@@ -228,7 +228,7 @@ export default async function HomePage({ params }: HomePageProps) {
                 icon: ScrollText,
                 title: locale === 'es' ? 'Hazte socio' : 'Become a member',
                 desc: locale === 'es'
-                  ? 'Registrate con tu numero de socio y correo electronico. Tu contrasena debe tener al menos 12 caracteres y un simbolo especial.'
+                  ? 'Registrate con tu numero de socio y correo electronico. Tu contraseña debe tener al menos 12 caracteres y un simbolo especial.'
                   : 'Register with your member number and email. Your password must be at least 12 characters with a special symbol.',
               },
               {

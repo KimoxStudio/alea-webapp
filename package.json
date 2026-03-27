@@ -10,5 +10,5 @@
     "typecheck": "pnpm --filter @alea/web typecheck",
     "lint": "pnpm --filter @alea/web lint"
   },
-  "engines": { "node": ">=20", "pnpm": ">=9" }
+  "engines": { "node": "20.11.1", "pnpm": ">=9" }
 }
