@@ -25,6 +25,7 @@ export interface GameTable {
   name: string;
   type: TableType;
   qrCode: string;
+  position?: { x: number; y: number };
 }
 
 export interface Reservation {
@@ -37,4 +38,57 @@ export interface Reservation {
   status: 'active' | 'cancelled' | 'completed';
   surface?: TableSurface | null;
   createdAt: string;
+}
+
+export interface RemovableTopTableStatus {
+  topAvailable: boolean;
+  bottomAvailable: boolean;
+}
+
+export interface TimeSlot {
+  startTime: string; // HH:mm
+  endTime: string;   // HH:mm
+  available: boolean;
+}
+
+export interface TableAvailability {
+  tableId: string;
+  date: string;
+  slots: TimeSlot[];
+  top?: TimeSlot[];
+  bottom?: TimeSlot[];
+  conflicts?: TimeSlot[];
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ApiError {
+  message: string;
+  statusCode: number;
+  error?: string;
+}
+
+export interface LoginRequest {
+  identifier: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  memberNumber: string;
+  email: string;
+  password: string;
+}
+
+export interface CreateReservationRequest {
+  tableId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  surface?: TableSurface;
 }

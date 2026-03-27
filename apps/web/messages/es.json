@@ -1,1 +1,82 @@
-{ "common": { "language": "Español" } }
+{
+  "common": {
+    "save": "Guardar", "cancel": "Cancelar", "delete": "Eliminar",
+    "edit": "Editar", "search": "Buscar", "loading": "Cargando...",
+    "error": "Ha ocurrido un error", "confirm": "Confirmar", "back": "Volver",
+    "close": "Cerrar", "yes": "Si", "no": "No", "actions": "Acciones",
+    "status": "Estado", "date": "Fecha", "time": "Hora", "name": "Nombre",
+    "email": "Email", "page": "Pagina", "of": "de", "previous": "Anterior",
+    "next": "Siguiente", "showing": "Mostrando", "results": "resultados",
+    "noResults": "No se encontraron resultados"
+  },
+  "nav": {
+    "rooms": "Salas", "reservations": "Mis Reservas",
+    "admin": "Administracion", "logout": "Cerrar Sesion", "profile": "Mi Perfil"
+  },
+  "auth": {
+    "login": "Iniciar Sesion", "register": "Registrarse", "logout": "Cerrar sesion",
+    "memberNumber": "Numero de Socio", "email": "Correo Electronico",
+    "password": "Contrasena", "confirmPassword": "Confirmar Contrasena",
+    "memberOrEmail": "Numero de socio o correo",
+    "loginSubtitle": "Bienvenido a la Asociacion Cultural Alea",
+    "registerSubtitle": "Unete a nuestra comunidad de jugadores",
+    "noAccount": "No tienes cuenta?", "hasAccount": "Ya tienes cuenta?",
+    "rememberMe": "Recordarme", "forgotPassword": "Olvidaste tu contrasena?",
+    "errors": {
+      "invalidCredentials": "Credenciales invalidas",
+      "emailRequired": "El correo es obligatorio",
+      "memberOrEmailRequired": "Introduce tu numero de socio o correo",
+      "passwordRequired": "La contrasena es obligatoria",
+      "passwordMinLength": "La contrasena debe tener al menos 12 caracteres",
+      "passwordAlphanumeric": "La contrasena debe contener letras y numeros",
+      "passwordSpecialChar": "La contrasena debe contener al menos un simbolo especial (!@#$%^&*...)",
+      "passwordsDoNotMatch": "Las contrasenas no coinciden",
+      "memberNumberRequired": "El numero de socio es obligatorio",
+      "emailInvalid": "El correo no es valido",
+      "memberNumberExists": "Este numero de socio ya esta registrado",
+      "emailExists": "Este correo ya esta registrado"
+    }
+  },
+  "rooms": {
+    "title": "Salas de Juego", "subtitle": "Explora nuestras salas y reserva tu mesa",
+    "available": "Disponible", "reserved": "Reservada", "partial": "Parcialmente ocupada",
+    "selectRoom": "Seleccionar sala", "tables": "mesas", "noTables": "Esta sala no tiene mesas todavia",
+    "reserveTable": "Reservar esta mesa", "viewAvailability": "Ver disponibilidad"
+  },
+  "tables": {
+    "small": "Mesa Pequena", "large": "Mesa Grande", "removable_top": "Mesa con Tapa Removible",
+    "surface": "Superficie", "surfaceTop": "Superior (tapa puesta)",
+    "surfaceBottom": "Inferior (tablero de juego)",
+    "surfaceConflict": "Esta mesa ya tiene la otra superficie reservada en este horario",
+    "selectSurface": "Que superficie deseas reservar?",
+    "qrCode": "Codigo QR", "position": "Posicion"
+  },
+  "reservations": {
+    "title": "Mis Reservas", "subtitle": "Gestiona tus reservas de mesas",
+    "makeReservation": "Nueva Reserva", "selectDate": "Seleccionar fecha",
+    "selectTime": "Seleccionar hora", "startTime": "Hora de inicio", "endTime": "Hora de fin",
+    "selectRoom": "Seleccionar sala", "selectTable": "Seleccionar mesa",
+    "active": "Activa", "cancelled": "Cancelada", "completed": "Completada",
+    "cancel": "Cancelar reserva",
+    "cancelConfirm": "Estas seguro de que deseas cancelar esta reserva?",
+    "noReservations": "No tienes reservas activas", "available": "Disponible",
+    "occupied": "Ocupado", "myReservation": "Mi reserva",
+    "calendar": "Calendario de disponibilidad",
+    "errors": {
+      "conflictTime": "Ya existe una reserva en ese horario",
+      "pastDate": "No puedes reservar en fechas pasadas",
+      "invalidTime": "La hora de fin debe ser posterior a la de inicio"
+    }
+  },
+  "admin": {
+    "dashboard": "Panel de Administracion", "users": "Usuarios", "rooms": "Salas",
+    "tables": "Mesas", "reservations": "Reservas", "totalUsers": "Total usuarios",
+    "todayReservations": "Reservas hoy", "occupancyRate": "Ocupacion", "activeRooms": "Salas activas",
+    "userManagement": "Gestion de usuarios", "roomManagement": "Gestion de salas",
+    "reservationManagement": "Gestion de reservas", "createRoom": "Crear sala",
+    "createTable": "Crear mesa", "editUser": "Editar usuario", "deleteUser": "Eliminar usuario",
+    "deleteUserConfirm": "Estas seguro de que deseas eliminar este usuario? Esta accion no se puede deshacer.",
+    "role": "Rol", "member": "Socio", "admin": "Administrador", "joinDate": "Fecha de registro",
+    "searchUsers": "Buscar usuarios...", "noUsers": "No se encontraron usuarios"
+  }
+}

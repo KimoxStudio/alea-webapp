@@ -1,13 +1,10 @@
-import './globals.css';
-import type { ReactNode } from 'react';
+import './globals.css'
+import type { Metadata } from 'next'
 
-export default function RootLayout({ children }: { children: ReactNode }) {
-  return (
-    <html lang="es">
-      <body>
-        <a className="skip-link" href="#main-content">Saltar al contenido</a>
-        {children}
-      </body>
-    </html>
-  );
+export const metadata: Metadata = {
+  title: 'Alea',
+}
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return children
 }

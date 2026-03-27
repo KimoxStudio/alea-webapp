@@ -1,1 +1,83 @@
-{ "common": { "language": "English" } }
+{
+  "common": {
+    "save": "Save", "cancel": "Cancel", "delete": "Delete",
+    "edit": "Edit", "search": "Search", "loading": "Loading...",
+    "error": "An error occurred", "confirm": "Confirm", "back": "Back",
+    "close": "Close", "yes": "Yes", "no": "No", "actions": "Actions",
+    "status": "Status", "date": "Date", "time": "Time", "name": "Name",
+    "email": "Email", "page": "Page", "of": "of", "previous": "Previous",
+    "next": "Next", "showing": "Showing", "results": "results",
+    "noResults": "No results found"
+  },
+  "nav": {
+    "rooms": "Rooms", "reservations": "My Reservations",
+    "admin": "Administration", "logout": "Sign Out", "profile": "My Profile"
+  },
+  "auth": {
+    "login": "Sign In", "register": "Register", "logout": "Sign out",
+    "memberNumber": "Member Number", "email": "Email Address",
+    "password": "Password", "confirmPassword": "Confirm Password",
+    "memberOrEmail": "Member number or email",
+    "loginSubtitle": "Welcome to Alea Cultural Association",
+    "registerSubtitle": "Join our gaming community",
+    "noAccount": "Don't have an account?", "hasAccount": "Already have an account?",
+    "rememberMe": "Remember me", "forgotPassword": "Forgot password?",
+    "errors": {
+      "invalidCredentials": "Invalid credentials",
+      "emailRequired": "Email is required",
+      "memberOrEmailRequired": "Enter your member number or email",
+      "passwordRequired": "Password is required",
+      "passwordMinLength": "Password must be at least 12 characters",
+      "passwordAlphanumeric": "Password must contain letters and numbers",
+      "passwordSpecialChar": "Password must contain at least one special symbol (!@#$%^&*...)",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "memberNumberRequired": "Member number is required",
+      "emailInvalid": "Email is not valid",
+      "memberNumberExists": "This member number is already registered",
+      "emailExists": "This email is already registered"
+    }
+  },
+  "rooms": {
+    "title": "Game Rooms", "subtitle": "Explore our rooms and book your table",
+    "available": "Available", "reserved": "Reserved", "partial": "Partially occupied",
+    "selectRoom": "Select room", "tables": "tables",
+    "noTables": "This room has no tables yet",
+    "reserveTable": "Reserve this table", "viewAvailability": "View availability"
+  },
+  "tables": {
+    "small": "Small Table", "large": "Large Table", "removable_top": "Removable Top Table",
+    "surface": "Surface", "surfaceTop": "Top (lid on)", "surfaceBottom": "Bottom (gaming board)",
+    "surfaceConflict": "This table already has the other surface reserved at this time",
+    "selectSurface": "Which surface do you want to reserve?",
+    "qrCode": "QR Code", "position": "Position"
+  },
+  "reservations": {
+    "title": "My Reservations", "subtitle": "Manage your table reservations",
+    "makeReservation": "New Reservation", "selectDate": "Select date",
+    "selectTime": "Select time", "startTime": "Start time", "endTime": "End time",
+    "selectRoom": "Select room", "selectTable": "Select table",
+    "active": "Active", "cancelled": "Cancelled", "completed": "Completed",
+    "cancel": "Cancel reservation",
+    "cancelConfirm": "Are you sure you want to cancel this reservation?",
+    "noReservations": "You have no active reservations", "available": "Available",
+    "occupied": "Occupied", "myReservation": "My reservation",
+    "calendar": "Availability calendar",
+    "errors": {
+      "conflictTime": "A reservation already exists at that time",
+      "pastDate": "You cannot book dates in the past",
+      "invalidTime": "End time must be after start time"
+    }
+  },
+  "admin": {
+    "dashboard": "Admin Dashboard", "users": "Users", "rooms": "Rooms",
+    "tables": "Tables", "reservations": "Reservations", "totalUsers": "Total users",
+    "todayReservations": "Today's reservations", "occupancyRate": "Occupancy rate",
+    "activeRooms": "Active rooms", "userManagement": "User management",
+    "roomManagement": "Room management", "reservationManagement": "Reservation management",
+    "createRoom": "Create room", "createTable": "Create table",
+    "editUser": "Edit user", "deleteUser": "Delete user",
+    "deleteUserConfirm": "Are you sure you want to delete this user? This action cannot be undone.",
+    "role": "Role", "member": "Member", "admin": "Administrator",
+    "joinDate": "Registration date", "searchUsers": "Search users...", "noUsers": "No users found"
+  }
+}

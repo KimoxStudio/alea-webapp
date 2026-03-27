@@ -1,13 +1,31 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it, expect } from 'vitest'
+import { validatePassword } from '@/lib/validations/password'
 
-const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{12,}$/;
+describe('validatePassword', () => {
+  it('rejects passwords shorter than 12 characters', () => {
+    const result = validatePassword('Short1!')
+    expect(result.valid).toBe(false)
+    expect(result.errors.length).toBeGreaterThan(0)
+  })
 
-describe('password policy', () => {
-  it('accepts valid password', () => {
-    expect(passwordRegex.test('RolMaster2026!')).toBe(true);
-  });
+  it('rejects passwords without special characters', () => {
+    const result = validatePassword('ValidPassword12')
+    expect(result.valid).toBe(false)
+  })
 
-  it('rejects weak password', () => {
-    expect(passwordRegex.test('short1!')).toBe(false);
-  });
-});
+  it('rejects passwords without numbers', () => {
+    const result = validatePassword('ValidPassword!@#')
+    expect(result.valid).toBe(false)
+  })
+
+  it('accepts valid passwords', () => {
+    const result = validatePassword('SecurePass123!')
+    expect(result.valid).toBe(true)
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('accepts passwords with multiple special chars', () => {
+    const result = validatePassword('MyStr0ng!Pass#2')
+    expect(result.valid).toBe(true)
+  })
+})

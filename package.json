@@ -1,14 +1,14 @@
 {
   "name": "alea-webapp",
-  "private": true,
   "version": "0.1.0",
+  "private": true,
   "packageManager": "pnpm@9.12.3",
   "scripts": {
-    "dev:web": "pnpm --filter @alea/web dev",
-    "dev:api": "pnpm --filter @alea/api start:dev",
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
-    "typecheck": "pnpm -r typecheck"
-  }
+    "dev": "pnpm --filter @alea/web dev",
+    "build": "pnpm --filter @alea/web build",
+    "test": "pnpm --filter @alea/web test",
+    "typecheck": "pnpm --filter @alea/web typecheck",
+    "lint": "pnpm --filter @alea/web lint"
+  },
+  "engines": { "node": ">=20", "pnpm": ">=9" }
 }
