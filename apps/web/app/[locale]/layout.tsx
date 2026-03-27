@@ -4,10 +4,11 @@ import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { locales } from '@/lib/i18n/config'
 import { AuthProvider } from '@/lib/auth/auth-context'
+import { Providers } from '@/lib/providers'
 import { Header } from '@/components/layout/header'
 
 export const metadata: Metadata = {
-  title: 'Alea -- Asociacion Cultural de Juegos',
+  title: 'Alea — Asociacion Cultural de Juegos',
   description: 'Gestion de salas y reservas para la Asociacion Cultural Alea',
 }
 
@@ -33,12 +34,14 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     <html lang={locale} className="dark">
       <body className="min-h-screen bg-background antialiased">
         <NextIntlClientProvider messages={messages}>
-          <AuthProvider>
-            <Header locale={locale} />
-            <main id="main-content" className="min-h-[calc(100vh-4rem)]">
-              {children}
-            </main>
-          </AuthProvider>
+          <Providers>
+            <AuthProvider>
+              <Header locale={locale} />
+              <main id="main-content" className="min-h-[calc(100vh-4rem)]">
+                {children}
+              </main>
+            </AuthProvider>
+          </Providers>
         </NextIntlClientProvider>
       </body>
     </html>
