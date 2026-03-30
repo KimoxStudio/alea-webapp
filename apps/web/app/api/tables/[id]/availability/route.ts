@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { buildTableAvailability, getTableById } from '@/lib/server/mock-db'
 import { requireAuth } from '@/lib/server/auth'
+import { toServiceErrorResponse } from '@/lib/server/service-error'
+import { getTableAvailability } from '@/lib/server/tables-service'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = requireAuth(request)
   if (auth instanceof NextResponse) return auth
 
-  const { id } = await params
-  const date = new URL(request.url).searchParams.get('date') ?? new Date().toISOString().split('T')[0]
-  const table = getTableById(id)
-  if (!table) {
-    return NextResponse.json({ message: 'Table not found', statusCode: 404 }, { status: 404 })
+  try {
+    const { id } = await params
+    return NextResponse.json(getTableAvailability(id, new URL(request.url).searchParams.get('date')))
+  } catch (error) {
+    return toServiceErrorResponse(error)
   }
-  return NextResponse.json(buildTableAvailability(id, date))
 }
