@@ -3,9 +3,10 @@
 -- Migration: 20260401000000_initial_schema.sql
 -- ============================================================
 
--- Enable pgcrypto for gen_random_uuid() on Postgres < 13
--- On Supabase (PG15+) this is a no-op but safe to include
+-- Enable required extensions for UUID generation and GiST exclusion constraints.
+-- On Supabase (PG15+) these are no-ops but safe to include.
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "btree_gist";
 
 -- Custom types / enums
 CREATE TYPE public.role AS ENUM ('member', 'admin');
@@ -81,6 +82,14 @@ CREATE TABLE public.reservations (
 
   CONSTRAINT reservation_times_valid CHECK (end_time > start_time)
 );
+
+ALTER TABLE public.reservations
+  ADD CONSTRAINT reservations_no_active_overlap
+  EXCLUDE USING gist (
+    table_id WITH =,
+    tsrange(date + start_time, date + end_time, '[)') WITH &&
+  )
+  WHERE (status = 'active'::public.reservation_status);
 
 CREATE INDEX reservations_table_date_idx ON public.reservations (table_id, date);
 CREATE INDEX reservations_user_id_idx ON public.reservations (user_id);
