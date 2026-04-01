@@ -3,6 +3,10 @@
 -- Migration: 20260401000000_initial_schema.sql
 -- ============================================================
 
+-- Enable pgcrypto for gen_random_uuid() on Postgres < 13
+-- On Supabase (PG15+) this is a no-op but safe to include
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- Custom types / enums
 CREATE TYPE public.role AS ENUM ('member', 'admin');
 CREATE TYPE public.table_type AS ENUM ('small', 'large', 'removable_top');
@@ -28,7 +32,7 @@ BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER profiles_updated_at
   BEFORE UPDATE ON public.profiles
@@ -99,7 +103,7 @@ RETURNS boolean AS $$
     SELECT 1 FROM public.profiles
     WHERE id = auth.uid() AND role = 'admin'
   );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public, pg_catalog;
 
 -- ---- profiles ----
 CREATE POLICY "profiles_admin_select"
@@ -190,9 +194,35 @@ CREATE POLICY "reservations_insert"
 CREATE POLICY "reservations_update"
   ON public.reservations FOR UPDATE
   TO authenticated
-  USING (user_id = auth.uid() OR public.is_admin());
+  USING (user_id = auth.uid() OR public.is_admin())
+  WITH CHECK (user_id = auth.uid() OR public.is_admin());
 
 CREATE POLICY "reservations_delete"
   ON public.reservations FOR DELETE
   TO authenticated
   USING (user_id = auth.uid() OR public.is_admin());
+
+-- ============================================================
+-- Auto-create profile on signup
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, member_number, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    -- Auto-generate a placeholder member_number from the user UUID.
+    -- An admin can assign a proper member number after creation.
+    'M-' || UPPER(LEFT(REPLACE(NEW.id::text, '-', ''), 8)),
+    'member'
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
