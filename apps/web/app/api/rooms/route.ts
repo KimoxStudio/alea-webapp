@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRoom, listRooms } from '@/lib/server/mock-db'
 import { enforceSameOriginForMutation, requireAdmin } from '@/lib/server/auth'
+import { createRoomEntry, listAllRooms } from '@/lib/server/rooms-service'
+import { toServiceErrorResponse } from '@/lib/server/http-error'
 
 export async function GET() {
-  return NextResponse.json(listRooms())
+  return NextResponse.json(listAllRooms())
 }
 
 export async function POST(request: NextRequest) {
@@ -12,16 +13,10 @@ export async function POST(request: NextRequest) {
   const originError = enforceSameOriginForMutation(request)
   if (originError) return originError
 
-  const body = await request.json()
-  const name = String(body.name ?? '').trim()
-  if (!name) {
-    return NextResponse.json({ message: 'Room name is required', statusCode: 400 }, { status: 400 })
+  try {
+    const body = await request.json()
+    return NextResponse.json(createRoomEntry(body), { status: 201 })
+  } catch (error) {
+    return toServiceErrorResponse(error)
   }
-
-  const newRoom = createRoom({
-    name,
-    tableCount: Number(body.tableCount ?? 0),
-    description: body.description ? String(body.description) : undefined,
-  })
-  return NextResponse.json(newRoom, { status: 201 })
 }
