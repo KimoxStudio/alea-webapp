@@ -12,7 +12,7 @@ type SessionPayload = {
   exp: number
 }
 
-type SessionUser = Pick<User, 'id' | 'role'>
+export type SessionUser = Pick<User, 'id' | 'role'>
 
 function getSessionSecret() {
   return process.env.AUTH_SESSION_SECRET ?? 'dev-insecure-secret-change-me'

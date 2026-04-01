@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { enforceSameOriginForMutation, requireAdmin } from '@/lib/server/auth'
-import { updateRoomById } from '@/lib/server/mock-db'
+import { updateRoom } from '@/lib/server/rooms-service'
+import { toServiceErrorResponse } from '@/lib/server/http-error'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = requireAdmin(request)
@@ -8,15 +9,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const originError = enforceSameOriginForMutation(request)
   if (originError) return originError
 
-  const { id } = await params
-  const body = await request.json()
-  const updated = updateRoomById(id, {
-    name: body.name ? String(body.name) : undefined,
-    description: body.description === undefined ? undefined : String(body.description),
-    tableCount: body.tableCount === undefined ? undefined : Number(body.tableCount),
-  })
-  if (!updated) {
-    return NextResponse.json({ message: 'Room not found', statusCode: 404 }, { status: 404 })
+  try {
+    const [{ id }, body] = await Promise.all([params, request.json()])
+    return NextResponse.json(updateRoom(id, body))
+  } catch (error) {
+    return toServiceErrorResponse(error)
   }
-  return NextResponse.json(updated)
 }
