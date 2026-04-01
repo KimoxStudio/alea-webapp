@@ -127,11 +127,12 @@ CREATE POLICY "profiles_admin_delete"
   TO authenticated
   USING (public.is_admin());
 
--- Members can update their own profile (e.g. email)
+-- Members can update their own profile (e.g. email) but cannot escalate their role
 CREATE POLICY "profiles_member_update"
   ON public.profiles FOR UPDATE
   TO authenticated
-  USING (id = auth.uid());
+  USING (id = auth.uid())
+  WITH CHECK (id = auth.uid() AND role = 'member'::public.role);
 
 -- ---- rooms ----
 CREATE POLICY "rooms_public_select"
