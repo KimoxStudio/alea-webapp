@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { enforceSameOriginForMutation, requireAuth } from '@/lib/server/auth'
-import { toServiceErrorResponse } from '@/lib/server/service-error'
+import { toServiceErrorResponse } from '@/lib/server/http-error'
 import { createReservationForSession, listVisibleReservations } from '@/lib/server/reservations-service'
 
 export async function GET(request: NextRequest) {

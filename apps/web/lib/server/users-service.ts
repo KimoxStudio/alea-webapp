@@ -7,8 +7,8 @@ export function listPaginatedUsers(input: {
   limit: number
   search?: string
 }): PaginatedResponse<User> {
-  const page = Number.isNaN(input.page) ? 1 : input.page
-  const limit = Number.isNaN(input.limit) ? 10 : input.limit
+  const page = Math.max(1, Math.floor(Number(input.page)) || 1)
+  const limit = Math.min(100, Math.max(1, Math.floor(Number(input.limit)) || 20))
   const search = input.search?.trim().toLowerCase() ?? ''
 
   let filtered = listUsers()

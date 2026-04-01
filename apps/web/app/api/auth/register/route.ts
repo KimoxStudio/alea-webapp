@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { enforceSameOriginForMutation, setSessionCookie } from '@/lib/server/auth'
 import { register } from '@/lib/server/auth-service'
-import { toServiceErrorResponse } from '@/lib/server/service-error'
+import { toServiceErrorResponse } from '@/lib/server/http-error'
 
 export async function POST(request: NextRequest) {
   const originError = enforceSameOriginForMutation(request)

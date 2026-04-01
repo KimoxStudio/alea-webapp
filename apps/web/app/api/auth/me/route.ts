@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSessionFromRequest } from '@/lib/server/auth'
 import { getCurrentUser } from '@/lib/server/auth-service'
-import { toServiceErrorResponse } from '@/lib/server/service-error'
+import { toServiceErrorResponse } from '@/lib/server/http-error'
 
 export async function GET(request: NextRequest) {
   try {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { enforceSameOriginForMutation, requireAdmin } from '@/lib/server/auth'
 import { createRoomEntry, listAllRooms } from '@/lib/server/rooms-service'
-import { toServiceErrorResponse } from '@/lib/server/service-error'
+import { toServiceErrorResponse } from '@/lib/server/http-error'
 
 export async function GET() {
   return NextResponse.json(listAllRooms())

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { enforceSameOriginForMutation, requireAdmin } from '@/lib/server/auth'
-import { toServiceErrorResponse } from '@/lib/server/service-error'
+import { toServiceErrorResponse } from '@/lib/server/http-error'
 import { deleteUser, updateUser } from '@/lib/server/users-service'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -1,8 +1,9 @@
 import { buildTableAvailability, createRoom, getRoomTables, listRooms, updateRoomById } from '@/lib/server/mock-db'
 import { serviceError } from '@/lib/server/service-error'
 
-function resolveDate(date?: string | null) {
-  return date && date.trim() ? date : new Date().toISOString().split('T')[0]
+function resolveDate(date?: string | null): string {
+  const trimmed = date?.trim()
+  return trimmed ? trimmed : new Date().toISOString().split('T')[0]
 }
 
 export function listAllRooms() {

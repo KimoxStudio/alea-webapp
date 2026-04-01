@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/server/auth'
-import { toServiceErrorResponse } from '@/lib/server/service-error'
+import { toServiceErrorResponse } from '@/lib/server/http-error'
 import { getTableAvailability } from '@/lib/server/tables-service'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
