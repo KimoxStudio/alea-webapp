@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { enforceSameOriginForMutation, requireAuth } from '@/lib/server/auth'
 import { toServiceErrorResponse } from '@/lib/server/http-error'
-import { updateReservationForSession } from '@/lib/server/reservations-service'
+import { checkReservationAccess, updateReservationForSession } from '@/lib/server/reservations-service'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = requireAuth(request)
@@ -10,7 +10,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (originError) return originError
 
   try {
-    const [{ id }, body] = await Promise.all([params, request.json()])
+    const { id } = await params
+    checkReservationAccess(auth, id)
+    const body = await request.json()
     return NextResponse.json(updateReservationForSession(auth, id, body))
   } catch (error) {
     return toServiceErrorResponse(error)

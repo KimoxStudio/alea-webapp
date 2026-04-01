@@ -24,10 +24,13 @@ export function createRoomEntry(body: { name?: unknown; tableCount?: unknown; de
 }
 
 export function updateRoom(id: string, body: { name?: unknown; description?: unknown; tableCount?: unknown }) {
+  if (body.tableCount !== undefined) {
+    serviceError('Updating tableCount is not supported', 400)
+  }
+
   const updated = updateRoomById(id, {
     name: body.name ? String(body.name) : undefined,
     description: body.description === undefined ? undefined : String(body.description),
-    tableCount: body.tableCount === undefined ? undefined : Number(body.tableCount),
   })
 
   if (!updated) {

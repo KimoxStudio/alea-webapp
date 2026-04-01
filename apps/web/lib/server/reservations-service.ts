@@ -64,6 +64,16 @@ export function createReservationForSession(
   })
 }
 
+export function checkReservationAccess(session: SessionUser, reservationId: string) {
+  const existingReservation = findReservationById(reservationId)
+  if (!existingReservation) {
+    serviceError('Reservation not found', 404)
+  }
+  if (session.role !== 'admin' && existingReservation.userId !== session.id) {
+    serviceError('Forbidden', 403)
+  }
+}
+
 export function updateReservationForSession(
   session: SessionUser,
   reservationId: string,
@@ -86,8 +96,8 @@ export function updateReservationForSession(
   const nextEndTime = body.endTime == null ? existingReservation.endTime : String(body.endTime)
   const nextDate = body.date == null ? existingReservation.date : String(body.date)
   const nextSurface = body.surface === undefined || body.surface === null
-    ? (existingReservation.surface ?? undefined)
-    : (parseSurface(body.surface) ?? (existingReservation.surface ?? undefined))
+    ? (existingReservation.surface ?? null)
+    : (parseSurface(body.surface) ?? (existingReservation.surface ?? null))
 
   if (nextStartTime >= nextEndTime) {
     serviceError('Invalid reservation time range', 400)
@@ -98,7 +108,7 @@ export function updateReservationForSession(
       date: nextDate,
       startTime: nextStartTime,
       endTime: nextEndTime,
-      surface: nextSurface,
+      surface: nextSurface ?? undefined,
       ignoreReservationId: existingReservation.id,
     })
   ) {
