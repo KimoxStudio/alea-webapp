@@ -5,6 +5,11 @@ coverage
 .env
 .env.*
 !.env.example
+!.env.local.example
+
+# Supabase local runtime artifacts (not migrations)
+supabase/.branches/
+supabase/.temp/
 package-lock.json
 yarn.lock
 .DS_Store
