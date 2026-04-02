@@ -5,9 +5,29 @@ coverage
 .env
 .env.*
 !.env.example
+!.env.local.example
+
+# Turbo cache
+.turbo/
+
+# Test output
+test-results/
+playwright-report/
+
+# Supabase local runtime artifacts (not migrations)
+supabase/.branches/
+supabase/.temp/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
 package-lock.json
 yarn.lock
-.DS_Store
 *.log
 *.tsbuildinfo
 **/next-env.d.ts
