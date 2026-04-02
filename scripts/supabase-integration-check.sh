@@ -12,7 +12,6 @@ shadow_port="${port_base}"
 api_port="$((port_base + 1))"
 db_port="$((port_base + 2))"
 studio_port="$((port_base + 3))"
-inbucket_port="$((port_base + 4))"
 
 cleanup() {
   supabase --workdir "${tmp_project_dir}" stop --no-backup >/dev/null 2>&1 || true
@@ -37,11 +36,11 @@ retry() {
 }
 
 cp -R "${root_dir}/supabase" "${tmp_project_dir}/supabase"
-perl -0pi -e 's/^project_id = ".*"$/project_id = "'"${tmp_project_id}"'"/m' "${tmp_project_dir}/supabase/config.toml"
-perl -0pi -e 's/^\[api\]\nenabled = true\nport = \d+/[api]\nenabled = true\nport = '"${api_port}"'/m' "${tmp_project_dir}/supabase/config.toml"
-perl -0pi -e 's/^\[db\]\nport = \d+\nshadow_port = \d+/[db]\nport = '"${db_port}"'\nshadow_port = '"${shadow_port}"'/m' "${tmp_project_dir}/supabase/config.toml"
-perl -0pi -e 's/^\[studio\]\nenabled = true\nport = \d+/[studio]\nenabled = true\nport = '"${studio_port}"'/m' "${tmp_project_dir}/supabase/config.toml"
-perl -0pi -e 's/^\[inbucket\]\nport = \d+/[inbucket]\nport = '"${inbucket_port}"'/m' "${tmp_project_dir}/supabase/config.toml"
+perl -0pi -e "s/^project_id = \".*\"$/project_id = \"${tmp_project_id}\"/m" "${tmp_project_dir}/supabase/config.toml"
+perl -0pi -e "s/^\\[api\\]\\nenabled = true\\nport = \\d+/[api]\\nenabled = true\\nport = ${api_port}/m" "${tmp_project_dir}/supabase/config.toml"
+perl -0pi -e "s/^\\[db\\]\\nport = \\d+\\nshadow_port = \\d+/[db]\\nport = ${db_port}\\nshadow_port = ${shadow_port}/m" "${tmp_project_dir}/supabase/config.toml"
+perl -0pi -e "s/^\\[studio\\]\\nenabled = true\\nport = \\d+/[studio]\\nenabled = true\\nport = ${studio_port}/m" "${tmp_project_dir}/supabase/config.toml"
+perl -0pi -e "s/^\\[inbucket\\]\\nenabled = true\\nport = \\d+/[inbucket]\\nenabled = true\\nport = $((studio_port + 1))/m" "${tmp_project_dir}/supabase/config.toml"
 
 retry 10 supabase --workdir "${tmp_project_dir}" start \
   --exclude gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor

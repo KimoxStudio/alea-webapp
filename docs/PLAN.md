@@ -71,7 +71,7 @@
 
 #### Issue #12 — [QA] Testing stack and CI quality gates
 **Branch:** `feat/qa-next-api-gates`
-**Status:** Done. CI expanded with auth coverage thresholds, Supabase local validation, Semgrep, and production dependency audit. Next.js upgraded to `15.5.10` to clear the current high-severity advisory.
+**Status:** Done. CI expanded with auth coverage thresholds, Supabase local validation, Semgrep, and production dependency audit. Next.js upgraded to `15.5.14` to clear the current production advisories identified by `pnpm audit`.
 
 **Deliverables completed:**
 - CI job matrix for `lint`, `typecheck`, `test`, `build`
@@ -79,7 +79,7 @@
 - Supabase CLI validation in CI with local stack boot + migration reset + lint
 - Semgrep static analysis gate
 - Production dependency audit gate
-- `next` / `eslint-config-next` upgraded to `15.5.10`
+- `next` / `eslint-config-next` upgraded to `15.5.14`
 
 ---
 
