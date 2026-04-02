@@ -21,6 +21,8 @@
     "loginSubtitle": "Welcome to Alea Cultural Association",
     "registerSubtitle": "Join our gaming community",
     "noAccount": "Don't have an account?", "hasAccount": "Already have an account?",
+    "showPassword": "Show password", "hidePassword": "Hide password",
+    "showConfirmation": "Show confirmation", "hideConfirmation": "Hide confirmation",
     "rememberMe": "Remember me", "forgotPassword": "Forgot password?",
     "errors": {
       "invalidCredentials": "Invalid credentials",

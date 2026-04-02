@@ -21,6 +21,8 @@
     "loginSubtitle": "Bienvenido a la Asociacion Cultural Alea",
     "registerSubtitle": "Unete a nuestra comunidad de jugadores",
     "noAccount": "No tienes cuenta?", "hasAccount": "Ya tienes cuenta?",
+    "showPassword": "Mostrar contraseña", "hidePassword": "Ocultar contraseña",
+    "showConfirmation": "Mostrar confirmacion", "hideConfirmation": "Ocultar confirmacion",
     "rememberMe": "Recordarme", "forgotPassword": "Olvidaste tu contraseña?",
     "errors": {
       "invalidCredentials": "Credenciales invalidas",

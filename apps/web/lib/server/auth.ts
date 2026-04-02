@@ -14,8 +14,14 @@ type SessionPayload = {
 
 export type SessionUser = Pick<User, 'id' | 'role'>
 
-function getSessionSecret() {
-  return process.env.AUTH_SESSION_SECRET ?? 'dev-insecure-secret-change-me'
+function getSessionSecret(): string {
+  const secret = process.env.AUTH_SESSION_SECRET
+  if (!secret) {
+    throw new Error(
+      'AUTH_SESSION_SECRET environment variable is not set. Set it to a random string of at least 32 characters.',
+    )
+  }
+  return secret
 }
 
 function base64UrlEncode(value: string) {

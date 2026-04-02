@@ -10,6 +10,9 @@ coverage
 # Turbo cache
 .turbo/
 
+# Agent coordination cache
+.agent-cache/
+
 # Test output
 test-results/
 playwright-report/

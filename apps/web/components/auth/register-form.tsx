@@ -5,12 +5,13 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Eye, EyeOff, Loader2, Check, X } from 'lucide-react'
+import { Check, X, Loader2 } from 'lucide-react'
 import { registerSchema, type RegisterFormData } from '@/lib/validations/auth'
 import { useAuth } from '@/lib/auth/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PasswordInput } from '@/components/ui/password-input'
 
 function PasswordStrengthIndicator({ password }: { password: string }) {
   const checks = [
@@ -39,8 +40,6 @@ export function RegisterForm({ locale }: RegisterFormProps) {
   const t = useTranslations('auth')
   const { register: registerUser } = useAuth()
   const router = useRouter()
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
 
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<RegisterFormData>({
@@ -90,38 +89,22 @@ export function RegisterForm({ locale }: RegisterFormProps) {
 
       <div className="space-y-1.5">
         <Label htmlFor="reg-password">{t('password')}</Label>
-        <div className="relative">
-          <Input id="reg-password" type={showPassword ? 'text' : 'password'} autoComplete="new-password"
-            className="pr-10"
-            aria-describedby="password-requirements"
-            aria-invalid={!!errors.password}
-            {...register('password')}
-          />
-          <button type="button" onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-            aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}>
-            {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
-          </button>
-        </div>
+        <PasswordInput id="reg-password" autoComplete="new-password"
+          aria-describedby="password-requirements"
+          aria-invalid={!!errors.password}
+          {...register('password')}
+        />
         <div id="password-requirements"><PasswordStrengthIndicator password={passwordValue} /></div>
         {errors.password && <p role="alert" className="text-xs text-destructive">{t(errors.password.message as Parameters<typeof t>[0])}</p>}
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="confirmPassword">{t('confirmPassword')}</Label>
-        <div className="relative">
-          <Input id="confirmPassword" type={showConfirm ? 'text' : 'password'} autoComplete="new-password"
-            className="pr-10"
-            aria-describedby={errors.confirmPassword ? 'confirm-error' : undefined}
-            aria-invalid={!!errors.confirmPassword}
-            {...register('confirmPassword')}
-          />
-          <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-            aria-label={showConfirm ? 'Ocultar confirmacion' : 'Mostrar confirmacion'}>
-            {showConfirm ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
-          </button>
-        </div>
+        <PasswordInput id="confirmPassword" variant="confirmation" autoComplete="new-password"
+          aria-describedby={errors.confirmPassword ? 'confirm-error' : undefined}
+          aria-invalid={!!errors.confirmPassword}
+          {...register('confirmPassword')}
+        />
         {errors.confirmPassword && <p id="confirm-error" role="alert" className="text-xs text-destructive">{t(errors.confirmPassword.message as Parameters<typeof t>[0])}</p>}
       </div>
 
