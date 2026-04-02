@@ -24,12 +24,13 @@ export function createRoomEntry(body: { name?: unknown; tableCount?: unknown; de
 }
 
 export function updateRoom(id: string, body: { name?: unknown; description?: unknown; tableCount?: unknown }) {
-  // Silently strip tableCount — it is not updatable, but we don't error to avoid breaking clients
-  const { tableCount: _ignored, ...rest } = body
+  if (body.tableCount !== undefined) {
+    serviceError('Updating tableCount is not supported', 400)
+  }
 
   const updated = updateRoomById(id, {
-    name: rest.name ? String(rest.name) : undefined,
-    description: rest.description === undefined ? undefined : String(rest.description),
+    name: body.name ? String(body.name) : undefined,
+    description: body.description === undefined ? undefined : String(body.description),
   })
 
   if (!updated) {
