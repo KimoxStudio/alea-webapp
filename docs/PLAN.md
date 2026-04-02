@@ -35,7 +35,7 @@
 **Code deliverables:**
 - Install `@supabase/supabase-js` + `@supabase/ssr` in `apps/web`
 - Initialize `supabase/` directory with `config.toml` for local dev
-- Create initial schema migration (`supabase/migrations/`) with: `users`, `rooms`, `tables`, `reservations`
+- Create initial schema migration (`supabase/migrations/`) with: `profiles`, `rooms`, `tables`, `reservations`
 - Configure RLS policies per table
 - Define env variable structure: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - Create `.env.example` and update `.env.local.example`
