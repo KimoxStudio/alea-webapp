@@ -133,7 +133,8 @@ CREATE POLICY "profiles_admin_insert"
 CREATE POLICY "profiles_admin_update"
   ON public.profiles FOR UPDATE
   TO authenticated
-  USING (public.is_admin());
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 CREATE POLICY "profiles_admin_delete"
   ON public.profiles FOR DELETE
@@ -161,7 +162,8 @@ CREATE POLICY "rooms_admin_insert"
 CREATE POLICY "rooms_admin_update"
   ON public.rooms FOR UPDATE
   TO authenticated
-  USING (public.is_admin());
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 CREATE POLICY "rooms_admin_delete"
   ON public.rooms FOR DELETE
@@ -182,7 +184,8 @@ CREATE POLICY "tables_admin_insert"
 CREATE POLICY "tables_admin_update"
   ON public.tables FOR UPDATE
   TO authenticated
-  USING (public.is_admin());
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 CREATE POLICY "tables_admin_delete"
   ON public.tables FOR DELETE
