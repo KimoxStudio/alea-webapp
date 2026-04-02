@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -20,20 +21,21 @@ import {
 } from '@/components/ui/form'
 
 function PasswordStrengthIndicator({ password }: { password: string }) {
+  const t = useTranslations('auth')
   const checks = [
-    { label: 'Minimo 12 caracteres', passed: password.length >= 12 },
-    { label: 'Letras y numeros', passed: /[a-zA-Z]/.test(password) && /[0-9]/.test(password) },
-    { label: 'Simbolo especial', passed: /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>\/?]/.test(password) },
+    { key: 'minChars', label: t('requireMinChars'), passed: password.length >= 12 },
+    { key: 'lettersNumbers', label: t('requireLettersNumbers'), passed: /[a-zA-Z]/.test(password) && /[0-9]/.test(password) },
+    { key: 'specialChar', label: t('requireSpecialChar'), passed: /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>\/?]/.test(password) },
   ]
   return (
-    <ul className="mt-2 space-y-1" aria-label="Requisitos de contrasena">
+    <ul className="mt-2 space-y-1" aria-label={t('passwordRequirementsLabel')}>
       {checks.map((check) => (
-        <li key={check.label} className="flex items-center gap-2 text-xs">
+        <li key={check.key} className="flex items-center gap-2 text-xs">
           {check.passed
             ? <Check className="h-3 w-3 text-emerald flex-shrink-0" aria-hidden="true" />
             : <X className="h-3 w-3 text-muted-foreground flex-shrink-0" aria-hidden="true" />}
           <span className={check.passed ? 'text-emerald-light' : 'text-muted-foreground'}>{check.label}</span>
-          <span className="sr-only">{check.passed ? '(cumplido)' : '(pendiente)'}</span>
+          <span className="sr-only">{check.passed ? t('requirementMet') : t('requirementPending')}</span>
         </li>
       ))}
     </ul>
@@ -121,30 +123,29 @@ export function RegisterForm({ locale }: RegisterFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>{t('password')}</FormLabel>
-              <FormControl>
-                <div className="relative">
+              <div className="relative">
+                <FormControl>
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     className="pr-10"
-                    aria-describedby="password-requirements"
                     {...field}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-                    aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
-                  >
-                    {showPassword
-                      ? <EyeOff className="h-4 w-4" aria-hidden="true" />
-                      : <Eye className="h-4 w-4" aria-hidden="true" />}
-                  </button>
-                </div>
-              </FormControl>
-              <div id="password-requirements">
-                <PasswordStrengthIndicator password={passwordValue} />
+                </FormControl>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                  aria-label={showPassword ? t('hidePassword') : t('showPassword')}
+                >
+                  {showPassword
+                    ? <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    : <Eye className="h-4 w-4" aria-hidden="true" />}
+                </button>
               </div>
+              <FormDescription>
+                <PasswordStrengthIndicator password={passwordValue} />
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -156,26 +157,26 @@ export function RegisterForm({ locale }: RegisterFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>{t('confirmPassword')}</FormLabel>
-              <FormControl>
-                <div className="relative">
+              <div className="relative">
+                <FormControl>
                   <Input
                     type={showConfirm ? 'text' : 'password'}
                     autoComplete="new-password"
                     className="pr-10"
                     {...field}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-                    aria-label={showConfirm ? 'Ocultar confirmacion' : 'Mostrar confirmacion'}
-                  >
-                    {showConfirm
-                      ? <EyeOff className="h-4 w-4" aria-hidden="true" />
-                      : <Eye className="h-4 w-4" aria-hidden="true" />}
-                  </button>
-                </div>
-              </FormControl>
+                </FormControl>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                  aria-label={showConfirm ? t('hideConfirmation') : t('showConfirmation')}
+                >
+                  {showConfirm
+                    ? <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    : <Eye className="h-4 w-4" aria-hidden="true" />}
+                </button>
+              </div>
               <FormMessage />
             </FormItem>
           )}

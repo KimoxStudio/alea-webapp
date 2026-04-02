@@ -82,26 +82,26 @@ export function LoginForm({ locale }: LoginFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>{t('password')}</FormLabel>
-              <FormControl>
-                <div className="relative">
+              <div className="relative">
+                <FormControl>
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     className="pr-10"
                     {...field}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-                    aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
-                  >
-                    {showPassword
-                      ? <EyeOff className="h-4 w-4" aria-hidden="true" />
-                      : <Eye className="h-4 w-4" aria-hidden="true" />}
-                  </button>
-                </div>
-              </FormControl>
+                </FormControl>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                  aria-label={showPassword ? t('hidePassword') : t('showPassword')}
+                >
+                  {showPassword
+                    ? <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    : <Eye className="h-4 w-4" aria-hidden="true" />}
+                </button>
+              </div>
               <FormMessage />
             </FormItem>
           )}

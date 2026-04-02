@@ -1,3 +1,5 @@
+'use client'
+
 import * as React from 'react'
 import * as LabelPrimitive from '@radix-ui/react-label'
 import { Slot } from '@radix-ui/react-slot'
@@ -9,6 +11,8 @@ import {
   FormProvider,
   useFormContext,
 } from 'react-hook-form'
+
+import { useTranslations } from 'next-intl'
 
 import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
@@ -44,11 +48,14 @@ const useFormField = () => {
   const itemContext = React.useContext(FormItemContext)
   const { getFieldState, formState } = useFormContext()
 
-  const fieldState = getFieldState(fieldContext.name, formState)
-
-  if (!fieldContext) {
+  if (!fieldContext || typeof fieldContext.name !== 'string') {
     throw new Error('useFormField should be used within <FormField>')
   }
+  if (!itemContext || typeof itemContext.id !== 'string') {
+    throw new Error('useFormField should be used within <FormItem>')
+  }
+
+  const fieldState = getFieldState(fieldContext.name, formState)
 
   const { id } = itemContext
 
@@ -145,7 +152,9 @@ const FormMessage = React.forwardRef<
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, children, ...props }, ref) => {
   const { error, formMessageId } = useFormField()
-  const body = error ? String(error?.message) : children
+  const t = useTranslations()
+  const raw = error ? String(error?.message) : children
+  const body = typeof raw === 'string' && raw.includes('.') && t.has(raw) ? t(raw) : raw
 
   if (!body) {
     return null
