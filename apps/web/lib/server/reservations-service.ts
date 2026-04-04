@@ -46,9 +46,20 @@ type SessionReservationsTableClient = {
 
 const RESERVATION_COLUMNS = 'id, table_id, user_id, date, start_time, end_time, status, surface, created_at'
 
+function parseDate(value: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw serviceError('Date must be in YYYY-MM-DD format', 400)
+  }
+  const d = new Date(value)
+  if (isNaN(d.getTime())) {
+    throw serviceError('Invalid date value', 400)
+  }
+  return value
+}
+
 function parseHHMM(value: string): string {
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
-    throw serviceError('Time must be in HH:MM format', 400)
+    throw serviceError('Time must be in HH:MM format (00:00–23:59)', 400)
   }
   return value
 }
@@ -176,6 +187,7 @@ export async function listVisibleReservations(input: {
 }) {
   const supabase = await createSupabaseServerClient()
   const effectiveUserId = input.session.role === 'admin' ? input.userId ?? undefined : input.session.id
+  const effectiveDate = input.date != null && input.date !== '' ? parseDate(input.date) : undefined
 
   let query = (supabase.from('reservations') as unknown as SessionReservationsTableClient)
     .select(RESERVATION_COLUMNS)
@@ -188,8 +200,8 @@ export async function listVisibleReservations(input: {
   if (input.tableId) {
     query = query.eq('table_id', input.tableId)
   }
-  if (input.date) {
-    query = query.eq('date', input.date)
+  if (effectiveDate) {
+    query = query.eq('date', effectiveDate)
   }
 
   const { data, error } = await query
@@ -206,15 +218,16 @@ export async function createReservationForSession(
   body: { tableId?: unknown; date?: unknown; startTime?: unknown; endTime?: unknown; surface?: unknown },
 ) {
   const tableId = requireString(body.tableId)
-  const date = requireString(body.date)
+  const dateRaw = requireString(body.date)
   const rawStartTime = requireString(body.startTime)
   const rawEndTime = requireString(body.endTime)
   const surface = parseSurface(body.surface)
 
-  if (!tableId || !date || !rawStartTime || !rawEndTime) {
+  if (!tableId || !dateRaw || !rawStartTime || !rawEndTime) {
     serviceError('tableId, date, startTime and endTime are required', 400)
   }
 
+  const date = parseDate(dateRaw)
   const startTime = parseHHMM(rawStartTime)
   const endTime = parseHHMM(rawEndTime)
 
@@ -282,7 +295,7 @@ export async function updateReservationForSession(
   const nextEndTime = body.endTime == null
     ? normalizeTime(existingReservation.end_time)
     : parseHHMM(String(body.endTime))
-  const nextDate = body.date == null ? existingReservation.date : String(body.date)
+  const nextDate = body.date == null ? existingReservation.date : parseDate(String(body.date))
   const nextSurface = body.surface === undefined || body.surface === null
     ? (existingReservation.surface ?? null)
     : (parseSurface(body.surface) ?? (existingReservation.surface ?? null))

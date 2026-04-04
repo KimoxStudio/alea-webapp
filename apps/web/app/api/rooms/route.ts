@@ -4,7 +4,11 @@ import { createRoomEntry, listAllRooms } from '@/lib/server/rooms-service'
 import { toServiceErrorResponse } from '@/lib/server/http-error'
 
 export async function GET() {
-  return NextResponse.json(await listAllRooms())
+  try {
+    return NextResponse.json(await listAllRooms())
+  } catch (error) {
+    return toServiceErrorResponse(error)
+  }
 }
 
 export async function POST(request: NextRequest) {

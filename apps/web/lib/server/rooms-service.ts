@@ -2,6 +2,7 @@ import type { GameTable, Room, TableAvailability, TimeSlot } from '@alea/types'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
+import { resolveDate } from '@/lib/server/availability'
 
 type RoomRow = Tables<'rooms'>
 type TableRow = Tables<'tables'>
@@ -42,11 +43,6 @@ type ReservationsByTableClient = {
 
 const ROOM_COLUMNS = 'id, name, table_count, description'
 const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, pos_x, pos_y'
-
-function resolveDate(date?: string | null): string {
-  const trimmed = date?.trim()
-  return trimmed ? trimmed : new Date().toISOString().split('T')[0]
-}
 
 function normalizeTime(time: string) {
   return time.slice(0, 5)
@@ -141,10 +137,16 @@ export async function createRoomEntry(body: { name?: unknown; tableCount?: unkno
     serviceError('Room name is required', 400)
   }
 
+  const rawCount = body.tableCount ?? 0
+  const tableCount = Number(rawCount)
+  if (!Number.isFinite(tableCount) || tableCount < 0 || !Number.isInteger(tableCount)) {
+    throw serviceError('tableCount must be a non-negative integer', 400)
+  }
+
   const supabase = await createSupabaseServerClient()
   const insert: TablesInsert<'rooms'> = {
     name,
-    table_count: Number(body.tableCount ?? 0),
+    table_count: tableCount,
     description: body.description ? String(body.description) : null,
   }
   const rooms = supabase.from('rooms') as unknown as RoomsTableClient

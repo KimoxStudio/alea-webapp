@@ -2,16 +2,12 @@ import type { GameTable, TableAvailability, TimeSlot } from '@alea/types'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
 import type { Tables } from '@/lib/supabase/types'
+import { resolveDate } from '@/lib/server/availability'
 
 type TableRow = Tables<'tables'>
 type ReservationRow = Tables<'reservations'>
 
 const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, pos_x, pos_y'
-
-function resolveDate(date?: string | null): string {
-  const trimmed = date?.trim()
-  return trimmed ? trimmed : new Date().toISOString().split('T')[0]
-}
 
 function normalizeTime(time: string) {
   return time.slice(0, 5)
@@ -94,5 +90,5 @@ export async function getTableAvailability(tableId: string, date?: string | null
     serviceError('Internal server error', 500)
   }
 
-  return buildAvailability(toGameTable(table), effectiveDate, reservations)
+  return buildAvailability(toGameTable(table!), effectiveDate, reservations)
 }
