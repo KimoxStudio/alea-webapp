@@ -188,14 +188,42 @@ describe('updateUser', () => {
   })
 
   it('returns the updated public user payload for the correct user id', async () => {
-    maybeSingleMock.mockImplementation(async function (this: { _eqId?: string }) {
-      return { data: profileRows[1], error: null }
+    let capturedId: string | undefined
+    maybeSingleMock.mockImplementation(async () => {
+      const row = profileRows.find((r) => r.id === capturedId) ?? null
+      return { data: row, error: null }
     })
+    vi.mocked(
+      (await import('@/lib/supabase/server')).createSupabaseServerClient
+    ).mockResolvedValue({
+      from: vi.fn(() => ({
+        select: vi.fn((columns: string, options?: { count?: 'exact' }) => {
+          if (options?.count === 'exact') {
+            return { order: orderMock, or: orMock }
+          }
+          return {
+            eq: vi.fn(() => ({ maybeSingle: maybeSingleMock })),
+            maybeSingle: maybeSingleMock,
+          }
+        }),
+        update: vi.fn(() => ({
+          eq: vi.fn((_col: string, val: string) => {
+            capturedId = val
+            return {
+              select: vi.fn(() => ({
+                maybeSingle: maybeSingleMock,
+              })),
+            }
+          }),
+        })),
+      })),
+    } as never)
     const { updateUser } = await loadUsersModules()
 
     const updated = await updateUser('2', { email: 'SOCIO@ALEA.CLUB', role: 'member' })
 
     expect(updated.id).toBe('2')
+    expect(updated.id).not.toBe('1')
     expect(updated.email).toBe('socio@alea.club')
   })
 

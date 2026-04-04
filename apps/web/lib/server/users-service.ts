@@ -57,6 +57,10 @@ function sanitizeSearchTerm(search: string) {
   return search.replace(/[^a-zA-Z0-9@._-]/g, '')
 }
 
+function escapeLikeWildcards(term: string) {
+  return term.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}
+
 export async function listPaginatedUsers(input: {
   page: number
   limit: number
@@ -71,8 +75,9 @@ export async function listPaginatedUsers(input: {
     .select(PROFILE_COLUMNS, { count: 'exact' })
 
   if (search) {
-    const escaped = sanitizeSearchTerm(search)
-    if (escaped) {
+    const sanitized = sanitizeSearchTerm(search)
+    if (sanitized) {
+      const escaped = escapeLikeWildcards(sanitized)
       query = query.or(`email.ilike.%${escaped}%,member_number.ilike.%${escaped}%`)
     }
   }
