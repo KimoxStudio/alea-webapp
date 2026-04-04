@@ -10,7 +10,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "next lint --no-cache",
-    "typecheck": "next typegen && rm -f .next/cache/.tsbuildinfo && tsc --noEmit"
+    "typecheck": "next typegen && node -e \"require('node:fs').rmSync('.next/cache/.tsbuildinfo', { force: true })\" && tsc --noEmit"
   },
   "dependencies": {
     "@alea/types": "workspace:*",

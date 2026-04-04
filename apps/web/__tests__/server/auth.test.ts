@@ -1,4 +1,3 @@
-import { createHmac } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -14,17 +13,6 @@ function createMutationRequest(origin = 'http://localhost:3000') {
   })
 }
 
-function createSignedTestSessionToken() {
-  const payload = Buffer.from(
-    JSON.stringify({ userId: '1', role: 'admin', exp: 4102444800 }),
-  ).toString('base64url')
-  const signature = createHmac('sha256', 'test-secret-with-at-least-32-chars')
-    .update(payload)
-    .digest('base64url')
-
-  return `${payload}.${signature}`
-}
-
 describe('server auth helpers', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -33,6 +21,7 @@ describe('server auth helpers', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.doUnmock('next/headers')
   })
 
@@ -147,7 +136,10 @@ describe('server auth helpers', () => {
   })
 
   it('reads the session from server cookies', async () => {
-    const token = createSignedTestSessionToken()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2099-01-01T00:00:00Z'))
+    const { createSessionToken } = await import('@/lib/server/auth')
+    const token = createSessionToken({ id: '1', role: 'admin' })
 
     vi.doMock('next/headers', () => ({
       cookies: vi.fn(async () => ({
@@ -161,8 +153,8 @@ describe('server auth helpers', () => {
       })),
     }))
 
+    vi.resetModules()
     const { getSessionFromServerCookies } = await import('@/lib/server/auth')
-
     expect(await getSessionFromServerCookies()).toEqual({ id: '1', role: 'admin' })
   })
 })
