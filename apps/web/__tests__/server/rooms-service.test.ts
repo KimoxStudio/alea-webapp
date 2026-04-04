@@ -1,6 +1,69 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ServiceError } from '@/lib/server/service-error'
 
+const maybeSingleMock = vi.fn()
+const listRoomsMock = vi.fn()
+const listTablesMock = vi.fn()
+const listReservationsMock = vi.fn()
+
+vi.mock('@/lib/supabase/server', () => ({
+  createSupabaseServerClient: vi.fn(async () => ({
+    from: vi.fn((table: string) => {
+      if (table === 'rooms') {
+        return {
+          select: vi.fn(() => ({
+            order: listRoomsMock,
+            maybeSingle: maybeSingleMock,
+          })),
+          insert: vi.fn(() => ({
+            select: vi.fn(() => ({
+              maybeSingle: maybeSingleMock,
+            })),
+          })),
+          update: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              select: vi.fn(() => ({
+                maybeSingle: maybeSingleMock,
+              })),
+            })),
+          })),
+        }
+      }
+
+      if (table === 'tables') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              order: listTablesMock,
+            })),
+          })),
+        }
+      }
+
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              in: listReservationsMock,
+            })),
+          })),
+        })),
+      }
+    }),
+  })),
+  createSupabaseServerAdminClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            in: listReservationsMock,
+          })),
+        })),
+      })),
+    })),
+  })),
+}))
+
 async function loadRoomsModules() {
   vi.resetModules()
 
@@ -12,6 +75,47 @@ async function loadRoomsModules() {
 describe('updateRoom', () => {
   beforeEach(() => {
     vi.resetModules()
+    vi.clearAllMocks()
+    listRoomsMock.mockResolvedValue({
+      data: [
+        { id: '1', name: 'Sala Mirkwood', table_count: 8, description: 'Sala principal' },
+      ],
+      error: null,
+    })
+    listTablesMock.mockResolvedValue({
+      data: [
+        {
+          id: 't1',
+          room_id: '1',
+          name: 'Mesa 1',
+          type: 'large',
+          qr_code: 'QR-1',
+          pos_x: 0,
+          pos_y: 0,
+        },
+      ],
+      error: null,
+    })
+    listReservationsMock.mockResolvedValue({
+      data: [
+        {
+          id: 'r1',
+          table_id: 't1',
+          date: '2025-01-01',
+          start_time: '10:00:00',
+          end_time: '12:00:00',
+          status: 'active',
+          surface: null,
+          user_id: '2',
+          created_at: '2025-01-01T00:00:00.000Z',
+        },
+      ],
+      error: null,
+    })
+    maybeSingleMock.mockResolvedValue({
+      data: { id: '1', name: 'Sala Mirkwood Updated', table_count: 8, description: 'Sala principal' },
+      error: null,
+    })
   })
 
   it('throws ServiceError with status 400 when tableCount is defined', async () => {
@@ -19,7 +123,7 @@ describe('updateRoom', () => {
 
     let caught: ServiceError | undefined
     try {
-      updateRoom('1', { tableCount: 5 })
+      await updateRoom('1', { tableCount: 5 })
     } catch (err) {
       caught = err as ServiceError
     }
@@ -33,9 +137,54 @@ describe('updateRoom', () => {
   it('succeeds when tableCount is not provided (using seed room id "1")', async () => {
     const { updateRoom } = await loadRoomsModules()
 
-    const updated = updateRoom('1', { name: 'Sala Mirkwood Updated' })
+    const updated = await updateRoom('1', { name: 'Sala Mirkwood Updated' })
 
     expect(updated).not.toBeNull()
     expect(updated?.name).toBe('Sala Mirkwood Updated')
+  })
+})
+
+describe('getRoomTablesAvailability', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+    listTablesMock.mockResolvedValue({
+      data: [
+        {
+          id: 't3',
+          room_id: '1',
+          name: 'Mesa 3',
+          type: 'removable_top',
+          qr_code: 'QR-3',
+          pos_x: 1,
+          pos_y: 1,
+        },
+      ],
+      error: null,
+    })
+    listReservationsMock.mockResolvedValue({
+      data: [
+        {
+          id: 'r2',
+          table_id: 't3',
+          date: '2025-01-01',
+          start_time: '10:00:00',
+          end_time: '12:00:00',
+          status: 'active',
+          surface: 'top',
+          user_id: '2',
+          created_at: '2025-01-01T00:00:00.000Z',
+        },
+      ],
+      error: null,
+    })
+  })
+
+  it('builds availability from Supabase rows', async () => {
+    const { getRoomTablesAvailability } = await loadRoomsModules()
+
+    const availability = await getRoomTablesAvailability('1', '2025-01-01')
+
+    expect(availability.t3?.top?.some((slot) => slot.startTime === '10:00' && !slot.available)).toBe(true)
   })
 })

@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   return auth.applyCookies(NextResponse.json(
-    listVisibleReservations({
+    await listVisibleReservations({
       session: auth.session,
       userId: searchParams.get('userId'),
       tableId: searchParams.get('tableId'),
@@ -27,7 +27,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    return auth.applyCookies(NextResponse.json(createReservationForSession(auth.session, body), { status: 201 }))
+    return auth.applyCookies(NextResponse.json(
+      await createReservationForSession(auth.session, body),
+      { status: 201 },
+    ))
   } catch (error) {
     return auth.applyCookies(toServiceErrorResponse(error))
   }

@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   return admin.applyCookies(NextResponse.json(
-    listPaginatedUsers({
+    await listPaginatedUsers({
       page: parseInt(searchParams.get('page') ?? '1'),
       limit: parseInt(searchParams.get('limit') ?? '10'),
       search: searchParams.get('search') ?? '',

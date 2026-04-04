@@ -7,5 +7,5 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (auth instanceof NextResponse) return auth
 
   const { id } = await params
-  return auth.applyCookies(NextResponse.json(getRoomTablesAvailability(id, new URL(request.url).searchParams.get('date'))))
+  return auth.applyCookies(NextResponse.json(await getRoomTablesAvailability(id, new URL(request.url).searchParams.get('date'))))
 }

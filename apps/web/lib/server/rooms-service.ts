@@ -1,55 +1,227 @@
-import { buildTableAvailability, createRoom, getRoomTables, listRooms, updateRoomById } from '@/lib/server/mock-db'
+import type { GameTable, Room, TableAvailability, TimeSlot } from '@alea/types'
+import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
+import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
+
+type RoomRow = Tables<'rooms'>
+type TableRow = Tables<'tables'>
+type ReservationRow = Tables<'reservations'>
+type RoomsTableClient = {
+  select: (columns: string) => {
+    order: (column: string, options: { ascending: boolean }) => Promise<{ data: RoomRow[] | null; error: unknown }>
+  }
+  insert: (values: TablesInsert<'rooms'>) => {
+    select: (columns: string) => {
+      maybeSingle: () => Promise<{ data: RoomRow | null; error: unknown }>
+    }
+  }
+  update: (values: TablesUpdate<'rooms'>) => {
+    eq: (column: 'id', value: string) => {
+      select: (columns: string) => {
+        maybeSingle: () => Promise<{ data: RoomRow | null; error: unknown }>
+      }
+    }
+  }
+}
+type TablesByRoomClient = {
+  select: (columns: string) => {
+    eq: (column: 'room_id', value: string) => {
+      order: (column: string, options: { ascending: boolean }) => Promise<{ data: TableRow[] | null; error: unknown }>
+    }
+  }
+}
+type ReservationsByTableClient = {
+  select: (columns: string) => {
+    eq: (column: 'date', value: string) => {
+      eq: (column: 'status', value: 'active') => {
+        in: (column: 'table_id', values: string[]) => Promise<{ data: ReservationRow[] | null; error: unknown }>
+      }
+    }
+  }
+}
+
+const ROOM_COLUMNS = 'id, name, table_count, description'
+const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, pos_x, pos_y'
 
 function resolveDate(date?: string | null): string {
   const trimmed = date?.trim()
   return trimmed ? trimmed : new Date().toISOString().split('T')[0]
 }
 
-export function listAllRooms() {
-  return listRooms()
+function normalizeTime(time: string) {
+  return time.slice(0, 5)
 }
 
-export function createRoomEntry(body: { name?: unknown; tableCount?: unknown; description?: unknown }) {
+function toRoom(row: RoomRow): Room {
+  return {
+    id: row.id,
+    name: row.name,
+    tableCount: row.table_count,
+    description: row.description ?? undefined,
+  }
+}
+
+function toGameTable(row: TableRow): GameTable {
+  return {
+    id: row.id,
+    roomId: row.room_id,
+    name: row.name,
+    type: row.type,
+    qrCode: row.qr_code ?? '',
+    position: row.pos_x == null || row.pos_y == null ? undefined : { x: row.pos_x, y: row.pos_y },
+  }
+}
+
+function generateDaySlots(reservedSlots: Array<{ start: string; end: string }>): TimeSlot[] {
+  return Array.from({ length: 13 }, (_, i) => {
+    const hour = 9 + i
+    const time = `${String(hour).padStart(2, '0')}:00`
+    const nextTime = `${String(hour + 1).padStart(2, '0')}:00`
+    const isReserved = reservedSlots.some((reservation) => reservation.start <= time && reservation.end > time)
+    return { startTime: time, endTime: nextTime, available: !isReserved }
+  })
+}
+
+function buildAvailability(table: GameTable, date: string, reservations: ReservationRow[]): TableAvailability {
+  const reserved = reservations.map((reservation) => ({
+    start: normalizeTime(reservation.start_time),
+    end: normalizeTime(reservation.end_time),
+    surface: reservation.surface ?? undefined,
+  }))
+
+  const availability: TableAvailability = {
+    tableId: table.id,
+    date,
+    slots: generateDaySlots(reserved),
+  }
+
+  if (table.type === 'removable_top') {
+    const topReserved = reserved.filter((reservation) => !reservation.surface || reservation.surface === 'top')
+    const bottomReserved = reserved.filter((reservation) => reservation.surface === 'bottom')
+    availability.top = generateDaySlots(topReserved)
+    availability.bottom = generateDaySlots(bottomReserved)
+    availability.conflicts = generateDaySlots(reserved)
+  }
+
+  return availability
+}
+
+async function listTablesByRoom(roomId: string) {
+  const supabase = await createSupabaseServerClient()
+  const tables = supabase.from('tables') as unknown as TablesByRoomClient
+  const { data, error } = await tables
+    .select(TABLE_COLUMNS)
+    .eq('room_id', roomId)
+    .order('name', { ascending: true })
+
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+
+  return ((data ?? []) as TableRow[]).map(toGameTable)
+}
+
+export async function listAllRooms() {
+  const supabase = await createSupabaseServerClient()
+  const rooms = supabase.from('rooms') as unknown as RoomsTableClient
+  const { data, error } = await rooms
+    .select(ROOM_COLUMNS)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+
+  return ((data ?? []) as RoomRow[]).map(toRoom)
+}
+
+export async function createRoomEntry(body: { name?: unknown; tableCount?: unknown; description?: unknown }) {
   const name = String(body.name ?? '').trim()
   if (!name) {
     serviceError('Room name is required', 400)
   }
 
-  return createRoom({
+  const supabase = await createSupabaseServerClient()
+  const insert: TablesInsert<'rooms'> = {
     name,
-    tableCount: Number(body.tableCount ?? 0),
-    description: body.description ? String(body.description) : undefined,
-  })
+    table_count: Number(body.tableCount ?? 0),
+    description: body.description ? String(body.description) : null,
+  }
+  const rooms = supabase.from('rooms') as unknown as RoomsTableClient
+  const { data, error } = await rooms
+    .insert(insert)
+    .select(ROOM_COLUMNS)
+    .maybeSingle()
+
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+  if (!data) {
+    serviceError('Internal server error', 500)
+  }
+
+  return toRoom(data as RoomRow)
 }
 
-export function updateRoom(id: string, body: { name?: unknown; description?: unknown; tableCount?: unknown }) {
+export async function updateRoom(id: string, body: { name?: unknown; description?: unknown; tableCount?: unknown }) {
   if (body.tableCount !== undefined) {
     serviceError('Updating tableCount is not supported', 400)
   }
 
-  const updated = updateRoomById(id, {
+  const supabase = await createSupabaseServerClient()
+  const updates: TablesUpdate<'rooms'> = {
     name: body.name ? String(body.name) : undefined,
     description: body.description === undefined ? undefined : String(body.description),
-  })
+  }
+  const rooms = supabase.from('rooms') as unknown as RoomsTableClient
+  const { data, error } = await rooms
+    .update(updates)
+    .eq('id', id)
+    .select(ROOM_COLUMNS)
+    .maybeSingle()
 
-  if (!updated) {
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+  if (!data) {
     serviceError('Room not found', 404)
   }
 
-  return updated
+  return toRoom(data as RoomRow)
 }
 
-export function listRoomTables(roomId: string) {
-  return getRoomTables(roomId)
+export async function listRoomTables(roomId: string) {
+  return listTablesByRoom(roomId)
 }
 
-export function getRoomTablesAvailability(roomId: string, date?: string | null) {
+export async function getRoomTablesAvailability(roomId: string, date?: string | null) {
   const effectiveDate = resolveDate(date)
-  const tables = getRoomTables(roomId)
+  const tables = await listTablesByRoom(roomId)
+  if (tables.length === 0) {
+    return {}
+  }
 
-  return tables.reduce<Record<string, ReturnType<typeof buildTableAvailability>>>((acc, table) => {
-    acc[table.id] = buildTableAvailability(table.id, effectiveDate)
+  const admin = createSupabaseServerAdminClient()
+  const reservations = admin.from('reservations') as unknown as ReservationsByTableClient
+  const { data, error } = await reservations
+    .select('id, table_id, date, start_time, end_time, status, surface, user_id, created_at')
+    .eq('date', effectiveDate)
+    .eq('status', 'active')
+    .in('table_id', tables.map((table) => table.id))
+
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+
+  const reservationsByTable = new Map<string, ReservationRow[]>()
+  for (const reservation of (data ?? []) as ReservationRow[]) {
+    const items = reservationsByTable.get(reservation.table_id) ?? []
+    items.push(reservation)
+    reservationsByTable.set(reservation.table_id, items)
+  }
+
+  return tables.reduce<Record<string, TableAvailability>>((acc, table) => {
+    acc[table.id] = buildAvailability(table, effectiveDate, reservationsByTable.get(table.id) ?? [])
     return acc
   }, {})
 }

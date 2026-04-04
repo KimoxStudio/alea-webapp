@@ -13,7 +13,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
     const body = await request.json()
-    return auth.applyCookies(NextResponse.json(updateReservationForSession(auth.session, id, body)))
+    return auth.applyCookies(NextResponse.json(await updateReservationForSession(auth.session, id, body)))
   } catch (error) {
     return auth.applyCookies(toServiceErrorResponse(error))
   }

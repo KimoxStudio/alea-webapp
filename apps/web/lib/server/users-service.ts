@@ -1,48 +1,140 @@
 import type { PaginatedResponse, User } from '@alea/types'
-import { deleteUserById, findUserById, getPublicUser, listUsers, updateUserById } from '@/lib/server/mock-db'
+import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
+import type { Tables, TablesUpdate } from '@/lib/supabase/types'
 
-export function listPaginatedUsers(input: {
+type ProfileRow = Tables<'profiles'>
+type ProfilesQuery = {
+  or: (filter: string) => ProfilesQuery
+  order: (column: string, options: { ascending: boolean }) => {
+    range: (from: number, to: number) => Promise<{
+      data: ProfileRow[] | null
+      error: unknown
+      count: number | null
+    }>
+  }
+}
+type ProfilesTableClient = {
+  select: (columns: string, options?: { count?: 'exact' }) => ProfilesQuery
+  update: (updates: TablesUpdate<'profiles'>) => {
+    eq: (column: 'id', value: string) => {
+      select: (columns: string) => {
+        maybeSingle: () => Promise<{ data: ProfileRow | null; error: unknown }>
+      }
+    }
+  }
+}
+type AdminProfilesTableClient = {
+  select: (columns: string) => {
+    eq: (column: 'id', value: string) => {
+      maybeSingle: () => Promise<{ data: { id: string } | null; error: unknown }>
+    }
+  }
+}
+
+const PROFILE_COLUMNS = 'id, member_number, email, role, created_at, updated_at'
+
+function toPublicUser(profile: ProfileRow): User {
+  return {
+    id: profile.id,
+    memberNumber: profile.member_number,
+    email: profile.email,
+    role: profile.role,
+    createdAt: profile.created_at,
+    updatedAt: profile.updated_at,
+  }
+}
+
+function normalizePage(page: number) {
+  return Math.max(1, Math.floor(Number(page)) || 1)
+}
+
+function normalizeLimit(limit: number) {
+  return Math.min(100, Math.max(1, Math.floor(Number(limit)) || 20))
+}
+
+function sanitizeSearchTerm(search: string) {
+  return search.replace(/[^a-zA-Z0-9@._-]/g, '')
+}
+
+export async function listPaginatedUsers(input: {
   page: number
   limit: number
   search?: string
-}): PaginatedResponse<User> {
-  const page = Math.max(1, Math.floor(Number(input.page)) || 1)
-  const limit = Math.min(100, Math.max(1, Math.floor(Number(input.limit)) || 20))
-  const search = input.search?.trim().toLowerCase() ?? ''
+}): Promise<PaginatedResponse<User>> {
+  const page = normalizePage(input.page)
+  const limit = normalizeLimit(input.limit)
+  const search = input.search?.trim() ?? ''
+  const supabase = await createSupabaseServerClient()
+  const profiles = supabase.from('profiles') as unknown as ProfilesTableClient
+  let query = profiles
+    .select(PROFILE_COLUMNS, { count: 'exact' })
 
-  let filtered = listUsers()
   if (search) {
-    filtered = filtered.filter((u) => u.email.toLowerCase().includes(search) || u.memberNumber.includes(search))
+    const escaped = sanitizeSearchTerm(search)
+    if (escaped) {
+      query = query.or(`email.ilike.%${escaped}%,member_number.ilike.%${escaped}%`)
+    }
   }
 
-  const total = filtered.length
+  const { data, error, count } = await query
+    .order('created_at', { ascending: true })
+    .range((page - 1) * limit, page * limit - 1)
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+
+  const total = count ?? 0
   return {
-    data: filtered.slice((page - 1) * limit, page * limit),
+    data: ((data ?? []) as ProfileRow[]).map(toPublicUser),
     total,
     page,
     limit,
-    totalPages: Math.ceil(total / limit),
+    totalPages: total === 0 ? 0 : Math.ceil(total / limit),
   }
 }
 
-export function updateUser(id: string, body: { memberNumber?: unknown; email?: unknown; role?: unknown }) {
-  const existing = findUserById(id)
-  if (!existing) {
+export async function updateUser(id: string, body: { memberNumber?: unknown; email?: unknown; role?: unknown }) {
+  const updates: TablesUpdate<'profiles'> = {}
+  if (body.memberNumber) updates.member_number = String(body.memberNumber)
+  if (body.email) updates.email = String(body.email).toLowerCase()
+  if (body.role === 'admin' || body.role === 'member') updates.role = body.role
+
+  const supabase = await createSupabaseServerClient()
+  const profiles = supabase.from('profiles') as unknown as ProfilesTableClient
+  const { data, error } = await profiles
+    .update(updates)
+    .eq('id', id)
+    .select(PROFILE_COLUMNS)
+    .maybeSingle()
+
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+  if (!data) {
     serviceError('User not found', 404)
   }
 
-  const updated = updateUserById(id, {
-    memberNumber: body.memberNumber ? String(body.memberNumber) : undefined,
-    email: body.email ? String(body.email).toLowerCase() : undefined,
-    role: body.role === 'admin' || body.role === 'member' ? body.role : undefined,
-  })
-
-  return updated ?? getPublicUser(existing)
+  return toPublicUser(data as ProfileRow)
 }
 
-export function deleteUser(id: string) {
-  if (!deleteUserById(id)) {
+export async function deleteUser(id: string) {
+  const admin = createSupabaseServerAdminClient()
+  const profiles = admin.from('profiles') as unknown as AdminProfilesTableClient
+  const { data, error } = await profiles
+    .select('id')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+  if (!data) {
     serviceError('User not found', 404)
+  }
+
+  const { error: deleteError } = await admin.auth.admin.deleteUser(id)
+  if (deleteError) {
+    serviceError('Internal server error', 500)
   }
 }

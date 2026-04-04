@@ -12,7 +12,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     const [{ id }, body] = await Promise.all([params, request.json()])
-    return admin.applyCookies(NextResponse.json(updateUser(id, body)))
+    return admin.applyCookies(NextResponse.json(await updateUser(id, body)))
   } catch (error) {
     return admin.applyCookies(toServiceErrorResponse(error))
   }
@@ -26,7 +26,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   if (admin instanceof NextResponse) return admin
 
   try {
-    deleteUser((await params).id)
+    await deleteUser((await params).id)
     return admin.applyCookies(new NextResponse(null, { status: 204 }))
   } catch (error) {
     return admin.applyCookies(toServiceErrorResponse(error))
