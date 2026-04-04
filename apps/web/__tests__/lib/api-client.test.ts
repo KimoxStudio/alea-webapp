@@ -34,4 +34,60 @@ describe('api client', () => {
       }),
     )
   })
+
+  it('preserves the CSRF header when callers pass additional headers', async () => {
+    Object.defineProperty(document, 'cookie', {
+      configurable: true,
+      value: 'alea-csrf-token=test-csrf-token',
+    })
+
+    const { apiClient } = await import('@/lib/api/client')
+
+    await apiClient.post(
+      '/auth/login',
+      { identifier: 'admin@alea.club', password: 'secret' },
+      { headers: { 'x-trace-id': 'trace-1' } },
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/login',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'x-csrf-token': 'test-csrf-token',
+          'x-trace-id': 'trace-1',
+        }),
+      }),
+    )
+  })
+
+  it('preserves the CSRF header when callers pass custom headers', async () => {
+    Object.defineProperty(document, 'cookie', {
+      configurable: true,
+      value: 'alea-csrf-token=test-csrf-token',
+    })
+
+    const { apiClient } = await import('@/lib/api/client')
+
+    await apiClient.post(
+      '/auth/login',
+      { identifier: 'admin@alea.club', password: 'secret' },
+      {
+        headers: {
+          'x-trace-id': 'trace-123',
+        },
+      },
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/login',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'x-csrf-token': 'test-csrf-token',
+          'x-trace-id': 'trace-123',
+        }),
+      }),
+    )
+  })
 })

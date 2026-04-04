@@ -23,12 +23,12 @@ class ApiClient {
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       credentials: 'include',
+      ...options,
       headers: {
         'Content-Type': 'application/json',
         ...(csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {}),
         ...options?.headers,
       },
-      ...options,
     })
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: response.statusText, statusCode: response.status }))
