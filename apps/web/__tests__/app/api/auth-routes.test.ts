@@ -220,6 +220,17 @@ describe('auth API routes', () => {
     expect(response.status).toBe(403)
   })
 
+  it('maps logout service failures to a 500 response', async () => {
+    const { POST } = await import('@/app/api/auth/logout/route')
+    const { ServiceError } = await import('@/lib/server/service-error')
+    logoutWithClientMock.mockRejectedValueOnce(new ServiceError('Internal server error', 500))
+
+    const response = await POST(createJsonRequest('/api/auth/logout'))
+
+    expect(response.status).toBe(500)
+    await expect(response.json()).resolves.toMatchObject({ statusCode: 500 })
+  })
+
   it('sanitizes callback redirects and exchanges the PKCE code when present', async () => {
     const { GET } = await import('@/app/api/auth/callback/route')
 
@@ -244,6 +255,11 @@ describe('auth API routes', () => {
       new NextRequest('http://localhost:3000/api/auth/callback?next=%2Frooms%0Aevil'),
     )
     expect(sanitized.headers.get('location')).toBe('http://localhost:3000/')
+
+    const bareSlash = await GET(
+      new NextRequest('http://localhost:3000/api/auth/callback?next=%2F'),
+    )
+    expect(bareSlash.headers.get('location')).toBe('http://localhost:3000/')
   })
 
   it('redirects to a safe error page when the PKCE code exchange fails', async () => {
@@ -255,6 +271,18 @@ describe('auth API routes', () => {
 
     const response = await GET(
       new NextRequest('http://localhost:3000/api/auth/callback?code=expired-code&next=%2Frooms'),
+    )
+
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('http://localhost:3000/?authError=callback')
+  })
+
+  it('redirects to a safe error page when the PKCE exchange throws unexpectedly', async () => {
+    const { GET } = await import('@/app/api/auth/callback/route')
+    exchangeCodeForSessionMock.mockRejectedValueOnce(new Error('network broke'))
+
+    const response = await GET(
+      new NextRequest('http://localhost:3000/api/auth/callback?code=broken-code&next=%2Frooms'),
     )
 
     expect(response.status).toBe(307)

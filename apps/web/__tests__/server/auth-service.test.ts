@@ -205,4 +205,58 @@ describe('auth service', () => {
       })
     })
   })
+
+  describe('getCurrentUser', () => {
+    it('rejects when no session is present', async () => {
+      const { getCurrentUser } = await loadService()
+
+      await expect(getCurrentUser(null)).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 401,
+      })
+    })
+
+    it('rejects when the session user profile is missing', async () => {
+      const { getCurrentUser } = await loadService()
+
+      await expect(getCurrentUser({ id: 'missing-user', role: 'member' })).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 401,
+      })
+    })
+  })
+
+  describe('logout', () => {
+    it('returns success when the server client signs out cleanly', async () => {
+      const { logout } = await loadService()
+
+      await expect(logout()).resolves.toEqual({ success: true })
+    })
+
+    it('maps sign-out failures to a 500 ServiceError', async () => {
+      const { logout } = await loadService()
+      signOut.mockResolvedValueOnce({ error: { message: 'sign-out failed' } })
+
+      await expect(logout()).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 500,
+      })
+    })
+
+    it('maps route-handler sign-out failures to a 500 ServiceError', async () => {
+      const { logoutWithClient } = await loadService()
+
+      await expect(
+        logoutWithClient({
+          auth: {
+            signInWithPassword,
+            signOut: vi.fn(async () => ({ error: { message: 'sign-out failed' } })),
+          },
+        }),
+      ).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 500,
+      })
+    })
+  })
 })

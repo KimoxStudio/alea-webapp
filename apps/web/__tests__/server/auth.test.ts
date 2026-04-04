@@ -76,6 +76,16 @@ describe('server auth helpers', () => {
     })
   })
 
+  it('returns null when the profile lookup fails after a valid auth session', async () => {
+    routeGetUser.mockResolvedValueOnce({ data: { user: { id: 'user-1' } }, error: null })
+    profileMaybeSingle.mockResolvedValueOnce({ data: null, error: { message: 'db failed' } })
+    const { getSessionFromRequest } = await import('@/lib/server/auth')
+
+    await expect(
+      getSessionFromRequest(new NextRequest('http://localhost:3000/api/auth/me')),
+    ).resolves.toBeNull()
+  })
+
   it('returns 401 from requireAuth when no Supabase user is present', async () => {
     const { requireAuth } = await import('@/lib/server/auth')
 
@@ -143,5 +153,22 @@ describe('server auth helpers', () => {
     )
 
     expect(rejected?.status).toBe(403)
+
+    const missingOrigin = enforceSameOriginForMutation(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+      }),
+    )
+    expect(missingOrigin?.status).toBe(403)
+
+    const malformedOrigin = enforceSameOriginForMutation(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          origin: 'not-a-valid-origin',
+        },
+      }),
+    )
+    expect(malformedOrigin?.status).toBe(403)
   })
 })
