@@ -97,11 +97,11 @@ describe('auth API routes', () => {
   })
 
   it('registers a user, reads it from /me, and clears the cookie on logout', async () => {
-    const loginRoute = await import('@/app/api/auth/register/route')
+    const registerRoute = await import('@/app/api/auth/register/route')
     const meRoute = await import('@/app/api/auth/me/route')
     const logoutRoute = await import('@/app/api/auth/logout/route')
 
-    const registerResponse = await loginRoute.POST(
+    const registerResponse = await registerRoute.POST(
       createJsonRequest('/api/auth/register', {
         memberNumber: '100099',
         email: 'nuevo@alea.club',

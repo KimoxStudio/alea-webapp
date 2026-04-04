@@ -8,7 +8,7 @@
     "build": "pnpm --filter @alea/web build && pnpm --filter @alea/api build",
     "test": "pnpm --filter @alea/web test && pnpm --filter @alea/api test",
     "test:coverage": "pnpm --filter @alea/web test:coverage",
-    "test:integration": "bash ./scripts/supabase-integration-check.sh",
+    "test:integration": "node -e \"if (process.platform === 'win32') { console.log('Skipping integration shell check on Windows.'); process.exit(0); } require('node:child_process').execFileSync('bash', ['./scripts/supabase-integration-check.sh'], { stdio: 'inherit' });\"",
     "typecheck": "pnpm --filter @alea/web typecheck && pnpm --filter @alea/api typecheck",
     "lint": "pnpm --filter @alea/web lint && pnpm --filter @alea/api lint",
     "security:deps": "pnpm audit --prod --audit-level high"

@@ -42,6 +42,7 @@ rewrite_temp_config() {
   local studio_port="$((port_base + 3))"
 
   cp -R "${root_dir}/supabase" "${tmp_project_dir}/supabase"
+  rm -rf "${tmp_project_dir}/supabase/.temp" "${tmp_project_dir}/supabase/.branches"
   perl -0pi -e "s/^project_id = \".*\"$/project_id = \"${tmp_project_id}\"/m" "${tmp_project_dir}/supabase/config.toml"
   perl -0pi -e "s/^\\[api\\]\\nenabled = true\\nport = \\d+/[api]\\nenabled = true\\nport = ${api_port}/m" "${tmp_project_dir}/supabase/config.toml"
   perl -0pi -e "s/^\\[db\\]\\nport = \\d+\\nshadow_port = \\d+/[db]\\nport = ${db_port}\\nshadow_port = ${shadow_port}/m" "${tmp_project_dir}/supabase/config.toml"
