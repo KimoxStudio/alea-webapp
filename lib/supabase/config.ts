@@ -3,7 +3,7 @@ import 'server-only'
 // Server-only Supabase config getters.
 // This file is guarded by `server-only` and will throw a build error
 // if accidentally imported in a Client Component or browser bundle.
-// Only exports the secret service role key getter.
+// Only exports the secret key getter (SUPABASE_SECRET_DEFAULT_KEY).
 //
 // For public-safe getters (URL and publishable key), import from ./config.client.
 
