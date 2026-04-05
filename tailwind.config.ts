@@ -123,7 +123,8 @@ const config: Config = {
         DEFAULT: '0.125rem',
         lg: '0.25rem',
         xl: '0.5rem',
-        full: '0.75rem',
+        '2xl': '0.75rem',
+        // full is not overridden → keeps Tailwind default (9999px)
       },
       keyframes: {
         'accordion-down': { from: { height: '0' }, to: { height: 'var(--radix-accordion-content-height)' } },
