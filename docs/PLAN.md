@@ -45,7 +45,7 @@
 - `supabase/` directory with `config.toml` for local dev
 - Initial schema migration: `profiles`, `rooms`, `tables`, `reservations`
 - RLS policies with `WITH CHECK` on all UPDATE policies
-- Env variable structure: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- Env variable structure: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - `.env.example` and `.env.local.example`
 - Typed Supabase clients: SSR (`createServerClient`) + admin (`createClient` stateless)
 - Signup trigger (`handle_new_user`) for auto-creating profiles
