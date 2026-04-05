@@ -117,7 +117,7 @@ export function UsersView({ locale }: UsersViewProps) {
             <p className="mb-2 text-xs font-bold uppercase tracking-[0.3em] text-primary">
               {copy.badge}
             </p>
-            <h1 className="font-cinzel text-4xl tracking-tight text-on-surface md:text-5xl">
+            <h1 className="font-headline text-4xl md:text-5xl tracking-tight text-on-surface">
               {copy.title}
             </h1>
           </div>
@@ -131,7 +131,7 @@ export function UsersView({ locale }: UsersViewProps) {
                 setPage(1)
               }}
               placeholder={copy.searchPlaceholder}
-              className="h-14 rounded-xl border-outline-variant/10 bg-surface-container-low/60 pl-12 text-sm text-foreground shadow-lg shadow-black/20 backdrop-blur-md"
+              className="py-4 rounded-lg border-outline-variant/10 bg-surface-container-low/60 pl-12 text-sm text-on-surface shadow-lg shadow-black/20 backdrop-blur-md"
             />
           </div>
         </div>
@@ -140,7 +140,7 @@ export function UsersView({ locale }: UsersViewProps) {
           <div className="group relative overflow-hidden rounded-xl bg-primary p-8 text-on-primary shadow-xl">
             <div className="relative z-10">
               <h2 className="text-xs font-bold uppercase tracking-[0.2em]">{copy.totalMembers}</h2>
-              <p className="mt-4 font-cinzel text-6xl font-bold italic">{total}</p>
+              <p className="mt-4 font-headline text-6xl font-bold italic mb-2">{total}</p>
               <div className="mt-3 flex items-center gap-2 text-sm text-on-primary/80">
                 <TrendingUp className="h-4 w-4" aria-hidden="true" />
                 <span>{copy.activeThisMonth}</span>
@@ -152,7 +152,7 @@ export function UsersView({ locale }: UsersViewProps) {
           <div className="relative overflow-hidden rounded-xl border border-outline-variant/10 bg-surface-container-high/40 p-8 backdrop-blur-md md:col-span-2">
             <div className="max-w-md">
               <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-primary">{copy.systemSecurity}</h2>
-              <p className="mt-4 font-cinzel text-2xl leading-tight text-on-surface">
+              <p className="mt-4 font-headline text-xl mb-4 leading-relaxed text-on-surface">
                 {copy.securityBody}
               </p>
               <div className="mt-5 inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-background/60 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/80">
@@ -171,16 +171,16 @@ export function UsersView({ locale }: UsersViewProps) {
             <table className="w-full border-collapse text-left">
               <thead className="bg-surface-container-high/50">
                 <tr className="border-b border-outline-variant/10">
-                  <th className="px-8 py-5 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{copy.memberNumber}</th>
-                  <th className="px-8 py-5 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{copy.status}</th>
-                  <th className="px-8 py-5 text-right text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{copy.actions}</th>
+                  <th className="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-bold text-stone-500">{copy.memberNumber}</th>
+                  <th className="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-bold text-stone-500">{copy.status}</th>
+                  <th className="px-8 py-5 text-right text-[10px] uppercase tracking-[0.2em] font-bold text-stone-500">{copy.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/5">
                 {users.map((user) => (
                   <tr key={user.id} className="transition-colors hover:bg-primary/5">
                     <td className="px-8 py-6">
-                      <span className="font-cinzel text-lg font-bold text-primary">#{user.memberNumber}</span>
+                      <span className="font-headline text-lg font-bold text-primary">#{user.memberNumber}</span>
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-2">
@@ -194,7 +194,7 @@ export function UsersView({ locale }: UsersViewProps) {
                         />
                         <span className={cn(
                           'text-[10px] uppercase tracking-[0.22em]',
-                          user.status === 'active' ? 'text-primary/80' : 'text-muted-foreground'
+                          user.status === 'active' ? 'text-primary/80' : 'text-on-surface-variant'
                         )}>
                           {user.status === 'active' ? copy.active : copy.suspended}
                         </span>
@@ -205,7 +205,7 @@ export function UsersView({ locale }: UsersViewProps) {
                         <Button variant="ghost" size="icon" className="text-primary/70 hover:text-primary" onClick={() => setEditingUser(user)}>
                           <Edit3 className="h-4 w-4" aria-hidden="true" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => setDeletingUser(user)}>
+                        <Button variant="ghost" size="icon" className="text-on-surface-variant hover:text-destructive" onClick={() => setDeletingUser(user)}>
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </Button>
                       </div>
@@ -217,13 +217,13 @@ export function UsersView({ locale }: UsersViewProps) {
           </div>
 
           {users.length === 0 && (
-            <div className="px-8 py-16 text-center text-sm text-muted-foreground">
+            <div className="px-8 py-16 text-center text-sm text-on-surface-variant">
               {copy.empty}
             </div>
           )}
 
           <div className="flex flex-col items-center justify-between gap-4 border-t border-outline-variant/10 bg-surface-container-low/60 px-8 py-6 md:flex-row">
-            <p className="text-xs uppercase tracking-tight text-muted-foreground">
+            <p className="text-xs uppercase tracking-tighter text-stone-500">
               {copy.showing} {from} {copy.to} {to} {copy.of} {total} {copy.users}
             </p>
             <div className="flex items-center gap-2">
@@ -261,7 +261,7 @@ export function UsersView({ locale }: UsersViewProps) {
       />
 
       <AlertDialog open={!!deletingUser} onOpenChange={(nextOpen) => !nextOpen && setDeletingUser(null)}>
-        <AlertDialogContent className="border-outline-variant/10 bg-surface-container-low text-foreground">
+        <AlertDialogContent className="border-outline-variant/10 bg-surface-container-low text-on-surface">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-cinzel text-2xl italic">{copy.deleteTitle}</AlertDialogTitle>
             <AlertDialogDescription className="text-on-surface-variant">

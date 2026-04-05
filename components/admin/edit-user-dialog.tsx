@@ -64,9 +64,9 @@ export function EditUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <DialogContent className="border-outline-variant/10 bg-surface-container-low text-foreground sm:max-w-xl">
+      <DialogContent className="rounded-xl shadow-2xl border-outline-variant/20 bg-surface-container-low text-on-surface sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-cinzel text-2xl italic text-foreground">
+          <DialogTitle className="font-headline text-3xl text-on-surface mb-2">
             {copy.title}
           </DialogTitle>
           <DialogDescription className="text-on-surface-variant">
@@ -76,28 +76,28 @@ export function EditUserDialog({
 
         <div className="space-y-6">
           <div className="space-y-2">
-            <label className="text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
+            <label className="text-[10px] uppercase tracking-widest font-bold text-primary mb-2">
               {copy.memberNumber}
             </label>
-            <Input value={user?.memberNumber ?? ''} disabled className="h-12 border-outline-variant/20 bg-background-secondary text-foreground" />
+            <Input value={user?.memberNumber ?? ''} disabled className="p-4 rounded-lg border-outline-variant/20 bg-surface-container-high text-on-surface cursor-not-allowed" />
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="user-status" className="text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
+            <label htmlFor="user-status" className="text-[10px] uppercase tracking-widest font-bold text-primary mb-2">
               {copy.accountStatus}
             </label>
             <select
               id="user-status"
               value={status}
               onChange={(event) => setStatus(event.target.value as UserStatus)}
-              className="flex h-12 w-full rounded-md border border-outline-variant/20 bg-background-secondary px-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
+              className="flex w-full rounded-lg border border-outline-variant/20 bg-surface-container-high p-4 text-sm text-on-surface outline-none transition-colors focus:border-primary"
             >
               <option value="active">{copy.active}</option>
               <option value="suspended">{copy.suspended}</option>
             </select>
           </div>
 
-          <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-4">
+          <div className="rounded-lg border border-error/20 bg-error-container/10 p-4">
             <p className="text-[11px] uppercase tracking-[0.28em] text-destructive/80">
               {copy.securityTitle}
             </p>
@@ -111,7 +111,7 @@ export function EditUserDialog({
           <Button variant="outline" onClick={onClose}>
             {locale === 'es' ? 'Cancelar' : 'Cancel'}
           </Button>
-          <Button onClick={() => onSave(status)} disabled={isSaving}>
+          <Button onClick={() => onSave(status)} disabled={isSaving} className="hover:shadow-[0_0_20px_rgba(255,183,123,0.3)] transition-all">
             {isSaving ? (locale === 'es' ? 'Guardando...' : 'Saving...') : copy.save}
           </Button>
         </DialogFooter>
