@@ -5,6 +5,8 @@ import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/l
 import type { Tables } from '@/lib/supabase/types'
 
 type ProfileRow = Tables<'profiles'>
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'created_at' | 'updated_at'>
+type AuthCredentialRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'created_at' | 'updated_at'>
 const PUBLIC_PROFILE_COLUMNS = 'id, member_number, role, created_at, updated_at' as const
 
 // Auth-only columns: email is needed solely to resolve Supabase Auth credentials.
@@ -14,7 +16,11 @@ const AUTH_CREDENTIAL_COLUMNS = 'id, member_number, email, role, created_at, upd
 type PublicProfileLookupColumn = 'id' | 'member_number'
 type AuthCredentialLookupColumn = 'id' | 'member_number'
 type PublicProfileMaybeSingleResult = Promise<{
-  data: ProfileRow | null
+  data: PublicProfileRow | null
+  error: unknown
+}>
+type AuthCredentialMaybeSingleResult = Promise<{
+  data: AuthCredentialRow | null
   error: unknown
 }>
 type PublicProfilesTableClient = {
@@ -27,7 +33,7 @@ type PublicProfilesTableClient = {
 type AuthCredentialTableClient = {
   select: (columns: typeof AUTH_CREDENTIAL_COLUMNS) => {
     eq: (column: AuthCredentialLookupColumn, value: string) => {
-      maybeSingle: () => PublicProfileMaybeSingleResult
+      maybeSingle: () => AuthCredentialMaybeSingleResult
     }
   }
 }
@@ -87,7 +93,7 @@ async function getAuthCredentialProfileBy(
   return data
 }
 
-function toPublicUser(profile: ProfileRow): User {
+function toPublicUser(profile: PublicProfileRow): User {
   return {
     id: profile.id,
     memberNumber: profile.member_number,

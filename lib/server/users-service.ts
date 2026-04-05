@@ -4,11 +4,12 @@ import { serviceError } from '@/lib/server/service-error'
 import type { Tables, TablesUpdate } from '@/lib/supabase/types'
 
 type ProfileRow = Tables<'profiles'>
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'created_at' | 'updated_at'>
 type ProfilesQuery = {
   or: (filter: string) => ProfilesQuery
   order: (column: string, options: { ascending: boolean }) => {
     range: (from: number, to: number) => Promise<{
-      data: ProfileRow[] | null
+      data: PublicProfileRow[] | null
       error: unknown
       count: number | null
     }>
@@ -19,7 +20,7 @@ type ProfilesTableClient = {
   update: (updates: TablesUpdate<'profiles'>) => {
     eq: (column: 'id', value: string) => {
       select: (columns: string) => {
-        maybeSingle: () => Promise<{ data: ProfileRow | null; error: unknown }>
+        maybeSingle: () => Promise<{ data: PublicProfileRow | null; error: unknown }>
       }
     }
   }
@@ -34,7 +35,7 @@ type AdminProfilesTableClient = {
 
 const PROFILE_COLUMNS = 'id, member_number, role, created_at, updated_at'
 
-function toPublicUser(profile: ProfileRow): User {
+function toPublicUser(profile: PublicProfileRow): User {
   return {
     id: profile.id,
     memberNumber: profile.member_number,
@@ -90,7 +91,7 @@ export async function listPaginatedUsers(input: {
 
   const total = count ?? 0
   return {
-    data: ((data ?? []) as ProfileRow[]).map(toPublicUser),
+    data: ((data ?? []) as PublicProfileRow[]).map(toPublicUser),
     total,
     page,
     limit,
@@ -122,7 +123,7 @@ export async function updateUser(id: string, body: { memberNumber?: unknown; rol
     serviceError('User not found', 404)
   }
 
-  return toPublicUser(data as ProfileRow)
+  return toPublicUser(data as PublicProfileRow)
 }
 
 export async function deleteUser(id: string) {
