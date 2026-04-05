@@ -27,6 +27,7 @@ type ParsedCidr = ParsedIpAddress & {
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 const ALLOWED_FETCH_SITES = new Set(['same-origin', 'same-site', 'none'])
 const RATE_LIMIT_STORE_KEY = '__aleaRateLimitStore'
+const TRUST_PROXY_HEADERS_ENV = 'TRUST_PROXY_HEADERS'
 const TRUSTED_PROXY_CIDRS_ENV = 'TRUSTED_PROXY_CIDRS'
 const DEFAULT_TRUSTED_PROXY_CIDRS = ['127.0.0.1/32', '::1/128'] as const
 
@@ -253,6 +254,10 @@ function getTrustedProxyCidrs() {
     .filter(Boolean)
 }
 
+function trustProxyHeaders() {
+  return process.env[TRUST_PROXY_HEADERS_ENV] === 'true'
+}
+
 function isTrustedProxySourceIp(ip: string | null) {
   if (!ip) return false
   return getTrustedProxyCidrs().some((cidr) => isIpInCidr(ip, cidr))
@@ -262,9 +267,9 @@ function getClientAddress(request: NextRequest) {
   const realIp = getValidIp(request.headers.get('x-real-ip'))
   const forwardedFor = getValidIp(request.headers.get('x-forwarded-for'))
 
-  // This trust check assumes the ingress strips and rewrites both x-real-ip and
-  // x-forwarded-for before the request reaches the app runtime.
-  if (forwardedFor && isTrustedProxySourceIp(realIp)) {
+  // This trust path is opt-in and assumes the ingress strips and rewrites both
+  // x-real-ip and x-forwarded-for before the request reaches the app runtime.
+  if (trustProxyHeaders() && forwardedFor && isTrustedProxySourceIp(realIp)) {
     return forwardedFor
   }
 
