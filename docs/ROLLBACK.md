@@ -77,7 +77,7 @@ Supabase migrations are forward-only versioned SQL files in `supabase/migrations
 If a migration was applied and needs to be undone locally:
 
 ```bash
-# Reset the local DB to a clean state and re-run all migrations except the broken one
+# Reset the local DB to a clean state and re-run all migrations from scratch
 supabase db reset
 ```
 
