@@ -70,7 +70,7 @@ If using Vercel or a similar platform, redeploy from the rollback branch or prom
 
 ### Understanding migrations
 
-Supabase migrations are versioned SQL files in `supabase/migrations/`. Each migration may have a corresponding down migration.
+Supabase migrations are forward-only versioned SQL files in `supabase/migrations/`. In this repo, rollbacks are handled by restoring from backup or applying a new migration that reverses the prior schema change, rather than by using paired down migrations.
 
 ### Rolling back a single migration (local dev)
 
@@ -82,6 +82,8 @@ supabase db reset
 ```
 
 `supabase db reset` drops and recreates the local database, runs all migrations from scratch, and applies `supabase/seed.sql`.
+
+**Note:** `supabase db reset` re-applies all migrations from `supabase/migrations/`. If the issue is caused by a broken migration, you must first remove or replace that migration file, then run `supabase db reset`.
 
 ### Rolling back a migration in production
 
@@ -118,7 +120,7 @@ Ensure these variables are correctly set in the target environment before deploy
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anonymous (public) key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (server only) |
 | `AUTH_SESSION_SECRET` | Yes | Secret used for session signing |
-| `NEXT_PUBLIC_APP_URL` | Yes | Public app base URL (e.g. `https://app.alea.club`) |
+| `NEXT_PUBLIC_APP_URL` | No | Public app base URL (e.g. `https://app.alea.club`); only set if deployment, redirect, or OAuth/provider configuration explicitly requires it |
 | `NEXT_PUBLIC_API_URL` | No | API base URL override (default: `/api`) |
 
 > **Security:** `SUPABASE_SERVICE_ROLE_KEY` and `AUTH_SESSION_SECRET` must never be exposed to the browser or committed to git.
