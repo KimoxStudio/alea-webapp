@@ -18,7 +18,7 @@
     "memberNumber": "Member Number", "email": "Email Address",
     "password": "Password", "confirmPassword": "Confirm Password",
     "memberOrEmail": "Member number or email",
-    "identifierPlaceholder": "e.g. 1234 or your@email.com",
+    "identifierPlaceholder": "e.g. 1234",
     "loginSubtitle": "Welcome to Alea Cultural Association",
     "registerSubtitle": "Join our gaming community",
     "registerUnavailableTitle": "Registration is temporarily unavailable",

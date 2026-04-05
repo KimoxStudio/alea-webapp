@@ -18,7 +18,7 @@
     "memberNumber": "Número de Socio", "email": "Correo Electrónico",
     "password": "Contraseña", "confirmPassword": "Confirmar contraseña",
     "memberOrEmail": "Número de socio o correo",
-    "identifierPlaceholder": "ej. 1234 o tu@correo.com",
+    "identifierPlaceholder": "ej. 1234",
     "loginSubtitle": "Bienvenido a la Asociación Cultural Alea",
     "registerSubtitle": "Únete a nuestra comunidad de jugadores",
     "registerUnavailableTitle": "El registro está temporalmente deshabilitado",

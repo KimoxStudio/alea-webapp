@@ -11,7 +11,7 @@ export const passwordSchema = z
   .regex(PASSWORD_SPECIAL_CHARS, 'auth.errors.passwordSpecialChar')
 
 export const loginSchema = z.object({
-  identifier: z.string().min(1, 'auth.errors.memberOrEmailRequired'),
+  identifier: z.string().min(1, 'auth.errors.memberNumberRequired'),
   password: z.string().min(1, 'auth.errors.passwordRequired').max(1024, 'auth.errors.passwordMaxLength'),
 })
 

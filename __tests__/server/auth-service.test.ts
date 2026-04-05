@@ -111,11 +111,11 @@ describe('auth service', () => {
   })
 
   describe('login', () => {
-    it('returns the public user for a valid email/password pair', async () => {
+    it('returns the public user for a valid member number / password pair', async () => {
       const { login } = await loadService()
 
       await expect(
-        login({ identifier: 'admin@alea.club', password: 'Admin1234!@#' }),
+        login({ identifier: '100001', password: 'Admin1234!@#' }),
       ).resolves.toMatchObject({
         id: 'user-1',
         role: 'admin',
@@ -123,7 +123,7 @@ describe('auth service', () => {
       })
     })
 
-    it('resolves the member number to email before signing in', async () => {
+    it('resolves the member number to the Supabase Auth email before signing in', async () => {
       const { login } = await loadService()
 
       await expect(
@@ -140,17 +140,17 @@ describe('auth service', () => {
     it('rejects missing credentials with a 400 ServiceError', async () => {
       const { login } = await loadService()
 
-      await expect(login({ identifier: 'admin@alea.club' })).rejects.toMatchObject({
+      await expect(login({ identifier: '100001' })).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
       })
     })
 
-    it('rejects an unknown identifier with a 401 ServiceError', async () => {
+    it('rejects an unknown member number with a 401 ServiceError', async () => {
       const { login } = await loadService()
 
       await expect(
-        login({ identifier: 'nobody@alea.club', password: 'Admin1234!@#' }),
+        login({ identifier: '999999', password: 'Admin1234!@#' }),
       ).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 401,
@@ -165,7 +165,7 @@ describe('auth service', () => {
       })
 
       await expect(
-        login({ identifier: 'admin@alea.club', password: 'wrong-password' }),
+        login({ identifier: '100001', password: 'wrong-password' }),
       ).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 401,
