@@ -114,7 +114,7 @@ Each service module maps to a domain:
 | `tables-service.ts` | Table listing, lookup, QR codes |
 | `reservations-service.ts` | Create, update, cancel, list reservations |
 | `availability.ts` | Slot generation, conflict detection, `removable_top` surface logic |
-| `security.ts` | `enforceMutationSecurity` (CSRF double-submit + origin + Fetch Metadata), `enforceRateLimit` (in-memory), `ensureCsrfCookie` |
+| `security.ts` | `enforceMutationSecurity` (CSRF double-submit + origin + Fetch Metadata), `enforceRateLimit` (in-memory, trusts `x-forwarded-for` only when `x-real-ip` is inside `TRUSTED_PROXY_CIDRS`), `ensureCsrfCookie` |
 | `http-error.ts` | Response converter: maps a caught `ServiceError` to a `NextResponse` JSON error |
 | `service-error.ts` | `ServiceError` class and `serviceError()` throw helper |
 

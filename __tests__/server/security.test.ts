@@ -32,27 +32,37 @@ describe('server security helpers', () => {
   })
 
   it('returns 429 when a client exceeds the configured rate limit window', async () => {
+    vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-rate-limit', limit: 2, windowMs: 60_000 }
 
     const first = enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'x-forwarded-for': '203.0.113.77' },
+        headers: {
+          'x-forwarded-for': '203.0.113.77',
+          'x-real-ip': '127.0.0.1',
+        },
       }),
       policy,
     )
     const second = enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'x-forwarded-for': '203.0.113.77' },
+        headers: {
+          'x-forwarded-for': '203.0.113.77',
+          'x-real-ip': '127.0.0.1',
+        },
       }),
       policy,
     )
     const third = enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
-        headers: { 'x-forwarded-for': '203.0.113.77' },
+        headers: {
+          'x-forwarded-for': '203.0.113.77',
+          'x-real-ip': '127.0.0.1',
+        },
       }),
       policy,
     )
@@ -61,5 +71,124 @@ describe('server security helpers', () => {
     expect(second).toBeNull()
     expect(third?.status).toBe(429)
     expect(third?.headers.get('retry-after')).toBeTruthy()
+  })
+
+  it('trusts x-forwarded-for only when the request comes through a trusted proxy IP', async () => {
+    vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
+    const { enforceRateLimit } = await import('@/lib/server/security')
+    const policy = { bucket: 'test-trusted-forwarded-for', limit: 1, windowMs: 60_000 }
+
+    const first = enforceRateLimit(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.10',
+          'x-real-ip': '127.0.0.1',
+        },
+      }),
+      policy,
+    )
+    const second = enforceRateLimit(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.11',
+          'x-real-ip': '127.0.0.1',
+        },
+      }),
+      policy,
+    )
+
+    expect(first).toBeNull()
+    expect(second).toBeNull()
+  })
+
+  it('ignores spoofed x-forwarded-for headers from untrusted clients', async () => {
+    vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
+    const { enforceRateLimit } = await import('@/lib/server/security')
+    const policy = { bucket: 'test-untrusted-forwarded-for', limit: 1, windowMs: 60_000 }
+
+    const first = enforceRateLimit(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.10',
+          'x-real-ip': '198.51.100.25',
+        },
+      }),
+      policy,
+    )
+    const second = enforceRateLimit(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.11',
+          'x-real-ip': '198.51.100.25',
+        },
+      }),
+      policy,
+    )
+
+    expect(first).toBeNull()
+    expect(second?.status).toBe(429)
+  })
+
+  it('falls back to local when forwarded headers are present without a trusted source IP', async () => {
+    const { enforceRateLimit } = await import('@/lib/server/security')
+    const policy = { bucket: 'test-missing-real-ip', limit: 1, windowMs: 60_000 }
+
+    const first = enforceRateLimit(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.40',
+        },
+      }),
+      policy,
+    )
+    const second = enforceRateLimit(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.41',
+        },
+      }),
+      policy,
+    )
+
+    expect(first).toBeNull()
+    expect(second?.status).toBe(429)
+  })
+
+  it('does not trust platform-style headers on their own', async () => {
+    vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
+    const { enforceRateLimit } = await import('@/lib/server/security')
+    const policy = { bucket: 'test-forged-platform-header', limit: 1, windowMs: 60_000 }
+
+    const first = enforceRateLimit(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.20',
+          'x-real-ip': '198.51.100.30',
+          'x-vercel-id': 'cdg1::iad1::test',
+        },
+      }),
+      policy,
+    )
+    const second = enforceRateLimit(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.21',
+          'x-real-ip': '198.51.100.30',
+          'x-vercel-id': 'cdg1::iad1::test',
+        },
+      }),
+      policy,
+    )
+
+    expect(first).toBeNull()
+    expect(second?.status).toBe(429)
   })
 })

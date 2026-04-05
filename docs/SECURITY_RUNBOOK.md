@@ -13,10 +13,12 @@
   - `POST /api/auth/logout`
   - admin mutation routes
   - reservation mutation routes
+- `x-forwarded-for` is only trusted when the immediate request source IP in `x-real-ip` belongs to a proxy range explicitly allowlisted via `TRUSTED_PROXY_CIDRS`. Otherwise the app falls back to `x-real-ip` (or `local` when no trusted source IP is present).
 
 ## Operational notes
 
 - The rate limiter is in-memory and best-effort. It is appropriate for local and single-instance deployments, but shared infrastructure should own the final abuse-control layer.
+- If you run a reverse proxy in front of the app, configure `TRUSTED_PROXY_CIDRS` to the source-IP ranges for that proxy/CDN. Do not forward user-controlled `x-forwarded-for` blindly.
 - Session cookies stay at `SameSite=Lax` to avoid breaking legitimate Supabase navigation and callback flows.
 - The CSRF cookie is intentionally readable by the browser because the client must echo it in `x-csrf-token`. The auth session cookie remains `HttpOnly`.
 

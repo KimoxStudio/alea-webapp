@@ -72,6 +72,8 @@ alea-webapp/
 
    Open `.env.local` and fill in your Supabase credentials. The example contains hosted-project placeholders that must be replaced. For local development, use `http://127.0.0.1:54321` for `NEXT_PUBLIC_SUPABASE_URL` and run `supabase status` to get the publishable and secret keys.
 
+   If the app runs behind a reverse proxy or CDN in deployment, set `TRUSTED_PROXY_CIDRS` to the proxy source-IP ranges that are allowed to provide `x-forwarded-for`; otherwise rate limiting falls back to `x-real-ip`.
+
 4. **Start the local Supabase instance**
 
    ```bash
