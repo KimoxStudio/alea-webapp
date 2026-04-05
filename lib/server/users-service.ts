@@ -4,11 +4,12 @@ import { serviceError } from '@/lib/server/service-error'
 import type { Tables, TablesUpdate } from '@/lib/supabase/types'
 
 type ProfileRow = Tables<'profiles'>
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'created_at' | 'updated_at'>
 type ProfilesQuery = {
   or: (filter: string) => ProfilesQuery
   order: (column: string, options: { ascending: boolean }) => {
     range: (from: number, to: number) => Promise<{
-      data: ProfileRow[] | null
+      data: PublicProfileRow[] | null
       error: unknown
       count: number | null
     }>
@@ -19,7 +20,7 @@ type ProfilesTableClient = {
   update: (updates: TablesUpdate<'profiles'>) => {
     eq: (column: 'id', value: string) => {
       select: (columns: string) => {
-        maybeSingle: () => Promise<{ data: ProfileRow | null; error: unknown }>
+        maybeSingle: () => Promise<{ data: PublicProfileRow | null; error: unknown }>
       }
     }
   }
@@ -32,13 +33,12 @@ type AdminProfilesTableClient = {
   }
 }
 
-const PROFILE_COLUMNS = 'id, member_number, email, role, created_at, updated_at'
+const PROFILE_COLUMNS = 'id, member_number, role, created_at, updated_at'
 
-function toPublicUser(profile: ProfileRow): User {
+function toPublicUser(profile: PublicProfileRow): User {
   return {
     id: profile.id,
     memberNumber: profile.member_number,
-    email: profile.email,
     role: profile.role,
     createdAt: profile.created_at,
     updatedAt: profile.updated_at,
@@ -78,7 +78,7 @@ export async function listPaginatedUsers(input: {
     const sanitized = sanitizeSearchTerm(search)
     if (sanitized) {
       const escaped = escapeLikeWildcards(sanitized)
-      query = query.or(`email.ilike.%${escaped}%,member_number.ilike.%${escaped}%`)
+      query = query.or(`member_number.ilike.%${escaped}%`)
     }
   }
 
@@ -91,7 +91,7 @@ export async function listPaginatedUsers(input: {
 
   const total = count ?? 0
   return {
-    data: ((data ?? []) as ProfileRow[]).map(toPublicUser),
+    data: ((data ?? []) as PublicProfileRow[]).map(toPublicUser),
     total,
     page,
     limit,
@@ -99,10 +99,9 @@ export async function listPaginatedUsers(input: {
   }
 }
 
-export async function updateUser(id: string, body: { memberNumber?: unknown; email?: unknown; role?: unknown }) {
+export async function updateUser(id: string, body: { memberNumber?: unknown; role?: unknown }) {
   const updates: TablesUpdate<'profiles'> = {}
   if (body.memberNumber) updates.member_number = String(body.memberNumber)
-  if (body.email) updates.email = String(body.email).toLowerCase()
   if (body.role === 'admin' || body.role === 'member') updates.role = body.role
 
   if (Object.keys(updates).length === 0) {
@@ -124,7 +123,7 @@ export async function updateUser(id: string, body: { memberNumber?: unknown; ema
     serviceError('User not found', 404)
   }
 
-  return toPublicUser(data as ProfileRow)
+  return toPublicUser(data as PublicProfileRow)
 }
 
 export async function deleteUser(id: string) {

@@ -5,6 +5,7 @@ const rangeMock = vi.fn()
 const orderMock = vi.fn()
 const orMock = vi.fn()
 const deleteUserMock = vi.fn()
+let capturedOrFilter: string | undefined
 
 const profileRows = [
   {
@@ -32,12 +33,21 @@ function resetQueryMocks() {
   orMock.mockReset()
   deleteUserMock.mockReset()
 
+  capturedOrFilter = undefined
+  orMock.mockImplementation((filter: string) => {
+    capturedOrFilter = filter
+    const match = filter.match(/ilike\.%(.+)%/)
+    const filtered = match
+      ? profileRows.filter((r) => r.member_number.toLowerCase().includes(match[1].toLowerCase()))
+      : profileRows
+    rangeMock.mockResolvedValue({ data: filtered, error: null, count: filtered.length })
+    return { order: orderMock }
+  })
   rangeMock.mockResolvedValue({
     data: profileRows,
     error: null,
     count: profileRows.length,
   })
-  orMock.mockReturnValue({ order: orderMock })
   orderMock.mockReturnValue({ range: rangeMock })
   maybeSingleMock.mockResolvedValue({ data: profileRows[0], error: null })
   deleteUserMock.mockResolvedValue({ error: null })
@@ -151,13 +161,13 @@ describe('listPaginatedUsers', () => {
     expect(result.limit).toBe(50)
   })
 
-  it('filters by email substring case-insensitively', async () => {
+  it('filters by memberNumber substring case-insensitively', async () => {
     const { listPaginatedUsers } = await loadUsersModules()
 
-    const result = await listPaginatedUsers({ page: 1, limit: 10, search: 'ADMIN' })
+    await listPaginatedUsers({ page: 1, limit: 10, search: 'ADMIN' })
 
-    expect(result.data.length).toBeGreaterThan(0)
-    expect(orMock).toHaveBeenCalledWith('email.ilike.%ADMIN%,member_number.ilike.%ADMIN%')
+    expect(orMock).toHaveBeenCalledWith('member_number.ilike.%ADMIN%')
+    expect(capturedOrFilter).toBe('member_number.ilike.%ADMIN%')
   })
 
   it('filters by memberNumber substring', async () => {
@@ -167,7 +177,7 @@ describe('listPaginatedUsers', () => {
     const result = await listPaginatedUsers({ page: 1, limit: 10, search: '100002' })
 
     expect(result.data.length).toBeGreaterThan(0)
-    expect(orMock).toHaveBeenCalledWith('email.ilike.%100002%,member_number.ilike.%100002%')
+    expect(orMock).toHaveBeenCalledWith('member_number.ilike.%100002%')
   })
 
   it('returns all users when search is empty', async () => {
@@ -220,11 +230,10 @@ describe('updateUser', () => {
     } as never)
     const { updateUser } = await loadUsersModules()
 
-    const updated = await updateUser('2', { email: 'SOCIO@ALEA.CLUB', role: 'member' })
+    const updated = await updateUser('2', { role: 'member' })
 
     expect(updated.id).toBe('2')
     expect(updated.id).not.toBe('1')
-    expect(updated.email).toBe('socio@alea.club')
   })
 
   it('throws 400 when no updatable fields are provided', async () => {

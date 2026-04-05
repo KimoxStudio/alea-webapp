@@ -91,7 +91,11 @@ describe('auth service', () => {
     adminState.byEmail.clear()
     adminState.byMemberNumber.clear()
     adminState.byId.clear()
-    signInWithPassword.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
+    signInWithPassword.mockImplementation(async ({ email }: { email: string }) => {
+      const profile = adminState.byEmail.get(email)
+      if (!profile) return { data: { user: null }, error: { message: 'Invalid credentials' } }
+      return { data: { user: { id: profile.id } }, error: null }
+    })
     signOut.mockResolvedValue({ error: null })
     sessionScopedProfileMaybeSingle.mockReset()
 
@@ -111,27 +115,25 @@ describe('auth service', () => {
   })
 
   describe('login', () => {
-    it('returns the public user for a valid email/password pair', async () => {
+    it('returns the public user for a valid member number / password pair', async () => {
       const { login } = await loadService()
 
       await expect(
-        login({ identifier: 'admin@alea.club', password: 'Admin1234!@#' }),
+        login({ identifier: '100001', password: 'Admin1234!@#' }),
       ).resolves.toMatchObject({
         id: 'user-1',
         role: 'admin',
-        email: 'admin@alea.club',
         memberNumber: '100001',
       })
     })
 
-    it('resolves the member number to email before signing in', async () => {
+    it('resolves the member number to the Supabase Auth email before signing in', async () => {
       const { login } = await loadService()
 
       await expect(
         login({ identifier: '100002', password: 'Socio1234!@#' }),
       ).resolves.toMatchObject({
         id: 'user-2',
-        email: 'socio@alea.club',
       })
       expect(signInWithPassword).toHaveBeenCalledWith({
         email: 'socio@alea.club',
@@ -142,17 +144,17 @@ describe('auth service', () => {
     it('rejects missing credentials with a 400 ServiceError', async () => {
       const { login } = await loadService()
 
-      await expect(login({ identifier: 'admin@alea.club' })).rejects.toMatchObject({
+      await expect(login({ identifier: '100001' })).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
       })
     })
 
-    it('rejects an unknown identifier with a 401 ServiceError', async () => {
+    it('rejects an unknown member number with a 401 ServiceError', async () => {
       const { login } = await loadService()
 
       await expect(
-        login({ identifier: 'nobody@alea.club', password: 'Admin1234!@#' }),
+        login({ identifier: '999999', password: 'Admin1234!@#' }),
       ).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 401,
@@ -167,7 +169,7 @@ describe('auth service', () => {
       })
 
       await expect(
-        login({ identifier: 'admin@alea.club', password: 'wrong-password' }),
+        login({ identifier: '100001', password: 'wrong-password' }),
       ).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 401,
@@ -176,47 +178,21 @@ describe('auth service', () => {
   })
 
   describe('register', () => {
-    it('blocks public self-registration during the auth cutover', async () => {
+    it('returns 403 immediately regardless of input payload shape', async () => {
       const { register } = await loadService()
 
-      await expect(
-        register({
-          memberNumber: '100099',
-          email: 'nuevo@alea.club',
-          password: 'Password1234!@#',
-        }),
-      ).rejects.toMatchObject({
+      await expect(register({ memberNumber: '100099', password: 'Password1234!@#' })).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 403,
       })
     })
 
-    it('still validates missing registration fields with a 400 ServiceError', async () => {
+    it('returns 403 even when called with no fields at all', async () => {
       const { register } = await loadService()
 
-      await expect(
-        register({
-          email: 'admin@alea.club',
-          password: 'Password1234!@#',
-        }),
-      ).rejects.toMatchObject({
+      await expect(register({})).rejects.toMatchObject({
         name: 'ServiceError',
-        statusCode: 400,
-      })
-    })
-
-    it('enforces the minimum password length on the server', async () => {
-      const { register } = await loadService()
-
-      await expect(
-        register({
-          memberNumber: '100099',
-          email: 'nuevo@alea.club',
-          password: 'short',
-        }),
-      ).rejects.toMatchObject({
-        name: 'ServiceError',
-        statusCode: 400,
+        statusCode: 403,
       })
     })
   })
@@ -245,7 +221,6 @@ describe('auth service', () => {
 
       await expect(getCurrentUser({ id: 'user-2', role: 'member' })).resolves.toMatchObject({
         id: 'user-2',
-        email: 'socio@alea.club',
         role: 'member',
       })
       expect(sessionScopedProfileMaybeSingle).toHaveBeenCalledWith('id', 'user-2')

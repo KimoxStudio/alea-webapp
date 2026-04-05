@@ -15,9 +15,9 @@
   },
   "auth": {
     "login": "Sign In", "register": "Register", "logout": "Sign out",
-    "memberNumber": "Member Number", "email": "Email Address",
+    "memberNumber": "Member Number",
     "password": "Password", "confirmPassword": "Confirm Password",
-    "memberOrEmail": "Member number or email",
+    "identifierPlaceholder": "e.g. 1234",
     "loginSubtitle": "Welcome to Alea Cultural Association",
     "registerSubtitle": "Join our gaming community",
     "registerUnavailableTitle": "Registration is temporarily unavailable",
@@ -28,17 +28,13 @@
     "rememberMe": "Remember me", "forgotPassword": "Forgot password?",
     "errors": {
       "invalidCredentials": "Invalid credentials",
-      "emailRequired": "Email is required",
-      "memberOrEmailRequired": "Enter your member number or email",
       "passwordRequired": "Password is required",
       "passwordMinLength": "Password must be at least 12 characters",
       "passwordAlphanumeric": "Password must contain letters and numbers",
       "passwordSpecialChar": "Password must contain at least one special symbol (!@#$%^&*...)",
       "passwordsDoNotMatch": "Passwords do not match",
       "memberNumberRequired": "Member number is required",
-      "emailInvalid": "Email is not valid",
-      "memberNumberExists": "This member number is already registered",
-      "emailExists": "This email is already registered"
+      "memberNumberExists": "This member number is already registered"
     }
   },
   "rooms": {

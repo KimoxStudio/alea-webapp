@@ -91,7 +91,6 @@ describe('auth API routes', () => {
     loginMock.mockResolvedValue({
       id: 'user-1',
       memberNumber: '100001',
-      email: 'admin@alea.club',
       role: 'admin',
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-01T00:00:00.000Z',
@@ -110,7 +109,6 @@ describe('auth API routes', () => {
     getCurrentUserMock.mockResolvedValue({
       id: 'user-2',
       memberNumber: '100099',
-      email: 'nuevo@alea.club',
       role: 'member',
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-01T00:00:00.000Z',
@@ -123,7 +121,7 @@ describe('auth API routes', () => {
 
     const response = await POST(
       createJsonRequest('/api/auth/login', {
-        identifier: 'admin@alea.club',
+        identifier: '100001',
         password: 'Admin1234!@#',
       }),
     )
@@ -132,7 +130,6 @@ describe('auth API routes', () => {
     await expect(response.json()).resolves.toMatchObject({
       id: 'user-1',
       role: 'admin',
-      email: 'admin@alea.club',
     })
     expect(response.cookies.get('sb-access-token')?.value).toBe('test-session')
   })
@@ -144,7 +141,7 @@ describe('auth API routes', () => {
       createJsonRequest(
         '/api/auth/login',
         {
-          identifier: 'admin@alea.club',
+          identifier: '100001',
           password: 'Admin1234!@#',
         },
         { origin: 'https://attacker.example' },
@@ -161,7 +158,7 @@ describe('auth API routes', () => {
       createJsonRequest(
         '/api/auth/login',
         {
-          identifier: 'admin@alea.club',
+          identifier: '100001',
           password: 'Admin1234!@#',
         },
         { csrfToken: null },
@@ -179,7 +176,7 @@ describe('auth API routes', () => {
       createJsonRequest(
         '/api/auth/login',
         {
-          identifier: 'admin@alea.club',
+          identifier: '100001',
           password: 'Admin1234!@#',
         },
         { fetchSite: 'cross-site' },
@@ -197,7 +194,7 @@ describe('auth API routes', () => {
 
     const response = await POST(
       createJsonRequest('/api/auth/login', {
-        identifier: 'admin@alea.club',
+        identifier: '100001',
         password: 'wrong-password',
       }),
     )
@@ -214,7 +211,7 @@ describe('auth API routes', () => {
         createJsonRequest(
           '/api/auth/login',
           {
-            identifier: 'admin@alea.club',
+            identifier: '100001',
             password: 'Admin1234!@#',
           },
           { forwardedFor: '203.0.113.10' },
@@ -228,7 +225,7 @@ describe('auth API routes', () => {
       createJsonRequest(
         '/api/auth/login',
         {
-          identifier: 'admin@alea.club',
+          identifier: '100001',
           password: 'Admin1234!@#',
         },
         { forwardedFor: '203.0.113.10' },
@@ -247,7 +244,6 @@ describe('auth API routes', () => {
     const response = await POST(
       createJsonRequest('/api/auth/register', {
         memberNumber: '100123',
-        email: 'admin@alea.club',
         password: 'Password1234!@#',
       }),
     )
@@ -271,7 +267,6 @@ describe('auth API routes', () => {
     getCurrentUserMock.mockResolvedValueOnce({
       id: 'user-1',
       memberNumber: '100001',
-      email: 'admin@alea.club',
       role: 'admin',
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-01T00:00:00.000Z',
@@ -279,7 +274,7 @@ describe('auth API routes', () => {
 
     const loginResponse = await loginRoute.POST(
       createJsonRequest('/api/auth/login', {
-        identifier: 'admin@alea.club',
+        identifier: '100001',
         password: 'Admin1234!@#',
       }),
     )
@@ -291,7 +286,6 @@ describe('auth API routes', () => {
     expect(meResponse.status).toBe(200)
     await expect(meResponse.json()).resolves.toMatchObject({
       memberNumber: '100001',
-      email: 'admin@alea.club',
       role: 'admin',
     })
 

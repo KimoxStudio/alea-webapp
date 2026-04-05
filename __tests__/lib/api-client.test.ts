@@ -22,7 +22,7 @@ describe('api client', () => {
 
     const { apiClient } = await import('@/lib/api/client')
 
-    await apiClient.post('/auth/login', { identifier: 'admin@alea.club', password: 'secret' })
+    await apiClient.post('/auth/login', { identifier: '100001', password: 'secret' })
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/auth/login',
@@ -43,7 +43,7 @@ describe('api client', () => {
 
     const { apiClient } = await import('@/lib/api/client')
 
-    await apiClient.post('/auth/login', { identifier: 'admin@alea.club', password: 'secret' })
+    await apiClient.post('/auth/login', { identifier: '100001', password: 'secret' })
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/auth/login',
@@ -65,7 +65,7 @@ describe('api client', () => {
 
     await apiClient.post(
       '/auth/login',
-      { identifier: 'admin@alea.club', password: 'secret' },
+      { identifier: '100001', password: 'secret' },
       { headers: { 'x-trace-id': 'trace-1' } },
     )
 
@@ -91,7 +91,7 @@ describe('api client', () => {
 
     await apiClient.post(
       '/auth/login',
-      { identifier: 'admin@alea.club', password: 'secret' },
+      { identifier: '100001', password: 'secret' },
       {
         headers: {
           'x-trace-id': 'trace-123',

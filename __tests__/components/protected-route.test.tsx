@@ -41,7 +41,7 @@ describe('ProtectedRoute', () => {
     vi.mocked(useAuth).mockReturnValue({
       isLoading: false,
       isAuthenticated: true,
-      user: { id: '1', memberNumber: '100001', email: 'test@test.com', role: 'member', createdAt: '', updatedAt: '' },
+      user: { id: '1', memberNumber: '100001', role: 'member', createdAt: '', updatedAt: '' },
       login: vi.fn(),
       logout: vi.fn(),
       register: vi.fn(),

@@ -15,7 +15,6 @@ function createUser(overrides?: Partial<User>): User {
   return {
     id: '1',
     memberNumber: '100001',
-    email: 'admin@alea.club',
     role: 'admin',
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
@@ -80,7 +79,6 @@ describe('AuthProvider', () => {
     const registeredUser = createUser({
       id: '2',
       memberNumber: '100099',
-      email: 'nuevo@alea.club',
       role: 'member',
     })
 

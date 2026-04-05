@@ -50,7 +50,7 @@ alea-webapp/
 ├── lib/
 │   ├── server/                 # Server-side service layer (never imported client-side)
 │   │   ├── auth.ts             # Session guard helpers: requireAuth, requireAdmin, getSessionFromRequest
-│   │   ├── auth-service.ts     # Login (member number or email), logout, getCurrentUser
+│   │   ├── auth-service.ts     # Login (member number only), logout, getCurrentUser
 │   │   ├── users-service.ts    # User CRUD operations
 │   │   ├── rooms-service.ts    # Room listing and lookup
 │   │   ├── tables-service.ts   # Table listing, lookup, QR codes
@@ -108,7 +108,7 @@ Each service module maps to a domain:
 | Module | Responsibility |
 |---|---|
 | `auth.ts` | Session guard helpers: `requireAuth`, `requireAdmin`, `getSessionFromRequest`, `getSessionFromServerCookies` |
-| `auth-service.ts` | Login (member number or email), logout, `getCurrentUser` |
+| `auth-service.ts` | Login (member number only), logout, `getCurrentUser` |
 | `users-service.ts` | User CRUD, role management |
 | `rooms-service.ts` | Room listing and lookup |
 | `tables-service.ts` | Table listing, lookup, QR codes |
@@ -126,13 +126,13 @@ Auth is handled by Supabase Auth with server-side session management via HTTP-on
 
 1. Client POSTs credentials to `/api/auth/login`.
 2. The Route Handler calls `enforceMutationSecurity()` (CSRF double-submit + same-origin `Origin` + Fetch Metadata check) and `enforceRateLimit()` before any service logic runs. If either check fails, a 403 or 429 response is returned immediately.
-3. Route Handler calls `login()` from `auth-service.ts`. The service resolves the profile by member number or email using the admin Supabase client (which bypasses RLS), then calls `supabase.auth.signInWithPassword()` with the resolved email address.
+3. Route Handler calls `login()` from `auth-service.ts`. The service resolves the profile by member number using the admin Supabase client (which bypasses RLS), then calls `supabase.auth.signInWithPassword()` with the resolved email address.
 4. Supabase writes session tokens into cookies. The Route Handler captures these via `createSupabaseRouteHandlerClient` and applies them to the `NextResponse` using `applyCookies()`.
 5. On subsequent page requests, `middleware.ts` calls `supabase.auth.getUser()` as a side effect. The return value is discarded. The call exists solely to allow `@supabase/ssr` to silently refresh an expired access token and write updated session cookies into the response. Middleware does not use the auth result for routing decisions.
 6. Protected API routes enforce authentication and authorization per route via `requireAuth()` and `requireAdmin()` from `lib/server/auth.ts`. These helpers read the session from the incoming request cookies and look up the user's role from the `profiles` table.
 7. Logout calls `supabase.auth.signOut()`, which invalidates the session and clears the auth cookie(s).
 
-Members can log in with their **member number** or **email address**.
+Members can log in with their **member number**.
 
 ### PKCE Callback
 
@@ -142,7 +142,7 @@ Members can log in with their **member number** or **email address**.
 
 ## Data Model (key entities)
 
-- **User** (maps to `profiles` table) — `id`, `memberNumber`, `email`, `role` (`admin` | `member`), `createdAt`, `updatedAt`
+- **User** (maps to `profiles` table) — `id`, `memberNumber`, `role` (`admin` | `member`), `createdAt`, `updatedAt`. The `email` column is intentionally absent from the application profile model in v1 (issue #39 — Stitch UI redesign). The column is retained in the database as nullable to allow re-introduction in a future milestone without a breaking migration. Supabase Auth continues to own the canonical email in `auth.users`.
 - **Room** — `id`, `name`, `tableCount`, `description`, `createdAt`
 - **GameTable** (maps to `tables` table) — `id`, `roomId`, `name`, `type` (`small` | `large` | `removable_top`), `qrCode`, `posX`, `posY` (two separate nullable integer columns)
 - **Reservation** — `id`, `tableId`, `userId`, `date`, `startTime`, `endTime`, `status` (`active` | `cancelled` | `completed`), `surface` (`top` | `bottom` | null)
@@ -181,7 +181,7 @@ There are three distinct Supabase client factories in `lib/supabase/server.ts`:
 
 The browser client factory (`createSupabaseBrowserClient` in `lib/supabase/client.ts`) uses the publishable key and creates a new browser client instance per call. It must never be used in server-side code.
 
-The admin client bypasses all RLS policies and must never be imported in Client Components or exposed to the browser. It is currently used in `auth-service.ts` to look up profiles by email or member number before sign-in, because the anon client's RLS policies would block unauthenticated profile reads.
+The admin client bypasses all RLS policies and must never be imported in Client Components or exposed to the browser. It is currently used in `auth-service.ts` to look up profiles by member number before sign-in, because the anon client's RLS policies would block unauthenticated profile reads.
 
 ---
 

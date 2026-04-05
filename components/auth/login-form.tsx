@@ -62,7 +62,7 @@ export function LoginForm({ locale }: LoginFormProps) {
           name="identifier"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('memberOrEmail')}</FormLabel>
+              <FormLabel>{t('memberNumber')}</FormLabel>
               <FormControl>
                 <Input
                   type="text"

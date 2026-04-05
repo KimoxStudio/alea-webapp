@@ -5,17 +5,35 @@ import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/l
 import type { Tables } from '@/lib/supabase/types'
 
 type ProfileRow = Tables<'profiles'>
-const PUBLIC_PROFILE_COLUMNS = 'id, member_number, email, role, created_at, updated_at' as const
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'created_at' | 'updated_at'>
+type AuthCredentialRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'created_at' | 'updated_at'>
+const PUBLIC_PROFILE_COLUMNS = 'id, member_number, role, created_at, updated_at' as const
 
-type PublicProfileLookupColumn = 'id' | 'email' | 'member_number'
+// Auth-only columns: email is needed solely to resolve Supabase Auth credentials.
+// It is not part of the application profile model (issue #39).
+const AUTH_CREDENTIAL_COLUMNS = 'id, member_number, email, role, created_at, updated_at' as const
+
+type PublicProfileLookupColumn = 'id' | 'member_number'
+type AuthCredentialLookupColumn = 'id' | 'member_number'
 type PublicProfileMaybeSingleResult = Promise<{
-  data: ProfileRow | null
+  data: PublicProfileRow | null
+  error: unknown
+}>
+type AuthCredentialMaybeSingleResult = Promise<{
+  data: AuthCredentialRow | null
   error: unknown
 }>
 type PublicProfilesTableClient = {
   select: (columns: typeof PUBLIC_PROFILE_COLUMNS) => {
     eq: (column: PublicProfileLookupColumn, value: string) => {
       maybeSingle: () => PublicProfileMaybeSingleResult
+    }
+  }
+}
+type AuthCredentialTableClient = {
+  select: (columns: typeof AUTH_CREDENTIAL_COLUMNS) => {
+    eq: (column: AuthCredentialLookupColumn, value: string) => {
+      maybeSingle: () => AuthCredentialMaybeSingleResult
     }
   }
 }
@@ -37,6 +55,10 @@ function getProfilesTable(client: ProfileLookupClient) {
   return client.from('profiles') as PublicProfilesTableClient
 }
 
+function getAuthCredentialTable(client: ProfileLookupClient) {
+  return client.from('profiles') as AuthCredentialTableClient
+}
+
 async function getPublicProfileBy(
   client: ProfileLookupClient,
   column: PublicProfileLookupColumn,
@@ -54,30 +76,36 @@ async function getPublicProfileBy(
   return data
 }
 
-function toPublicUser(profile: ProfileRow): User {
+async function getAuthCredentialProfileBy(
+  client: ProfileLookupClient,
+  column: AuthCredentialLookupColumn,
+  value: string,
+) {
+  const { data, error } = await getAuthCredentialTable(client)
+    .select(AUTH_CREDENTIAL_COLUMNS)
+    .eq(column, value)
+    .maybeSingle()
+
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+
+  return data
+}
+
+function toPublicUser(profile: PublicProfileRow): User {
   return {
     id: profile.id,
     memberNumber: profile.member_number,
-    email: profile.email,
     role: profile.role,
     createdAt: profile.created_at,
     updatedAt: profile.updated_at,
   }
 }
 
-async function getProfileById(id: string) {
+async function getAuthCredentialByMemberNumber(memberNumber: string) {
   const admin = createSupabaseServerAdminClient()
-  return getPublicProfileBy(admin, 'id', id)
-}
-
-async function getProfileByEmail(email: string) {
-  const admin = createSupabaseServerAdminClient()
-  return getPublicProfileBy(admin, 'email', email)
-}
-
-async function getProfileByMemberNumber(memberNumber: string) {
-  const admin = createSupabaseServerAdminClient()
-  return getPublicProfileBy(admin, 'member_number', memberNumber)
+  return getAuthCredentialProfileBy(admin, 'member_number', memberNumber)
 }
 
 export async function login(
@@ -91,17 +119,21 @@ export async function login(
     serviceError('Identifier and password are required', 400)
   }
 
-  const profile = identifier.includes('@')
-    ? await getProfileByEmail(identifier.toLowerCase())
-    : await getProfileByMemberNumber(identifier)
+  // Resolve the auth credential profile by member number (email login not supported).
+  const credentialProfile = await getAuthCredentialByMemberNumber(identifier)
 
-  if (!profile) {
+  if (!credentialProfile) {
+    serviceError('Invalid credentials', 401)
+  }
+
+  if (!credentialProfile.email) {
+    // Profile has no email set — cannot authenticate via Supabase Auth.
     serviceError('Invalid credentials', 401)
   }
 
   const supabase = client ?? await createSupabaseServerClient()
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: profile.email,
+    email: credentialProfile.email,
     password,
   })
 
@@ -109,24 +141,19 @@ export async function login(
     serviceError('Invalid credentials', 401)
   }
 
-  return toPublicUser(profile)
+  if (data.user.id !== credentialProfile.id) {
+    // Guard against profile/auth drift: the authenticated Supabase user must match
+    // the profile resolved by member number.
+    serviceError('Invalid credentials', 401)
+  }
+
+  return toPublicUser(credentialProfile)
 }
 
 export async function register(
-  input: { memberNumber?: unknown; email?: unknown; password?: unknown },
+  _input: unknown,
   _client?: AuthClient,
 ): Promise<User> {
-  const memberNumber = String(input.memberNumber ?? '').trim()
-  const email = String(input.email ?? '').trim().toLowerCase()
-  const password = String(input.password ?? '')
-
-  if (!memberNumber || !email || !password) {
-    serviceError('Member number, email and password are required', 400)
-  }
-  if (password.length < 12) {
-    serviceError('Password must be at least 12 characters', 400)
-  }
-
   serviceError('Registration is currently unavailable', 403)
 }
 
