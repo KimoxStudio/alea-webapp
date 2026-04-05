@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Check, X, Loader2 } from 'lucide-react'
+import { Check, X, Loader2, BadgeIcon, LockKeyhole } from 'lucide-react'
 import { registerSchema, type RegisterFormData } from '@/lib/validations/auth'
 import { useAuth } from '@/lib/auth/auth-context'
 import { Button } from '@/components/ui/button'
@@ -19,13 +19,14 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
     { label: 'Letras y numeros', passed: /[a-zA-Z]/.test(password) && /[0-9]/.test(password) },
     { label: 'Simbolo especial', passed: /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>\/?]/.test(password) },
   ]
+
   return (
     <ul className="mt-2 space-y-1" aria-label="Requisitos de contrasena">
       {checks.map((check) => (
         <li key={check.label} className="flex items-center gap-2 text-xs">
           {check.passed
-            ? <Check className="h-3 w-3 text-emerald flex-shrink-0" aria-hidden="true" />
-            : <X className="h-3 w-3 text-muted-foreground flex-shrink-0" aria-hidden="true" />}
+            ? <Check className="h-3 w-3 flex-shrink-0 text-emerald" aria-hidden="true" />
+            : <X className="h-3 w-3 flex-shrink-0 text-muted-foreground" aria-hidden="true" />}
           <span className={check.passed ? 'text-emerald-light' : 'text-muted-foreground'}>{check.label}</span>
           <span className="sr-only">{check.passed ? '(cumplido)' : '(pendiente)'}</span>
         </li>
@@ -62,43 +63,78 @@ export function RegisterForm({ locale }: RegisterFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
       {serverError && (
-        <div role="alert" className="rounded-md bg-destructive/15 border border-destructive/30 px-4 py-3 text-sm text-destructive-foreground">
+        <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/15 px-4 py-3 text-sm text-destructive-foreground">
           {serverError}
         </div>
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="memberNumber">{t('memberNumber')}</Label>
-        <Input id="memberNumber" type="text" placeholder="123456"
-          aria-describedby={errors.memberNumber ? 'memberNumber-error' : undefined}
-          aria-invalid={!!errors.memberNumber}
-          {...register('memberNumber')}
-        />
+        <Label htmlFor="memberNumber" className="text-[11px] uppercase tracking-[0.25em] text-outline">
+          {t('memberNumber')}
+        </Label>
+        <div className="relative">
+          <BadgeIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-primary/70" aria-hidden="true" />
+          <Input
+            id="memberNumber"
+            type="text"
+            placeholder="123456"
+            className="h-14 rounded-none border-0 border-b-2 border-outline-variant bg-surface-container-low pl-12 pr-4 text-base text-foreground placeholder:text-outline focus-visible:border-primary focus-visible:ring-0"
+            aria-describedby={errors.memberNumber ? 'memberNumber-error' : undefined}
+            aria-invalid={!!errors.memberNumber}
+            {...register('memberNumber')}
+          />
+        </div>
         {errors.memberNumber && <p id="memberNumber-error" role="alert" className="text-xs text-destructive">{t(errors.memberNumber.message as Parameters<typeof t>[0])}</p>}
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="reg-password">{t('password')}</Label>
-        <PasswordInput id="reg-password" autoComplete="new-password"
-          aria-describedby="password-requirements"
-          aria-invalid={!!errors.password}
-          {...register('password')}
-        />
+        <Label htmlFor="reg-password" className="text-[11px] uppercase tracking-[0.25em] text-outline">
+          {t('password')}
+        </Label>
+        <div className="relative">
+          <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-primary/70" aria-hidden="true" />
+          <PasswordInput
+            id="reg-password"
+            autoComplete="new-password"
+            className="h-14 rounded-none border-0 border-b-2 border-outline-variant bg-surface-container-low pl-12 pr-12 text-base text-foreground placeholder:text-outline focus-visible:border-primary focus-visible:ring-0"
+            aria-describedby="password-requirements"
+            aria-invalid={!!errors.password}
+            {...register('password')}
+          />
+        </div>
         <div id="password-requirements"><PasswordStrengthIndicator password={passwordValue} /></div>
         {errors.password && <p role="alert" className="text-xs text-destructive">{t(errors.password.message as Parameters<typeof t>[0])}</p>}
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="confirmPassword">{t('confirmPassword')}</Label>
-        <PasswordInput id="confirmPassword" variant="confirmation" autoComplete="new-password"
-          aria-describedby={errors.confirmPassword ? 'confirm-error' : undefined}
-          aria-invalid={!!errors.confirmPassword}
-          {...register('confirmPassword')}
-        />
+        <Label htmlFor="confirmPassword" className="text-[11px] uppercase tracking-[0.25em] text-outline">
+          {t('confirmPassword')}
+        </Label>
+        <div className="relative">
+          <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-primary/70" aria-hidden="true" />
+          <PasswordInput
+            id="confirmPassword"
+            variant="confirmation"
+            autoComplete="new-password"
+            className="h-14 rounded-none border-0 border-b-2 border-outline-variant bg-surface-container-low pl-12 pr-12 text-base text-foreground placeholder:text-outline focus-visible:border-primary focus-visible:ring-0"
+            aria-describedby={errors.confirmPassword ? 'confirm-error' : undefined}
+            aria-invalid={!!errors.confirmPassword}
+            {...register('confirmPassword')}
+          />
+        </div>
         {errors.confirmPassword && <p id="confirm-error" role="alert" className="text-xs text-destructive">{t(errors.confirmPassword.message as Parameters<typeof t>[0])}</p>}
       </div>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
+      <div className="border-l-2 border-primary bg-primary/5 px-4 py-4 text-sm text-on-surface-variant">
+        {t('passwordRequirements')}
+      </div>
+
+      <Button
+        type="submit"
+        variant="outline"
+        className="h-14 w-full rounded-md border-[1.5px] border-primary bg-transparent font-bold uppercase tracking-[0.3em] text-primary hover:bg-primary/10"
+        disabled={isSubmitting}
+      >
         {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />{t('register')}...</> : t('register')}
       </Button>
     </form>

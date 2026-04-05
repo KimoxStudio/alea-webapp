@@ -15,26 +15,43 @@
   },
   "auth": {
     "login": "Iniciar Sesión", "register": "Registrarse", "logout": "Cerrar sesión",
-    "memberNumber": "Número de Socio",
+    "memberNumber": "Número de Socio", "email": "Email",
     "password": "Contraseña", "confirmPassword": "Confirmar contraseña",
     "identifierPlaceholder": "ej. 1234",
-    "loginSubtitle": "Bienvenido a la Asociación Cultural Alea",
-    "registerSubtitle": "Únete a nuestra comunidad de jugadores",
+    "loginSubtitle": "Recupera tu ficha de socio y entra en el archivo de la asociación desde cualquier dispositivo.",
+    "registerSubtitle": "Crea tus credenciales de acceso y empieza a reservar mesas con tu número de socio.",
+    "archiveHeadline": "Preservar el legado, celebrar cada campaña.",
+    "archiveBody": "Alea reúne rol, juegos de mesa y gestión comunitaria en un archivo de socios pensado para planificar con calma y precisión.",
+    "registerHeadline": "Un nuevo capítulo empieza con un solo número de socio.",
+    "registerBody": "El acceso a la plataforma sigue vinculado al censo de la asociación. Usa tu número de socio para crear credenciales mientras el directorio de socios mantiene los datos privados fuera de la experiencia pública.",
     "registerUnavailableTitle": "El registro está temporalmente deshabilitado",
     "registerUnavailableBody": "Hemos pausado el autoregistro mientras terminamos la migración de autenticación. Inicia sesión con una cuenta existente o contacta con la asociación para solicitar acceso.",
     "noAccount": "No tienes cuenta?", "hasAccount": "Ya tienes cuenta?",
     "showPassword": "Mostrar contraseña", "hidePassword": "Ocultar contraseña",
     "showConfirmation": "Mostrar confirmación", "hideConfirmation": "Ocultar confirmación",
     "rememberMe": "Recordarme", "forgotPassword": "¿Olvidaste tu contraseña?",
+    "accessNoteTitle": "Acceso al archivo",
+    "accessNoteBody": "Usa tu número de socio y tus credenciales actuales. Los privilegios administrativos siguen ocultos salvo que tu perfil tenga el rol correspondiente.",
+    "passwordRequirementsTitle": "Política de contraseña",
+    "passwordRequirementsHint": "Usa una frase larga con letras, números y al menos un símbolo especial.",
+    "passwordRequirementsAria": "Requisitos de contraseña",
+    "passwordRequirements": "Mínimo 12 caracteres, letras y números, y al menos un símbolo especial.",
+    "passwordRuleLength": "Mínimo 12 caracteres",
+    "passwordRuleAlphanumeric": "Letras y números",
+    "passwordRuleSpecial": "Al menos un símbolo especial",
     "errors": {
       "invalidCredentials": "Credenciales inválidas",
       "passwordRequired": "La contraseña es obligatoria",
+      "passwordMaxLength": "La contraseña es demasiado larga",
       "passwordMinLength": "La contraseña debe tener al menos 12 caracteres",
       "passwordAlphanumeric": "La contraseña debe contener letras y números",
       "passwordSpecialChar": "La contraseña debe contener al menos un símbolo especial (!@#$%^&*...)",
       "passwordsDoNotMatch": "Las contraseñas no coinciden",
       "memberNumberRequired": "El número de socio es obligatorio",
-      "memberNumberExists": "Este número de socio ya está registrado"
+      "memberNumberExists": "Este número de socio ya está registrado",
+      "emailRequired": "El email es obligatorio",
+      "emailInvalid": "Introduce un email válido",
+      "emailExists": "Este email ya está registrado"
     }
   },
   "rooms": {
@@ -77,7 +94,15 @@
     "createTable": "Crear mesa", "editUser": "Editar usuario", "deleteUser": "Eliminar usuario",
     "deleteUserConfirm": "Estas seguro de que deseas eliminar este usuario? Esta accion no se puede deshacer.",
     "role": "Rol", "member": "Socio", "admin": "Administrador", "joinDate": "Fecha de registro",
-    "searchUsers": "Buscar usuarios...", "noUsers": "No se encontraron usuarios"
+    "searchUsers": "Buscar por número de socio...", "noUsers": "No se encontraron usuarios",
+    "memberManagement": "Gestión de socios",
+    "accountStatus": "Estado de cuenta",
+    "activeStatus": "Activo",
+    "suspendedStatus": "Suspendido",
+    "securityTitle": "Seguridad del sistema",
+    "securityBody": "Los campos de contraseña permanecen deshabilitados durante la edición según el protocolo interno.",
+    "securityChip": "AES-256 Activo",
+    "showingUsers": "Mostrando {from} a {to} de {total} usuarios"
   },
   "home": {
     "heroTitle": "Tu Aventura Comienza Aquí",
@@ -109,6 +134,8 @@
     "reservations": "Mis Reservas",
     "association": "Web de la Asociación",
     "contact": "Contacto",
+    "privacy": "Privacidad",
+    "terms": "Términos",
     "rights": "Todos los derechos reservados."
   }
 }

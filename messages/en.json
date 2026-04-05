@@ -15,26 +15,43 @@
   },
   "auth": {
     "login": "Sign In", "register": "Register", "logout": "Sign out",
-    "memberNumber": "Member Number",
+    "memberNumber": "Member Number", "email": "Email",
     "password": "Password", "confirmPassword": "Confirm Password",
     "identifierPlaceholder": "e.g. 1234",
-    "loginSubtitle": "Welcome to Alea Cultural Association",
-    "registerSubtitle": "Join our gaming community",
+    "loginSubtitle": "Recover your member record and enter the association archive from any device.",
+    "registerSubtitle": "Create your access credentials and start reserving tables with your member number.",
+    "archiveHeadline": "Preserving heritage, celebrating every campaign.",
+    "archiveBody": "Alea gathers roleplaying, board gaming and community stewardship in a single members archive designed for calm, deliberate planning.",
+    "registerHeadline": "A new chapter begins with a single member number.",
+    "registerBody": "Access to the platform remains tied to the association roster. Use your member number to create credentials while the member directory keeps private data out of the public experience.",
     "registerUnavailableTitle": "Registration is temporarily unavailable",
     "registerUnavailableBody": "We have paused self-service registration while the authentication cutover is being finalized. Please sign in with an existing account or contact the association to request access.",
     "noAccount": "Don't have an account?", "hasAccount": "Already have an account?",
     "showPassword": "Show password", "hidePassword": "Hide password",
     "showConfirmation": "Show confirmation", "hideConfirmation": "Hide confirmation",
     "rememberMe": "Remember me", "forgotPassword": "Forgot password?",
+    "accessNoteTitle": "Archive access",
+    "accessNoteBody": "Use your member number and current credentials. Administrative privileges remain hidden unless your profile has the required role.",
+    "passwordRequirementsTitle": "Password policy",
+    "passwordRequirementsHint": "Use a long passphrase with letters, numbers, and at least one special symbol.",
+    "passwordRequirementsAria": "Password requirements",
+    "passwordRequirements": "Minimum 12 characters, letters and numbers, and at least one special symbol.",
+    "passwordRuleLength": "Minimum 12 characters",
+    "passwordRuleAlphanumeric": "Letters and numbers",
+    "passwordRuleSpecial": "At least one special symbol",
     "errors": {
       "invalidCredentials": "Invalid credentials",
       "passwordRequired": "Password is required",
+      "passwordMaxLength": "Password is too long",
       "passwordMinLength": "Password must be at least 12 characters",
       "passwordAlphanumeric": "Password must contain letters and numbers",
       "passwordSpecialChar": "Password must contain at least one special symbol (!@#$%^&*...)",
       "passwordsDoNotMatch": "Passwords do not match",
       "memberNumberRequired": "Member number is required",
-      "memberNumberExists": "This member number is already registered"
+      "memberNumberExists": "This member number is already registered",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Enter a valid email address",
+      "emailExists": "This email is already registered"
     }
   },
   "rooms": {
@@ -78,7 +95,15 @@
     "editUser": "Edit user", "deleteUser": "Delete user",
     "deleteUserConfirm": "Are you sure you want to delete this user? This action cannot be undone.",
     "role": "Role", "member": "Member", "admin": "Administrator",
-    "joinDate": "Registration date", "searchUsers": "Search users...", "noUsers": "No users found"
+    "joinDate": "Registration date", "searchUsers": "Search by member number...", "noUsers": "No users found",
+    "memberManagement": "Member Management",
+    "accountStatus": "Account Status",
+    "activeStatus": "Active",
+    "suspendedStatus": "Suspended",
+    "securityTitle": "System Security",
+    "securityBody": "Password fields remain disabled during editing per internal security protocol.",
+    "securityChip": "AES-256 Active",
+    "showingUsers": "Showing {from} to {to} of {total} users"
   },
   "home": {
     "heroTitle": "Your Adventure Starts Here",
@@ -110,6 +135,8 @@
     "reservations": "My Reservations",
     "association": "Association Website",
     "contact": "Contact",
+    "privacy": "Privacy",
+    "terms": "Terms",
     "rights": "All rights reserved."
   }
 }
