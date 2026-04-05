@@ -17,7 +17,6 @@
     "login": "Iniciar Sesión", "register": "Registrarse", "logout": "Cerrar sesión",
     "memberNumber": "Número de Socio",
     "password": "Contraseña", "confirmPassword": "Confirmar contraseña",
-    "memberOrEmail": "Número de socio o correo",
     "identifierPlaceholder": "ej. 1234",
     "loginSubtitle": "Bienvenido a la Asociación Cultural Alea",
     "registerSubtitle": "Únete a nuestra comunidad de jugadores",
@@ -29,7 +28,6 @@
     "rememberMe": "Recordarme", "forgotPassword": "¿Olvidaste tu contraseña?",
     "errors": {
       "invalidCredentials": "Credenciales inválidas",
-      "memberOrEmailRequired": "Introduce tu número de socio o correo",
       "passwordRequired": "La contraseña es obligatoria",
       "passwordMinLength": "La contraseña debe tener al menos 12 caracteres",
       "passwordAlphanumeric": "La contraseña debe contener letras y números",
