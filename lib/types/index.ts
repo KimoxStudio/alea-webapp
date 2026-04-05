@@ -3,7 +3,6 @@ export type Role = 'member' | 'admin';
 export interface User {
   id: string;
   memberNumber: string;
-  email: string;
   role: Role;
   createdAt: string;
   updatedAt: string;
