@@ -51,7 +51,7 @@ export function RegisterForm({ locale }: RegisterFormProps) {
   const onSubmit = async (data: RegisterFormData) => {
     setServerError(null)
     try {
-      await registerUser(data.memberNumber, data.email, data.password)
+      await registerUser(data.memberNumber, data.password)
       router.push(`/${locale}/rooms`)
     } catch (err: unknown) {
       const error = err as { message?: string }
@@ -75,16 +75,6 @@ export function RegisterForm({ locale }: RegisterFormProps) {
           {...register('memberNumber')}
         />
         {errors.memberNumber && <p id="memberNumber-error" role="alert" className="text-xs text-destructive">{t(errors.memberNumber.message as Parameters<typeof t>[0])}</p>}
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="email">{t('email')}</Label>
-        <Input id="email" type="email" autoComplete="email" placeholder="nombre@email.com"
-          aria-describedby={errors.email ? 'email-error' : undefined}
-          aria-invalid={!!errors.email}
-          {...register('email')}
-        />
-        {errors.email && <p id="email-error" role="alert" className="text-xs text-destructive">{t(errors.email.message as Parameters<typeof t>[0])}</p>}
       </div>
 
       <div className="space-y-1.5">

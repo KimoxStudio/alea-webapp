@@ -18,7 +18,6 @@ export const loginSchema = z.object({
 export const registerSchema = z
   .object({
     memberNumber: z.string().min(1, 'auth.errors.memberNumberRequired'),
-    email: z.string().email('auth.errors.emailInvalid'),
     password: passwordSchema,
     confirmPassword: z.string(),
   })

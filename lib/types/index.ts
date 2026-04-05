@@ -80,7 +80,6 @@ export interface LoginRequest {
 
 export interface RegisterRequest {
   memberNumber: string;
-  email: string;
   password: string;
 }
 

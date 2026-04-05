@@ -11,7 +11,7 @@ interface AuthContextValue {
   isAuthenticated: boolean
   login: (identifier: string, password: string) => Promise<void>
   logout: () => Promise<void>
-  register: (memberNumber: string, email: string, password: string) => Promise<void>
+  register: (memberNumber: string, password: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -41,8 +41,8 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
     await apiClient.post(endpoints.auth.logout)
     setUser(null)
   }
-  const register = async (memberNumber: string, email: string, password: string) => {
-    const data = await apiClient.post<User>(endpoints.auth.register, { memberNumber, email, password })
+  const register = async (memberNumber: string, password: string) => {
+    const data = await apiClient.post<User>(endpoints.auth.register, { memberNumber, password })
     setUser(data)
   }
 
