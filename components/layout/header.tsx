@@ -31,7 +31,7 @@ export function Header({ locale }: HeaderProps) {
   }
 
   return (
-    <header className="fixed top-0 z-50 w-full border-b border-white/5 bg-stone-950/80 backdrop-blur-xl shadow-2xl shadow-black/40">
+    <header className="fixed top-0 z-50 w-full border-b border-white/5 bg-surface-container-lowest/80 backdrop-blur-xl shadow-2xl shadow-black/40">
       <a href="#main-content" className="skip-link">
         {locale === 'es' ? 'Ir al contenido principal' : 'Skip to main content'}
       </a>
@@ -42,11 +42,9 @@ export function Header({ locale }: HeaderProps) {
           className="flex items-center gap-4 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Alea"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 shadow-[0_0_30px_rgba(255,183,123,0.15)]">
-            <Sword className="h-6 w-6 text-primary" aria-hidden="true" />
-          </div>
+          <Sword className="h-6 w-6 text-primary" aria-hidden="true" />
           <div className="flex flex-col">
-            <span className="font-cinzel text-2xl italic tracking-tight text-primary">ALEA</span>
+            <span className="font-headline italic text-2xl tracking-tighter text-primary">ALEA</span>
             <span className="hidden text-[10px] uppercase tracking-[0.35em] text-muted-foreground md:block">
               Tabletop Association
             </span>
@@ -59,10 +57,9 @@ export function Header({ locale }: HeaderProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'border-b pb-1 font-cinzel text-sm uppercase tracking-[0.22em] transition-colors',
                 isActive(item.href)
-                  ? 'border-primary/50 text-primary'
-                  : 'border-transparent text-foreground/70 hover:text-primary'
+                  ? 'font-headline text-primary border-b border-primary/50 pb-1 uppercase tracking-widest text-sm'
+                  : 'font-headline text-on-surface/70 uppercase tracking-widest text-sm hover:text-primary transition-colors duration-300'
               )}
             >
               {item.label}
@@ -86,7 +83,7 @@ export function Header({ locale }: HeaderProps) {
                 <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
                   {user?.role === 'admin' ? t('nav.admin') : t('nav.profile')}
                 </span>
-                <span className="font-cinzel text-sm text-primary">#{user?.memberNumber}</span>
+                <span className="font-headline text-sm text-primary">#{user?.memberNumber}</span>
               </div>
               <Button variant="ghost" size="icon" className="text-foreground/70 hover:text-primary" aria-label="Notifications">
                 <Bell className="h-4 w-4" aria-hidden="true" />
@@ -105,12 +102,12 @@ export function Header({ locale }: HeaderProps) {
           ) : (
             <div className="hidden items-center gap-3 md:flex">
               <Link href={`/${locale}/login`}>
-                <Button variant="ghost" className="font-cinzel uppercase tracking-[0.2em] text-foreground/80 hover:text-primary">
+                <Button variant="ghost" className="font-headline uppercase tracking-[0.2em] text-foreground/80 hover:text-primary">
                   {t('auth.login')}
                 </Button>
               </Link>
               <Link href={`/${locale}/register`}>
-                <Button className="rounded-full px-5 font-semibold uppercase tracking-[0.22em]">
+                <Button className="px-5 font-semibold uppercase tracking-[0.22em]">
                   {t('auth.register')}
                 </Button>
               </Link>
@@ -130,16 +127,17 @@ export function Header({ locale }: HeaderProps) {
           </Button>
         </div>
       </div>
+      <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
       {mobileMenuOpen && (
-        <div id="mobile-menu" className="border-t border-white/5 bg-stone-950/95 px-6 py-4 md:hidden">
+        <div id="mobile-menu" className="border-t border-white/5 bg-surface-container-lowest/95 px-6 py-4 md:hidden">
           <div className="space-y-3">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'block rounded-lg px-4 py-3 font-cinzel text-sm uppercase tracking-[0.2em] transition-colors',
+                  'block rounded-lg px-4 py-3 font-headline text-sm uppercase tracking-[0.2em] transition-colors',
                   isActive(item.href)
                     ? 'bg-primary/10 text-primary'
                     : 'bg-white/5 text-foreground/80 hover:text-primary'
