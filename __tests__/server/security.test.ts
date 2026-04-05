@@ -191,4 +191,64 @@ describe('server security helpers', () => {
     expect(first).toBeNull()
     expect(second?.status).toBe(429)
   })
+
+  it('rejects malformed IPv6 proxy source values when deciding whether to trust x-forwarded-for', async () => {
+    vi.stubEnv('TRUSTED_PROXY_CIDRS', '::1/128')
+    const { enforceRateLimit } = await import('@/lib/server/security')
+    const policy = { bucket: 'test-invalid-ipv6-source', limit: 1, windowMs: 60_000 }
+
+    const first = enforceRateLimit(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.60',
+          'x-real-ip': '2001::db8::1',
+        },
+      }),
+      policy,
+    )
+    const second = enforceRateLimit(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.61',
+          'x-real-ip': '2001::db8::1',
+        },
+      }),
+      policy,
+    )
+
+    expect(first).toBeNull()
+    expect(second?.status).toBe(429)
+  })
+
+  it('rejects malformed non-compressed IPv6 values with empty segments', async () => {
+    vi.stubEnv('TRUSTED_PROXY_CIDRS', '::1/128')
+    const { enforceRateLimit } = await import('@/lib/server/security')
+    const policy = { bucket: 'test-invalid-ipv6-empty-segment', limit: 1, windowMs: 60_000 }
+
+    const first = enforceRateLimit(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.70',
+          'x-real-ip': ':1:2:3:4:5:6:7:8',
+        },
+      }),
+      policy,
+    )
+    const second = enforceRateLimit(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'x-forwarded-for': '203.0.113.71',
+          'x-real-ip': ':1:2:3:4:5:6:7:8',
+        },
+      }),
+      policy,
+    )
+
+    expect(first).toBeNull()
+    expect(second?.status).toBe(429)
+  })
 })

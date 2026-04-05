@@ -120,34 +120,42 @@ function parseIpv6Segment(segment: string) {
   return Number.parseInt(segment, 16)
 }
 
+function parseIpv6Parts(part: string) {
+  if (!part) return []
+
+  const rawSegments = part.split(':')
+  if (rawSegments.some((segment) => segment.length === 0)) {
+    return [null]
+  }
+
+  return rawSegments.flatMap((segment) => {
+    if (!segment.includes('.')) {
+      const parsedSegment = parseIpv6Segment(segment)
+      return parsedSegment === null ? [null] : [parsedSegment]
+    }
+
+    const parsedIpv4 = parseIpv4(segment)
+    if (!parsedIpv4) return [null]
+
+    return [
+      Number((parsedIpv4.value >> BigInt(16)) & BigInt(0xffff)),
+      Number(parsedIpv4.value & BigInt(0xffff)),
+    ]
+  })
+}
+
 function expandIpv6Segments(ip: string) {
   if (ip.includes(':::')) return null
 
   const hasCompression = ip.includes('::')
-  const [head, tail] = ip.split('::')
+  const compressionParts = ip.split('::')
+  if (compressionParts.length > 2) return null
+
+  const [head, tail] = compressionParts
   if (hasCompression && tail === undefined) return null
 
-  const parsePart = (part: string) =>
-    part
-      .split(':')
-      .filter(Boolean)
-      .flatMap((segment) => {
-        if (!segment.includes('.')) {
-          const parsedSegment = parseIpv6Segment(segment)
-          return parsedSegment === null ? [null] : [parsedSegment]
-        }
-
-        const parsedIpv4 = parseIpv4(segment)
-        if (!parsedIpv4) return [null]
-
-        return [
-          Number((parsedIpv4.value >> BigInt(16)) & BigInt(0xffff)),
-          Number(parsedIpv4.value & BigInt(0xffff)),
-        ]
-      })
-
-  const headSegments = parsePart(head ?? '')
-  const tailSegments = parsePart(tail ?? '')
+  const headSegments = parseIpv6Parts(head ?? '')
+  const tailSegments = parseIpv6Parts(tail ?? '')
   if (headSegments.some((segment) => segment === null)) return null
   if (tailSegments.some((segment) => segment === null)) return null
 
@@ -254,6 +262,8 @@ function getClientAddress(request: NextRequest) {
   const realIp = getValidIp(request.headers.get('x-real-ip'))
   const forwardedFor = getValidIp(request.headers.get('x-forwarded-for'))
 
+  // This trust check assumes the ingress strips and rewrites both x-real-ip and
+  // x-forwarded-for before the request reaches the app runtime.
   if (forwardedFor && isTrustedProxySourceIp(realIp)) {
     return forwardedFor
   }
