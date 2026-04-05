@@ -157,7 +157,7 @@ A `removable_top` table has two bookable surfaces. Reserving one surface blocks 
 - `middleware.ts` handles locale detection and redirect via `next-intl/middleware`.
 - Translation files: `messages/es.json`, `messages/en.json`.
 - `next-intl` is used for both server and client components.
-- `lib/i18n/config.ts` exports the locale list and default locale, consumed by both `middleware.ts` and `next.config.ts`.
+- `lib/i18n/config.ts` exports the locale list and default locale, consumed directly by `middleware.ts` and indirectly by `next.config.ts` (via `lib/i18n/request.ts`).
 
 ---
 
