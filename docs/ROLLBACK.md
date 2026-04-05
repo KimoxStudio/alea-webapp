@@ -127,6 +127,40 @@ For local development, copy `.env.local.example` to `.env.local`. The example va
 
 ---
 
+## Security Implications
+
+Rolling back a deployment can have security consequences that must be addressed before or immediately after redeployment.
+
+### Rolling back past a security fix
+
+If the rollback target predates a security patch (e.g. a credential exposure or input validation fix), **rotate all affected credentials before redeploying**. Redeploying a version with a known vulnerability without rotating secrets leaves the system in a worse state than the original incident.
+
+### `AUTH_SESSION_SECRET` rollback
+
+Rolling back `AUTH_SESSION_SECRET` to a previous value invalidates all currently active sessions. **Every logged-in user will be logged out** and required to re-authenticate. Communicate this to users before rolling back if possible.
+
+### Never rollback to a version with known secret exposure
+
+If the rollback target is a version where secrets were exposed (e.g. accidentally committed to git, leaked in logs), **rotate the exposed credentials first**. Only then redeploy. Rolling back without rotation leaves the exposed values active.
+
+Credentials to rotate if any exposure is suspected:
+
+- `AUTH_SESSION_SECRET` — generate a new secret (min 32 chars)
+- `SUPABASE_SERVICE_ROLE_KEY` — rotate via Supabase Dashboard > Project Settings > API
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — rotate if the anon key was abused
+
+### Supabase service role key rotation on auth architecture rollback
+
+If the rollback affects auth architecture (e.g. rolling back past M3 Supabase auth integration), **rotate the Supabase service role key** before redeployment. This prevents the old key from being usable if it was cached or logged during the affected window.
+
+```bash
+# After rotating the key in the Supabase dashboard, update your deployment environment:
+# SUPABASE_SERVICE_ROLE_KEY=<new-key>
+# Then redeploy.
+```
+
+---
+
 ## Post-Rollback Verification
 
 After rolling back, verify:
