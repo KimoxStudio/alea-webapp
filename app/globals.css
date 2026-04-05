@@ -7,6 +7,8 @@
 @layer base {
   :root {
     --background: #131313;
+    --background-secondary: #201f1f;
+    --background-surface: #1c1b1b;
     --foreground: #e5e2e1;
     --primary: #ffb77b;
     --primary-foreground: #4d2700;
@@ -50,11 +52,12 @@
 @layer components {
   .rpg-card {
     @apply bg-card border border-border rounded-lg transition-all duration-200;
-    @apply hover:shadow-lg;
   }
   .rpg-card:hover {
-    border-color: rgba(255, 183, 123, 0.4);
-    box-shadow: 0 10px 15px -3px rgba(255, 183, 123, 0.05), 0 4px 6px -4px rgba(255, 183, 123, 0.05);
+    border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+    box-shadow:
+      0 10px 15px -3px color-mix(in srgb, var(--primary) 5%, transparent),
+      0 4px 6px -4px color-mix(in srgb, var(--primary) 5%, transparent);
   }
   .table-available {
     @apply border-emerald/60 bg-emerald-dark/20 hover:border-emerald hover:bg-emerald-dark/30;
