@@ -142,7 +142,7 @@ Members can log in with their **member number** or **email address**.
 
 ## Data Model (key entities)
 
-- **User** (maps to `profiles` table) — `id`, `memberNumber`, `email`, `role` (`admin` | `member`), `createdAt`, `updatedAt`
+- **User** (maps to `profiles` table) — `id`, `memberNumber`, `role` (`admin` | `member`), `createdAt`, `updatedAt`. The `email` column is intentionally absent from the application profile model in v1 (issue #39 — Stitch UI redesign). The column is retained in the database as nullable to allow re-introduction in a future milestone without a breaking migration. Supabase Auth continues to own the canonical email in `auth.users`.
 - **Room** — `id`, `name`, `tableCount`, `description`, `createdAt`
 - **GameTable** (maps to `tables` table) — `id`, `roomId`, `name`, `type` (`small` | `large` | `removable_top`), `qrCode`, `posX`, `posY` (two separate nullable integer columns)
 - **Reservation** — `id`, `tableId`, `userId`, `date`, `startTime`, `endTime`, `status` (`active` | `cancelled` | `completed`), `surface` (`top` | `bottom` | null)
