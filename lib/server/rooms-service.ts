@@ -102,7 +102,7 @@ export async function createRoomEntry(body: { name?: unknown; tableCount?: unkno
   const rawCount = body.tableCount ?? 0
   const tableCount = Number(rawCount)
   if (!Number.isFinite(tableCount) || tableCount < 0 || !Number.isInteger(tableCount)) {
-    throw serviceError('tableCount must be a non-negative integer', 400)
+    serviceError('tableCount must be a non-negative integer', 400)
   }
 
   const supabase = await createSupabaseServerClient()
