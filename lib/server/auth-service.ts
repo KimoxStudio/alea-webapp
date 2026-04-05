@@ -161,6 +161,7 @@ export async function getCurrentUser(
     serviceError('Unauthorized', 401)
   }
 
+  // TODO: tighten select return type to avoid cast — see PR #35 comment
   return toPublicUser(profile as ProfileRow)
 }
 
