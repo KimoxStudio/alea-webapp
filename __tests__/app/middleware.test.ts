@@ -63,7 +63,7 @@ describe('middleware', () => {
           httpOnly: true,
           path: '/',
           sameSite: 'lax',
-          secure: false,
+          secure: true,
         }),
       }),
     )
@@ -81,23 +81,4 @@ describe('middleware', () => {
     expect(response.cookies.get('alea-csrf-token')).toBeUndefined()
   })
 
-  it('switches the Supabase auth cookie policy to secure cookies in production', async () => {
-    vi.stubEnv('NODE_ENV', 'production')
-    const middleware = (await import('@/middleware')).default
-
-    await middleware(new NextRequest('https://alea.club/rooms'))
-
-    expect(createServerClientMock).toHaveBeenCalledWith(
-      'https://example.supabase.co',
-      'anon-key',
-      expect.objectContaining({
-        cookieOptions: expect.objectContaining({
-          httpOnly: true,
-          path: '/',
-          sameSite: 'lax',
-          secure: true,
-        }),
-      }),
-    )
-  })
 })

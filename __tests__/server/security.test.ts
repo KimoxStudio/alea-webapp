@@ -1,26 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { NextRequest } from 'next/server'
 
 describe('server security helpers', () => {
-  beforeEach(() => {
-    vi.resetModules()
-    vi.unstubAllEnvs()
-  })
-
-  it('uses hardened cookie options for Supabase sessions in development and production', async () => {
-    vi.stubEnv('NODE_ENV', 'development')
-    let security = await import('@/lib/server/security')
-
-    expect(security.getSupabaseCookieOptions()).toMatchObject({
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      path: '/',
-    })
-
-    vi.resetModules()
-    vi.stubEnv('NODE_ENV', 'production')
-    security = await import('@/lib/server/security')
+  it('uses hardened cookie options with secure always enabled for Supabase sessions', async () => {
+    const security = await import('@/lib/server/security')
 
     expect(security.getSupabaseCookieOptions()).toMatchObject({
       httpOnly: true,

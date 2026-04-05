@@ -31,10 +31,6 @@ function getRateLimitStore() {
   return globalRateLimitStore[RATE_LIMIT_STORE_KEY]
 }
 
-function isProduction() {
-  return process.env.NODE_ENV === 'production'
-}
-
 function forbidden(message: string) {
   return NextResponse.json({ message, statusCode: 403 }, { status: 403 })
 }
@@ -84,7 +80,7 @@ export function getCsrfCookieOptions() {
     httpOnly: false,
     path: '/',
     sameSite: 'lax',
-    secure: isProduction(),
+    secure: true, // environment is determined by Supabase keys, not NODE_ENV
   } satisfies CookieOptionsWithName
 }
 
@@ -93,7 +89,7 @@ export function getSupabaseCookieOptions() {
     httpOnly: true,
     path: '/',
     sameSite: 'lax',
-    secure: isProduction(),
+    secure: true, // environment is determined by Supabase keys, not NODE_ENV
   } satisfies CookieOptionsWithName
 }
 
