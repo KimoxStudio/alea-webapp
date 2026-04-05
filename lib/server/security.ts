@@ -47,6 +47,21 @@ function isSecureContext(): boolean {
   return appUrl.startsWith('https://')
 }
 
+// Warn at most once per process — isSecureContext() is called on every request.
+let _warnedAboutMissingAppUrl = false
+
+function isSecureContext(): boolean {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (!appUrl && !_warnedAboutMissingAppUrl) {
+    _warnedAboutMissingAppUrl = true
+    console.warn(
+      '[security] NEXT_PUBLIC_APP_URL is not set — cookies will be issued without the Secure flag.' +
+        ' Set it to your app URL (e.g. https://app.alea.club).',
+    )
+  }
+  return (appUrl ?? '').startsWith('https://')
+}
+
 function forbidden(message: string) {
   return NextResponse.json({ message, statusCode: 403 }, { status: 403 })
 }
