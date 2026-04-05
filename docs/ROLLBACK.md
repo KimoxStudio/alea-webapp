@@ -120,7 +120,7 @@ Ensure these variables are correctly set in the target environment before deploy
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` | Yes | Supabase publishable key (format: `sb_publishable_*`) |
 | `SUPABASE_SECRET_DEFAULT_KEY` | Yes | Supabase secret key (format: `sb_secret_*`); server only |
 | `AUTH_SESSION_SECRET` | No | Auth session secret (min 32 chars); only required if rolling back to pre-M3 implementations |
-| `NEXT_PUBLIC_APP_URL` | No | Public app base URL (e.g. `https://app.alea.club`); only set if deployment, redirect, or OAuth/provider configuration explicitly requires it |
+| `NEXT_PUBLIC_APP_URL` | No | Public app base URL (e.g. `https://app.alea.club`). In production, set this to the canonical `https` URL for the app: it is used not only for redirects/OAuth/provider configuration, but also to determine secure context for issuing cookies with the `Secure` flag. |
 | `NEXT_PUBLIC_API_URL` | No | API base URL override (default: `/api`) |
 
 > **Security:** `SUPABASE_SECRET_DEFAULT_KEY` and `AUTH_SESSION_SECRET` must never be exposed to the browser or committed to git.
