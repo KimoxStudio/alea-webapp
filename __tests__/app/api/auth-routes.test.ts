@@ -82,6 +82,7 @@ describe('auth API routes', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
+    vi.unstubAllEnvs()
     vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
     requestCounter = 0
     loginMock.mockResolvedValue({
