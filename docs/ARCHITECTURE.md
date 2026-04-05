@@ -93,8 +93,10 @@ Auth is handled by Supabase Auth with server-side session management via HTTP-on
 1. Client POSTs credentials to `/api/auth/login`.
 2. Route Handler calls `auth-service.ts` → `supabase.auth.signInWithPassword()`.
 3. Supabase sets an HTTP-only session cookie.
-4. `middleware.ts` validates the session cookie on every request and redirects unauthenticated users.
-5. Logout calls `supabase.auth.signOut()` and clears the cookie.
+4. `middleware.ts` runs on requests to apply `next-intl` routing, refresh Supabase auth state via `auth.getUser()`, and set the CSRF cookie.
+5. Protected pages/components (for example, `app/[locale]/rooms/page.tsx`) check the session and redirect unauthenticated users.
+6. Protected API routes enforce authentication/authorization per route via helpers such as `requireAuth` and `requireAdmin`.
+7. Logout calls `supabase.auth.signOut()`, which invalidates the session and clears the auth cookie(s).
 
 Members can log in with their **member number** or **email address**.
 
@@ -134,9 +136,9 @@ A `removable_top` table has two bookable surfaces. Reserving one surface blocks 
 
 `middleware.ts` runs on every request (Edge Runtime) and handles:
 
-1. **Auth gate**: Redirect unauthenticated users to the login page.
-2. **Locale routing**: Inject locale prefix and resolve `next-intl` locale.
-3. **Public routes**: Certain paths (login, public API) bypass the auth gate.
+1. **Locale routing**: Injects locale prefixes and resolves the active `next-intl` locale.
+2. **Supabase user lookup**: Calls `supabase.auth.getUser()` to load the current auth context for the request.
+3. **CSRF cookie setup**: Sets a CSRF cookie used by the application.
 
 ---
 

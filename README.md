@@ -38,7 +38,7 @@ alea-webapp/
 ├── supabase/               # Supabase config, migrations, and seed data
 ├── __tests__/              # Integration and unit tests
 ├── docs/                   # Architecture and decision documentation
-├── middleware.ts            # Auth + i18n routing middleware
+├── middleware.ts            # i18n routing, Supabase session refresh, and CSRF cookie setup
 └── scripts/                # Dev utility scripts
 ```
 
