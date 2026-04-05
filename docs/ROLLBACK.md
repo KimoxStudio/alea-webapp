@@ -121,6 +121,8 @@ Ensure these variables are correctly set in the target environment before deploy
 | `SUPABASE_SECRET_DEFAULT_KEY` | Yes | Supabase secret key (format: `sb_secret_*`); server only |
 | `AUTH_SESSION_SECRET` | No | Auth session secret (min 32 chars); only required if rolling back to pre-M3 implementations |
 | `NEXT_PUBLIC_APP_URL` | No | Public app base URL (e.g. `https://app.alea.club`). In production, set this to the canonical `https` URL for the app: it is used not only for redirects/OAuth/provider configuration, but also to determine secure context for issuing cookies with the `Secure` flag. |
+| `TRUST_PROXY_HEADERS` | No | Set to `true` only when the ingress strips and rewrites both `x-real-ip` and `x-forwarded-for` before requests reach the app. |
+| `TRUSTED_PROXY_CIDRS` | No | Comma-separated CIDR allowlist for reverse proxies that are allowed to supply `x-forwarded-for` when `TRUST_PROXY_HEADERS=true`. Requests outside these source-IP ranges fall back to `x-real-ip` for rate limiting; the ingress must also strip and overwrite inbound `x-real-ip` and `x-forwarded-for`. |
 
 > **Security:** `SUPABASE_SECRET_DEFAULT_KEY` and `AUTH_SESSION_SECRET` must never be exposed to the browser or committed to git.
 

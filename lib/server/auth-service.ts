@@ -5,7 +5,23 @@ import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/l
 import type { Tables } from '@/lib/supabase/types'
 
 type ProfileRow = Tables<'profiles'>
-const PUBLIC_PROFILE_COLUMNS = 'id, member_number, email, role, created_at, updated_at'
+const PUBLIC_PROFILE_COLUMNS = 'id, member_number, email, role, created_at, updated_at' as const
+
+type PublicProfileLookupColumn = 'id' | 'email' | 'member_number'
+type PublicProfileMaybeSingleResult = Promise<{
+  data: ProfileRow | null
+  error: unknown
+}>
+type PublicProfilesTableClient = {
+  select: (columns: typeof PUBLIC_PROFILE_COLUMNS) => {
+    eq: (column: PublicProfileLookupColumn, value: string) => {
+      maybeSingle: () => PublicProfileMaybeSingleResult
+    }
+  }
+}
+type ProfileLookupClient = {
+  from: (table: 'profiles') => unknown
+}
 
 type AuthClient = {
   auth: {
@@ -17,14 +33,25 @@ type AuthClient = {
   }
 }
 
-type ProfileLookupClient = {
-  from: (table: 'profiles') => {
-    select: (columns: string) => {
-      eq: (column: 'id', value: string) => {
-        maybeSingle: () => Promise<{ data: ProfileRow | null; error: { message: string } | null }>
-      }
-    }
+function getProfilesTable(client: ProfileLookupClient) {
+  return client.from('profiles') as PublicProfilesTableClient
+}
+
+async function getPublicProfileBy(
+  client: ProfileLookupClient,
+  column: PublicProfileLookupColumn,
+  value: string,
+) {
+  const { data, error } = await getProfilesTable(client)
+    .select(PUBLIC_PROFILE_COLUMNS)
+    .eq(column, value)
+    .maybeSingle()
+
+  if (error) {
+    serviceError('Internal server error', 500)
   }
+
+  return data
 }
 
 function toPublicUser(profile: ProfileRow): User {
@@ -40,47 +67,17 @@ function toPublicUser(profile: ProfileRow): User {
 
 async function getProfileById(id: string) {
   const admin = createSupabaseServerAdminClient()
-  const { data, error } = await admin
-    .from('profiles')
-    .select(PUBLIC_PROFILE_COLUMNS)
-    .eq('id', id)
-    .maybeSingle()
-
-  if (error) {
-    serviceError('Internal server error', 500)
-  }
-
-  return data
+  return getPublicProfileBy(admin, 'id', id)
 }
 
 async function getProfileByEmail(email: string) {
   const admin = createSupabaseServerAdminClient()
-  const { data, error } = await admin
-    .from('profiles')
-    .select(PUBLIC_PROFILE_COLUMNS)
-    .eq('email', email)
-    .maybeSingle()
-
-  if (error) {
-    serviceError('Internal server error', 500)
-  }
-
-  return data
+  return getPublicProfileBy(admin, 'email', email)
 }
 
 async function getProfileByMemberNumber(memberNumber: string) {
   const admin = createSupabaseServerAdminClient()
-  const { data, error } = await admin
-    .from('profiles')
-    .select(PUBLIC_PROFILE_COLUMNS)
-    .eq('member_number', memberNumber)
-    .maybeSingle()
-
-  if (error) {
-    serviceError('Internal server error', 500)
-  }
-
-  return data
+  return getPublicProfileBy(admin, 'member_number', memberNumber)
 }
 
 export async function login(
@@ -135,17 +132,7 @@ export async function register(
 
 async function getSessionScopedProfile(id: string, client?: ProfileLookupClient) {
   const supabase = client ?? await createSupabaseServerClient()
-  const { data, error } = await supabase
-    .from('profiles')
-    .select(PUBLIC_PROFILE_COLUMNS)
-    .eq('id', id)
-    .maybeSingle()
-
-  if (error) {
-    serviceError('Internal server error', 500)
-  }
-
-  return data
+  return getPublicProfileBy(supabase, 'id', id)
 }
 
 export async function getCurrentUser(
@@ -161,8 +148,7 @@ export async function getCurrentUser(
     serviceError('Unauthorized', 401)
   }
 
-  // TODO: tighten select return type to avoid cast — see PR #35 comment
-  return toPublicUser(profile as ProfileRow)
+  return toPublicUser(profile)
 }
 
 export async function logout() {
