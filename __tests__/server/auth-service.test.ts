@@ -91,7 +91,11 @@ describe('auth service', () => {
     adminState.byEmail.clear()
     adminState.byMemberNumber.clear()
     adminState.byId.clear()
-    signInWithPassword.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
+    signInWithPassword.mockImplementation(async ({ email }: { email: string }) => {
+      const profile = adminState.byEmail.get(email)
+      if (!profile) return { data: { user: null }, error: { message: 'Invalid credentials' } }
+      return { data: { user: { id: profile.id } }, error: null }
+    })
     signOut.mockResolvedValue({ error: null })
     sessionScopedProfileMaybeSingle.mockReset()
 
