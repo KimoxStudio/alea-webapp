@@ -26,13 +26,13 @@
 
 1. Revoke the affected sessions in Supabase and force logout on the affected accounts.
 2. Review recent auth, reservation, and admin mutation activity for the impacted users.
-3. If the blast radius is unclear, rotate the Supabase JWT secret and redeploy.
+3. If the blast radius is unclear, rotate `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` and `SUPABASE_SECRET_DEFAULT_KEY` in the Supabase Dashboard (Project Settings → API Keys) and redeploy.
 4. Confirm clients receive a fresh session cookie and a fresh CSRF cookie after recovery.
 
 ### Service-role or environment secret compromise
 
-1. Rotate `SUPABASE_SECRET_DEFAULT_KEY` immediately via Supabase Dashboard > Project Settings > API.
-2. Rotate `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` if exposure scope is uncertain.
+1. Rotate `SUPABASE_SECRET_DEFAULT_KEY` immediately via Supabase Dashboard → Project Settings → API Keys → Secret keys → default.
+2. Rotate `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` if exposure scope is uncertain (Dashboard → Project Settings → API Keys → Publishable key).
 3. Redeploy with the new secrets.
 4. Audit privileged reads and writes that could have bypassed RLS while the key was exposed.
 
