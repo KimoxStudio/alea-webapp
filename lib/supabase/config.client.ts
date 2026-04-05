@@ -1,19 +1,20 @@
-// Public-safe Supabase config getters.
-// Safe to import in Client Components, middleware, and server code.
-// Does NOT include server-only guard — intentionally browser-safe.
+// Browser-safe Supabase config — uses static process.env references
+// so Next.js can inline the values at build time.
 
-function requiredEnv(name: string): string {
-  const value = process.env[name]
+export function getSupabaseUrl(): string {
+  const value = process.env.NEXT_PUBLIC_SUPABASE_URL
   if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`)
+    throw new Error('Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL')
   }
   return value
 }
 
-export function getSupabaseUrl(): string {
-  return requiredEnv('NEXT_PUBLIC_SUPABASE_URL')
-}
-
 export function getSupabasePublishableKey(): string {
-  return requiredEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY')
+  const value = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY
+  if (!value) {
+    throw new Error(
+      'Missing required environment variable: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY',
+    )
+  }
+  return value
 }
