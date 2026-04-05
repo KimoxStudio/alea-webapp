@@ -40,7 +40,7 @@ describe('middleware', () => {
     vi.resetModules()
     vi.clearAllMocks()
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co')
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY', 'anon-key')
     getUserMock.mockResolvedValue({ data: { user: null }, error: null })
   })
 
