@@ -135,6 +135,22 @@ describe('server auth helpers', () => {
           method: 'POST',
           headers: {
             origin: 'http://localhost:3000',
+            cookie: 'alea-csrf-token=test-csrf-token',
+            'x-csrf-token': 'test-csrf-token',
+          },
+        }),
+      ),
+    ).toBeNull()
+
+    expect(
+      enforceSameOriginForMutation(
+        new NextRequest('http://localhost:3000/api/auth/login', {
+          method: 'POST',
+          headers: {
+            origin: 'http://localhost:3000',
+            cookie: 'alea-csrf-token=test-csrf-token',
+            'x-csrf-token': 'test-csrf-token',
+            'sec-fetch-site': 'same-origin',
           },
         }),
       ),
@@ -145,6 +161,8 @@ describe('server auth helpers', () => {
         method: 'POST',
         headers: {
           origin: 'http://localhost:3000',
+          cookie: 'alea-csrf-token=test-csrf-token',
+          'x-csrf-token': 'test-csrf-token',
         },
       }),
     )
@@ -156,6 +174,8 @@ describe('server auth helpers', () => {
         method: 'POST',
         headers: {
           origin: 'https://attacker.example',
+          cookie: 'alea-csrf-token=test-csrf-token',
+          'x-csrf-token': 'test-csrf-token',
         },
       }),
     )
@@ -178,5 +198,28 @@ describe('server auth helpers', () => {
       }),
     )
     expect(malformedOrigin?.status).toBe(403)
+
+    const crossSite = enforceSameOriginForMutation(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          origin: 'http://localhost:3000',
+          cookie: 'alea-csrf-token=test-csrf-token',
+          'x-csrf-token': 'test-csrf-token',
+          'sec-fetch-site': 'cross-site',
+        },
+      }),
+    )
+    expect(crossSite?.status).toBe(403)
+
+    const missingCsrf = enforceSameOriginForMutation(
+      new NextRequest('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          origin: 'http://localhost:3000',
+        },
+      }),
+    )
+    expect(missingCsrf?.status).toBe(403)
   })
 })

@@ -1,7 +1,7 @@
 # Migration Execution Plan — Alea Webapp
 
 **Last updated:** 2026-04-04
-**Branch:** feat/next-api-m4-api-parity
+**Branch:** feat/next-api-security-hardening
 **Epic:** #3 — Next.js API migration (remove NestJS + monorepo)
 **Platform:** Supabase (dev + prod, sole DB/auth provider)
 
@@ -17,8 +17,8 @@
 | QA — CI quality gates | #12 | Done | — |
 | UI — shadcn + auth foundation | #18 | Done | PR #19 (merged) |
 | M3 — Auth cutover (Supabase SSR) | #6 | Done | PR #22 (merged) |
-| M4 — API parity | #7 | In Progress | Branch `feat/next-api-m4-api-parity` |
-| SEC — Security hardening | #10 | Pending | — |
+| M4 — API parity | #7 | Done | PR #23 (merged) |
+| SEC — Security hardening | #10 | In Progress | Branch `feat/next-api-security-hardening` |
 | M5 — Flatten repo / remove NestJS | #8 | Pending | — |
 | M6 — Cleanup + release readiness | #9 | Pending | — |
 
@@ -102,7 +102,7 @@
 
 ### P2 — After M3
 
-#### 4. Issue #10 — [SEC] Security hardening (parallel with #7)
+#### 4. Issue #10 — [SEC] Security hardening
 **Branch:** `feat/next-api-security-hardening`
 **Depends on:** #6
 **Deliverables:**
@@ -111,9 +111,10 @@
 - Origin/fetch-metadata checks
 - Security runbook documented
 
-#### 5. Issue #7 — [M4] API parity across all domains (parallel with #10)
+#### 5. Issue #7 — [M4] API parity across all domains
 **Branch:** `feat/next-api-m4-api-parity`
 **Depends on:** #6
+**Status:** Done. Merged via PR #23 on 2026-04-04.
 **Deliverables:**
 - Replace `mock-db` with Supabase queries in all services
 - `users`, `rooms`, `tables`, `reservations` services rewritten against Supabase
@@ -154,9 +155,10 @@
 
 ```
 #4 (M1) ✅ → #5 (M2) ✅ → #11 (Platform) ✅ → #6 (M3) ✅ ─┐
-                                                             ├→ #7 (M4 API parity) ← CURRENT
+                                                             ├→ #7 (M4 API parity) ✅
 #12 (QA gates) ✅ ───────────────────────────────────────────┤
 #18 (shadcn + auth UI) ✅ ───────────────────────────────────┘
+                                                             └→ #10 (Security hardening) ← CURRENT
 ```
 
 ---

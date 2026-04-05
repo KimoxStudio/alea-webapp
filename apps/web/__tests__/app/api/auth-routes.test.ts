@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
 
+let requestCounter = 0
+
 const loginMock = vi.fn()
 const registerMock = vi.fn()
 const logoutWithClientMock = vi.fn()
@@ -45,16 +47,27 @@ function createJsonRequest(
     method?: string
     origin?: string
     cookie?: string
+    csrfToken?: string | null
+    fetchSite?: string
+    forwardedFor?: string
   },
 ) {
   const origin = options?.origin ?? 'http://localhost:3000'
+  const csrfToken = options?.csrfToken === undefined ? 'test-csrf-token' : options.csrfToken
+  const cookie = [options?.cookie, csrfToken ? `alea-csrf-token=${csrfToken}` : null]
+    .filter(Boolean)
+    .join('; ')
+  requestCounter += 1
 
   return new NextRequest(`http://localhost:3000${path}`, {
     method: options?.method ?? 'POST',
     headers: {
       host: 'localhost:3000',
       origin,
-      ...(options?.cookie ? { cookie: options.cookie } : {}),
+      'x-forwarded-for': options?.forwardedFor ?? `10.0.0.${requestCounter}`,
+      ...(options?.fetchSite ? { 'sec-fetch-site': options.fetchSite } : {}),
+      ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+      ...(cookie ? { cookie } : {}),
       'content-type': 'application/json',
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -65,6 +78,7 @@ describe('auth API routes', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
+    requestCounter = 0
     loginMock.mockResolvedValue({
       id: 'user-1',
       memberNumber: '100001',
@@ -131,6 +145,42 @@ describe('auth API routes', () => {
     expect(response.status).toBe(403)
   })
 
+  it('rejects login requests with a missing CSRF token', async () => {
+    const { POST } = await import('@/app/api/auth/login/route')
+
+    const response = await POST(
+      createJsonRequest(
+        '/api/auth/login',
+        {
+          identifier: 'admin@alea.club',
+          password: 'Admin1234!@#',
+        },
+        { csrfToken: null },
+      ),
+    )
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toMatchObject({ message: 'Invalid CSRF token' })
+  })
+
+  it('rejects login requests flagged as cross-site by fetch metadata', async () => {
+    const { POST } = await import('@/app/api/auth/login/route')
+
+    const response = await POST(
+      createJsonRequest(
+        '/api/auth/login',
+        {
+          identifier: 'admin@alea.club',
+          password: 'Admin1234!@#',
+        },
+        { fetchSite: 'cross-site' },
+      ),
+    )
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toMatchObject({ message: 'Cross-site requests are not allowed' })
+  })
+
   it('maps invalid credentials from the service to a 401 response', async () => {
     const { POST } = await import('@/app/api/auth/login/route')
     const { ServiceError } = await import('@/lib/server/service-error')
@@ -145,6 +195,39 @@ describe('auth API routes', () => {
 
     expect(response.status).toBe(401)
     await expect(response.json()).resolves.toMatchObject({ statusCode: 401 })
+  })
+
+  it('rate limits repeated login attempts from the same client', async () => {
+    const { POST } = await import('@/app/api/auth/login/route')
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const response = await POST(
+        createJsonRequest(
+          '/api/auth/login',
+          {
+            identifier: 'admin@alea.club',
+            password: 'Admin1234!@#',
+          },
+          { forwardedFor: '203.0.113.10' },
+        ),
+      )
+
+      expect(response.status).toBe(200)
+    }
+
+    const blocked = await POST(
+      createJsonRequest(
+        '/api/auth/login',
+        {
+          identifier: 'admin@alea.club',
+          password: 'Admin1234!@#',
+        },
+        { forwardedFor: '203.0.113.10' },
+      ),
+    )
+
+    expect(blocked.status).toBe(429)
+    expect(blocked.headers.get('retry-after')).toBeTruthy()
   })
 
   it('returns a generic 403 when public registration is unavailable', async () => {

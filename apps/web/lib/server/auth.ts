@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseRouteHandlerClient, createSupabaseServerClient } from '@/lib/supabase/server'
+export { enforceSameOriginForMutation } from '@/lib/server/security'
 
 export type SessionUser = {
   id: string
@@ -80,25 +81,4 @@ export async function requireAdmin(request: NextRequest): Promise<AuthContext | 
     return auth.applyCookies(NextResponse.json({ message: 'Forbidden', statusCode: 403 }, { status: 403 }))
   }
   return auth
-}
-
-export function enforceSameOriginForMutation(request: NextRequest): NextResponse | null {
-  const method = request.method.toUpperCase()
-  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return null
-
-  const origin = request.headers.get('origin')
-  if (!origin) {
-    return NextResponse.json({ message: 'Invalid request origin', statusCode: 403 }, { status: 403 })
-  }
-
-  try {
-    const requestOrigin = new URL(request.url).origin
-    if (new URL(origin).origin !== requestOrigin) {
-      return NextResponse.json({ message: 'Invalid request origin', statusCode: 403 }, { status: 403 })
-    }
-  } catch {
-    return NextResponse.json({ message: 'Invalid request origin', statusCode: 403 }, { status: 403 })
-  }
-
-  return null
 }

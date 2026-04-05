@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { enforceSameOriginForMutation, requireAuth } from '@/lib/server/auth'
+import { requireAuth } from '@/lib/server/auth'
 import { toServiceErrorResponse } from '@/lib/server/http-error'
 import { createReservationForSession, listVisibleReservations } from '@/lib/server/reservations-service'
+import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request)
@@ -23,8 +24,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const originError = enforceSameOriginForMutation(request)
-  if (originError) return originError
+  const securityError = enforceMutationSecurity(request)
+  if (securityError) return securityError
+
+  const rateLimitError = enforceRateLimit(request, RATE_LIMIT_POLICIES.reservationMutation)
+  if (rateLimitError) return rateLimitError
 
   const auth = await requireAuth(request)
   if (auth instanceof NextResponse) return auth

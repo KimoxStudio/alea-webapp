@@ -1,6 +1,7 @@
 import createMiddleware from 'next-intl/middleware'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { type NextRequest, type NextResponse } from 'next/server'
+import { ensureCsrfCookie, getSupabaseCookieOptions } from './lib/server/security'
 import { locales, defaultLocale } from './lib/i18n/config'
 
 const handleI18nRouting = createMiddleware({
@@ -14,6 +15,7 @@ function createMiddlewareSupabaseClient(request: NextRequest, response: NextResp
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: getSupabaseCookieOptions(),
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -38,7 +40,7 @@ export default async function middleware(request: NextRequest) {
 
   await supabase.auth.getUser()
 
-  return response
+  return ensureCsrfCookie(request, response)
 }
 
 export const config = {
