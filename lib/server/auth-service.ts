@@ -161,7 +161,7 @@ export async function getCurrentUser(
     serviceError('Unauthorized', 401)
   }
 
-  return toPublicUser(profile)
+  return toPublicUser(profile as ProfileRow)
 }
 
 export async function logout() {
