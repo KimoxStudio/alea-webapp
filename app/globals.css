@@ -6,28 +6,26 @@
 
 @layer base {
   :root {
-    --background: 215 20% 6%;
-    --background-secondary: 216 18% 11%;
-    --background-surface: 213 17% 14%;
-    --foreground: 210 17% 90%;
-    --card: 213 17% 14%;
-    --card-foreground: 210 17% 90%;
-    --popover: 213 17% 14%;
-    --popover-foreground: 210 17% 90%;
-    --primary: 41 57% 54%;
-    --primary-foreground: 215 20% 6%;
-    --secondary: 213 16% 20%;
-    --secondary-foreground: 210 17% 90%;
-    --muted: 215 16% 18%;
-    --muted-foreground: 215 14% 55%;
-    --accent: 41 57% 54%;
-    --accent-foreground: 215 20% 6%;
-    --destructive: 350 58% 35%;
-    --destructive-foreground: 210 17% 90%;
-    --border: 216 13% 20%;
-    --input: 216 13% 20%;
-    --ring: 41 57% 54%;
-    --radius: 0.5rem;
+    --background: #131313;
+    --foreground: #e5e2e1;
+    --primary: #ffb77b;
+    --primary-foreground: #4d2700;
+    --secondary: #201f1f;
+    --secondary-foreground: #e5e2e1;
+    --muted: #2a2a2a;
+    --muted-foreground: #d8c3b4;
+    --accent: #c8803f;
+    --accent-foreground: #ffdcc2;
+    --destructive: #ffb4ab;
+    --destructive-foreground: #690005;
+    --border: #524439;
+    --input: #2a2a2a;
+    --ring: #ffb77b;
+    --card: #1c1b1b;
+    --card-foreground: #e5e2e1;
+    --popover: #201f1f;
+    --popover-foreground: #e5e2e1;
+    --radius: 0.125rem;
   }
 }
 
@@ -52,7 +50,11 @@
 @layer components {
   .rpg-card {
     @apply bg-card border border-border rounded-lg transition-all duration-200;
-    @apply hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5;
+    @apply hover:shadow-lg;
+  }
+  .rpg-card:hover {
+    border-color: rgba(255, 183, 123, 0.4);
+    box-shadow: 0 10px 15px -3px rgba(255, 183, 123, 0.05), 0 4px 6px -4px rgba(255, 183, 123, 0.05);
   }
   .table-available {
     @apply border-emerald/60 bg-emerald-dark/20 hover:border-emerald hover:bg-emerald-dark/30;
@@ -75,4 +77,42 @@
   .glow-gold { box-shadow: 0 0 20px rgba(201, 168, 76, 0.15); }
   .glow-emerald { box-shadow: 0 0 20px rgba(45, 134, 83, 0.2); }
   .glow-crimson { box-shadow: 0 0 20px rgba(139, 38, 53, 0.2); }
+
+  .glass-panel {
+    background: rgba(28, 27, 27, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .glass-effect {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .hero-gradient {
+    background: linear-gradient(to bottom, rgba(19, 19, 19, 0.4), rgba(19, 19, 19, 1));
+  }
+
+  .heraldic-watermark {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    opacity: 0.04;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .copper-shimmer {
+    transition: background 0.3s ease;
+  }
+  .copper-shimmer:hover {
+    background: linear-gradient(135deg, #ffb77b, #c8803f);
+  }
+
+  .bg-neo-classical {
+    position: fixed;
+    inset: 0;
+    background-color: #131313;
+    z-index: -1;
+  }
 }
