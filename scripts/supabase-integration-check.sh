@@ -78,7 +78,7 @@ retry 20 supabase --workdir "${tmp_project_dir}" db reset --local
 retry 10 supabase --workdir "${tmp_project_dir}" db lint --local
 retry 10 sh -c 'supabase --workdir "$1" gen types typescript --local > "$2"' _ "${tmp_project_dir}" "${tmp_types_file}"
 
-cp "${root_dir}/apps/web/lib/supabase/types.ts" "${tmp_expected_types_file}"
+cp "${root_dir}/lib/supabase/types.ts" "${tmp_expected_types_file}"
 perl -0pi -e 's/\n*\z/\n/' "${tmp_expected_types_file}" "${tmp_types_file}"
 
 diff -u "${tmp_expected_types_file}" "${tmp_types_file}"

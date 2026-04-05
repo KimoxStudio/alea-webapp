@@ -1,3 +1,5 @@
 apps/web/.env.example
 apps/web/.env.local.example
 apps/web/__tests__/
+# Supabase CLI demo tokens in example env file are not real credentials
+.env.local.example
