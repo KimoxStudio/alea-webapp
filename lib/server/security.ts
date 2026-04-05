@@ -31,24 +31,20 @@ function getRateLimitStore() {
   return globalRateLimitStore[RATE_LIMIT_STORE_KEY]
 }
 
-// Secure cookies when running over HTTPS.
-// Determined by NEXT_PUBLIC_APP_URL, not NODE_ENV,
-// because environment is controlled by which Supabase keys are configured.
+// Determines whether cookies should have the Secure flag.
+// Based on NEXT_PUBLIC_APP_URL — not NODE_ENV — because the environment
+// is defined by which Supabase keys are configured, not Node's runtime mode.
+// Set NEXT_PUBLIC_APP_URL=https://... for HTTPS deployments.
 function isSecureContext(): boolean {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').startsWith('https://')
-}
-
-function isSecureContext(): boolean {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
-  const isSecure = appUrl.startsWith('https://')
-  if (!isSecure && process.env.NODE_ENV === 'production') {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (!appUrl) {
     console.warn(
-      '[security] NEXT_PUBLIC_APP_URL is not set or does not start with https://' +
-        ' — cookies will be issued without the Secure flag.' +
-        ' Set NEXT_PUBLIC_APP_URL to your production HTTPS URL.',
+      '[security] NEXT_PUBLIC_APP_URL is not set — cookies will be issued without the Secure flag.' +
+        ' Set it to your app URL (e.g. https://app.alea.club).',
     )
+    return false
   }
-  return isSecure
+  return appUrl.startsWith('https://')
 }
 
 function forbidden(message: string) {
