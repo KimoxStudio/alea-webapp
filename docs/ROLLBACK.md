@@ -117,9 +117,9 @@ Ensure these variables are correctly set in the target environment before deploy
 | Variable | Required | Description |
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` | Yes | Supabase anonymous (public) key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (server only) |
-| `AUTH_SESSION_SECRET` | No | **Legacy** — used by the pre-Supabase HMAC session implementation (M3 cutover). Not referenced in the current runtime; retain only if rolling back past M3. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` | Yes | Supabase publishable key (format: `sb_publishable_*`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase secret key (format: `sb_secret_*`); server only |
+| `AUTH_SESSION_SECRET` | No | Auth session secret (min 32 chars); only required if rolling back to pre-M3 implementations |
 | `NEXT_PUBLIC_APP_URL` | No | Public app base URL (e.g. `https://app.alea.club`); only set if deployment, redirect, or OAuth/provider configuration explicitly requires it |
 | `NEXT_PUBLIC_API_URL` | No | API base URL override (default: `/api`) |
 
@@ -137,9 +137,9 @@ Rolling back a deployment can have security consequences that must be addressed 
 
 If the rollback target predates a security patch (e.g. a credential exposure or input validation fix), **rotate all affected credentials before redeploying**. Redeploying a version with a known vulnerability without rotating secrets leaves the system in a worse state than the original incident.
 
-### `AUTH_SESSION_SECRET` rollback (legacy only)
+### `AUTH_SESSION_SECRET` rollback
 
-This applies only when rolling back to a pre-Supabase auth implementation (before M3) that uses `AUTH_SESSION_SECRET` to sign application sessions. In that case, restoring an older secret value can invalidate sessions issued under the newer value, requiring users to re-authenticate. For the current Supabase-based runtime, `AUTH_SESSION_SECRET` is not referenced and changing it will not affect active sessions.
+If rolling back to a pre-M3 implementation that uses `AUTH_SESSION_SECRET` to sign application sessions, restoring an older secret value can invalidate sessions issued under the newer value, requiring users to re-authenticate. For the current Supabase-based runtime, `AUTH_SESSION_SECRET` is not referenced and changing it will not affect active sessions.
 
 ### Never rollback to a version with known secret exposure
 
