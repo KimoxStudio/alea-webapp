@@ -73,9 +73,11 @@ alea-webapp/
 │   ├── validations/            # Shared Zod schemas (used by both client forms and server route handlers)
 │   │   ├── auth.ts             # loginSchema, registerSchema, passwordSchema
 │   │   └── password.ts         # Password strength validation rules
-│   ├── supabase/               # Supabase client factories
+│   ├── supabase/               # Supabase client factories and config getters
 │   │   ├── client.ts           # Browser client factory (createSupabaseBrowserClient)
 │   │   ├── server.ts           # Server client factories: createSupabaseServerClient, createSupabaseRouteHandlerClient, createSupabaseServerAdminClient
+│   │   ├── config.ts           # Server-only config getters (secret key); guarded by `server-only`
+│   │   ├── config.client.ts    # Browser-safe config getters (URL, publishable key)
 │   │   └── types.ts            # Generated DB types
 │   ├── types/
 │   │   └── index.ts            # Shared TypeScript domain types (User, Room, etc.)
@@ -175,9 +177,9 @@ There are three distinct Supabase client factories in `lib/supabase/server.ts`:
 |---|---|---|---|
 | `createSupabaseServerClient()` | Anon key | Reads/writes via `next/headers` cookie store | Server Components, Server Actions |
 | `createSupabaseRouteHandlerClient(request)` | Anon key | Reads from `NextRequest`, buffers writes returned via `applyCookies()` | Route Handlers |
-| `createSupabaseServerAdminClient()` | Service role key | None (stateless) | Server-only; bypasses all RLS policies |
+| `createSupabaseServerAdminClient()` | Secret default key | None (stateless) | Server-only; bypasses all RLS policies |
 
-The browser client factory (`createSupabaseBrowserClient` in `lib/supabase/client.ts`) uses the anon key and creates a new browser client instance per call. It must never be used in server-side code.
+The browser client factory (`createSupabaseBrowserClient` in `lib/supabase/client.ts`) uses the publishable key and creates a new browser client instance per call. It must never be used in server-side code.
 
 The admin client bypasses all RLS policies and must never be imported in Client Components or exposed to the browser. It is currently used in `auth-service.ts` to look up profiles by email or member number before sign-in, because the anon client's RLS policies would block unauthenticated profile reads.
 
@@ -225,8 +227,10 @@ The client-side architecture is organized under `lib/`:
 pnpm install
 
 # 2. Copy environment template
-cp .env.local.example .env.local
-# Edit .env.local — local Supabase values from the example work out of the box
+cp .env.example .env.local
+# Edit .env.local — the example contains hosted-project placeholders; replace with your values.
+# For local development with supabase start, use http://127.0.0.1:54321 for NEXT_PUBLIC_SUPABASE_URL
+# and run `supabase status` to get the publishable and secret keys.
 
 # 3. Start local Supabase (runs migrations automatically)
 supabase start
@@ -265,5 +269,5 @@ pnpm lint          # ESLint
 - All input validated with Zod before reaching the service layer.
 - HTTP-only, SameSite cookies for Supabase session token management.
 - Mutations are protected by a three-layer check in each Route Handler: Fetch Metadata validation (`sec-fetch-site`), same-origin `Origin` header validation, and double-submit CSRF token validation — all via `enforceMutationSecurity()` from `lib/server/security.ts`. This check runs inside Route Handlers directly; middleware does not cover API routes.
-- The admin Supabase client (service role key) bypasses all RLS policies. It is restricted to server-only code and must never be imported client-side.
+- The admin Supabase client (secret key) bypasses all RLS policies. It is restricted to server-only code and must never be imported client-side.
 - See `docs/SECURITY_RUNBOOK.md` for the full security checklist.

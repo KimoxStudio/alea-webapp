@@ -31,8 +31,22 @@ function getRateLimitStore() {
   return globalRateLimitStore[RATE_LIMIT_STORE_KEY]
 }
 
-function isProduction() {
-  return process.env.NODE_ENV === 'production'
+// Determines whether cookies should have the Secure flag.
+// Based on NEXT_PUBLIC_APP_URL — not NODE_ENV — because the environment
+// is defined by which Supabase keys are configured, not Node's runtime mode.
+// Warn at most once per process — this is called on every request.
+let _warnedAboutMissingAppUrl = false
+
+function isSecureContext(): boolean {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (!appUrl && !_warnedAboutMissingAppUrl) {
+    _warnedAboutMissingAppUrl = true
+    console.warn(
+      '[security] NEXT_PUBLIC_APP_URL is not set — cookies will be issued without the Secure flag.' +
+        ' Set it to your app URL (e.g. https://app.alea.club).',
+    )
+  }
+  return (appUrl ?? '').startsWith('https://')
 }
 
 function forbidden(message: string) {
@@ -84,7 +98,7 @@ export function getCsrfCookieOptions() {
     httpOnly: false,
     path: '/',
     sameSite: 'lax',
-    secure: isProduction(),
+    secure: isSecureContext(),
   } satisfies CookieOptionsWithName
 }
 
@@ -93,7 +107,7 @@ export function getSupabaseCookieOptions() {
     httpOnly: true,
     path: '/',
     sameSite: 'lax',
-    secure: isProduction(),
+    secure: isSecureContext(),
   } satisfies CookieOptionsWithName
 }
 

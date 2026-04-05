@@ -7,9 +7,9 @@ describe('server security helpers', () => {
     vi.unstubAllEnvs()
   })
 
-  it('uses hardened cookie options for Supabase sessions in development and production', async () => {
-    vi.stubEnv('NODE_ENV', 'development')
-    let security = await import('@/lib/server/security')
+  it('uses secure:false for Supabase cookies when NEXT_PUBLIC_APP_URL is http (localhost)', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'http://localhost:3000')
+    const security = await import('@/lib/server/security')
 
     expect(security.getSupabaseCookieOptions()).toMatchObject({
       httpOnly: true,
@@ -17,10 +17,11 @@ describe('server security helpers', () => {
       secure: false,
       path: '/',
     })
+  })
 
-    vi.resetModules()
-    vi.stubEnv('NODE_ENV', 'production')
-    security = await import('@/lib/server/security')
+  it('uses secure:true for Supabase cookies when NEXT_PUBLIC_APP_URL is https', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://app.alea.club')
+    const security = await import('@/lib/server/security')
 
     expect(security.getSupabaseCookieOptions()).toMatchObject({
       httpOnly: true,

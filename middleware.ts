@@ -3,6 +3,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { type NextRequest, type NextResponse } from 'next/server'
 import { ensureCsrfCookie, getSupabaseCookieOptions } from './lib/server/security'
 import { locales, defaultLocale } from './lib/i18n/config'
+import { getSupabaseUrl, getSupabasePublishableKey } from './lib/supabase/config.client'
 
 const handleI18nRouting = createMiddleware({
   locales,
@@ -12,8 +13,8 @@ const handleI18nRouting = createMiddleware({
 
 function createMiddlewareSupabaseClient(request: NextRequest, response: NextResponse) {
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabaseUrl(),
+    getSupabasePublishableKey(),
     {
       cookieOptions: getSupabaseCookieOptions(),
       cookies: {
