@@ -118,12 +118,12 @@ Ensure these variables are correctly set in the target environment before deploy
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` | Yes | Supabase publishable key (format: `sb_publishable_*`) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase secret key (format: `sb_secret_*`); server only |
+| `SUPABASE_SECRET_DEFAULT_KEY` | Yes | Supabase secret key (format: `sb_secret_*`); server only |
 | `AUTH_SESSION_SECRET` | No | Auth session secret (min 32 chars); only required if rolling back to pre-M3 implementations |
 | `NEXT_PUBLIC_APP_URL` | No | Public app base URL (e.g. `https://app.alea.club`); only set if deployment, redirect, or OAuth/provider configuration explicitly requires it |
 | `NEXT_PUBLIC_API_URL` | No | API base URL override (default: `/api`) |
 
-> **Security:** `SUPABASE_SERVICE_ROLE_KEY` and `AUTH_SESSION_SECRET` must never be exposed to the browser or committed to git.
+> **Security:** `SUPABASE_SECRET_DEFAULT_KEY` and `AUTH_SESSION_SECRET` must never be exposed to the browser or committed to git.
 
 For local development, copy `.env.local.example` to `.env.local`. The example values work with the local Supabase instance started via `supabase start`.
 
@@ -148,16 +148,16 @@ If the rollback target is a version where secrets were exposed (e.g. accidentall
 Credentials to rotate if any exposure is suspected:
 
 - `AUTH_SESSION_SECRET` — generate a new secret (min 32 chars)
-- `SUPABASE_SERVICE_ROLE_KEY` — rotate via Supabase Dashboard > Project Settings > API
+- `SUPABASE_SECRET_DEFAULT_KEY` — rotate via Supabase Dashboard > Project Settings > API
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` — rotate if the anon key was abused
 
-### Supabase service role key rotation on auth architecture rollback
+### Supabase secret key rotation on auth architecture rollback
 
-If the rollback affects auth architecture (e.g. rolling back past M3 Supabase auth integration), **rotate the Supabase service role key** before redeployment. This prevents the old key from being usable if it was cached or logged during the affected window.
+If the rollback affects auth architecture (e.g. rolling back past M3 Supabase auth integration), **rotate the Supabase secret key** before redeployment. This prevents the old key from being usable if it was cached or logged during the affected window.
 
 ```bash
 # After rotating the key in the Supabase dashboard, update your deployment environment:
-# SUPABASE_SERVICE_ROLE_KEY=<new-key>
+# SUPABASE_SECRET_DEFAULT_KEY=<new-key>
 # Then redeploy.
 ```
 
