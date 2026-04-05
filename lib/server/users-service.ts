@@ -100,9 +100,17 @@ export async function listPaginatedUsers(input: {
   }
 }
 
+const MEMBER_NUMBER_REGEX = /^[A-Za-z0-9-]{1,20}$/
+
 export async function updateUser(id: string, body: { memberNumber?: unknown; role?: unknown; status?: unknown }) {
   const updates: TablesUpdate<'profiles'> = {}
-  if (body.memberNumber) updates.member_number = String(body.memberNumber)
+  if (body.memberNumber) {
+    const memberNumber = String(body.memberNumber)
+    if (!MEMBER_NUMBER_REGEX.test(memberNumber)) {
+      serviceError('Invalid member number format', 400)
+    }
+    updates.member_number = memberNumber
+  }
   if (body.role === 'admin' || body.role === 'member') updates.role = body.role
   if (body.status === 'active' || body.status === 'suspended') updates.status = body.status
 

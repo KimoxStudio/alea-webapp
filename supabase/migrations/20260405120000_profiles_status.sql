@@ -14,3 +14,18 @@ BEGIN
   END IF;
 END;
 $$;
+
+-- Update is_admin() to also require status = 'active' so suspended admins
+-- lose RLS admin privileges at the database layer.
+CREATE OR REPLACE FUNCTION is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM profiles
+    WHERE id = auth.uid()
+      AND role = 'admin'
+      AND status = 'active'
+  );
+$$;

@@ -48,6 +48,7 @@
       "passwordSpecialChar": "La contraseña debe contener al menos un símbolo especial (!@#$%^&*...)",
       "passwordsDoNotMatch": "Las contraseñas no coinciden",
       "memberNumberRequired": "El número de socio es obligatorio",
+      "memberNumberInvalid": "Formato de número de socio inválido",
       "memberNumberExists": "Este número de socio ya está registrado",
       "emailRequired": "El email es obligatorio",
       "emailInvalid": "Introduce un email válido",

@@ -17,7 +17,7 @@ export const loginSchema = z.object({
 
 export const registerSchema = z
   .object({
-    memberNumber: z.string().trim().min(1, 'auth.errors.memberNumberRequired'),
+    memberNumber: z.string().trim().min(1, 'auth.errors.memberNumberRequired').regex(/^[A-Za-z0-9-]{1,20}$/, 'auth.errors.memberNumberInvalid'),
     password: passwordSchema,
     confirmPassword: z.string(),
   })

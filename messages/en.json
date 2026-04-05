@@ -48,6 +48,7 @@
       "passwordSpecialChar": "Password must contain at least one special symbol (!@#$%^&*...)",
       "passwordsDoNotMatch": "Passwords do not match",
       "memberNumberRequired": "Member number is required",
+      "memberNumberInvalid": "Invalid member number format",
       "memberNumberExists": "This member number is already registered",
       "emailRequired": "Email is required",
       "emailInvalid": "Enter a valid email address",
