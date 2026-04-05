@@ -102,7 +102,7 @@ alea-webapp/
 - **6 rooms**: Mirkwood, Gondolin, Khazad-dum, Rivendell, Lothlorien, Edoras — each with a fixed number of tables.
 - **Table types**: `small`, `large`, `removable_top`.
 - **removable_top rule**: A table with a removable top has two bookable surfaces (`top` and `bottom`). Reserving one surface blocks the other surface in the same time slot.
-- **Authentication**: Members log in with their member number or email + password. Passwords must be at least 12 characters with letters, numbers, and symbols.
+- **Authentication**: Members log in with their member number or email + password. Passwords must be at least 12 characters.
 - **Admin**: Admins can view/edit/delete users (without seeing or modifying passwords), manage rooms, tables, and reservations (10 users per page, with search).
 - **QR codes**: Each table has a QR code for quick reservation lookup.
 

@@ -44,9 +44,11 @@ alea-webapp/
 │   │   ├── tables-service.ts   # Table queries
 │   │   ├── reservations-service.ts  # Reservation business logic
 │   │   ├── availability.ts     # Slot availability and conflict detection
-│   │   ├── security.ts         # Password validation, rate limiting helpers
+│   │   ├── security.ts         # CSRF, fetch-metadata, and rate limiting helpers
 │   │   ├── http-error.ts       # Typed HTTP error factory
 │   │   └── service-error.ts    # Domain error types
+│   ├── validations/            # Shared input validation schemas/utilities
+│   │   └── password.ts         # Password strength validation
 │   └── supabase/               # Supabase client factory
 │       ├── client.ts           # Browser-side client (singleton)
 │       ├── server.ts           # Server-side client (per-request, cookie-based)
@@ -82,7 +84,7 @@ Each service module maps to a domain:
 | `tables-service.ts` | Table listing, lookup, QR codes |
 | `reservations-service.ts` | Create, update, cancel, list reservations |
 | `availability.ts` | Slot generation, conflict detection, `removable_top` surface logic |
-| `security.ts` | Password strength validation, brute-force guards |
+| `security.ts` | CSRF validation, fetch-metadata checks, and in-memory rate limiting |
 
 ---
 

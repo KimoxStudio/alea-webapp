@@ -6,7 +6,7 @@ This document describes how to roll back a deployment of the Alea WebApp to a pr
 
 ## What "Rollback" Means
 
-Rolling back means reverting the running application to the code and database schema of a previous stable git tag or branch. It does **not** automatically undo database data changes (rows inserted/deleted by users) — only schema changes can be rolled back via Supabase down migrations.
+Rolling back means reverting the running application to the code and database schema of a previous stable git tag or branch. It does **not** automatically undo database data changes (rows inserted/deleted by users). Schema changes are also not automatically reverted; rolling them back requires restoring a backup or applying a new migration that reverses the prior schema change.
 
 ---
 
@@ -16,7 +16,7 @@ Before every deployment, verify the following:
 
 - [ ] `pnpm lint` passes with no errors
 - [ ] `pnpm typecheck` passes with no type errors
-- [ ] `pnpm test --run` passes (all tests green)
+- [ ] `pnpm test` passes (all tests green)
 - [ ] `pnpm build` completes successfully
 - [ ] All required environment variables are set in the deployment target (see [Environment Variable Checklist](#environment-variable-checklist))
 - [ ] Supabase migrations have been reviewed and tested against a staging database
@@ -47,7 +47,7 @@ git checkout -b rollback/v0.3.2 v0.3.2
 pnpm install
 pnpm lint
 pnpm typecheck
-pnpm test --run
+pnpm test
 pnpm build
 ```
 
