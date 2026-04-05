@@ -73,9 +73,11 @@ alea-webapp/
 │   ├── validations/            # Shared Zod schemas (used by both client forms and server route handlers)
 │   │   ├── auth.ts             # loginSchema, registerSchema, passwordSchema
 │   │   └── password.ts         # Password strength validation rules
-│   ├── supabase/               # Supabase client factories
+│   ├── supabase/               # Supabase client factories and config getters
 │   │   ├── client.ts           # Browser client factory (createSupabaseBrowserClient)
 │   │   ├── server.ts           # Server client factories: createSupabaseServerClient, createSupabaseRouteHandlerClient, createSupabaseServerAdminClient
+│   │   ├── config.ts           # Server-only config getters (secret key); guarded by `server-only`
+│   │   ├── config.client.ts    # Browser-safe config getters (URL, publishable key)
 │   │   └── types.ts            # Generated DB types
 │   ├── types/
 │   │   └── index.ts            # Shared TypeScript domain types (User, Room, etc.)
