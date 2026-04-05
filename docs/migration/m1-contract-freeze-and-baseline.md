@@ -1,5 +1,7 @@
 # M1 Contract Freeze and Architecture Baseline
 
+> **Historical record.** This document captures the architectural baseline and contract freeze decisions made at M1 (issue #4, PR #13) before migration work started. References to `apps/web`, `apps/api`, `packages/types`, and `mock-db` describe the pre-migration state. Do not update this file to reflect current architecture.
+
 Issue: #4  
 Branch: `feat/next-api-m1-baseline`
 

@@ -1,5 +1,7 @@
 # M1 Endpoint Inventory (Current State)
 
+> **Historical record.** This document captures the pre-migration state of the codebase as of M1 (issue #4, PR #13). It describes `apps/web`, `apps/api`, and `mock-db` as they existed before the monorepo was flattened and Supabase was adopted. Do not update this file to reflect current architecture.
+
 This document is the contract baseline for issue #4.
 
 ## Next.js API (`apps/web/app/api`)
