@@ -1,7 +1,7 @@
 # Migration Execution Plan — Alea Webapp
 
-**Last updated:** 2026-04-04
-**Branch:** feat/next-api-security-hardening
+**Last updated:** 2026-04-05
+**Branch:** feat/next-api-m5-flatten-repo
 **Epic:** #3 — Next.js API migration (remove NestJS + monorepo)
 **Platform:** Supabase (dev + prod, sole DB/auth provider)
 
@@ -18,8 +18,8 @@
 | UI — shadcn + auth foundation | #18 | Done | PR #19 (merged) |
 | M3 — Auth cutover (Supabase SSR) | #6 | Done | PR #22 (merged) |
 | M4 — API parity | #7 | Done | PR #23 (merged) |
-| SEC — Security hardening | #10 | In Progress | Branch `feat/next-api-security-hardening` |
-| M5 — Flatten repo / remove NestJS | #8 | Pending | — |
+| SEC — Security hardening | #10 | Done | PR #24 (merged) |
+| M5 — Flatten repo / remove NestJS | #8 | In Progress | Branch `feat/next-api-m5-flatten-repo` |
 | M6 — Cleanup + release readiness | #9 | Pending | — |
 
 ---
@@ -104,8 +104,9 @@
 
 #### 4. Issue #10 — [SEC] Security hardening
 **Branch:** `feat/next-api-security-hardening`
-**Depends on:** #6
-**Deliverables:**
+**PR:** #24 (merged)
+**Status:** Done. Merged via PR #24 on 2026-04-04.
+**Deliverables completed:**
 - Env-specific cookie policy finalized
 - Rate limiting on auth + sensitive endpoints
 - Origin/fetch-metadata checks
@@ -158,7 +159,8 @@
                                                              ├→ #7 (M4 API parity) ✅
 #12 (QA gates) ✅ ───────────────────────────────────────────┤
 #18 (shadcn + auth UI) ✅ ───────────────────────────────────┘
-                                                             └→ #10 (Security hardening) ← CURRENT
+                                                             └→ #10 (Security hardening) ✅
+                                                             └→ #8 (M5 Flatten repo) ← CURRENT
 ```
 
 ---
