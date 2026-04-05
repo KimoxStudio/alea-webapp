@@ -38,6 +38,19 @@ function isSecureContext(): boolean {
   return (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').startsWith('https://')
 }
 
+function isSecureContext(): boolean {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const isSecure = appUrl.startsWith('https://')
+  if (!isSecure && process.env.NODE_ENV === 'production') {
+    console.warn(
+      '[security] NEXT_PUBLIC_APP_URL is not set or does not start with https://' +
+        ' — cookies will be issued without the Secure flag.' +
+        ' Set NEXT_PUBLIC_APP_URL to your production HTTPS URL.',
+    )
+  }
+  return isSecure
+}
+
 function forbidden(message: string) {
   return NextResponse.json({ message, statusCode: 403 }, { status: 403 })
 }
