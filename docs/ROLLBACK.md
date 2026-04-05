@@ -117,7 +117,7 @@ Ensure these variables are correctly set in the target environment before deploy
 | Variable | Required | Description |
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anonymous (public) key |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` | Yes | Supabase anonymous (public) key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (server only) |
 | `AUTH_SESSION_SECRET` | No | **Legacy** — used by the pre-Supabase HMAC session implementation (M3 cutover). Not referenced in the current runtime; retain only if rolling back past M3. |
 | `NEXT_PUBLIC_APP_URL` | No | Public app base URL (e.g. `https://app.alea.club`); only set if deployment, redirect, or OAuth/provider configuration explicitly requires it |
@@ -149,7 +149,7 @@ Credentials to rotate if any exposure is suspected:
 
 - `AUTH_SESSION_SECRET` — generate a new secret (min 32 chars)
 - `SUPABASE_SERVICE_ROLE_KEY` — rotate via Supabase Dashboard > Project Settings > API
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — rotate if the anon key was abused
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` — rotate if the anon key was abused
 
 ### Supabase service role key rotation on auth architecture rollback
 

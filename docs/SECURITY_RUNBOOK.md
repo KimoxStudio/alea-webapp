@@ -32,7 +32,7 @@
 ### Service-role or environment secret compromise
 
 1. Rotate `SUPABASE_SERVICE_ROLE_KEY` immediately.
-2. Rotate `NEXT_PUBLIC_SUPABASE_ANON_KEY` if exposure scope is uncertain.
+2. Rotate `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` if exposure scope is uncertain.
 3. Redeploy every environment with the new secrets.
 4. Audit privileged reads and writes that could have bypassed RLS while the key was exposed.
 5. Re-check Vercel environment scoping so preview, development, and production stay isolated.
