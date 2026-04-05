@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
-import { ArrowRight, Shield, Sparkles, Swords } from 'lucide-react'
+import { ArrowRight, Sparkles, Swords } from 'lucide-react'
 import { LoginForm } from '@/components/auth/login-form'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,7 +25,7 @@ export default async function LoginPage({ params }: LoginPageProps) {
       </div>
 
       <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 items-stretch gap-0 lg:grid-cols-2 lg:gap-12">
-        <section className="hidden min-h-[720px] flex-col justify-between overflow-hidden rounded-2xl bg-surface-container-lowest p-12 lg:flex">
+        <section className="hidden min-h-[720px] flex-col justify-between overflow-hidden bg-surface-container-lowest p-12 lg:flex">
           <div className="space-y-6">
             <div className="inline-flex items-center gap-3 text-primary">
               <Sparkles className="h-5 w-5" aria-hidden="true" />
@@ -34,14 +34,14 @@ export default async function LoginPage({ params }: LoginPageProps) {
               </span>
             </div>
             <div>
-              <p className="font-cinzel text-6xl italic tracking-[0.35em] text-primary">ALEA</p>
-              <h1 className="mt-6 max-w-md font-cinzel text-4xl leading-tight text-foreground">
+              <p className="font-headline italic text-6xl tracking-widest uppercase text-primary mb-4">ALEA</p>
+              <h1 className="mt-6 max-w-md font-headline text-4xl leading-tight text-foreground">
                 {t('archiveHeadline')}
               </h1>
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl bg-background-secondary/70 p-8">
+          <div className="relative overflow-hidden bg-background-secondary/70 p-8">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,183,123,0.18),_transparent_35%)]" />
             <div className="relative space-y-6">
               <div className="flex items-center gap-3 text-primary">
@@ -54,17 +54,17 @@ export default async function LoginPage({ params }: LoginPageProps) {
                 {t('archiveBody')}
               </p>
               <dl className="grid grid-cols-2 gap-4">
-                <div className="rounded-xl bg-background/70 p-4">
-                  <dt className="text-[11px] uppercase tracking-[0.3em] text-primary/70">
+                <div className="bg-background/70 p-4">
+                  <dt className="text-[10px] uppercase tracking-widest text-outline">
                     {locale === 'es' ? 'Fundada' : 'Founded'}
                   </dt>
-                  <dd className="mt-2 font-cinzel text-3xl italic text-foreground">1924</dd>
+                  <dd className="mt-2 font-headline text-2xl text-primary">1924</dd>
                 </div>
-                <div className="rounded-xl bg-background/70 p-4">
-                  <dt className="text-[11px] uppercase tracking-[0.3em] text-primary/70">
+                <div className="bg-background/70 p-4">
+                  <dt className="text-[10px] uppercase tracking-widest text-outline">
                     {locale === 'es' ? 'Miembros activos' : 'Active members'}
                   </dt>
-                  <dd className="mt-2 font-cinzel text-3xl italic text-foreground">8.4k</dd>
+                  <dd className="mt-2 font-headline text-2xl text-primary">8.4k</dd>
                 </div>
               </dl>
             </div>
@@ -72,8 +72,8 @@ export default async function LoginPage({ params }: LoginPageProps) {
         </section>
 
         <section className="relative flex min-h-[640px] items-center justify-center">
-          <div className="w-full max-w-md rounded-[1.75rem] border border-outline-variant/10 bg-surface-container-low/55 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-10">
-            <div className="mb-10 flex w-full border-b border-outline-variant/40">
+          <div className="relative flex flex-col items-center w-full max-w-md p-6 sm:p-10">
+            <div className="mb-10 flex w-full border-b border-outline-variant">
               <Link
                 href={`/${locale}/login`}
                 className="flex-1 border-b-2 border-primary px-2 py-4 text-center text-sm font-semibold uppercase tracking-[0.28em] text-primary"
@@ -88,14 +88,11 @@ export default async function LoginPage({ params }: LoginPageProps) {
               </Link>
             </div>
 
-            <div className="mb-10 text-center lg:text-left">
-              <div className="mb-5 inline-flex rounded-full border border-primary/20 bg-primary/10 p-3 text-primary">
-                <Shield className="h-6 w-6" aria-hidden="true" />
-              </div>
-              <h1 className="font-cinzel text-4xl italic tracking-tight text-foreground">
+            <div className="mb-10 w-full text-center lg:text-left">
+              <h1 className="font-headline text-3xl text-on-surface mb-2">
                 {t('login')}
               </h1>
-              <p className="mt-3 text-sm leading-7 text-on-surface-variant">
+              <p className="text-on-surface-variant font-body text-sm">
                 {t('loginSubtitle')}
               </p>
             </div>

@@ -25,9 +25,9 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
       {checks.map((check) => (
         <li key={check.label} className="flex items-center gap-2 text-xs">
           {check.passed
-            ? <Check className="h-3 w-3 flex-shrink-0 text-emerald" aria-hidden="true" />
-            : <X className="h-3 w-3 flex-shrink-0 text-muted-foreground" aria-hidden="true" />}
-          <span className={check.passed ? 'text-emerald-light' : 'text-muted-foreground'}>{check.label}</span>
+            ? <Check className="h-3 w-3 flex-shrink-0 text-primary" aria-hidden="true" />
+            : <X className="h-3 w-3 flex-shrink-0 text-on-surface-variant" aria-hidden="true" />}
+          <span className={check.passed ? 'text-primary' : 'text-on-surface-variant'}>{check.label}</span>
           <span className="sr-only">{check.passed ? '(cumplido)' : '(pendiente)'}</span>
         </li>
       ))}
@@ -61,7 +61,7 @@ export function RegisterForm({ locale }: RegisterFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5 w-full">
       {serverError && (
         <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/15 px-4 py-3 text-sm text-destructive-foreground">
           {serverError}
@@ -69,7 +69,7 @@ export function RegisterForm({ locale }: RegisterFormProps) {
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="memberNumber" className="text-[11px] uppercase tracking-[0.25em] text-outline">
+        <Label htmlFor="memberNumber" className="text-[10px] uppercase tracking-[0.2em] font-bold ml-1 text-outline">
           {t('memberNumber')}
         </Label>
         <div className="relative">
@@ -78,7 +78,7 @@ export function RegisterForm({ locale }: RegisterFormProps) {
             id="memberNumber"
             type="text"
             placeholder="123456"
-            className="h-14 rounded-none border-0 border-b-2 border-outline-variant bg-surface-container-low pl-12 pr-4 text-base text-foreground placeholder:text-outline focus-visible:border-primary focus-visible:ring-0"
+            className="border-0 border-b-2 border-outline-variant bg-surface-container-low py-4 pl-12 pr-4 text-base text-on-surface placeholder:text-surface-variant focus-visible:border-primary focus-visible:ring-0"
             aria-describedby={errors.memberNumber ? 'memberNumber-error' : undefined}
             aria-invalid={!!errors.memberNumber}
             {...register('memberNumber')}
@@ -88,7 +88,7 @@ export function RegisterForm({ locale }: RegisterFormProps) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="reg-password" className="text-[11px] uppercase tracking-[0.25em] text-outline">
+        <Label htmlFor="reg-password" className="text-[10px] uppercase tracking-[0.2em] font-bold ml-1 text-outline">
           {t('password')}
         </Label>
         <div className="relative">
@@ -96,7 +96,7 @@ export function RegisterForm({ locale }: RegisterFormProps) {
           <PasswordInput
             id="reg-password"
             autoComplete="new-password"
-            className="h-14 rounded-none border-0 border-b-2 border-outline-variant bg-surface-container-low pl-12 pr-12 text-base text-foreground placeholder:text-outline focus-visible:border-primary focus-visible:ring-0"
+            className="border-0 border-b-2 border-outline-variant bg-surface-container-low py-4 pl-12 pr-12 text-base text-on-surface placeholder:text-surface-variant focus-visible:border-primary focus-visible:ring-0"
             aria-describedby="password-requirements"
             aria-invalid={!!errors.password}
             {...register('password')}
@@ -107,7 +107,7 @@ export function RegisterForm({ locale }: RegisterFormProps) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="confirmPassword" className="text-[11px] uppercase tracking-[0.25em] text-outline">
+        <Label htmlFor="confirmPassword" className="text-[10px] uppercase tracking-[0.2em] font-bold ml-1 text-outline">
           {t('confirmPassword')}
         </Label>
         <div className="relative">
@@ -116,7 +116,7 @@ export function RegisterForm({ locale }: RegisterFormProps) {
             id="confirmPassword"
             variant="confirmation"
             autoComplete="new-password"
-            className="h-14 rounded-none border-0 border-b-2 border-outline-variant bg-surface-container-low pl-12 pr-12 text-base text-foreground placeholder:text-outline focus-visible:border-primary focus-visible:ring-0"
+            className="border-0 border-b-2 border-outline-variant bg-surface-container-low py-4 pl-12 pr-12 text-base text-on-surface placeholder:text-surface-variant focus-visible:border-primary focus-visible:ring-0"
             aria-describedby={errors.confirmPassword ? 'confirm-error' : undefined}
             aria-invalid={!!errors.confirmPassword}
             {...register('confirmPassword')}
@@ -125,14 +125,14 @@ export function RegisterForm({ locale }: RegisterFormProps) {
         {errors.confirmPassword && <p id="confirm-error" role="alert" className="text-xs text-destructive">{t(errors.confirmPassword.message as Parameters<typeof t>[0])}</p>}
       </div>
 
-      <div className="border-l-2 border-primary bg-primary/5 px-4 py-4 text-sm text-on-surface-variant">
+      <div className="border-0 border-l-2 border-primary bg-surface-container-low p-4 text-sm text-on-surface-variant">
         {t('passwordRequirements')}
       </div>
 
       <Button
         type="submit"
         variant="outline"
-        className="h-14 w-full rounded-md border-[1.5px] border-primary bg-transparent font-bold uppercase tracking-[0.3em] text-primary hover:bg-primary/10"
+        className="w-full border-2 border-primary bg-transparent font-bold uppercase tracking-[0.3em] text-primary hover:bg-primary/10 py-5"
         disabled={isSubmitting}
       >
         {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />{t('register')}...</> : t('register')}

@@ -52,7 +52,7 @@ export function LoginForm({ locale }: LoginFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-6 w-full">
         {serverError && (
           <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive-foreground">
             {serverError}
@@ -64,7 +64,7 @@ export function LoginForm({ locale }: LoginFormProps) {
           name="identifier"
           render={({ field }) => (
             <FormItem className="space-y-2">
-              <FormLabel className="text-[11px] uppercase tracking-[0.25em] text-outline">
+              <FormLabel className="text-[10px] uppercase tracking-[0.2em] font-bold ml-1 text-outline">
                 {t('memberNumber')}
               </FormLabel>
               <FormControl>
@@ -74,7 +74,7 @@ export function LoginForm({ locale }: LoginFormProps) {
                     type="text"
                     autoComplete="username"
                     placeholder={t('identifierPlaceholder')}
-                    className="h-14 border-0 border-b-2 border-outline-variant bg-surface-container-low pl-12 pr-4 text-base text-foreground placeholder:text-outline focus-visible:ring-0 focus-visible:border-primary rounded-none"
+                    className="border-0 border-b-2 border-outline-variant bg-surface-container-low py-4 pl-12 pr-4 text-base text-on-surface placeholder:text-surface-variant focus-visible:ring-0 focus-visible:border-primary"
                     {...field}
                   />
                 </div>
@@ -89,7 +89,7 @@ export function LoginForm({ locale }: LoginFormProps) {
           name="password"
           render={({ field }) => (
             <FormItem className="space-y-2">
-              <FormLabel className="text-[11px] uppercase tracking-[0.25em] text-outline">
+              <FormLabel className="text-[10px] uppercase tracking-[0.2em] font-bold ml-1 text-outline">
                 {t('password')}
               </FormLabel>
               <FormControl>
@@ -97,7 +97,7 @@ export function LoginForm({ locale }: LoginFormProps) {
                   <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-primary/70" aria-hidden="true" />
                   <PasswordInput
                     autoComplete="current-password"
-                    className="h-14 border-0 border-b-2 border-outline-variant bg-surface-container-low pl-12 pr-12 text-base text-foreground placeholder:text-outline focus-visible:ring-0 focus-visible:border-primary rounded-none"
+                    className="border-0 border-b-2 border-outline-variant bg-surface-container-low py-4 pl-12 pr-12 text-base text-on-surface placeholder:text-surface-variant focus-visible:ring-0 focus-visible:border-primary"
                     {...field}
                   />
                 </div>
@@ -107,14 +107,14 @@ export function LoginForm({ locale }: LoginFormProps) {
           )}
         />
 
-        <div className="flex flex-col gap-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 text-sm sm:flex-row sm:items-center sm:justify-between">
           <label className="inline-flex items-center gap-3">
             <Checkbox aria-label={t('rememberMe')} />
-            <span>{t('rememberMe')}</span>
+            <span className="text-xs text-on-surface-variant font-body">{t('rememberMe')}</span>
           </label>
           <Link
             href={`/${locale}/login`}
-            className="text-primary/80 transition-colors hover:text-primary"
+            className="text-xs text-primary hover:text-secondary transition-colors underline underline-offset-4"
           >
             {t('forgotPassword')}
           </Link>
@@ -122,7 +122,7 @@ export function LoginForm({ locale }: LoginFormProps) {
 
         <Button
           type="submit"
-          className="h-14 w-full rounded-md bg-primary font-bold uppercase tracking-[0.3em] text-on-primary transition-transform hover:-translate-y-0.5"
+          className="w-full bg-primary font-bold uppercase tracking-[0.3em] text-on-primary transition-all py-5 active:scale-[0.98] shadow-xl shadow-primary/5"
           disabled={isSubmitting}
         >
           {isSubmitting
@@ -130,7 +130,7 @@ export function LoginForm({ locale }: LoginFormProps) {
             : t('login')}
         </Button>
 
-        <div className="rounded-md border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+        <div className="border-0 border-l-2 border-primary bg-primary/5 p-4 text-sm text-on-surface-variant">
           <div className="flex items-center gap-2 text-primary">
             <ShieldCheck className="h-4 w-4" aria-hidden="true" />
             <span className="text-[11px] font-semibold uppercase tracking-[0.25em]">
