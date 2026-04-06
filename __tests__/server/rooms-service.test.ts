@@ -5,6 +5,7 @@ const maybeSingleMock = vi.fn()
 const listRoomsMock = vi.fn()
 const listTablesMock = vi.fn()
 const listReservationsMock = vi.fn()
+const updateMock = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn(async () => ({
@@ -20,13 +21,7 @@ vi.mock('@/lib/supabase/server', () => ({
               maybeSingle: maybeSingleMock,
             })),
           })),
-          update: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              select: vi.fn(() => ({
-                maybeSingle: maybeSingleMock,
-              })),
-            })),
-          })),
+          update: updateMock,
         }
       }
 
@@ -64,13 +59,7 @@ vi.mock('@/lib/supabase/server', () => ({
               maybeSingle: maybeSingleMock,
             })),
           })),
-          update: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              select: vi.fn(() => ({
-                maybeSingle: maybeSingleMock,
-              })),
-            })),
-          })),
+          update: updateMock,
         }
       }
 
@@ -154,6 +143,13 @@ describe('updateRoom', () => {
       data: { id: '1', name: 'Sala Mirkwood Updated', table_count: 8, description: 'Sala principal' },
       error: null,
     })
+    updateMock.mockReturnValue({
+      eq: vi.fn(() => ({
+        select: vi.fn(() => ({
+          maybeSingle: maybeSingleMock,
+        })),
+      })),
+    })
   })
 
   it('succeeds when tableCount is a valid non-negative integer', async () => {
@@ -199,6 +195,9 @@ describe('updateRoom', () => {
 
     // null is treated as "not provided" — should not reset table_count to 0
     await expect(updateRoom('1', { tableCount: null })).resolves.not.toThrow()
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({ table_count: expect.anything() })
+    )
   })
 
   it('skips table_count update when tableCount is empty string', async () => {
@@ -206,6 +205,9 @@ describe('updateRoom', () => {
 
     // empty string is treated as "not provided" — should not reset table_count to 0
     await expect(updateRoom('1', { tableCount: '' })).resolves.not.toThrow()
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({ table_count: expect.anything() })
+    )
   })
 
   it('preserves existing description when description is null', async () => {

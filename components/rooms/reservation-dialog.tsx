@@ -44,7 +44,6 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
   const allTimeSlots = generateTimeSlots('09:00', '22:00', 60)
   const timeSlots = selectedDate === today
     ? allTimeSlots.filter((slot) => {
-        const now = new Date()
         const [slotH, slotM] = slot.split(':').map(Number)
         return slotH * 60 + slotM > now.getHours() * 60 + now.getMinutes()
       })
