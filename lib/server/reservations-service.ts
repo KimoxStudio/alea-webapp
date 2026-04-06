@@ -217,7 +217,9 @@ export async function listVisibleReservations(input: {
   tableId?: string | null
   date?: string | null
 }) {
-  const supabase = await createSupabaseServerClient()
+  // Use the admin client so the enriched join (profiles, tables, rooms) is not
+  // silently blocked by RLS policies that restrict cross-user profile reads.
+  const supabase = createSupabaseServerAdminClient()
   const effectiveUserId = input.session.role === 'admin' ? input.userId ?? undefined : input.session.id
   const effectiveDate = input.date != null && input.date !== '' ? parseDate(input.date) : undefined
 
