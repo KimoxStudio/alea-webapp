@@ -5,13 +5,13 @@ import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/l
 import type { Tables } from '@/lib/supabase/types'
 
 type ProfileRow = Tables<'profiles'>
-type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'created_at' | 'updated_at'>
-type AuthCredentialRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'created_at' | 'updated_at'>
-const PUBLIC_PROFILE_COLUMNS = 'id, member_number, role, created_at, updated_at' as const
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'status' | 'created_at' | 'updated_at'>
+type AuthCredentialRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'status' | 'created_at' | 'updated_at'>
+const PUBLIC_PROFILE_COLUMNS = 'id, member_number, role, status, created_at, updated_at' as const
 
 // Auth-only columns: email is needed solely to resolve Supabase Auth credentials.
 // It is not part of the application profile model (issue #39).
-const AUTH_CREDENTIAL_COLUMNS = 'id, member_number, email, role, created_at, updated_at' as const
+const AUTH_CREDENTIAL_COLUMNS = 'id, member_number, email, role, status, created_at, updated_at' as const
 
 type PublicProfileLookupColumn = 'id' | 'member_number'
 type AuthCredentialLookupColumn = 'id' | 'member_number'
@@ -94,10 +94,12 @@ async function getAuthCredentialProfileBy(
 }
 
 function toPublicUser(profile: PublicProfileRow): User {
+  const status = profile.status === 'suspended' ? 'suspended' : 'active'
   return {
     id: profile.id,
     memberNumber: profile.member_number,
     role: profile.role,
+    status,
     createdAt: profile.created_at,
     updatedAt: profile.updated_at,
   }

@@ -1,9 +1,11 @@
 export type Role = 'member' | 'admin';
+export type UserStatus = 'active' | 'suspended';
 
 export interface User {
   id: string;
   memberNumber: string;
   role: Role;
+  status: UserStatus;
   createdAt: string;
   updatedAt: string;
 }
