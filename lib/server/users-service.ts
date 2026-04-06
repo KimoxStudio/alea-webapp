@@ -4,7 +4,7 @@ import { serviceError } from '@/lib/server/service-error'
 import type { Tables, TablesUpdate } from '@/lib/supabase/types'
 
 type ProfileRow = Tables<'profiles'>
-type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'status' | 'created_at' | 'updated_at'>
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'is_active' | 'created_at' | 'updated_at'>
 type ProfilesQuery = {
   or: (filter: string) => ProfilesQuery
   order: (column: string, options: { ascending: boolean }) => {
@@ -33,15 +33,14 @@ type AdminProfilesTableClient = {
   }
 }
 
-const PROFILE_COLUMNS = 'id, member_number, role, status, created_at, updated_at'
+const PROFILE_COLUMNS = 'id, member_number, role, is_active, created_at, updated_at'
 
 function toPublicUser(profile: PublicProfileRow): User {
-  const status = profile.status === 'suspended' ? 'suspended' : 'active'
   return {
     id: profile.id,
     memberNumber: profile.member_number,
     role: profile.role,
-    status,
+    isActive: profile.is_active,
     createdAt: profile.created_at,
     updatedAt: profile.updated_at,
   }
@@ -101,23 +100,17 @@ export async function listPaginatedUsers(input: {
   }
 }
 
-export async function updateUser(id: string, body: { memberNumber?: unknown; role?: unknown; status?: unknown }) {
+export async function updateUser(id: string, body: { memberNumber?: unknown; role?: unknown; is_active?: unknown }) {
   const updates: TablesUpdate<'profiles'> = {}
-  if (body.memberNumber) {
-    const memberNumberStr = String(body.memberNumber)
-    if (memberNumberStr.length > 20) {
-      serviceError('memberNumber must be 20 characters or fewer', 400)
-    }
-    updates.member_number = memberNumberStr
-  }
+  if (body.memberNumber) updates.member_number = String(body.memberNumber)
   if (body.role === 'admin' || body.role === 'member') updates.role = body.role
-  if (body.status === 'active' || body.status === 'suspended') updates.status = body.status
+  if (typeof body.is_active === 'boolean') updates.is_active = body.is_active
 
   if (Object.keys(updates).length === 0) {
     serviceError('No updatable fields provided', 400)
   }
 
-  const supabase = createSupabaseServerAdminClient()
+  const supabase = await createSupabaseServerClient()
   const profiles = supabase.from('profiles') as unknown as ProfilesTableClient
   const { data, error } = await profiles
     .update(updates)

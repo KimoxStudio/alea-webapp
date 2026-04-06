@@ -1,11 +1,10 @@
 export type Role = 'member' | 'admin';
-export type UserStatus = 'active' | 'suspended';
 
 export interface User {
   id: string;
   memberNumber: string;
   role: Role;
-  status: UserStatus;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }

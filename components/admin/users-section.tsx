@@ -1,329 +1,187 @@
 'use client'
 
 import { useState } from 'react'
-import { useTranslations } from 'next-intl'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Loader2, Pencil, Trash2, AlertCircle } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { apiClient } from '@/lib/api/client'
-import { endpoints } from '@/lib/api/endpoints'
-import type { PaginatedResponse, User } from '@/lib/types'
+import type { User } from '@/lib/types'
 
-type UserStatus = 'active' | 'suspended'
-type UserRole = 'member' | 'admin'
-
-interface EditState {
-  memberNumber: string
-  role: UserRole
-  status: UserStatus
+interface UsersSectionProps {
+  users: User[]
+  onUpdateUser?: (id: string, payload: { role?: 'member' | 'admin'; is_active?: boolean }) => Promise<void>
+  onDeleteUser?: (id: string) => Promise<void>
 }
 
-function StatusBadge({ status }: { status: UserStatus }) {
-  const t = useTranslations('admin')
-  if (status === 'suspended') {
+function StatusBadge({ isActive }: { isActive: boolean }) {
+  if (isActive) {
     return (
-      <Badge className="border-orange-500/40 bg-orange-900/20 text-orange-400">
-        {t('suspended')}
-      </Badge>
+      <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+        Activo
+      </span>
     )
   }
   return (
-    <Badge className="border-emerald-500/40 bg-emerald-900/20 text-emerald-400">
-      {t('active')}
-    </Badge>
+    <span className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-800">
+      Suspendido
+    </span>
   )
 }
 
-export function UsersSection() {
-  const t = useTranslations('admin')
-  const tc = useTranslations('common')
-  const queryClient = useQueryClient()
+interface ActiveToggleProps {
+  isActive: boolean
+  onChange: (value: boolean) => void
+  disabled?: boolean
+}
 
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
-  const [searchInput, setSearchInput] = useState('')
+function ActiveToggle({ isActive, onChange, disabled }: ActiveToggleProps) {
+  return (
+    <label className="relative inline-flex cursor-pointer items-center gap-2">
+      <input
+        type="checkbox"
+        className="sr-only"
+        checked={isActive}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <div
+        className={[
+          'h-5 w-9 rounded-full transition-colors',
+          isActive ? 'bg-green-500' : 'bg-orange-400',
+          disabled ? 'opacity-50' : '',
+        ].join(' ')}
+      >
+        <div
+          className={[
+            'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform',
+            isActive ? 'translate-x-4' : 'translate-x-0.5',
+          ].join(' ')}
+        />
+      </div>
+      <span className="text-sm text-muted-foreground">
+        {isActive ? 'Activo' : 'Suspendido'}
+      </span>
+    </label>
+  )
+}
 
-  const [editUser, setEditUser] = useState<User | null>(null)
-  const [editState, setEditState] = useState<EditState>({ memberNumber: '', role: 'member', status: 'active' })
-  const [deleteUser, setDeleteUser] = useState<User | null>(null)
-
-  const { data, isLoading, isError } = useQuery<PaginatedResponse<User>>({
-    queryKey: ['admin', 'users', page, search],
-    queryFn: () => {
-      const params = new URLSearchParams({ page: String(page), limit: '10' })
-      if (search) params.set('search', search)
-      return apiClient.get<PaginatedResponse<User>>(`${endpoints.users.list}?${params}`)
-    },
-  })
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: Partial<EditState> }) =>
-      apiClient.put<User>(endpoints.users.byId(id), body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      setEditUser(null)
-    },
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete(endpoints.users.byId(id)),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      setDeleteUser(null)
-    },
-  })
+export function UsersSection({ users, onUpdateUser, onDeleteUser }: UsersSectionProps) {
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [editRole, setEditRole] = useState<'member' | 'admin'>('member')
+  const [editIsActive, setEditIsActive] = useState<boolean>(true)
+  const [saving, setSaving] = useState(false)
 
   function openEdit(user: User) {
-    setEditState({
-      memberNumber: user.memberNumber,
-      role: user.role,
-      status: user.status,
-    })
-    setEditUser(user)
+    setEditingUser(user)
+    setEditRole(user.role)
+    setEditIsActive(user.isActive)
   }
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    setSearch(searchInput.trim())
-    setPage(1)
+  function closeEdit() {
+    setEditingUser(null)
   }
 
-  function handleSaveEdit() {
-    if (!editUser) return
-    updateMutation.mutate({
-      id: editUser.id,
-      body: {
-        memberNumber: editState.memberNumber,
-        role: editState.role,
-        status: editState.status,
-      },
-    })
+  async function handleSave() {
+    if (!editingUser || !onUpdateUser) return
+    setSaving(true)
+    try {
+      await onUpdateUser(editingUser.id, {
+        role: editRole,
+        is_active: editIsActive,
+      })
+      closeEdit()
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <div className="space-y-4">
-      <form onSubmit={handleSearch} className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={t('searchUsers')}
-            className="pl-9"
-            aria-label={t('searchUsers')}
-          />
-        </div>
-        <Button type="submit" variant="outline" size="sm">
-          {tc('search')}
-        </Button>
-      </form>
-
-      {isLoading && (
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-label={tc('loading')} />
-        </div>
-      )}
-
-      {isError && (
-        <div className="flex items-center gap-2 text-destructive-foreground py-4">
-          <AlertCircle className="h-4 w-4" aria-hidden="true" />
-          <span className="text-sm">{tc('error')}</span>
-        </div>
-      )}
-
-      {data && data.data.length === 0 && (
-        <p className="text-center text-muted-foreground py-8">{t('noUsers')}</p>
-      )}
-
-      {data && data.data.length > 0 && (
-        <>
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-secondary/20">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('memberNumber')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('role')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('status')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('joinDate')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">{tc('actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.data.map((user) => (
-                  <tr key={user.id} className="border-b border-border last:border-0 hover:bg-secondary/10 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs">{user.memberNumber}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                        {t(user.role)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={user.status} />
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEdit(user)}
-                          aria-label={t('editUser')}
-                        >
-                          <Pencil className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteUser(user)}
-                          aria-label={t('deleteUser')}
-                          className="text-destructive-foreground hover:bg-destructive/15"
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {data.totalPages > 1 && (
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                {tc('showing')} {(page - 1) * 10 + 1}–{Math.min(page * 10, data.total)} {tc('of')} {data.total} {tc('results')}
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b text-left text-muted-foreground">
+            <th className="pb-2 pr-4 font-medium">Socio</th>
+            <th className="pb-2 pr-4 font-medium">Rol</th>
+            <th className="pb-2 pr-4 font-medium">Estado</th>
+            <th className="pb-2 font-medium">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((user) => (
+            <tr key={user.id} className="border-b last:border-0">
+              <td className="py-3 pr-4 font-mono">{user.memberNumber}</td>
+              <td className="py-3 pr-4 capitalize">{user.role}</td>
+              <td className="py-3 pr-4">
+                <StatusBadge isActive={user.isActive} />
+              </td>
+              <td className="py-3">
+                <button
+                  type="button"
+                  className="mr-2 rounded px-2 py-1 text-xs hover:bg-muted"
+                  onClick={() => openEdit(user)}
                 >
-                  {tc('previous')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= data.totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  {tc('next')}
-                </Button>
-              </div>
+                  Editar
+                </button>
+                {onDeleteUser && (
+                  <button
+                    type="button"
+                    className="rounded px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
+                    onClick={() => onDeleteUser(user.id)}
+                  >
+                    Eliminar
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-sm rounded-lg bg-background p-6 shadow-lg">
+            <h2 className="mb-4 text-base font-semibold">
+              Editar usuario #{editingUser.memberNumber}
+            </h2>
+
+            <div className="mb-4 space-y-2">
+              <label className="block text-sm font-medium">Rol</label>
+              <select
+                className="w-full rounded border bg-background px-3 py-2 text-sm"
+                value={editRole}
+                onChange={(e) => setEditRole(e.target.value as 'member' | 'admin')}
+              >
+                <option value="member">Socio</option>
+                <option value="admin">Administrador</option>
+              </select>
             </div>
-          )}
-        </>
-      )}
 
-      {/* Edit Dialog */}
-      <Dialog open={!!editUser} onOpenChange={(open) => { if (!open) setEditUser(null) }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('editUserTitle')}</DialogTitle>
-            <DialogDescription>
-              {editUser?.memberNumber}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-member-number">{t('memberNumber')}</Label>
-              <Input
-                id="edit-member-number"
-                value={editState.memberNumber}
-                onChange={(e) => setEditState((s) => ({ ...s, memberNumber: e.target.value }))}
+            <div className="mb-6 space-y-2">
+              <label className="block text-sm font-medium">Estado</label>
+              <ActiveToggle
+                isActive={editIsActive}
+                onChange={setEditIsActive}
+                disabled={saving}
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-role">{t('role')}</Label>
-              <Select
-                value={editState.role}
-                onValueChange={(v) => setEditState((s) => ({ ...s, role: v as UserRole }))}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="rounded px-4 py-2 text-sm hover:bg-muted"
+                onClick={closeEdit}
+                disabled={saving}
               >
-                <SelectTrigger id="edit-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="member">{t('member')}</SelectItem>
-                  <SelectItem value="admin">{t('admin')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-status">{t('status')}</Label>
-              <Select
-                value={editState.status}
-                onValueChange={(v) => setEditState((s) => ({ ...s, status: v as UserStatus }))}
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                onClick={handleSave}
+                disabled={saving}
               >
-                <SelectTrigger id="edit-status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">{t('active')}</SelectItem>
-                  <SelectItem value="suspended">{t('suspended')}</SelectItem>
-                </SelectContent>
-              </Select>
+                {saving ? 'Guardando...' : 'Guardar'}
+              </button>
             </div>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditUser(null)}>
-              {tc('cancel')}
-            </Button>
-            <Button
-              onClick={handleSaveEdit}
-              disabled={updateMutation.isPending || !editState.memberNumber.trim()}
-            >
-              {updateMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />
-              ) : null}
-              {tc('save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteUser} onOpenChange={(open) => { if (!open) setDeleteUser(null) }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('deleteUser')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('deleteUserConfirm')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tc('cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteUser && deleteMutation.mutate(deleteUser.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />
-              ) : null}
-              {tc('delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        </div>
+      )}
     </div>
   )
 }
