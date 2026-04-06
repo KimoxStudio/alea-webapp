@@ -198,8 +198,8 @@ describe('buildAvailability', () => {
 
   it('reservation with null surface marks both top and bottom sections as reserved', () => {
     const table = makeGameTable({ type: 'removable_top' })
-    const wholTableReservation = makeReservationRow({ start_time: '10:00:00', end_time: '12:00:00', surface: null })
-    const result = buildAvailability(table, '2025-06-15', [wholTableReservation])
+    const wholeTableReservation = makeReservationRow({ start_time: '10:00:00', end_time: '12:00:00', surface: null })
+    const result = buildAvailability(table, '2025-06-15', [wholeTableReservation])
 
     // Null surface = whole-table reservation: both sections must be blocked
     expect(result.top?.find((s) => s.startTime === '10:00')?.available).toBe(false)
