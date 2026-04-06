@@ -15,9 +15,15 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'auth.errors.passwordRequired').max(1024, 'auth.errors.passwordMaxLength'),
 })
 
+const memberNumberSchema = z
+  .string()
+  .min(1, 'auth.errors.memberNumberRequired')
+  .max(20, 'auth.errors.memberNumberTooLong')
+  .regex(/^\d+$/, 'auth.errors.memberNumberNumeric')
+
 export const registerSchema = z
   .object({
-    memberNumber: z.string().min(1, 'auth.errors.memberNumberRequired'),
+    memberNumber: memberNumberSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
   })
@@ -26,5 +32,15 @@ export const registerSchema = z
     path: ['confirmPassword'],
   })
 
+/**
+ * Server-side registration schema: validates the fields sent to the API.
+ * confirmPassword is a UI-only concern and is not required server-side.
+ */
+export const registerServerSchema = z.object({
+  memberNumber: memberNumberSchema,
+  password: passwordSchema,
+})
+
 export type LoginFormData = z.infer<typeof loginSchema>
 export type RegisterFormData = z.infer<typeof registerSchema>
+export type RegisterServerData = z.infer<typeof registerServerSchema>
