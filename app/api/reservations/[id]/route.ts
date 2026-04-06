@@ -17,6 +17,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params
     const body = await request.json()
+    if (body?.status === 'completed' && auth.session.role !== 'admin') {
+      return auth.applyCookies(NextResponse.json({ message: 'Forbidden', statusCode: 403 }, { status: 403 }))
+    }
     return auth.applyCookies(NextResponse.json(await updateReservationForSession(auth.session, id, body)))
   } catch (error) {
     return auth.applyCookies(toServiceErrorResponse(error))

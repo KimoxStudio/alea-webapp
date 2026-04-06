@@ -5,6 +5,7 @@ type ProfileRow = {
   member_number: string
   email: string
   role: 'member' | 'admin'
+  is_active: boolean
   created_at: string
   updated_at: string
 }
@@ -25,6 +26,7 @@ function makeProfile(overrides?: Partial<ProfileRow>): ProfileRow {
     member_number: '100001',
     email: 'admin@alea.club',
     role: 'admin',
+    is_active: true,
     created_at: '2024-01-01T00:00:00.000Z',
     updated_at: '2024-01-01T00:00:00.000Z',
     ...overrides,
@@ -174,6 +176,29 @@ describe('auth service', () => {
         name: 'ServiceError',
         statusCode: 401,
       })
+    })
+
+    it('rejects a suspended user (is_active: false) with a 403 ServiceError before signing in', async () => {
+      const { login } = await loadService()
+      const suspended = makeProfile({
+        id: 'user-3',
+        member_number: '100003',
+        email: 'suspended@alea.club',
+        role: 'member',
+        is_active: false,
+      })
+      adminState.byMemberNumber.set(suspended.member_number, suspended)
+      adminState.byEmail.set(suspended.email, suspended)
+      adminState.byId.set(suspended.id, suspended)
+
+      await expect(
+        login({ identifier: '100003', password: 'Password1234!@#' }),
+      ).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 403,
+        message: 'Your account is suspended. Contact an administrator to reactivate it.',
+      })
+      expect(signInWithPassword).not.toHaveBeenCalled()
     })
   })
 

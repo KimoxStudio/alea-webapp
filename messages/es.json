@@ -75,9 +75,21 @@
     "userManagement": "Gestion de usuarios", "roomManagement": "Gestion de salas",
     "reservationManagement": "Gestion de reservas", "createRoom": "Crear sala",
     "createTable": "Crear mesa", "editUser": "Editar usuario", "deleteUser": "Eliminar usuario",
-    "deleteUserConfirm": "Estas seguro de que deseas eliminar este usuario? Esta accion no se puede deshacer.",
+    "deleteUserConfirm": "¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer.",
     "role": "Rol", "member": "Socio", "admin": "Administrador", "joinDate": "Fecha de registro",
-    "searchUsers": "Buscar usuarios...", "noUsers": "No se encontraron usuarios"
+    "searchUsers": "Buscar usuarios...", "noUsers": "No se encontraron usuarios",
+    "status": "Estado de cuenta", "active": "Activa", "suspended": "Suspendida",
+    "memberNumber": "Número de Socio", "editUserTitle": "Editar Usuario",
+    "dashboardSubtitle": "Gestiona usuarios, reservas y salas",
+    "saving": "Guardando...", "creating": "Creando...",
+    "editRoom": "Editar sala", "noRooms": "No hay salas",
+    "noTables": "No hay mesas en esta sala",
+    "roomName": "Nombre de sala", "roomDescription": "Descripción",
+    "tableCount": "Número de mesas", "tableName": "Nombre de mesa", "tableType": "Tipo de mesa",
+    "cancelReservation": "Cancelar reserva",
+    "cancelReservationConfirm": "¿Estás seguro de que deseas cancelar esta reserva? Esta acción no se puede deshacer.",
+    "noReservations": "No hay reservas",
+    "table": "Mesa", "user": "Usuario"
   },
   "home": {
     "heroTitle": "Tu Aventura Comienza Aquí",

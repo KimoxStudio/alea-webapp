@@ -31,6 +31,13 @@ type TablesByRoomClient = {
     }
   }
 }
+type TablesInsertClient = {
+  insert: (values: TablesInsert<'tables'>) => {
+    select: (columns: string) => {
+      maybeSingle: () => Promise<{ data: TableRow | null; error: unknown }>
+    }
+  }
+}
 type ReservationsByTableClient = {
   select: (columns: string) => {
     eq: (column: 'date', value: string) => {
@@ -105,7 +112,7 @@ export async function createRoomEntry(body: { name?: unknown; tableCount?: unkno
     serviceError('tableCount must be a non-negative integer', 400)
   }
 
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseServerAdminClient()
   const insert: TablesInsert<'rooms'> = {
     name,
     table_count: tableCount,
@@ -132,7 +139,7 @@ export async function updateRoom(id: string, body: { name?: unknown; description
     serviceError('Updating tableCount is not supported', 400)
   }
 
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseServerAdminClient()
   const updates: TablesUpdate<'rooms'> = {
     name: body.name ? String(body.name) : undefined,
     description:
@@ -193,4 +200,48 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
     acc[table.id] = buildAvailability(table, effectiveDate, reservationsByTable.get(table.id) ?? [])
     return acc
   }, {})
+}
+
+export async function createTableEntry(
+  roomId: string,
+  body: { name?: unknown; type?: unknown },
+) {
+  const name = String(body.name ?? '').trim()
+  if (!name) {
+    serviceError('Table name is required', 400)
+  }
+
+  const rawType = String(body.type ?? 'small')
+  const validTypes = ['small', 'large', 'removable_top'] as const
+  type ValidType = typeof validTypes[number]
+  if (!validTypes.includes(rawType as ValidType)) {
+    serviceError('Invalid table type. Must be small, large, or removable_top', 400)
+  }
+  const type = rawType as ValidType
+
+  const supabase = createSupabaseServerAdminClient()
+  const insert: TablesInsert<'tables'> = {
+    room_id: roomId,
+    name,
+    type,
+  }
+  const tables = supabase.from('tables') as unknown as TablesInsertClient
+  const { data, error } = await tables
+    .insert(insert)
+    .select(TABLE_COLUMNS)
+    .maybeSingle()
+
+  if (error) {
+    const pgError = error as { code?: string }
+    if (pgError.code === '23503') {
+      // Foreign-key violation: the provided roomId does not reference an existing room.
+      serviceError('Invalid room ID', 400)
+    }
+    serviceError('Internal server error', 500)
+  }
+  if (!data) {
+    serviceError('Internal server error', 500)
+  }
+
+  return toGameTable(data as TableRow)
 }

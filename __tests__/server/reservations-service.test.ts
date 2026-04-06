@@ -376,6 +376,23 @@ describe('reservations service', () => {
       })
     })
 
+    it('rejects status completed for non-admin users with 403', async () => {
+      const { updateReservationForSession } = await loadReservationModules()
+
+      await expect(updateReservationForSession(memberSession, 'r1', { status: 'completed' })).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 403,
+      })
+    })
+
+    it('allows admins to mark a reservation as completed', async () => {
+      const { updateReservationForSession } = await loadReservationModules()
+
+      const updated = await updateReservationForSession(adminSession, 'r1', { status: 'completed' })
+
+      expect(updated.status).toBe('completed')
+    })
+
     it('rejects updates from non-owners', async () => {
       const { updateReservationForSession } = await loadReservationModules()
 

@@ -288,6 +288,9 @@ export async function updateReservationForSession(
   if (nextStatus != null && !['active', 'cancelled', 'completed'].includes(String(nextStatus))) {
     serviceError('Invalid reservation status', 400)
   }
+  if (nextStatus === 'completed' && session.role !== 'admin') {
+    serviceError('Only admins can mark a reservation as completed', 403)
+  }
 
   const nextStartTime = body.startTime == null
     ? normalizeTime(existingReservation.start_time)

@@ -52,15 +52,53 @@ vi.mock('@/lib/supabase/server', () => ({
     }),
   })),
   createSupabaseServerAdminClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
+    from: vi.fn((table: string) => {
+      if (table === 'rooms') {
+        return {
+          select: vi.fn(() => ({
+            order: listRoomsMock,
+            maybeSingle: maybeSingleMock,
+          })),
+          insert: vi.fn(() => ({
+            select: vi.fn(() => ({
+              maybeSingle: maybeSingleMock,
+            })),
+          })),
+          update: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              select: vi.fn(() => ({
+                maybeSingle: maybeSingleMock,
+              })),
+            })),
+          })),
+        }
+      }
+
+      if (table === 'tables') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              order: listTablesMock,
+            })),
+          })),
+          insert: vi.fn(() => ({
+            select: vi.fn(() => ({
+              maybeSingle: maybeSingleMock,
+            })),
+          })),
+        }
+      }
+
+      return {
+        select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            in: listReservationsMock,
+            eq: vi.fn(() => ({
+              in: listReservationsMock,
+            })),
           })),
         })),
-      })),
-    })),
+      }
+    }),
   })),
 }))
 
@@ -177,6 +215,53 @@ describe('updateRoom', () => {
     const updated = await updateRoom('1', { description: 'New description' })
 
     expect(updated.description).toBe('New description')
+  })
+})
+
+describe('createTableEntry', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+    maybeSingleMock.mockResolvedValue({
+      data: { id: 't1', room_id: '1', name: 'Mesa 1', type: 'small', qr_code: null, pos_x: null, pos_y: null },
+      error: null,
+    })
+  })
+
+  it('maps a foreign-key violation (23503) to a 400 ServiceError', async () => {
+    maybeSingleMock.mockResolvedValue({ data: null, error: { code: '23503', message: 'FK violation' } })
+    const { createTableEntry } = await loadRoomsModules()
+
+    await expect(createTableEntry('nonexistent-room', { name: 'Mesa X', type: 'small' })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 400,
+    })
+  })
+
+  it('returns the created table on success', async () => {
+    const { createTableEntry } = await loadRoomsModules()
+
+    const result = await createTableEntry('1', { name: 'Mesa 1', type: 'small' })
+
+    expect(result).toMatchObject({ name: 'Mesa 1', type: 'small' })
+  })
+
+  it('throws 400 when table name is empty', async () => {
+    const { createTableEntry } = await loadRoomsModules()
+
+    await expect(createTableEntry('1', { name: '', type: 'small' })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 400,
+    })
+  })
+
+  it('throws 400 when table type is invalid', async () => {
+    const { createTableEntry } = await loadRoomsModules()
+
+    await expect(createTableEntry('1', { name: 'Mesa X', type: 'invalid_type' })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 400,
+    })
   })
 })
 

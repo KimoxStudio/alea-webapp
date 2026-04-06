@@ -5,16 +5,16 @@ import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/l
 import type { Tables } from '@/lib/supabase/types'
 
 type ProfileRow = Tables<'profiles'>
-type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'created_at' | 'updated_at'>
-type AuthCredentialRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'created_at' | 'updated_at'>
-const PUBLIC_PROFILE_COLUMNS = 'id, member_number, role, created_at, updated_at' as const
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'is_active' | 'created_at' | 'updated_at'>
+type AuthCredentialRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'is_active' | 'created_at' | 'updated_at'>
+const PUBLIC_PROFILE_COLUMNS = 'id, member_number, role, is_active, created_at, updated_at' as const
 
 // Auth-only columns: email is needed solely to resolve Supabase Auth credentials.
-// It is not part of the application profile model (issue #39).
-const AUTH_CREDENTIAL_COLUMNS = 'id, member_number, email, role, created_at, updated_at' as const
+// It is not part of the public user model (issue #39) but IS included for admin-facing user data.
+const AUTH_CREDENTIAL_COLUMNS = 'id, member_number, email, role, is_active, created_at, updated_at' as const
 
 type PublicProfileLookupColumn = 'id' | 'member_number'
-type AuthCredentialLookupColumn = 'id' | 'member_number'
+type AuthCredentialLookupColumn = 'id' | 'member_number' | 'email'
 type PublicProfileMaybeSingleResult = Promise<{
   data: PublicProfileRow | null
   error: unknown
@@ -98,6 +98,7 @@ function toPublicUser(profile: PublicProfileRow): User {
     id: profile.id,
     memberNumber: profile.member_number,
     role: profile.role,
+    isActive: profile.is_active,
     createdAt: profile.created_at,
     updatedAt: profile.updated_at,
   }
@@ -129,6 +130,11 @@ export async function login(
   if (!credentialProfile.email) {
     // Profile has no email set — cannot authenticate via Supabase Auth.
     serviceError('Invalid credentials', 401)
+  }
+
+  if (credentialProfile.is_active === false) {
+    // Suspended users cannot sign in.
+    serviceError('Your account is suspended. Contact an administrator to reactivate it.', 403)
   }
 
   const supabase = client ?? await createSupabaseServerClient()
