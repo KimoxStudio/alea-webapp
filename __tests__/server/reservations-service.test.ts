@@ -11,6 +11,9 @@ type ReservationRow = {
   status: 'active' | 'cancelled' | 'completed'
   surface: 'top' | 'bottom' | null
   created_at: string
+  // enriched join fields populated by the mock
+  profiles?: { member_number: string } | null
+  tables?: { name: string; rooms?: { name: string } | null } | null
 }
 
 type TableRow = {
@@ -21,6 +24,11 @@ type TableRow = {
   qr_code: string | null
   pos_x: number | null
   pos_y: number | null
+}
+
+type RoomRow = {
+  id: string
+  name: string
 }
 
 const adminSession: SessionUser = {
@@ -35,6 +43,8 @@ const memberSession: SessionUser = {
 
 const reservationsState: ReservationRow[] = []
 const tablesState = new Map<string, TableRow>()
+const profilesMap = new Map<string, { member_number: string }>()
+const roomsMap = new Map<string, RoomRow>()
 
 function makeReservation(overrides?: Partial<ReservationRow>): ReservationRow {
   return {
@@ -56,17 +66,11 @@ function cloneReservation(row: ReservationRow) {
 }
 
 function seedState() {
-  reservationsState.length = 0
-  reservationsState.push(
-    makeReservation(),
-    makeReservation({
-      id: 'r2',
-      table_id: 't3',
-      start_time: '10:00:00',
-      end_time: '12:00:00',
-      surface: 'top',
-    }),
-  )
+  profilesMap.clear()
+  profilesMap.set('2', { member_number: 'M-00000002' })
+
+  roomsMap.clear()
+  roomsMap.set('room-1', { id: 'room-1', name: 'Sala Mirkwood' })
 
   tablesState.clear()
   tablesState.set('t1', {
@@ -86,6 +90,30 @@ function seedState() {
     qr_code: 'QR-3',
     pos_x: 1,
     pos_y: 0,
+  })
+
+  reservationsState.length = 0
+
+  const r1base = makeReservation()
+  const t1 = tablesState.get(r1base.table_id)!
+  reservationsState.push({
+    ...r1base,
+    profiles: profilesMap.get(r1base.user_id) ?? null,
+    tables: t1 ? { name: t1.name, rooms: roomsMap.get(t1.room_id) ?? null } : null,
+  })
+
+  const r2base = makeReservation({
+    id: 'r2',
+    table_id: 't3',
+    start_time: '10:00:00',
+    end_time: '12:00:00',
+    surface: 'top',
+  })
+  const t3 = tablesState.get(r2base.table_id)!
+  reservationsState.push({
+    ...r2base,
+    profiles: profilesMap.get(r2base.user_id) ?? null,
+    tables: t3 ? { name: t3.name, rooms: roomsMap.get(t3.room_id) ?? null } : null,
   })
 }
 
@@ -225,14 +253,20 @@ describe('reservations service', () => {
     it('lets admins filter by user, table, and date', async () => {
       const { listVisibleReservations } = await loadReservationModules()
 
-      reservationsState.push(makeReservation({
+      const r3base = makeReservation({
         id: 'r3',
         user_id: '9',
         table_id: 't1',
         date: '2026-04-05',
         start_time: '12:00:00',
         end_time: '13:00:00',
-      }))
+      })
+      const t1 = tablesState.get('t1')!
+      reservationsState.push({
+        ...r3base,
+        profiles: profilesMap.get('9') ?? null,
+        tables: { name: t1.name, rooms: roomsMap.get(t1.room_id) ?? null },
+      })
 
       const result = await listVisibleReservations({
         session: adminSession,
@@ -251,6 +285,47 @@ describe('reservations service', () => {
           endTime: '13:00',
         }),
       ])
+    })
+
+    it('populates memberNumber for admin sessions', async () => {
+      const { listVisibleReservations } = await loadReservationModules()
+
+      const result = await listVisibleReservations({ session: adminSession })
+
+      expect(result.length).toBeGreaterThan(0)
+      expect(result[0]!.memberNumber).toBe('M-00000002')
+    })
+
+    it('strips memberNumber for member sessions', async () => {
+      const { listVisibleReservations } = await loadReservationModules()
+
+      const result = await listVisibleReservations({ session: memberSession })
+
+      expect(result.length).toBeGreaterThan(0)
+      expect(result[0]!.memberNumber).toBeUndefined()
+    })
+
+    it('populates roomName and tableName for admin sessions', async () => {
+      const { listVisibleReservations } = await loadReservationModules()
+
+      const result = await listVisibleReservations({ session: adminSession })
+
+      // Both seeded reservations share the same room; find r1 which is on table t1 (Mesa 1)
+      const r1 = result.find((r) => r.id === 'r1')
+      expect(r1).toBeDefined()
+      expect(r1!.roomName).toBe('Sala Mirkwood')
+      expect(r1!.tableName).toBe('Mesa 1')
+    })
+
+    it('populates roomName and tableName for member sessions', async () => {
+      const { listVisibleReservations } = await loadReservationModules()
+
+      const result = await listVisibleReservations({ session: memberSession })
+
+      const r1 = result.find((r) => r.id === 'r1')
+      expect(r1).toBeDefined()
+      expect(r1!.roomName).toBe('Sala Mirkwood')
+      expect(r1!.tableName).toBe('Mesa 1')
     })
   })
 

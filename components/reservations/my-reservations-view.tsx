@@ -45,7 +45,11 @@ export function MyReservationsView() {
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-sm font-medium">
               <MapPin className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-              <span>Mesa {reservation.tableId}</span>
+              <span>
+                {reservation.roomName && reservation.tableName
+                  ? `${reservation.roomName} · ${reservation.tableName}`
+                  : reservation.tableName ?? reservation.tableId}
+              </span>
               {reservation.surface && (
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Layers className="h-3 w-3" aria-hidden="true" />
@@ -74,7 +78,7 @@ export function MyReservationsView() {
             variant="outline"
             size="sm"
             onClick={() => setCancelingId(reservation.id)}
-            className="w-full border-destructive/40 text-destructive-foreground hover:bg-destructive/15"
+            className="w-full border-destructive/40 text-destructive hover:bg-destructive/15"
           >
             {t('cancel')}
           </Button>

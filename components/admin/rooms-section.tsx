@@ -159,14 +159,16 @@ function RoomRow({ room }: { room: Room }) {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(room.name)
   const [editDesc, setEditDesc] = useState(room.description ?? '')
+  const [editTableCount, setEditTableCount] = useState(String(room.tableCount))
 
   const updateRoom = useAdminUpdateRoom()
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+    const tableCount = Math.max(0, parseInt(editTableCount, 10) || 0)
     await updateRoom.mutateAsync({
       id: room.id,
-      data: { name: editName.trim() || room.name, description: editDesc.trim() || undefined },
+      data: { name: editName.trim() || room.name, description: editDesc.trim() || undefined, tableCount },
     })
     setEditing(false)
   }
@@ -214,6 +216,7 @@ function RoomRow({ room }: { room: Room }) {
               setEditing(true)
               setEditName(room.name)
               setEditDesc(room.description ?? '')
+              setEditTableCount(String(room.tableCount))
             }}
             className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
           >
@@ -262,6 +265,19 @@ function RoomRow({ room }: { room: Room }) {
                 className="bg-background-secondary border-border focus:border-primary/50"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor={`room-count-edit-${room.id}`} className="text-sm text-muted-foreground font-medium">
+                {t('tableCount')}
+              </Label>
+              <Input
+                id={`room-count-edit-${room.id}`}
+                type="number"
+                min="0"
+                value={editTableCount}
+                onChange={(e) => setEditTableCount(e.target.value)}
+                className="bg-background-secondary border-border focus:border-primary/50"
+              />
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditing(false)} className="border-border">
                 {tc('cancel')}
@@ -293,7 +309,8 @@ export function RoomsSection() {
 
   async function handleCreateRoom(e: React.FormEvent) {
     e.preventDefault()
-    const tableCount = Math.max(0, parseInt(newTableCount, 10) || 0)
+    const parsed = Number(newTableCount)
+    const tableCount = Number.isInteger(parsed) && parsed >= 0 ? parsed : 0
     await createRoom.mutateAsync({ name: newName.trim(), description: newDesc.trim() || undefined, tableCount })
     setNewName('')
     setNewDesc('')
@@ -407,6 +424,8 @@ export function RoomsSection() {
                 id="new-room-count"
                 type="number"
                 min="0"
+                step="1"
+                inputMode="numeric"
                 value={newTableCount}
                 onChange={(e) => setNewTableCount(e.target.value)}
                 className="bg-background-secondary border-border focus:border-primary/50"

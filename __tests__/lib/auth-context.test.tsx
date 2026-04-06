@@ -2,6 +2,12 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { User } from '@/lib/types'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const routerPushMock = vi.fn()
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: routerPushMock }),
+}))
+
 const apiClientMock = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
@@ -26,6 +32,7 @@ describe('AuthProvider', () => {
   beforeEach(() => {
     apiClientMock.get.mockReset()
     apiClientMock.post.mockReset()
+    routerPushMock.mockReset()
   })
 
   it('hydrates from /auth/me when no initial user is provided', async () => {
@@ -112,5 +119,6 @@ describe('AuthProvider', () => {
 
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
+    expect(routerPushMock).toHaveBeenCalledWith('/')
   })
 })

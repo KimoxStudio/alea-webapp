@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import type { User } from '@/lib/types'
 import { apiClient } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children, initialUser }: { children: React.ReactNode; initialUser?: User | null }) {
   const [user, setUser] = useState<User | null>(initialUser ?? null)
   const [isLoading, setIsLoading] = useState(initialUser === undefined)
+  const router = useRouter()
 
   const checkAuth = useCallback(async () => {
     try {
@@ -40,6 +42,7 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
   const logout = async () => {
     await apiClient.post(endpoints.auth.logout)
     setUser(null)
+    router.push('/')
   }
   const register = async (memberNumber: string, password: string) => {
     const data = await apiClient.post<User>(endpoints.auth.register, { memberNumber, password })

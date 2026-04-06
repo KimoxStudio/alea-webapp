@@ -61,7 +61,7 @@ export function RoomView({ roomId, currentDate }: RoomViewProps) {
 
   if (error) {
     return (
-      <div role="alert" className="text-sm text-destructive-foreground bg-destructive/15 border border-destructive/30 rounded-lg p-4">
+      <div role="alert" className="text-sm text-destructive bg-destructive/15 border border-destructive/30 rounded-lg p-4">
         Error al cargar las mesas. Intentalo de nuevo.
       </div>
     )

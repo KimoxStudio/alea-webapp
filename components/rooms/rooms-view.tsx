@@ -46,7 +46,7 @@ export function RoomsView() {
   if (error || !rooms) {
     return (
       <div className="container mx-auto max-w-7xl px-4 py-8">
-        <div role="alert" className="text-sm text-destructive-foreground bg-destructive/15 border border-destructive/30 rounded-lg p-4">
+        <div role="alert" className="text-sm text-destructive bg-destructive/15 border border-destructive/30 rounded-lg p-4">
           Error al cargar las salas.
         </div>
       </div>

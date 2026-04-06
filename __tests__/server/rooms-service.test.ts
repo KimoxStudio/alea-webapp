@@ -5,6 +5,7 @@ const maybeSingleMock = vi.fn()
 const listRoomsMock = vi.fn()
 const listTablesMock = vi.fn()
 const listReservationsMock = vi.fn()
+const updateMock = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn(async () => ({
@@ -20,13 +21,7 @@ vi.mock('@/lib/supabase/server', () => ({
               maybeSingle: maybeSingleMock,
             })),
           })),
-          update: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              select: vi.fn(() => ({
-                maybeSingle: maybeSingleMock,
-              })),
-            })),
-          })),
+          update: updateMock,
         }
       }
 
@@ -64,13 +59,7 @@ vi.mock('@/lib/supabase/server', () => ({
               maybeSingle: maybeSingleMock,
             })),
           })),
-          update: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              select: vi.fn(() => ({
-                maybeSingle: maybeSingleMock,
-              })),
-            })),
-          })),
+          update: updateMock,
         }
       }
 
@@ -154,14 +143,34 @@ describe('updateRoom', () => {
       data: { id: '1', name: 'Sala Mirkwood Updated', table_count: 8, description: 'Sala principal' },
       error: null,
     })
+    updateMock.mockReturnValue({
+      eq: vi.fn(() => ({
+        select: vi.fn(() => ({
+          maybeSingle: maybeSingleMock,
+        })),
+      })),
+    })
   })
 
-  it('throws ServiceError with status 400 when tableCount is defined', async () => {
+  it('succeeds when tableCount is a valid non-negative integer', async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: { id: '1', name: 'Sala Mirkwood', table_count: 5, description: 'Sala principal' },
+      error: null,
+    })
+    const { updateRoom } = await loadRoomsModules()
+
+    const updated = await updateRoom('1', { tableCount: 5 })
+
+    expect(updated).not.toBeNull()
+    expect(updated?.tableCount).toBe(5)
+  })
+
+  it('throws ServiceError with status 400 when tableCount is not a non-negative integer', async () => {
     const { updateRoom } = await loadRoomsModules()
 
     let caught: ServiceError | undefined
     try {
-      await updateRoom('1', { tableCount: 5 })
+      await updateRoom('1', { tableCount: -1 })
     } catch (err) {
       caught = err as ServiceError
     }
@@ -179,6 +188,26 @@ describe('updateRoom', () => {
 
     expect(updated).not.toBeNull()
     expect(updated?.name).toBe('Sala Mirkwood Updated')
+  })
+
+  it('skips table_count update when tableCount is null', async () => {
+    const { updateRoom } = await loadRoomsModules()
+
+    // null is treated as "not provided" — should not reset table_count to 0
+    await expect(updateRoom('1', { tableCount: null })).resolves.not.toThrow()
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({ table_count: expect.anything() })
+    )
+  })
+
+  it('skips table_count update when tableCount is empty string', async () => {
+    const { updateRoom } = await loadRoomsModules()
+
+    // empty string is treated as "not provided" — should not reset table_count to 0
+    await expect(updateRoom('1', { tableCount: '' })).resolves.not.toThrow()
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({ table_count: expect.anything() })
+    )
   })
 
   it('preserves existing description when description is null', async () => {

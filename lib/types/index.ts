@@ -39,6 +39,9 @@ export interface Reservation {
   status: 'active' | 'cancelled' | 'completed';
   surface?: TableSurface | null;
   createdAt: string;
+  memberNumber?: string | null;
+  roomName?: string | null;
+  tableName?: string | null;
 }
 
 export interface RemovableTopTableStatus {

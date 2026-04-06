@@ -135,8 +135,13 @@ export async function createRoomEntry(body: { name?: unknown; tableCount?: unkno
 }
 
 export async function updateRoom(id: string, body: { name?: unknown; description?: unknown; tableCount?: unknown }) {
-  if (body.tableCount !== undefined) {
-    serviceError('Updating tableCount is not supported', 400)
+  let tableCount: number | undefined
+  if (body.tableCount !== undefined && body.tableCount !== null && body.tableCount !== '') {
+    const raw = Number(body.tableCount)
+    if (!Number.isFinite(raw) || raw < 0 || !Number.isInteger(raw)) {
+      serviceError('tableCount must be a non-negative integer', 400)
+    }
+    tableCount = raw
   }
 
   const supabase = createSupabaseServerAdminClient()
@@ -148,6 +153,7 @@ export async function updateRoom(id: string, body: { name?: unknown; description
         : body.description === null
           ? null
           : String(body.description),
+    ...(tableCount !== undefined ? { table_count: tableCount } : {}),
   }
   const rooms = supabase.from('rooms') as unknown as RoomsTableClient
   const { data, error } = await rooms

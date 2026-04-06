@@ -66,21 +66,21 @@ export function TableCard({ table, availability, onReserve, currentDate: _curren
       aria-disabled={status === 'reserved'}
     >
       {/* Table type icon */}
-      <div className="flex items-center justify-between w-full mb-2">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between w-full mb-2 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <Icon
             className={cn(
-              'h-5 w-5',
+              'h-5 w-5 shrink-0',
               status === 'available' && 'text-emerald-light',
               status === 'partial' && 'text-gold-400',
-              status === 'reserved' && 'text-crimson-light',
+              status === 'reserved' && 'text-destructive',
               status === 'unknown' && 'text-muted-foreground'
             )}
             aria-hidden="true"
           />
-          <span className="text-sm font-semibold font-cinzel">{table.name}</span>
+          <span className="text-sm font-semibold font-cinzel truncate">{table.name}</span>
         </div>
-        <Badge variant={config.badgeVariant} className="text-[10px] px-1.5 py-0.5">
+        <Badge variant={config.badgeVariant} className="text-[10px] px-1.5 py-0.5 shrink-0">
           {config.label}
         </Badge>
       </div>
@@ -96,7 +96,7 @@ export function TableCard({ table, availability, onReserve, currentDate: _curren
               className={cn(
                 'text-[9px] px-1.5 py-0.5 rounded border',
                 availability.top.some(s => !s.available)
-                  ? 'border-crimson/40 bg-crimson-dark/20 text-crimson-light'
+                  ? 'border-crimson/40 bg-crimson-dark/30 text-destructive'
                   : 'border-emerald/40 bg-emerald-dark/20 text-emerald-light'
               )}
               aria-label={`Superior: ${availability.top.some(s => !s.available) ? 'ocupada' : 'libre'}`}
@@ -107,7 +107,7 @@ export function TableCard({ table, availability, onReserve, currentDate: _curren
               className={cn(
                 'text-[9px] px-1.5 py-0.5 rounded border',
                 availability.bottom.some(s => !s.available)
-                  ? 'border-crimson/40 bg-crimson-dark/20 text-crimson-light'
+                  ? 'border-crimson/40 bg-crimson-dark/30 text-destructive'
                   : 'border-emerald/40 bg-emerald-dark/20 text-emerald-light'
               )}
               aria-label={`Inferior: ${availability.bottom.some(s => !s.available) ? 'ocupada' : 'libre'}`}

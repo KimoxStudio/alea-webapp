@@ -44,7 +44,22 @@ type SessionReservationsTableClient = {
   }
 }
 
+type EnrichedReservationRow = ReservationRow & {
+  profiles?: { member_number: string } | null
+  tables?: { name: string; rooms?: { name: string } | null } | null
+}
+
+type EnrichedReservationsQuery = {
+  eq: (column: 'user_id' | 'table_id' | 'date', value: string) => EnrichedReservationsQuery
+  order: (column: string, options: { ascending: boolean }) => EnrichedReservationsQuery
+  then: Promise<{ data: EnrichedReservationRow[] | null; error: unknown }>['then']
+}
+type EnrichedReservationsTableClient = {
+  select: (columns: string) => EnrichedReservationsQuery
+}
+
 const RESERVATION_COLUMNS = 'id, table_id, user_id, date, start_time, end_time, status, surface, created_at'
+const RESERVATION_ENRICHED_COLUMNS = 'id, table_id, user_id, date, start_time, end_time, status, surface, created_at, profiles(member_number), tables(name, rooms(name))'
 
 function parseDate(value: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -87,6 +102,23 @@ function mapReservation(row: ReservationRow): Reservation {
     status: row.status,
     surface: row.surface,
     createdAt: row.created_at,
+  }
+}
+
+function mapEnrichedReservation(row: EnrichedReservationRow): Reservation {
+  return {
+    id: row.id,
+    tableId: row.table_id,
+    userId: row.user_id,
+    date: row.date,
+    startTime: normalizeTime(row.start_time),
+    endTime: normalizeTime(row.end_time),
+    status: row.status,
+    surface: row.surface,
+    createdAt: row.created_at,
+    memberNumber: row.profiles?.member_number ?? null,
+    roomName: row.tables?.rooms?.name ?? null,
+    tableName: row.tables?.name ?? null,
   }
 }
 
@@ -189,8 +221,8 @@ export async function listVisibleReservations(input: {
   const effectiveUserId = input.session.role === 'admin' ? input.userId ?? undefined : input.session.id
   const effectiveDate = input.date != null && input.date !== '' ? parseDate(input.date) : undefined
 
-  let query = (supabase.from('reservations') as unknown as SessionReservationsTableClient)
-    .select(RESERVATION_COLUMNS)
+  let query = (supabase.from('reservations') as unknown as EnrichedReservationsTableClient)
+    .select(RESERVATION_ENRICHED_COLUMNS)
     .order('date', { ascending: true })
     .order('start_time', { ascending: true })
 
@@ -210,7 +242,14 @@ export async function listVisibleReservations(input: {
     serviceError('Internal server error', 500)
   }
 
-  return (data ?? []).map(mapReservation)
+  const isAdmin = input.session.role === 'admin'
+  return (data ?? []).map((row) => {
+    const reservation = mapEnrichedReservation(row)
+    if (!isAdmin) {
+      reservation.memberNumber = undefined
+    }
+    return reservation
+  })
 }
 
 export async function createReservationForSession(

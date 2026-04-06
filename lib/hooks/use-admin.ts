@@ -76,7 +76,7 @@ export function useAdminRooms() {
 export function useAdminUpdateRoom() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { name?: string; description?: string } }) =>
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; description?: string; tableCount?: number } }) =>
       apiClient.put<Room>(endpoints.rooms.byId(id), data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'] })

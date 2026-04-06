@@ -62,7 +62,7 @@ export function RegisterForm({ locale }: RegisterFormProps) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
       {serverError && (
-        <div role="alert" className="rounded-md bg-destructive/15 border border-destructive/30 px-4 py-3 text-sm text-destructive-foreground">
+        <div role="alert" className="rounded-md bg-destructive/15 border border-destructive/30 px-4 py-3 text-sm text-destructive">
           {serverError}
         </div>
       )}
