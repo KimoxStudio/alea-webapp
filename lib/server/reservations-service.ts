@@ -217,9 +217,12 @@ export async function listVisibleReservations(input: {
   tableId?: string | null
   date?: string | null
 }) {
-  // Use the admin client so the enriched join (profiles, tables, rooms) is not
-  // silently blocked by RLS policies that restrict cross-user profile reads.
-  const supabase = createSupabaseServerAdminClient()
+  // Admin sessions use the admin client so the cross-user profiles join is not
+  // silently blocked by RLS. Member sessions use the session client so RLS
+  // remains an additional safety net (the member can only join their own profile row).
+  const supabase = input.session.role === 'admin'
+    ? createSupabaseServerAdminClient()
+    : await createSupabaseServerClient()
   const effectiveUserId = input.session.role === 'admin' ? input.userId ?? undefined : input.session.id
   const effectiveDate = input.date != null && input.date !== '' ? parseDate(input.date) : undefined
 
