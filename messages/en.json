@@ -80,7 +80,17 @@
     "role": "Role", "member": "Member", "admin": "Administrator",
     "joinDate": "Registration date", "searchUsers": "Search users...", "noUsers": "No users found",
     "status": "Account status", "active": "Active", "suspended": "Suspended",
-    "memberNumber": "Member Number", "editUserTitle": "Edit User"
+    "memberNumber": "Member Number", "editUserTitle": "Edit User",
+    "dashboardSubtitle": "Manage users, reservations, and rooms",
+    "saving": "Saving...", "creating": "Creating...",
+    "editRoom": "Edit room", "noRooms": "No rooms found",
+    "noTables": "No tables in this room",
+    "roomName": "Room name", "roomDescription": "Description",
+    "tableCount": "Table count", "tableName": "Table name", "tableType": "Table type",
+    "cancelReservation": "Cancel reservation",
+    "cancelReservationConfirm": "Are you sure you want to cancel this reservation?",
+    "noReservations": "No reservations found",
+    "table": "Table", "user": "User"
   },
   "home": {
     "heroTitle": "Your Adventure Starts Here",

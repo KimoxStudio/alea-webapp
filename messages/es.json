@@ -79,7 +79,17 @@
     "role": "Rol", "member": "Socio", "admin": "Administrador", "joinDate": "Fecha de registro",
     "searchUsers": "Buscar usuarios...", "noUsers": "No se encontraron usuarios",
     "status": "Estado de cuenta", "active": "Activa", "suspended": "Suspendida",
-    "memberNumber": "Numero de Socio", "editUserTitle": "Editar Usuario"
+    "memberNumber": "Numero de Socio", "editUserTitle": "Editar Usuario",
+    "dashboardSubtitle": "Gestiona usuarios, reservas y salas",
+    "saving": "Guardando...", "creating": "Creando...",
+    "editRoom": "Editar sala", "noRooms": "No hay salas",
+    "noTables": "No hay mesas en esta sala",
+    "roomName": "Nombre de sala", "roomDescription": "Descripcion",
+    "tableCount": "Numero de mesas", "tableName": "Nombre de mesa", "tableType": "Tipo de mesa",
+    "cancelReservation": "Cancelar reserva",
+    "cancelReservationConfirm": "Estas seguro de que deseas cancelar esta reserva?",
+    "noReservations": "No hay reservas",
+    "table": "Mesa", "user": "Usuario"
   },
   "home": {
     "heroTitle": "Tu Aventura Comienza Aquí",
