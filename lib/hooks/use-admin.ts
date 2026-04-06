@@ -1,229 +1,119 @@
-import { useState, useCallback, useEffect } from 'react'
-import type { User, Reservation, Room, GameTable } from '@/lib/types'
+'use client'
 
-interface UseAdminUsersOptions {
-  initialUsers?: User[]
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { User, Room, GameTable, Reservation, PaginatedResponse } from '@/lib/types'
+import { apiClient } from '@/lib/api/client'
+import { endpoints } from '@/lib/api/endpoints'
+
+// ----- Users -----
+
+export function useAdminUsers(page: number, limit: number, search: string) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  if (search) params.set('search', search)
+  return useQuery<PaginatedResponse<User>>({
+    queryKey: ['admin', 'users', page, limit, search],
+    queryFn: () => apiClient.get<PaginatedResponse<User>>(`${endpoints.users.list}?${params.toString()}`),
+    staleTime: 30_000,
+  })
 }
 
-interface UseAdminUsersReturn {
-  users: User[]
-  loading: boolean
-  error: string | null
-  updateUser: (id: string, payload: { role?: 'member' | 'admin'; is_active?: boolean }) => Promise<void>
-  deleteUser: (id: string) => Promise<void>
-  setUsers: (users: User[]) => void
+export function useAdminUpdateUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { memberNumber?: string; role?: string; is_active?: boolean } }) =>
+      apiClient.put<User>(endpoints.users.byId(id), data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+    },
+  })
 }
 
-export function useAdminUsers({ initialUsers = [] }: UseAdminUsersOptions = {}): UseAdminUsersReturn {
-  const [users, setUsers] = useState<User[]>(initialUsers)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const updateUser = useCallback(async (
-    id: string,
-    payload: { role?: 'member' | 'admin'; is_active?: boolean },
-  ) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/users/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error((json as { message?: string }).message ?? 'Failed to update user')
-      }
-      const updated: User = await res.json()
-      setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  const deleteUser = useCallback(async (id: string) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/users/${id}`, { method: 'DELETE' })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error((json as { message?: string }).message ?? 'Failed to delete user')
-      }
-      setUsers((prev) => prev.filter((u) => u.id !== id))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  return { users, loading, error, updateUser, deleteUser, setUsers }
+export function useAdminDeleteUser() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete<void>(endpoints.users.byId(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+    },
+  })
 }
 
-// ---------------------------------------------------------------------------
-// Reservations
-// ---------------------------------------------------------------------------
+// ----- Reservations -----
 
-export function useAdminReservations(): { data: Reservation[] | undefined; isLoading: boolean } {
-  const [data, setData] = useState<Reservation[] | undefined>(undefined)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    let cancelled = false
-    setIsLoading(true)
-    fetch('/api/admin/reservations')
-      .then((r) => r.json())
-      .then((json) => { if (!cancelled) setData(json as Reservation[]) })
-      .catch(() => { if (!cancelled) setData([]) })
-      .finally(() => { if (!cancelled) setIsLoading(false) })
-    return () => { cancelled = true }
-  }, [])
-
-  return { data, isLoading }
+export function useAdminReservations(userId?: string | null, date?: string | null) {
+  const params = new URLSearchParams()
+  if (userId) params.set('userId', userId)
+  if (date) params.set('date', date)
+  const query = params.toString()
+  return useQuery<Reservation[]>({
+    queryKey: ['admin', 'reservations', userId, date],
+    queryFn: () => apiClient.get<Reservation[]>(`/reservations${query ? `?${query}` : ''}`),
+    staleTime: 30_000,
+  })
 }
 
-export function useAdminCancelReservation(): {
-  mutateAsync: (id: string) => Promise<void>
-  isPending: boolean
-} {
-  const [isPending, setIsPending] = useState(false)
-
-  const mutateAsync = useCallback(async (id: string) => {
-    setIsPending(true)
-    try {
-      const res = await fetch(`/api/admin/reservations/${id}/cancel`, { method: 'POST' })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error((json as { message?: string }).message ?? 'Failed to cancel reservation')
-      }
-    } finally {
-      setIsPending(false)
-    }
-  }, [])
-
-  return { mutateAsync, isPending }
+export function useAdminCancelReservation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.put<Reservation>(`/reservations/${id}`, { status: 'cancelled' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reservations'] })
+      queryClient.invalidateQueries({ queryKey: ['reservations'] })
+    },
+  })
 }
 
-// ---------------------------------------------------------------------------
-// Rooms
-// ---------------------------------------------------------------------------
+// ----- Rooms -----
 
-export function useAdminRooms(): { data: Room[] | undefined; isLoading: boolean } {
-  const [data, setData] = useState<Room[] | undefined>(undefined)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    let cancelled = false
-    setIsLoading(true)
-    fetch('/api/admin/rooms')
-      .then((r) => r.json())
-      .then((json) => { if (!cancelled) setData(json as Room[]) })
-      .catch(() => { if (!cancelled) setData([]) })
-      .finally(() => { if (!cancelled) setIsLoading(false) })
-    return () => { cancelled = true }
-  }, [])
-
-  return { data, isLoading }
+export function useAdminRooms() {
+  return useQuery<Room[]>({
+    queryKey: ['admin', 'rooms'],
+    queryFn: () => apiClient.get<Room[]>(endpoints.rooms.list),
+    staleTime: 60_000,
+  })
 }
 
-export function useAdminUpdateRoom(): {
-  mutateAsync: (args: { id: string; data: { name?: string; description?: string } }) => Promise<void>
-  isPending: boolean
-} {
-  const [isPending, setIsPending] = useState(false)
-
-  const mutateAsync = useCallback(async (args: { id: string; data: { name?: string; description?: string } }) => {
-    setIsPending(true)
-    try {
-      const res = await fetch(`/api/admin/rooms/${args.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(args.data),
-      })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error((json as { message?: string }).message ?? 'Failed to update room')
-      }
-    } finally {
-      setIsPending(false)
-    }
-  }, [])
-
-  return { mutateAsync, isPending }
+export function useAdminUpdateRoom() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; description?: string } }) =>
+      apiClient.put<Room>(endpoints.rooms.byId(id), data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'] })
+      queryClient.invalidateQueries({ queryKey: ['rooms'] })
+    },
+  })
 }
 
-export function useAdminCreateRoom(): {
-  mutateAsync: (data: { name: string; description?: string; tableCount: number }) => Promise<void>
-  isPending: boolean
-} {
-  const [isPending, setIsPending] = useState(false)
-
-  const mutateAsync = useCallback(async (data: { name: string; description?: string; tableCount: number }) => {
-    setIsPending(true)
-    try {
-      const res = await fetch('/api/admin/rooms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error((json as { message?: string }).message ?? 'Failed to create room')
-      }
-    } finally {
-      setIsPending(false)
-    }
-  }, [])
-
-  return { mutateAsync, isPending }
+export function useAdminCreateRoom() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; description?: string; tableCount: number }) =>
+      apiClient.post<Room>(endpoints.rooms.list, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'] })
+      queryClient.invalidateQueries({ queryKey: ['rooms'] })
+    },
+  })
 }
 
-export function useAdminRoomTables(roomId: string): { data: GameTable[] | undefined; isLoading: boolean } {
-  const [data, setData] = useState<GameTable[] | undefined>(undefined)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    let cancelled = false
-    setIsLoading(true)
-    fetch(`/api/admin/rooms/${roomId}/tables`)
-      .then((r) => r.json())
-      .then((json) => { if (!cancelled) setData(json as GameTable[]) })
-      .catch(() => { if (!cancelled) setData([]) })
-      .finally(() => { if (!cancelled) setIsLoading(false) })
-    return () => { cancelled = true }
-  }, [roomId])
-
-  return { data, isLoading }
+export function useAdminRoomTables(roomId: string | null) {
+  return useQuery<GameTable[]>({
+    queryKey: ['admin', 'rooms', roomId, 'tables'],
+    queryFn: () => apiClient.get<GameTable[]>(endpoints.rooms.tables(roomId!)),
+    enabled: !!roomId,
+    staleTime: 60_000,
+  })
 }
 
-export function useAdminCreateTable(): {
-  mutateAsync: (args: { roomId: string; data: { name: string; type: 'small' | 'large' | 'removable_top' } }) => Promise<void>
-  isPending: boolean
-} {
-  const [isPending, setIsPending] = useState(false)
-
-  const mutateAsync = useCallback(async (args: { roomId: string; data: { name: string; type: 'small' | 'large' | 'removable_top' } }) => {
-    setIsPending(true)
-    try {
-      const res = await fetch(`/api/admin/rooms/${args.roomId}/tables`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(args.data),
-      })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error((json as { message?: string }).message ?? 'Failed to create table')
-      }
-    } finally {
-      setIsPending(false)
-    }
-  }, [])
-
-  return { mutateAsync, isPending }
+export function useAdminCreateTable() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ roomId, data }: { roomId: string; data: { name: string; type: string } }) =>
+      apiClient.post<GameTable>(endpoints.rooms.tables(roomId), data),
+    onSuccess: (_created, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', variables.roomId, 'tables'] })
+      queryClient.invalidateQueries({ queryKey: ['rooms', variables.roomId, 'tables'] })
+    },
+  })
 }
