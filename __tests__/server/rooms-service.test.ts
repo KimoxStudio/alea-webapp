@@ -52,15 +52,38 @@ vi.mock('@/lib/supabase/server', () => ({
     }),
   })),
   createSupabaseServerAdminClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
+    from: vi.fn((table: string) => {
+      if (table === 'rooms') {
+        return {
+          select: vi.fn(() => ({
+            order: listRoomsMock,
+            maybeSingle: maybeSingleMock,
+          })),
+          insert: vi.fn(() => ({
+            select: vi.fn(() => ({
+              maybeSingle: maybeSingleMock,
+            })),
+          })),
+          update: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              select: vi.fn(() => ({
+                maybeSingle: maybeSingleMock,
+              })),
+            })),
+          })),
+        }
+      }
+
+      return {
+        select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            in: listReservationsMock,
+            eq: vi.fn(() => ({
+              in: listReservationsMock,
+            })),
           })),
         })),
-      })),
-    })),
+      }
+    }),
   })),
 }))
 
