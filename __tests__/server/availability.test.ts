@@ -195,4 +195,26 @@ describe('buildAvailability', () => {
     expect(result.top?.find((s) => s.startTime === '10:00')?.available).toBe(false)
     expect(result.bottom?.find((s) => s.startTime === '10:00')?.available).toBe(true)
   })
+
+  it('reservation with null surface does not mark top section as reserved', () => {
+    const table = makeGameTable({ type: 'removable_top' })
+    // surface: null means no specific section was targeted — should not bleed into top/bottom badges
+    const noSurfaceReservation = makeReservationRow({ start_time: '10:00:00', end_time: '11:00:00', surface: null })
+    const result = buildAvailability(table, '2025-06-15', [noSurfaceReservation])
+
+    // overall slot should be unavailable (reservation exists)
+    expect(result.slots.find((s) => s.startTime === '10:00')?.available).toBe(false)
+    // but neither top nor bottom badge should be red
+    expect(result.top?.find((s) => s.startTime === '10:00')?.available).toBe(true)
+    expect(result.bottom?.find((s) => s.startTime === '10:00')?.available).toBe(true)
+  })
+
+  it('bottom-only reservation does not mark top section as reserved', () => {
+    const table = makeGameTable({ type: 'removable_top' })
+    const bottomReservation = makeReservationRow({ start_time: '14:00:00', end_time: '15:00:00', surface: 'bottom' })
+    const result = buildAvailability(table, '2025-06-15', [bottomReservation])
+
+    expect(result.bottom?.find((s) => s.startTime === '14:00')?.available).toBe(false)
+    expect(result.top?.find((s) => s.startTime === '14:00')?.available).toBe(true)
+  })
 })
