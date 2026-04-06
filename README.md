@@ -106,7 +106,7 @@ alea-webapp/
 - **Table types**: `small`, `large`, `removable_top`.
 - **removable_top rule**: A table with a removable top has two bookable surfaces (`top` and `bottom`). Reserving one surface blocks the other surface in the same time slot.
 - **Authentication**: Members log in with their member number or email + password. Passwords require: minimum 12 characters, at least one letter, at least one number, and at least one special character.
-- **Admin**: Admins can view/edit/delete users (without seeing or modifying passwords), manage rooms, tables, and reservations (10 users per page, with search).
+- **Admin**: Admins access the dashboard at `/{locale}/admin` (guarded route). The dashboard features: user management (10/page, paginated list with search, status badge, edit role/status/member number, delete), room and table management (list/edit rooms, create tables), and reservation management (list all, cancel with confirmation). Passwords are never shown or editable. Admin write operations use Supabase admin client (bypasses RLS). Suspended users cannot log in.
 - **QR codes**: Each table has a QR code for quick reservation lookup.
 
 ## Accessibility

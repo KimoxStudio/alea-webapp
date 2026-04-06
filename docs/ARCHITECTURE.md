@@ -45,7 +45,8 @@ alea-webapp/
 │       ├── login/page.tsx
 │       ├── register/page.tsx
 │       ├── rooms/page.tsx
-│       └── reservations/page.tsx
+│       ├── reservations/page.tsx
+│       └── admin/page.tsx       # Admin dashboard (admin-only, guarded by requireAdmin)
 ├── components/                 # Reusable React components (client + server)
 ├── lib/
 │   ├── server/                 # Server-side service layer (never imported client-side)
@@ -140,9 +141,29 @@ Members can log in with their **member number**.
 
 ---
 
+## Admin Dashboard
+
+The admin dashboard is located at `/{locale}/admin`. Access is restricted to authenticated users with `role = 'admin'`. Non-admin users are redirected to the home page. Unauthenticated requests are redirected to login.
+
+### Features
+
+1. **User management** — Paginated list (10 per page) with search functionality. Admins can view user member number, email, role, and status. Admins can edit member number, role, and status, delete users, and toggle suspension status. Passwords are never displayed or editable from the admin panel.
+2. **Room & table management** — View all rooms, edit room details, and create new tables per room. Tables are assigned a room and type (`small`, `large`, `removable_top`).
+3. **Reservation management** — View all reservations with their status (`active`, `cancelled`, `completed`). Admins can cancel reservations with a confirmation prompt.
+
+### User Status
+
+The `profiles` table now includes a `status` column (`TEXT NOT NULL DEFAULT 'active'`, `CHECK (status IN ('active', 'suspended'))`). Suspended users cannot log in. Status changes are managed through the admin dashboard.
+
+### Supabase Admin Client
+
+All admin write operations (user creation, deletion, status changes, etc.) use the Supabase admin client (`createSupabaseServerAdminClient`). The admin client bypasses all RLS policies, allowing admins to modify user data directly. Read operations on the admin routes may use either the anon client (with RLS) or the admin client depending on the endpoint.
+
+---
+
 ## Data Model (key entities)
 
-- **User** (maps to `profiles` table) — `id`, `memberNumber`, `role` (`admin` | `member`), `createdAt`, `updatedAt`. The `email` column is intentionally absent from the application profile model in v1 (issue #39 — Stitch UI redesign). The column is retained in the database as nullable to allow re-introduction in a future milestone without a breaking migration. Supabase Auth continues to own the canonical email in `auth.users`.
+- **User** (maps to `profiles` table) — `id`, `memberNumber`, `role` (`admin` | `member`), `status` (`active` | `suspended`), `createdAt`, `updatedAt`. Suspended users cannot log in. The `email` column is intentionally absent from the application profile model in v1 (issue #39 — Stitch UI redesign). The column is retained in the database as nullable to allow re-introduction in a future milestone without a breaking migration. Supabase Auth continues to own the canonical email in `auth.users`.
 - **Room** — `id`, `name`, `tableCount`, `description`, `createdAt`
 - **GameTable** (maps to `tables` table) — `id`, `roomId`, `name`, `type` (`small` | `large` | `removable_top`), `qrCode`, `posX`, `posY` (two separate nullable integer columns)
 - **Reservation** — `id`, `tableId`, `userId`, `date`, `startTime`, `endTime`, `status` (`active` | `cancelled` | `completed`), `surface` (`top` | `bottom` | null)
