@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Search, Loader2, Pencil, Trash2, AlertCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,9 +17,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { apiClient } from '@/lib/api/client'
-import { endpoints } from '@/lib/api/endpoints'
-import type { PaginatedResponse, User } from '@/lib/types'
+import { useAdminUsers, useAdminUpdateUser, useAdminDeleteUser } from '@/lib/hooks/use-admin'
+import type { User } from '@/lib/types'
 
 type UserRole = 'member' | 'admin'
 
@@ -49,7 +47,6 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
 export function UsersSection() {
   const t = useTranslations('admin')
   const tc = useTranslations('common')
-  const queryClient = useQueryClient()
 
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -59,31 +56,9 @@ export function UsersSection() {
   const [editState, setEditState] = useState<EditState>({ memberNumber: '', role: 'member', isActive: true })
   const [deleteUser, setDeleteUser] = useState<User | null>(null)
 
-  const { data, isLoading, isError } = useQuery<PaginatedResponse<User>>({
-    queryKey: ['admin', 'users', page, search],
-    queryFn: () => {
-      const params = new URLSearchParams({ page: String(page), limit: '10' })
-      if (search) params.set('search', search)
-      return apiClient.get<PaginatedResponse<User>>(`${endpoints.users.list}?${params}`)
-    },
-  })
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: Partial<EditState> & { is_active?: boolean } }) =>
-      apiClient.put<User>(endpoints.users.byId(id), body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      setEditUser(null)
-    },
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete(endpoints.users.byId(id)),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-      setDeleteUser(null)
-    },
-  })
+  const { data, isLoading, isError } = useAdminUsers(page, 10, search)
+  const updateMutation = useAdminUpdateUser()
+  const deleteMutation = useAdminDeleteUser()
 
   function openEdit(user: User) {
     setEditState({
@@ -104,11 +79,20 @@ export function UsersSection() {
     if (!editUser) return
     updateMutation.mutate({
       id: editUser.id,
-      body: {
+      data: {
         memberNumber: editState.memberNumber,
         role: editState.role,
         is_active: editState.isActive,
       },
+    }, {
+      onSuccess: () => setEditUser(null),
+    })
+  }
+
+  function handleDeleteConfirm() {
+    if (!deleteUser) return
+    deleteMutation.mutate(deleteUser.id, {
+      onSuccess: () => setDeleteUser(null),
     })
   }
 
@@ -314,7 +298,7 @@ export function UsersSection() {
           <AlertDialogFooter>
             <AlertDialogCancel>{tc('cancel')}</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteUser && deleteMutation.mutate(deleteUser.id)}
+              onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? (

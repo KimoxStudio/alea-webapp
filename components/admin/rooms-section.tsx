@@ -34,6 +34,7 @@ const tableTypeBadge: Record<string, 'outline' | 'partial' | 'available'> = {
 function RoomTablesPanel({ room }: { room: Room }) {
   const t = useTranslations('admin')
   const tc = useTranslations('common')
+  const tt = useTranslations('tables')
 
   const { data: tables, isLoading } = useAdminRoomTables(room.id)
   const createTable = useAdminCreateTable()
@@ -111,9 +112,9 @@ function RoomTablesPanel({ room }: { room: Room }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="small">Small</SelectItem>
-                <SelectItem value="large">Large</SelectItem>
-                <SelectItem value="removable_top">Removable Top</SelectItem>
+                <SelectItem value="small">{tt('small')}</SelectItem>
+                <SelectItem value="large">{tt('large')}</SelectItem>
+                <SelectItem value="removable_top">{tt('removable_top')}</SelectItem>
               </SelectContent>
             </Select>
           </div>

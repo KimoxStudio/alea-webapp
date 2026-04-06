@@ -20,7 +20,7 @@ export function useAdminUsers(page: number, limit: number, search: string) {
 export function useAdminUpdateUser() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { memberNumber?: string; role?: string; is_active?: boolean } }) =>
+    mutationFn: ({ id, data }: { id: string; data: { memberNumber?: string; role?: string; is_active?: boolean; status?: 'active' | 'suspended' } }) =>
       apiClient.put<User>(endpoints.users.byId(id), data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
@@ -47,7 +47,7 @@ export function useAdminReservations(userId?: string | null, date?: string | nul
   const query = params.toString()
   return useQuery<Reservation[]>({
     queryKey: ['admin', 'reservations', userId, date],
-    queryFn: () => apiClient.get<Reservation[]>(`/reservations${query ? `?${query}` : ''}`),
+    queryFn: () => apiClient.get<Reservation[]>(endpoints.reservations.list(query ? Object.fromEntries(params) : undefined)),
     staleTime: 30_000,
   })
 }
@@ -55,7 +55,7 @@ export function useAdminReservations(userId?: string | null, date?: string | nul
 export function useAdminCancelReservation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => apiClient.put<Reservation>(`/reservations/${id}`, { status: 'cancelled' }),
+    mutationFn: (id: string) => apiClient.put<Reservation>(endpoints.reservations.byId(id), { status: 'cancelled' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'reservations'] })
       queryClient.invalidateQueries({ queryKey: ['reservations'] })
