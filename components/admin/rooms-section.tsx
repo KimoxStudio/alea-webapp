@@ -309,7 +309,8 @@ export function RoomsSection() {
 
   async function handleCreateRoom(e: React.FormEvent) {
     e.preventDefault()
-    const tableCount = Math.max(0, parseInt(newTableCount, 10) || 0)
+    const parsed = Number(newTableCount)
+    const tableCount = Number.isInteger(parsed) && parsed >= 0 ? parsed : 0
     await createRoom.mutateAsync({ name: newName.trim(), description: newDesc.trim() || undefined, tableCount })
     setNewName('')
     setNewDesc('')
@@ -423,6 +424,8 @@ export function RoomsSection() {
                 id="new-room-count"
                 type="number"
                 min="0"
+                step="1"
+                inputMode="numeric"
                 value={newTableCount}
                 onChange={(e) => setNewTableCount(e.target.value)}
                 className="bg-background-secondary border-border focus:border-primary/50"
