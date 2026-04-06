@@ -136,7 +136,7 @@ export async function createRoomEntry(body: { name?: unknown; tableCount?: unkno
 
 export async function updateRoom(id: string, body: { name?: unknown; description?: unknown; tableCount?: unknown }) {
   let tableCount: number | undefined
-  if (body.tableCount !== undefined) {
+  if (body.tableCount !== undefined && body.tableCount !== null && body.tableCount !== '') {
     const raw = Number(body.tableCount)
     if (!Number.isFinite(raw) || raw < 0 || !Number.isInteger(raw)) {
       serviceError('tableCount must be a non-negative integer', 400)

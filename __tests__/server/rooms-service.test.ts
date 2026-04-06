@@ -194,6 +194,20 @@ describe('updateRoom', () => {
     expect(updated?.name).toBe('Sala Mirkwood Updated')
   })
 
+  it('skips table_count update when tableCount is null', async () => {
+    const { updateRoom } = await loadRoomsModules()
+
+    // null is treated as "not provided" — should not reset table_count to 0
+    await expect(updateRoom('1', { tableCount: null })).resolves.not.toThrow()
+  })
+
+  it('skips table_count update when tableCount is empty string', async () => {
+    const { updateRoom } = await loadRoomsModules()
+
+    // empty string is treated as "not provided" — should not reset table_count to 0
+    await expect(updateRoom('1', { tableCount: '' })).resolves.not.toThrow()
+  })
+
   it('preserves existing description when description is null', async () => {
     maybeSingleMock.mockResolvedValue({
       data: { id: '1', name: 'Sala Mirkwood', table_count: 8, description: 'Sala principal' },
