@@ -4,8 +4,9 @@ import { serviceError } from '@/lib/server/service-error'
 import type { Tables, TablesUpdate } from '@/lib/supabase/types'
 
 type ProfileRow = Tables<'profiles'>
-type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'is_active' | 'created_at' | 'updated_at'>
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'is_active' | 'created_at' | 'updated_at'>
 type ProfilesQuery = {
+  eq: (column: string, value: unknown) => ProfilesQuery
   or: (filter: string) => ProfilesQuery
   order: (column: string, options: { ascending: boolean }) => {
     range: (from: number, to: number) => Promise<{
@@ -33,12 +34,13 @@ type AdminProfilesTableClient = {
   }
 }
 
-const PROFILE_COLUMNS = 'id, member_number, role, is_active, created_at, updated_at'
+const PROFILE_COLUMNS = 'id, member_number, email, role, is_active, created_at, updated_at'
 
 function toPublicUser(profile: PublicProfileRow): User {
   return {
     id: profile.id,
     memberNumber: profile.member_number,
+    email: profile.email ?? null,
     role: profile.role,
     isActive: profile.is_active,
     createdAt: profile.created_at,
@@ -74,6 +76,7 @@ export async function listPaginatedUsers(input: {
   const profiles = supabase.from('profiles') as unknown as ProfilesTableClient
   let query = profiles
     .select(PROFILE_COLUMNS, { count: 'exact' })
+    .eq('is_active', true)
 
   if (search) {
     const sanitized = sanitizeSearchTerm(search)

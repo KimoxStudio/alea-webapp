@@ -154,6 +154,7 @@ export function UsersSection() {
               <thead>
                 <tr className="border-b border-border bg-secondary/20">
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('memberNumber')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{tc('email')}</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('role')}</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('status')}</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('joinDate')}</th>
@@ -164,6 +165,7 @@ export function UsersSection() {
                 {data.data.map((user) => (
                   <tr key={user.id} className="border-b border-border last:border-0 hover:bg-secondary/10 transition-colors">
                     <td className="px-4 py-3 font-mono text-xs">{user.memberNumber}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{user.email ?? '—'}</td>
                     <td className="px-4 py-3">
                       <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
                         {t(user.role)}

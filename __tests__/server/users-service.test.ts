@@ -60,10 +60,12 @@ vi.mock('@/lib/supabase/server', () => ({
     from: vi.fn(() => ({
       select: vi.fn((columns: string, options?: { count?: 'exact' }) => {
         if (options?.count === 'exact') {
-          return {
+          const listQuery = {
             order: orderMock,
             or: orMock,
+            eq: vi.fn(() => listQuery),
           }
+          return listQuery
         }
         return {
           eq: vi.fn(() => ({

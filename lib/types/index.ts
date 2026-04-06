@@ -3,6 +3,7 @@ export type Role = 'member' | 'admin';
 export interface User {
   id: string;
   memberNumber: string;
+  email?: string | null;
   role: Role;
   isActive: boolean;
   createdAt: string;
