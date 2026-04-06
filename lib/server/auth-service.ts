@@ -51,6 +51,22 @@ type AuthClient = {
   }
 }
 
+type AdminAuthClient = {
+  auth: {
+    admin: {
+      createUser: (params: {
+        email: string
+        password: string
+        email_confirm: boolean
+        user_metadata?: Record<string, unknown>
+      }) => Promise<{
+        data: { user: { id: string } | null }
+        error: { message: string } | null
+      }>
+    }
+  }
+}
+
 function getProfilesTable(client: ProfileLookupClient) {
   return client.from('profiles') as PublicProfilesTableClient
 }
@@ -157,10 +173,73 @@ export async function login(
 }
 
 export async function register(
-  _input: unknown,
+  input: unknown,
   _client?: AuthClient,
+  adminClient?: AdminAuthClient,
 ): Promise<User> {
-  serviceError('Registration is currently unavailable', 403)
+  const raw = input as Record<string, unknown> | null | undefined
+  const memberNumber = String(raw?.memberNumber ?? '').trim()
+  const password = String(raw?.password ?? '')
+
+  if (!memberNumber || !password) {
+    serviceError('Member number and password are required', 400)
+  }
+
+  const rawAdmin = adminClient
+    ? (adminClient as unknown as ReturnType<typeof createSupabaseServerAdminClient>)
+    : createSupabaseServerAdminClient()
+
+  // Check whether the member number is already taken.
+  const existing = await getAuthCredentialProfileBy(
+    rawAdmin as unknown as ProfileLookupClient,
+    'member_number',
+    memberNumber,
+  )
+  if (existing) {
+    serviceError('This member number is already registered', 409)
+  }
+
+  // Derive a deterministic internal email from the member number so Supabase Auth
+  // can work with email/password credentials without exposing real emails.
+  const email = `${memberNumber}@members.alea.internal`
+
+  const adminWithAuth = rawAdmin as unknown as AdminAuthClient
+  const { data: authData, error: authError } = await adminWithAuth.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  })
+
+  if (authError || !authData.user) {
+    serviceError('Failed to create account', 500)
+  }
+
+  const userId = authData.user!.id
+
+  // Insert the profile row and select back the public columns in one round-trip.
+  const profilesTable = (rawAdmin as unknown as ProfileLookupClient).from('profiles') as unknown as {
+    insert: (row: Record<string, unknown>) => {
+      select: (columns: string) => {
+        maybeSingle: () => Promise<{ data: PublicProfileRow | null; error: { message: string } | null }>
+      }
+    }
+  }
+  const { data: profileData, error: profileError } = await profilesTable
+    .insert({
+      id: userId,
+      member_number: memberNumber,
+      email,
+      role: 'member',
+      is_active: true,
+    })
+    .select(PUBLIC_PROFILE_COLUMNS)
+    .maybeSingle()
+
+  if (profileError || !profileData) {
+    serviceError('Failed to create user profile', 500)
+  }
+
+  return toPublicUser(profileData!)
 }
 
 async function getSessionScopedProfile(id: string, client?: ProfileLookupClient) {
