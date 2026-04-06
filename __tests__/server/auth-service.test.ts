@@ -20,7 +20,9 @@ const signInWithPassword = vi.fn()
 const signOut = vi.fn()
 const sessionScopedProfileMaybeSingle = vi.fn()
 const adminCreateUser = vi.fn()
-const adminInsertProfile = vi.fn()
+const adminDeleteUser = vi.fn()
+const adminUpdateProfileSelectMaybeSingle = vi.fn()
+const adminUpdateProfileEq = vi.fn()
 
 function makeProfile(overrides?: Partial<ProfileRow>): ProfileRow {
   return {
@@ -59,7 +61,7 @@ vi.mock('@/lib/supabase/server', () => ({
     auth: {
       admin: {
         createUser: adminCreateUser,
-        deleteUser: vi.fn(),
+        deleteUser: adminDeleteUser,
       },
     },
     from: vi.fn(() => ({
@@ -79,12 +81,9 @@ vi.mock('@/lib/supabase/server', () => ({
           }),
         })),
       })),
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          maybeSingle: adminInsertProfile,
-        })),
+      update: vi.fn(() => ({
+        eq: adminUpdateProfileEq,
       })),
-      update: vi.fn(),
     })),
   })),
 }))
@@ -108,7 +107,8 @@ describe('auth service', () => {
     signOut.mockResolvedValue({ error: null })
     sessionScopedProfileMaybeSingle.mockReset()
     adminCreateUser.mockResolvedValue({ data: { user: { id: 'new-user-id' } }, error: null })
-    adminInsertProfile.mockResolvedValue({
+    adminDeleteUser.mockResolvedValue({ error: null })
+    adminUpdateProfileSelectMaybeSingle.mockResolvedValue({
       data: {
         id: 'new-user-id',
         member_number: '100099',
@@ -118,6 +118,11 @@ describe('auth service', () => {
         updated_at: '2024-01-01T00:00:00.000Z',
       },
       error: null,
+    })
+    adminUpdateProfileEq.mockReturnValue({
+      select: vi.fn(() => ({
+        maybeSingle: adminUpdateProfileSelectMaybeSingle,
+      })),
     })
 
     const admin = makeProfile()
@@ -222,10 +227,11 @@ describe('auth service', () => {
   })
 
   describe('register', () => {
-    it('creates a Supabase Auth user and profile row, then returns the public user', async () => {
+    it('creates a Supabase Auth user, updates the trigger-created profile row, and returns the public user', async () => {
       const { register } = await loadService()
+      const sessionClient = { auth: { signInWithPassword, signOut } }
 
-      const result = await register({ memberNumber: '100099', password: 'Password1234!@#' })
+      const result = await register({ memberNumber: '100099', password: 'Password1234!@#' }, sessionClient)
 
       expect(adminCreateUser).toHaveBeenCalledWith({
         email: '100099@members.alea.internal',
@@ -237,6 +243,18 @@ describe('auth service', () => {
         memberNumber: '100099',
         role: 'member',
         isActive: true,
+      })
+    })
+
+    it('calls signInWithPassword after creating the profile to establish a session', async () => {
+      const { register } = await loadService()
+      const sessionClient = { auth: { signInWithPassword, signOut } }
+
+      await register({ memberNumber: '100099', password: 'Password1234!@#' }, sessionClient)
+
+      expect(signInWithPassword).toHaveBeenCalledWith({
+        email: '100099@members.alea.internal',
+        password: 'Password1234!@#',
       })
     })
 
@@ -255,6 +273,28 @@ describe('auth service', () => {
       const { register } = await loadService()
 
       await expect(register({ password: 'Password1234!@#' })).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 400,
+      })
+    })
+
+    it('rejects with 400 when member number exceeds 20 characters', async () => {
+      const { register } = await loadService()
+
+      await expect(
+        register({ memberNumber: '1'.repeat(21), password: 'Password1234!@#' }),
+      ).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 400,
+      })
+    })
+
+    it('rejects with 400 when member number contains non-numeric characters', async () => {
+      const { register } = await loadService()
+
+      await expect(
+        register({ memberNumber: 'ABC123', password: 'Password1234!@#' }),
+      ).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
       })
@@ -282,17 +322,45 @@ describe('auth service', () => {
       })
     })
 
-    it('rejects with 500 when the profile insert fails', async () => {
+    it('cleans up the auth user and rejects with 409 when profile update hits a unique constraint', async () => {
       const { register } = await loadService()
-      adminInsertProfile.mockResolvedValueOnce({
+      adminUpdateProfileSelectMaybeSingle.mockResolvedValueOnce({
         data: null,
-        error: { message: 'insert failed' },
+        error: { code: '23505', message: 'duplicate key value violates unique constraint' },
+      })
+
+      await expect(register({ memberNumber: '100099', password: 'Password1234!@#' })).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 409,
+      })
+      expect(adminDeleteUser).toHaveBeenCalledWith('new-user-id')
+    })
+
+    it('cleans up the auth user and rejects with 500 when the profile update fails', async () => {
+      const { register } = await loadService()
+      adminUpdateProfileSelectMaybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: { code: 'PGRST', message: 'unexpected error' },
       })
 
       await expect(register({ memberNumber: '100099', password: 'Password1234!@#' })).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 500,
       })
+      expect(adminDeleteUser).toHaveBeenCalledWith('new-user-id')
+    })
+
+    it('succeeds even when auto-login after registration fails', async () => {
+      const { register } = await loadService()
+      const failingSignIn = vi.fn().mockResolvedValue({
+        data: { user: null },
+        error: { message: 'sign in failed' },
+      })
+      const sessionClient = { auth: { signInWithPassword: failingSignIn, signOut } }
+
+      const result = await register({ memberNumber: '100099', password: 'Password1234!@#' }, sessionClient)
+
+      expect(result).toMatchObject({ id: 'new-user-id', memberNumber: '100099' })
     })
   })
 
