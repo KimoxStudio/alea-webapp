@@ -7,7 +7,8 @@
     "status": "Estado", "date": "Fecha", "time": "Hora", "name": "Nombre",
     "email": "Email", "page": "Pagina", "of": "de", "previous": "Anterior",
     "next": "Siguiente", "showing": "Mostrando", "results": "resultados",
-    "noResults": "No se encontraron resultados"
+    "noResults": "No se encontraron resultados",
+    "loadingPage": "Cargando página..."
   },
   "nav": {
     "rooms": "Salas", "reservations": "Mis Reservas",
@@ -25,7 +26,7 @@
     "noAccount": "No tienes cuenta?", "hasAccount": "Ya tienes cuenta?",
     "showPassword": "Mostrar contraseña", "hidePassword": "Ocultar contraseña",
     "showConfirmation": "Mostrar confirmación", "hideConfirmation": "Ocultar confirmación",
-    "rememberMe": "Recordarme", "forgotPassword": "¿Olvidaste tu contraseña?",
+    "rememberMe": "Recordarme", "forgotPassword": "¿Olvidaste tu contraseña?", "verifyingSession": "Verificando sesión...",
     "passwordRequirements": {
       "title": "Requisitos de contraseña",
       "minLength": "Mínimo 12 caracteres",
@@ -71,6 +72,7 @@
     "noReservations": "No tienes reservas activas", "available": "Disponible",
     "occupied": "Ocupado", "myReservation": "Mi reserva",
     "calendar": "Calendario de disponibilidad",
+    "canceling": "Cancelando...", "confirmCancel": "Sí, cancelar", "submitting": "Reservando...",
     "errors": {
       "conflictTime": "Ya existe una reserva en ese horario",
       "pastDate": "No puedes reservar en fechas pasadas",

@@ -7,7 +7,8 @@
     "status": "Status", "date": "Date", "time": "Time", "name": "Name",
     "email": "Email", "page": "Page", "of": "of", "previous": "Previous",
     "next": "Next", "showing": "Showing", "results": "results",
-    "noResults": "No results found"
+    "noResults": "No results found",
+    "loadingPage": "Loading page..."
   },
   "nav": {
     "rooms": "Rooms", "reservations": "My Reservations",
@@ -25,7 +26,7 @@
     "noAccount": "Don't have an account?", "hasAccount": "Already have an account?",
     "showPassword": "Show password", "hidePassword": "Hide password",
     "showConfirmation": "Show confirmation", "hideConfirmation": "Hide confirmation",
-    "rememberMe": "Remember me", "forgotPassword": "Forgot password?",
+    "rememberMe": "Remember me", "forgotPassword": "Forgot password?", "verifyingSession": "Verifying session...",
     "passwordRequirements": {
       "title": "Password requirements",
       "minLength": "At least 12 characters",
@@ -71,6 +72,7 @@
     "noReservations": "You have no active reservations", "available": "Available",
     "occupied": "Occupied", "myReservation": "My reservation",
     "calendar": "Availability calendar",
+    "canceling": "Canceling...", "confirmCancel": "Yes, cancel", "submitting": "Submitting...",
     "errors": {
       "conflictTime": "A reservation already exists at that time",
       "pastDate": "You cannot book dates in the past",

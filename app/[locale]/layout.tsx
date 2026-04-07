@@ -7,6 +7,7 @@ import { AuthProvider } from '@/lib/auth/auth-context'
 import { Providers } from '@/lib/providers'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
+import { NavigationProgress } from '@/components/ui/navigation-progress'
 import { getSessionFromServerCookies } from '@/lib/server/auth'
 import { getCurrentUser } from '@/lib/server/auth-service'
 
@@ -41,6 +42,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
         <NextIntlClientProvider messages={messages}>
           <Providers>
             <AuthProvider initialUser={initialUser}>
+              <NavigationProgress />
               <Header locale={locale} />
               <main id="main-content" className="flex-1">
                 {children}

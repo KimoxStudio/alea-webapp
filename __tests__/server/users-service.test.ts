@@ -81,11 +81,17 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
   createSupabaseServerAdminClient: vi.fn(() => ({
     from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
+      select: vi.fn((columns: string, options?: { count?: 'exact' }) => {
+        if (options?.count === 'exact') {
+          return listQuery
+        }
+        return {
+          eq: vi.fn(() => ({
+            maybeSingle: maybeSingleMock,
+          })),
           maybeSingle: maybeSingleMock,
-        })),
-      })),
+        }
+      }),
       update: vi.fn(() => ({
         eq: vi.fn(() => ({
           select: vi.fn(() => ({

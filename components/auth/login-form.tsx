@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Loader2 } from 'lucide-react'
+import { DiceLoader } from '@/components/ui/dice-loader'
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
 import { useAuth } from '@/lib/auth/auth-context'
 import { Button } from '@/components/ui/button'
@@ -95,7 +95,12 @@ export function LoginForm({ locale }: LoginFormProps) {
 
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting
-            ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />{t('login')}...</>
+            ? (
+              <span className="inline-flex items-center gap-2">
+                <DiceLoader size="sm" />
+                <span>{t('login')}...</span>
+              </span>
+            )
             : t('login')}
         </Button>
       </form>

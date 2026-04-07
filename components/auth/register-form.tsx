@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Check, X, Loader2 } from 'lucide-react'
+import { Check, X } from 'lucide-react'
+import { DiceLoader } from '@/components/ui/dice-loader'
 import { registerSchema, type RegisterFormData } from '@/lib/validations/auth'
 import { useAuth } from '@/lib/auth/auth-context'
 import { Button } from '@/components/ui/button'
@@ -116,7 +117,12 @@ export function RegisterForm({ locale }: RegisterFormProps) {
         disabled={isSubmitting || !allPasswordChecksPassed}
       >
         {isSubmitting
-          ? <><Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />{t('register')}...</>
+          ? (
+            <span className="inline-flex items-center gap-2">
+              <DiceLoader size="sm" />
+              <span>{t('register')}...</span>
+            </span>
+          )
           : t('register')}
       </Button>
     </form>

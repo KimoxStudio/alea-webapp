@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Pencil, Plus, ChevronDown, ChevronRight, Loader2, DoorOpen, Table2 } from 'lucide-react'
+import { Pencil, Plus, ChevronDown, ChevronRight, DoorOpen, Table2 } from 'lucide-react'
+import { DiceLoader } from '@/components/ui/dice-loader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -121,7 +122,7 @@ function RoomTablesPanel({ room }: { room: Room }) {
           <div className="flex gap-2 pt-1">
             <Button type="submit" size="sm" disabled={createTable.isPending} className="h-8">
               {createTable.isPending ? (
-                <><Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />{t('creating')}</>
+                <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('creating')}</span></span>
               ) : tc('save')}
             </Button>
             <Button
@@ -284,7 +285,7 @@ function RoomRow({ room }: { room: Room }) {
               </Button>
               <Button type="submit" disabled={updateRoom.isPending} className="min-w-[80px]">
                 {updateRoom.isPending ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />{t('saving')}</>
+                  <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('saving')}</span></span>
                 ) : tc('save')}
               </Button>
             </DialogFooter>
@@ -437,7 +438,7 @@ export function RoomsSection() {
               </Button>
               <Button type="submit" disabled={createRoom.isPending} className="min-w-[80px]">
                 {createRoom.isPending ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />{t('creating')}</>
+                  <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('creating')}</span></span>
                 ) : tc('save')}
               </Button>
             </DialogFooter>

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Search, Loader2, Pencil, Trash2, AlertCircle } from 'lucide-react'
+import { Search, Pencil, Trash2, AlertCircle } from 'lucide-react'
+import { DiceLoader } from '@/components/ui/dice-loader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -116,7 +117,7 @@ export function UsersSection() {
 
       {isLoading && (
         <div className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-label={tc('loading')} />
+          <DiceLoader size="sm" />
         </div>
       )}
 
@@ -278,7 +279,7 @@ export function UsersSection() {
               disabled={updateMutation.isPending || !editState.memberNumber.trim()}
             >
               {updateMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />
+                <DiceLoader size="sm" className="mr-2" hideRole />
               ) : null}
               {tc('save')}
             </Button>
@@ -302,7 +303,7 @@ export function UsersSection() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />
+                <DiceLoader size="sm" className="mr-2" hideRole />
               ) : null}
               {tc('delete')}
             </AlertDialogAction>

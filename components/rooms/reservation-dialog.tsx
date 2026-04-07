@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Loader2, Calendar, Clock, Layers } from 'lucide-react'
+import { Calendar, Clock, Layers } from 'lucide-react'
+import { DiceLoader } from '@/components/ui/dice-loader'
 import type { GameTable, TableSurface, TableAvailability } from '@/lib/types'
 import { useTableAvailability, useCreateReservation } from '@/lib/hooks/use-reservations'
 import { useAuth } from '@/lib/auth/auth-context'
@@ -192,7 +193,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
 
               {availabilityLoading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  <DiceLoader size="sm" />
                   <span>{tCommon('loading')}</span>
                 </div>
               ) : (
@@ -284,7 +285,12 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
             }
           >
             {createReservation.isPending
-              ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />Reservando...</>
+              ? (
+                <span className="inline-flex items-center gap-2">
+                  <DiceLoader size="sm" hideRole />
+                  <span>{t('submitting')}</span>
+                </span>
+              )
               : t('makeReservation')}
           </Button>
         </DialogFooter>
