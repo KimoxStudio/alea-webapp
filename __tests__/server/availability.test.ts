@@ -196,6 +196,18 @@ describe('buildAvailability', () => {
     expect(result.bottom?.find((s) => s.startTime === '10:00')?.available).toBe(true)
   })
 
+  it('top-surface reservation also blocks the overall card-level slot', () => {
+    const table = makeGameTable({ type: 'removable_top' })
+    const topReservation = makeReservationRow({ start_time: '10:00:00', end_time: '11:00:00', surface: 'top' })
+    const result = buildAvailability(table, '2025-06-15', [topReservation])
+
+    // overall card-level slot must be blocked even for a surface-specific reservation
+    expect(result.slots.find((s) => s.startTime === '10:00')?.available).toBe(false)
+    // only the targeted section should be unavailable
+    expect(result.top?.find((s) => s.startTime === '10:00')?.available).toBe(false)
+    expect(result.bottom?.find((s) => s.startTime === '10:00')?.available).toBe(true)
+  })
+
   it('reservation with null surface marks both top and bottom sections as reserved', () => {
     const table = makeGameTable({ type: 'removable_top' })
     const wholeTableReservation = makeReservationRow({ start_time: '10:00:00', end_time: '12:00:00', surface: null })
