@@ -18,8 +18,7 @@ const PASSWORD_SPECIAL_CHARS = /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>\/?]/
 function getPasswordChecks(password: string) {
   return [
     { key: 'minLength' as const, passed: password.length >= 12 },
-    { key: 'uppercase' as const, passed: /[A-Z]/.test(password) },
-    { key: 'lowercase' as const, passed: /[a-z]/.test(password) },
+    { key: 'letter' as const, passed: /[a-zA-Z]/.test(password) },
     { key: 'number' as const, passed: /[0-9]/.test(password) },
     { key: 'specialChar' as const, passed: PASSWORD_SPECIAL_CHARS.test(password) },
   ]

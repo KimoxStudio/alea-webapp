@@ -28,8 +28,7 @@
     "rememberMe": "Recordarme", "forgotPassword": "¿Olvidaste tu contraseña?",
     "passwordRequirements": {
       "minLength": "Mínimo 12 caracteres",
-      "uppercase": "Al menos una letra mayúscula",
-      "lowercase": "Al menos una letra minúscula",
+      "letter": "Al menos una letra",
       "number": "Al menos un número",
       "specialChar": "Al menos un carácter especial (!@#$%^&*...)",
       "met": "(cumplido)",
