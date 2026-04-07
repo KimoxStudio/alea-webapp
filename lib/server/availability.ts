@@ -46,8 +46,8 @@ export function buildAvailability(table: GameTable, date: string, reservations: 
   }
 
   if (table.type === 'removable_top') {
-    const topReserved = reserved.filter((reservation) => !reservation.surface || reservation.surface === 'top')
-    const bottomReserved = reserved.filter((reservation) => reservation.surface === 'bottom')
+    const topReserved = reserved.filter((reservation) => reservation.surface == null || reservation.surface === 'top')
+    const bottomReserved = reserved.filter((reservation) => reservation.surface == null || reservation.surface === 'bottom')
     availability.top = generateDaySlots(topReserved)
     availability.bottom = generateDaySlots(bottomReserved)
     availability.conflicts = generateDaySlots(reserved)

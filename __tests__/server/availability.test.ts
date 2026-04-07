@@ -195,4 +195,37 @@ describe('buildAvailability', () => {
     expect(result.top?.find((s) => s.startTime === '10:00')?.available).toBe(false)
     expect(result.bottom?.find((s) => s.startTime === '10:00')?.available).toBe(true)
   })
+
+  it('top-surface reservation also blocks the overall card-level slot', () => {
+    const table = makeGameTable({ type: 'removable_top' })
+    const topReservation = makeReservationRow({ start_time: '10:00:00', end_time: '11:00:00', surface: 'top' })
+    const result = buildAvailability(table, '2025-06-15', [topReservation])
+
+    // overall card-level slot must be blocked even for a surface-specific reservation
+    expect(result.slots.find((s) => s.startTime === '10:00')?.available).toBe(false)
+    // only the targeted section should be unavailable
+    expect(result.top?.find((s) => s.startTime === '10:00')?.available).toBe(false)
+    expect(result.bottom?.find((s) => s.startTime === '10:00')?.available).toBe(true)
+  })
+
+  it('reservation with null surface marks both top and bottom sections as reserved', () => {
+    const table = makeGameTable({ type: 'removable_top' })
+    const wholeTableReservation = makeReservationRow({ start_time: '10:00:00', end_time: '12:00:00', surface: null })
+    const result = buildAvailability(table, '2025-06-15', [wholeTableReservation])
+
+    // Null surface = whole-table reservation: both sections must be blocked
+    expect(result.top?.find((s) => s.startTime === '10:00')?.available).toBe(false)
+    expect(result.bottom?.find((s) => s.startTime === '10:00')?.available).toBe(false)
+    // Card-level slot must also be blocked
+    expect(result.slots.find((s) => s.startTime === '10:00')?.available).toBe(false)
+  })
+
+  it('bottom-only reservation does not mark top section as reserved', () => {
+    const table = makeGameTable({ type: 'removable_top' })
+    const bottomReservation = makeReservationRow({ start_time: '14:00:00', end_time: '15:00:00', surface: 'bottom' })
+    const result = buildAvailability(table, '2025-06-15', [bottomReservation])
+
+    expect(result.bottom?.find((s) => s.startTime === '14:00')?.available).toBe(false)
+    expect(result.top?.find((s) => s.startTime === '14:00')?.available).toBe(true)
+  })
 })
