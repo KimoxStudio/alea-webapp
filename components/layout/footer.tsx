@@ -10,6 +10,7 @@ interface FooterProps {
 
 export function Footer({ locale }: FooterProps) {
   const t = useTranslations('footer')
+  const tAuth = useTranslations('auth')
 
   // PLACEHOLDER — user will replace this with real association URL
   const associationUrl = 'https://alea.example.com'
@@ -85,7 +86,7 @@ export function Footer({ locale }: FooterProps) {
                   href={`/${locale}/login`}
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 >
-                  {locale === 'es' ? 'Iniciar sesion' : 'Sign in'}
+                  {tAuth('login')}
                 </Link>
               </li>
               <li>
@@ -93,7 +94,7 @@ export function Footer({ locale }: FooterProps) {
                   href={`/${locale}/register`}
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
                 >
-                  {locale === 'es' ? 'Registrarse' : 'Register'}
+                  {tAuth('register')}
                 </Link>
               </li>
             </ul>
@@ -106,7 +107,7 @@ export function Footer({ locale }: FooterProps) {
             &copy; {new Date().getFullYear()} Alea — {t('rights')}
           </p>
           <p className="text-xs text-muted-foreground">
-            {locale === 'es' ? 'Hecho con amor para la comunidad jugadora' : 'Made with love for the gaming community'}
+            {t('madeWithLove')}
           </p>
         </div>
       </div>
