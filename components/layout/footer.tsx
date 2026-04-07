@@ -12,8 +12,7 @@ export function Footer({ locale }: FooterProps) {
   const t = useTranslations('footer')
   const tAuth = useTranslations('auth')
 
-  // PLACEHOLDER — user will replace this with real association URL
-  const associationUrl = 'https://alea.example.com'
+  const associationUrl = process.env.NEXT_PUBLIC_ASSOCIATION_URL ?? '#'
 
   return (
     <footer className="border-t border-border bg-background-secondary mt-auto" role="contentinfo">
