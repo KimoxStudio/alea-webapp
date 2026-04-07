@@ -13,21 +13,33 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
 
-function PasswordStrengthIndicator({ password }: { password: string }) {
-  const checks = [
-    { label: 'Minimo 12 caracteres', passed: password.length >= 12 },
-    { label: 'Letras y numeros', passed: /[a-zA-Z]/.test(password) && /[0-9]/.test(password) },
-    { label: 'Simbolo especial', passed: /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>\/?]/.test(password) },
+const PASSWORD_SPECIAL_CHARS = /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>\/?]/
+
+function getPasswordChecks(password: string) {
+  return [
+    { key: 'minLength' as const, passed: password.length >= 12 },
+    { key: 'uppercase' as const, passed: /[A-Z]/.test(password) },
+    { key: 'lowercase' as const, passed: /[a-z]/.test(password) },
+    { key: 'number' as const, passed: /[0-9]/.test(password) },
+    { key: 'specialChar' as const, passed: PASSWORD_SPECIAL_CHARS.test(password) },
   ]
+}
+
+function PasswordStrengthIndicator({ password }: { password: string }) {
+  const t = useTranslations('auth.passwordRequirements')
+  const checks = getPasswordChecks(password)
+
   return (
-    <ul className="mt-2 space-y-1" aria-label="Requisitos de contrasena">
+    <ul className="mt-2 space-y-1" aria-label={t('minLength')}>
       {checks.map((check) => (
-        <li key={check.label} className="flex items-center gap-2 text-xs">
+        <li key={check.key} className="flex items-center gap-2 text-xs">
           {check.passed
-            ? <Check className="h-3 w-3 text-emerald flex-shrink-0" aria-hidden="true" />
+            ? <Check className="h-3 w-3 text-emerald-500 flex-shrink-0" aria-hidden="true" />
             : <X className="h-3 w-3 text-muted-foreground flex-shrink-0" aria-hidden="true" />}
-          <span className={check.passed ? 'text-emerald-light' : 'text-muted-foreground'}>{check.label}</span>
-          <span className="sr-only">{check.passed ? '(cumplido)' : '(pendiente)'}</span>
+          <span className={check.passed ? 'text-emerald-400' : 'text-muted-foreground'}>
+            {t(check.key)}
+          </span>
+          <span className="sr-only">{check.passed ? t('met') : t('pending')}</span>
         </li>
       ))}
     </ul>
@@ -47,6 +59,7 @@ export function RegisterForm({ locale }: RegisterFormProps) {
   })
 
   const passwordValue = watch('password', '')
+  const allPasswordChecksPassed = getPasswordChecks(passwordValue).every((c) => c.passed)
 
   const onSubmit = async (data: RegisterFormData) => {
     setServerError(null)
@@ -98,8 +111,14 @@ export function RegisterForm({ locale }: RegisterFormProps) {
         {errors.confirmPassword && <p id="confirm-error" role="alert" className="text-xs text-destructive">{t(errors.confirmPassword.message as Parameters<typeof t>[0])}</p>}
       </div>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />{t('register')}...</> : t('register')}
+      <Button
+        type="submit"
+        className="w-full h-11 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/25 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+        disabled={isSubmitting || !allPasswordChecksPassed}
+      >
+        {isSubmitting
+          ? <><Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />{t('register')}...</>
+          : t('register')}
       </Button>
     </form>
   )
