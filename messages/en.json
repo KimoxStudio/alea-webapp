@@ -26,6 +26,15 @@
     "showPassword": "Show password", "hidePassword": "Hide password",
     "showConfirmation": "Show confirmation", "hideConfirmation": "Hide confirmation",
     "rememberMe": "Remember me", "forgotPassword": "Forgot password?",
+    "passwordRequirements": {
+      "minLength": "At least 12 characters",
+      "uppercase": "At least one uppercase letter",
+      "lowercase": "At least one lowercase letter",
+      "number": "At least one number",
+      "specialChar": "At least one special character (!@#$%^&*...)",
+      "met": "(met)",
+      "pending": "(pending)"
+    },
     "errors": {
       "invalidCredentials": "Invalid credentials",
       "passwordRequired": "Password is required",

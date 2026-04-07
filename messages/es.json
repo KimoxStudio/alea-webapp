@@ -26,6 +26,15 @@
     "showPassword": "Mostrar contraseña", "hidePassword": "Ocultar contraseña",
     "showConfirmation": "Mostrar confirmación", "hideConfirmation": "Ocultar confirmación",
     "rememberMe": "Recordarme", "forgotPassword": "¿Olvidaste tu contraseña?",
+    "passwordRequirements": {
+      "minLength": "Mínimo 12 caracteres",
+      "uppercase": "Al menos una letra mayúscula",
+      "lowercase": "Al menos una letra minúscula",
+      "number": "Al menos un número",
+      "specialChar": "Al menos un carácter especial (!@#$%^&*...)",
+      "met": "(cumplido)",
+      "pending": "(pendiente)"
+    },
     "errors": {
       "invalidCredentials": "Credenciales inválidas",
       "passwordRequired": "La contraseña es obligatoria",
