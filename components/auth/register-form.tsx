@@ -29,7 +29,7 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
   const checks = getPasswordChecks(password)
 
   return (
-    <ul className="mt-2 space-y-1" aria-label={t('minLength')}>
+    <ul className="mt-2 space-y-1" aria-label={t('title')}>
       {checks.map((check) => (
         <li key={check.key} className="flex items-center gap-2 text-xs">
           {check.passed

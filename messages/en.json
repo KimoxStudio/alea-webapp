@@ -27,6 +27,7 @@
     "showConfirmation": "Show confirmation", "hideConfirmation": "Hide confirmation",
     "rememberMe": "Remember me", "forgotPassword": "Forgot password?",
     "passwordRequirements": {
+      "title": "Password requirements",
       "minLength": "At least 12 characters",
       "letter": "At least one letter",
       "number": "At least one number",
