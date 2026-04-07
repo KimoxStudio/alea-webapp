@@ -72,7 +72,7 @@ export async function listPaginatedUsers(input: {
   const page = normalizePage(input.page)
   const limit = normalizeLimit(input.limit)
   const search = input.search?.trim() ?? ''
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseServerAdminClient()
   const profiles = supabase.from('profiles') as unknown as ProfilesTableClient
   let query = profiles.select(PROFILE_COLUMNS, { count: 'exact' })
 
