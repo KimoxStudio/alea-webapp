@@ -122,7 +122,7 @@ function RoomTablesPanel({ room }: { room: Room }) {
           <div className="flex gap-2 pt-1">
             <Button type="submit" size="sm" disabled={createTable.isPending} className="h-8">
               {createTable.isPending ? (
-                <><DiceLoader size="sm" />{t('creating')}</>
+                <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('creating')}</span></span>
               ) : tc('save')}
             </Button>
             <Button
@@ -285,7 +285,7 @@ function RoomRow({ room }: { room: Room }) {
               </Button>
               <Button type="submit" disabled={updateRoom.isPending} className="min-w-[80px]">
                 {updateRoom.isPending ? (
-                  <><DiceLoader size="sm" />{t('saving')}</>
+                  <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('saving')}</span></span>
                 ) : tc('save')}
               </Button>
             </DialogFooter>
@@ -438,7 +438,7 @@ export function RoomsSection() {
               </Button>
               <Button type="submit" disabled={createRoom.isPending} className="min-w-[80px]">
                 {createRoom.isPending ? (
-                  <><DiceLoader size="sm" />{t('creating')}</>
+                  <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('creating')}</span></span>
                 ) : tc('save')}
               </Button>
             </DialogFooter>

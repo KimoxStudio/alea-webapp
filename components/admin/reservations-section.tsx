@@ -183,7 +183,7 @@ export function ReservationsSection() {
               className="bg-crimson hover:bg-crimson-light text-white border-0 min-w-[100px]"
             >
               {cancelReservation.isPending ? (
-                <><DiceLoader size="sm" />{t('saving')}</>
+                <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('saving')}</span></span>
               ) : tc('confirm')}
             </Button>
           </DialogFooter>

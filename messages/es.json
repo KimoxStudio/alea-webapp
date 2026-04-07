@@ -72,6 +72,7 @@
     "noReservations": "No tienes reservas activas", "available": "Disponible",
     "occupied": "Ocupado", "myReservation": "Mi reserva",
     "calendar": "Calendario de disponibilidad",
+    "canceling": "Cancelando...", "confirmCancel": "Sí, cancelar", "submitting": "Reservando...",
     "errors": {
       "conflictTime": "Ya existe una reserva en ese horario",
       "pastDate": "No puedes reservar en fechas pasadas",

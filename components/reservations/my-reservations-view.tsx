@@ -154,8 +154,8 @@ export function MyReservationsView() {
               disabled={cancelReservation.isPending}
             >
               {cancelReservation.isPending
-                ? <><DiceLoader size="sm" />Cancelando...</>
-                : 'Si, cancelar'}
+                ? <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('canceling')}</span></span>
+                : t('confirmCancel')}
             </Button>
           </DialogFooter>
         </DialogContent>

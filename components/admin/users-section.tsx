@@ -279,7 +279,7 @@ export function UsersSection() {
               disabled={updateMutation.isPending || !editState.memberNumber.trim()}
             >
               {updateMutation.isPending ? (
-                <DiceLoader size="sm" className="mr-2" />
+                <DiceLoader size="sm" className="mr-2" hideRole />
               ) : null}
               {tc('save')}
             </Button>
@@ -303,7 +303,7 @@ export function UsersSection() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? (
-                <DiceLoader size="sm" className="mr-2" />
+                <DiceLoader size="sm" className="mr-2" hideRole />
               ) : null}
               {tc('delete')}
             </AlertDialogAction>

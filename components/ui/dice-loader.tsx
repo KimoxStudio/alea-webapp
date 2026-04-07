@@ -6,6 +6,7 @@ interface DiceLoaderProps {
   size?: 'sm' | 'md' | 'lg'
   label?: string
   className?: string
+  hideRole?: boolean
 }
 
 const sizeMap = {
@@ -41,16 +42,18 @@ function D20Svg({ px, strokeWidth = 1.5 }: { px: number; strokeWidth?: number })
   )
 }
 
-export function DiceLoader({ size = 'md', label, className }: DiceLoaderProps) {
+export function DiceLoader({ size = 'md', label, className, hideRole = false }: DiceLoaderProps) {
   const t = useTranslations('common')
   const px = sizeMap[size]
+
+  const roleProps = hideRole
+    ? {}
+    : { role: 'status' as const, 'aria-live': 'polite' as const, 'aria-label': label ?? t('loading') }
 
   if (size === 'lg') {
     return (
       <span
-        role="status"
-        aria-live="polite"
-        aria-label={label ?? t('loading')}
+        {...roleProps}
         className={`inline-flex items-center justify-center text-primary${className ? ` ${className}` : ''}`}
       >
         <span className="relative">
@@ -65,9 +68,7 @@ export function DiceLoader({ size = 'md', label, className }: DiceLoaderProps) {
 
   return (
     <span
-      role="status"
-      aria-live="polite"
-      aria-label={label ?? t('loading')}
+      {...roleProps}
       className={`inline-flex items-center justify-center text-primary${className ? ` ${className}` : ''}`}
     >
       <D20Svg px={px} />

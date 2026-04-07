@@ -72,6 +72,7 @@
     "noReservations": "You have no active reservations", "available": "Available",
     "occupied": "Occupied", "myReservation": "My reservation",
     "calendar": "Availability calendar",
+    "canceling": "Canceling...", "confirmCancel": "Yes, cancel", "submitting": "Submitting...",
     "errors": {
       "conflictTime": "A reservation already exists at that time",
       "pastDate": "You cannot book dates in the past",

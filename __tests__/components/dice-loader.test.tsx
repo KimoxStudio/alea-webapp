@@ -29,4 +29,17 @@ describe('DiceLoader', () => {
     const svg = container.querySelector('svg')
     expect(svg).not.toBeNull()
   })
+
+  it('omits role and aria-live when hideRole is true', () => {
+    const { container } = render(<DiceLoader hideRole />)
+    const span = container.firstElementChild as HTMLElement
+    expect(span.getAttribute('role')).toBeNull()
+    expect(span.getAttribute('aria-live')).toBeNull()
+    expect(span.getAttribute('aria-label')).toBeNull()
+  })
+
+  it('keeps role="status" when hideRole is false (default)', () => {
+    render(<DiceLoader hideRole={false} />)
+    expect(screen.getByRole('status')).toBeDefined()
+  })
 })
