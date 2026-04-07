@@ -7,7 +7,8 @@
     "status": "Estado", "date": "Fecha", "time": "Hora", "name": "Nombre",
     "email": "Email", "page": "Pagina", "of": "de", "previous": "Anterior",
     "next": "Siguiente", "showing": "Mostrando", "results": "resultados",
-    "noResults": "No se encontraron resultados"
+    "noResults": "No se encontraron resultados",
+    "loadingPage": "Cargando página..."
   },
   "nav": {
     "rooms": "Salas", "reservations": "Mis Reservas",
