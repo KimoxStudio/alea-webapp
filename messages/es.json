@@ -72,6 +72,7 @@
     "selectTime": "Seleccionar hora", "startTime": "Hora de inicio", "endTime": "Hora de fin",
     "selectRoom": "Seleccionar sala", "selectTable": "Seleccionar mesa",
     "active": "Activa", "cancelled": "Cancelada", "completed": "Completada",
+    "pending": "Pendiente", "no_show": "No presentado",
     "cancel": "Cancelar reserva",
     "cancelConfirm": "Estas seguro de que deseas cancelar esta reserva?",
     "noReservations": "No tienes reservas activas", "available": "Disponible",
@@ -128,6 +129,17 @@
     "ctaButton": "Registrarse ahora",
     "ctaLoginText": "¿Ya eres socio?",
     "ctaLoginLink": "Inicia sesión"
+  },
+  "checkin": {
+    "title": "Check-in",
+    "activated": "¡Ya estás registrado! Tu reserva está activa.",
+    "alreadyActive": "Esta reserva ya está activa.",
+    "tooEarly": "Es demasiado pronto. Tu sesión aún no ha comenzado.",
+    "tooLate": "La ventana de registro ha cerrado. Tu reserva ha expirado.",
+    "noReservation": "No se ha encontrado ninguna reserva para esta mesa.",
+    "loading": "Verificando tu reserva...",
+    "tryAgain": "Intentar de nuevo",
+    "backToReservations": "Volver a mis reservas"
   },
   "footer": {
     "tagline": "El espacio de juego de la comunidad",

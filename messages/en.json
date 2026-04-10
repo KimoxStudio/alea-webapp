@@ -72,6 +72,7 @@
     "selectTime": "Select time", "startTime": "Start time", "endTime": "End time",
     "selectRoom": "Select room", "selectTable": "Select table",
     "active": "Active", "cancelled": "Cancelled", "completed": "Completed",
+    "pending": "Pending", "no_show": "No Show",
     "cancel": "Cancel reservation",
     "cancelConfirm": "Are you sure you want to cancel this reservation?",
     "noReservations": "You have no active reservations", "available": "Available",
@@ -129,6 +130,17 @@
     "ctaButton": "Register now",
     "ctaLoginText": "Already a member?",
     "ctaLoginLink": "Sign in"
+  },
+  "checkin": {
+    "title": "Check-in",
+    "activated": "You're checked in! Your reservation is now active.",
+    "alreadyActive": "This reservation is already active.",
+    "tooEarly": "It's too early. Your session hasn't started yet.",
+    "tooLate": "The check-in window has closed. Your reservation has expired.",
+    "noReservation": "No reservation found for this table.",
+    "loading": "Checking your reservation...",
+    "tryAgain": "Try again",
+    "backToReservations": "Back to my reservations"
   },
   "footer": {
     "tagline": "The community's gaming space",
