@@ -49,7 +49,7 @@ type ReservationsByTableClient = {
 }
 
 const ROOM_COLUMNS = 'id, name, table_count, description'
-const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, pos_x, pos_y'
+const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, qr_code_inf, pos_x, pos_y'
 
 function toRoom(row: RoomRow): Room {
   return {
@@ -67,6 +67,7 @@ function toGameTable(row: TableRow): GameTable {
     name: row.name,
     type: row.type,
     qrCode: row.qr_code ?? '',
+    qrCodeInf: row.qr_code_inf ?? null,
     position: row.pos_x == null || row.pos_y == null ? undefined : { x: row.pos_x, y: row.pos_y },
   }
 }
