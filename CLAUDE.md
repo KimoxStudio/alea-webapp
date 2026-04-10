@@ -24,6 +24,7 @@ All process rules (language, agent pipeline, worktrees, git, documentation disci
 - All privilege checks (ownership + role) must live in the **service layer**, never in route handlers
 - i18n keys must maintain full parity between `en.json` and `es.json`
 - Test files must be excluded from `tsconfig.app.json`
+- Test files are owned exclusively by `qa-engineer` — `software-engineer` must never create or modify test files
 
 ---
 
