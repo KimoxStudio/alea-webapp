@@ -1,7 +1,9 @@
 node_modules
 .next
+out/
 dist
 coverage
+.nyc_output/
 .env
 .env.*
 !.env.example
@@ -11,6 +13,7 @@ coverage
 
 # Agent coordination cache
 .agent-cache/
+.claude/worktrees/
 
 # Test output
 test-results/
@@ -28,9 +31,12 @@ supabase/.temp/
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 package-lock.json
 yarn.lock
+pnpm-debug.log
+.pnpm-store/
 *.log
 *.tsbuildinfo
 **/next-env.d.ts
