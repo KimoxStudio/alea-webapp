@@ -117,3 +117,10 @@ export function useAdminCreateTable() {
     },
   })
 }
+
+export function useAdminRegenerateTableQr() {
+  return useMutation({
+    mutationFn: (tableId: string) =>
+      apiClient.post<{ qr_code: string; qr_code_inf: string | null }>(`/tables/${tableId}/qr`),
+  })
+}

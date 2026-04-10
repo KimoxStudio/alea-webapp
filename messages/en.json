@@ -107,7 +107,8 @@
     "cancelReservation": "Cancel reservation",
     "cancelReservationConfirm": "Are you sure you want to cancel this reservation?",
     "noReservations": "No reservations found",
-    "table": "Table", "user": "User"
+    "table": "Table", "user": "User",
+    "regenerateQr": "Regenerate QR"
   },
   "home": {
     "heroTitle": "Your Adventure Starts Here",

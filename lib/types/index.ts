@@ -26,6 +26,7 @@ export interface GameTable {
   name: string;
   type: TableType;
   qrCode: string;
+  qrCodeInf?: string | null;
   position?: { x: number; y: number };
 }
 
