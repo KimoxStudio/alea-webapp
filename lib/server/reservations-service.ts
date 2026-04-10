@@ -334,6 +334,9 @@ export async function updateReservationForSession(
   if (nextStatus != null && !['active', 'cancelled', 'completed', 'pending', 'no_show'].includes(String(nextStatus))) {
     serviceError('Invalid reservation status', 400)
   }
+  if (nextStatus === 'active' && session.role !== 'admin') {
+    serviceError('STATUS_TRANSITION_FORBIDDEN', 403)
+  }
   if ((nextStatus === 'completed' || nextStatus === 'no_show') && session.role !== 'admin') {
     serviceError('Only admins can mark a reservation as completed or no_show', 403)
   }
