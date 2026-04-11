@@ -101,7 +101,9 @@ export function MyReservationsView() {
       await cancelReservation.mutateAsync(id)
       closeDialog()
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : ''
+      const msg = error instanceof Error
+        ? error.message
+        : (error as { message?: string })?.message ?? ''
       if (msg === 'CANCELLATION_CUTOFF') {
         setCancelError(t('errors.cancellationCutoff'))
       } else {
