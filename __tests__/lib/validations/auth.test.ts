@@ -218,6 +218,7 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
 
       // Test passwordSchema
       const passwordResult = passwordSchema.safeParse('short')
+      expect(passwordResult.success).toBe(false)
       if (!passwordResult.success) {
         passwordResult.error.issues.forEach(issue => {
           expect(issue.message).toMatch(/^errors\./)
