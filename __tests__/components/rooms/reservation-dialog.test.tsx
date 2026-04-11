@@ -176,10 +176,7 @@ describe('ReservationDialog', () => {
     await waitFor(() => {
       const alert = screen.getByRole('alert')
       expect(alert).toBeInTheDocument()
-      // This test validates the error handling structure
-      // When the feature is implemented, it should show 'errors.userSlotConflict'
-      // For now, the component shows 'errors.conflictTime' for all errors
-      expect(alert.textContent).toMatch(/errors\.(userSlotConflict|conflictTime)/)
+      expect(alert).toHaveTextContent('errors.userSlotConflict')
     })
   })
 
@@ -246,7 +243,7 @@ describe('ReservationDialog', () => {
       statusCode: 409,
     })
 
-    render(
+    const { unmount } = render(
       <ReservationDialog
         table={mockTable}
         open={true}
@@ -285,6 +282,33 @@ describe('ReservationDialog', () => {
     await user.click(cancelButton)
 
     expect(onClose).toHaveBeenCalled()
+
+    // Unmount and re-render to verify error state is cleared
+    unmount()
+
+    mockMutateAsync.fn = vi.fn().mockResolvedValueOnce({
+      id: 'res-456',
+      tableId: 't1',
+      userId: 'user-123',
+      date: '2025-01-16',
+      startTime: '10:00',
+      endTime: '11:00',
+      status: 'pending',
+      surface: null,
+      createdAt: new Date().toISOString(),
+      activatedAt: null,
+    })
+
+    render(
+      <ReservationDialog
+        table={mockTable}
+        open={true}
+        onClose={vi.fn()}
+      />
+    )
+
+    // Verify no error alert is present in the fresh dialog
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('submit button is disabled when time range not selected', () => {
