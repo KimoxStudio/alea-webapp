@@ -12,12 +12,12 @@
 ## Current branch
 `develop`
 
-## Open PRs — awaiting manual merge
-| PR | Branch | Issues | Status |
+## Open PRs — ready to merge (team-review clean, all comments resolved)
+| PR | Branch | Issues | Tests |
 |---|---|---|---|
-| [#79](https://github.com/KimoxStudio/alea-webapp/pull/79) | `feat/cancellation-cutoff` | KIM-331, KIM-340, KIM-342 | Ready — all Copilot comments resolved |
-| [#80](https://github.com/KimoxStudio/alea-webapp/pull/80) | `chore/seed-data` | KIM-306 | Ready — all Copilot comments resolved |
-| [#81](https://github.com/KimoxStudio/alea-webapp/pull/81) | `feat/overlap-ui-feedback` | KIM-337 | Ready — no pending comments |
+| [#79](https://github.com/KimoxStudio/alea-webapp/pull/79) | `feat/cancellation-cutoff` | KIM-331, KIM-340, KIM-342 | 266 ✅ |
+| [#80](https://github.com/KimoxStudio/alea-webapp/pull/80) | `chore/seed-data` | KIM-306 | SQL only ✅ |
+| [#81](https://github.com/KimoxStudio/alea-webapp/pull/81) | `feat/overlap-ui-feedback` | KIM-337 | 269 ✅ |
 
 ## Merged this session
 | PR | Branch | Issues |
