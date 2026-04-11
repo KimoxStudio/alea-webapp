@@ -47,7 +47,7 @@ describe('CheckInActivator', () => {
       expect(screen.queryByText('loading')).toBeNull()
     })
 
-    expect(mockPost).toHaveBeenCalledWith('/api/tables/t1/activate')
+    expect(mockPost).toHaveBeenCalledWith('/tables/t1/activate')
     // Assert the activated status message is rendered
     await screen.findByText('activated')
   })
@@ -64,7 +64,7 @@ describe('CheckInActivator', () => {
       expect(screen.queryByText('loading')).toBeNull()
     })
 
-    expect(mockPost).toHaveBeenCalledWith('/api/tables/t1/activate')
+    expect(mockPost).toHaveBeenCalledWith('/tables/t1/activate')
     // Assert the alreadyActive status message is rendered
     await screen.findByText('alreadyActive')
   })
@@ -81,7 +81,7 @@ describe('CheckInActivator', () => {
       expect(screen.queryByText('loading')).toBeNull()
     })
 
-    expect(mockPost).toHaveBeenCalledWith('/api/tables/t1/activate')
+    expect(mockPost).toHaveBeenCalledWith('/tables/t1/activate')
     // Assert the tooEarly status message is rendered
     await screen.findByText('tooEarly')
   })
@@ -98,7 +98,7 @@ describe('CheckInActivator', () => {
       expect(screen.queryByText('loading')).toBeNull()
     })
 
-    expect(mockPost).toHaveBeenCalledWith('/api/tables/t1/activate')
+    expect(mockPost).toHaveBeenCalledWith('/tables/t1/activate')
     // Assert the tooLate status message is rendered
     await screen.findByText('tooLate')
   })
@@ -112,7 +112,7 @@ describe('CheckInActivator', () => {
       expect(screen.queryByText('loading')).toBeNull()
     })
 
-    expect(mockPost).toHaveBeenCalledWith('/api/tables/t1/activate')
+    expect(mockPost).toHaveBeenCalledWith('/tables/t1/activate')
     // Assert the error status message is rendered
     await screen.findByText('error')
   })
@@ -158,7 +158,7 @@ describe('CheckInActivator', () => {
       expect(screen.queryByText('loading')).toBeNull()
     })
 
-    expect(mockPost).toHaveBeenCalledWith('/api/tables/t1/activate?side=inf')
+    expect(mockPost).toHaveBeenCalledWith('/tables/t1/activate?side=inf')
   })
 
   it('does not pass side query parameter when side prop is not inf', async () => {
@@ -170,6 +170,6 @@ describe('CheckInActivator', () => {
       expect(screen.queryByText('loading')).toBeNull()
     })
 
-    expect(mockPost).toHaveBeenCalledWith('/api/tables/t1/activate')
+    expect(mockPost).toHaveBeenCalledWith('/tables/t1/activate')
   })
 })
