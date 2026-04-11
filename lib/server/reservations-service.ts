@@ -34,6 +34,7 @@ type UserSlotOverlapQuery = {
   in: (column: string, values: string[]) => UserSlotOverlapQuery
   lt: (column: string, value: string) => UserSlotOverlapQuery
   gt: (column: string, value: string) => UserSlotOverlapQuery
+  limit: (count: number) => Promise<{ data: Array<{ id: string }> | null; error: unknown }>
   then: Promise<{ data: ReservationRow[] | null; error: unknown }>['then']
 }
 type UserSlotOverlapTableClient = {
@@ -286,6 +287,7 @@ async function checkUserSlotOverlap(
     .in('status', ['pending', 'active'])
     .lt('start_time', endTime)
     .gt('end_time', startTime)
+    .limit(1)
 
   if (error) {
     serviceError('Internal server error', 500)
