@@ -31,7 +31,7 @@ type SessionReservationsQuery = {
 }
 type UserSlotOverlapQuery = {
   eq: (column: 'user_id' | 'date', value: string) => UserSlotOverlapQuery
-  not: (column: string, operator: string, value: string) => UserSlotOverlapQuery
+  in: (column: string, values: string[]) => UserSlotOverlapQuery
   lt: (column: string, value: string) => UserSlotOverlapQuery
   gt: (column: string, value: string) => UserSlotOverlapQuery
   then: Promise<{ data: ReservationRow[] | null; error: unknown }>['then']
