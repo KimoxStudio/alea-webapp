@@ -87,6 +87,11 @@ export function MyReservationsView() {
   const [cancelingId, setCancelingId] = useState<string | null>(null)
   const [cancelError, setCancelError] = useState<string | null>(null)
 
+  const closeDialog = () => {
+    setCancelingId(null)
+    setCancelError(null)
+  }
+
   const activeReservations = reservations?.filter(r => r.status === 'active') ?? []
   const pastReservations = reservations?.filter(r => r.status !== 'active') ?? []
 
@@ -94,13 +99,14 @@ export function MyReservationsView() {
     setCancelError(null)
     try {
       await cancelReservation.mutateAsync(id)
+      closeDialog()
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : ''
-      if (msg === 'CANCELLATION_CUTOFF' || (error as { statusCode?: number })?.statusCode === 403) {
+      if (msg === 'CANCELLATION_CUTOFF') {
         setCancelError(t('errors.cancellationCutoff'))
+      } else {
+        setCancelError(t('errors.generic'))
       }
-    } finally {
-      setCancelingId(null)
     }
   }
 
@@ -154,17 +160,20 @@ export function MyReservationsView() {
       )}
 
       {/* Cancel confirmation dialog */}
-      <Dialog open={!!cancelingId} onOpenChange={() => { setCancelingId(null); setCancelError(null) }}>
+      <Dialog open={!!cancelingId} onOpenChange={closeDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-cinzel">{t('cancel')}</DialogTitle>
             <DialogDescription>{t('cancelConfirm')}</DialogDescription>
           </DialogHeader>
           {cancelError && (
-            <p className="text-sm text-destructive mt-2">{cancelError}</p>
+            <p className="text-sm text-destructive flex items-center gap-1.5">
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {cancelError}
+            </p>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setCancelingId(null); setCancelError(null) }}>
+            <Button variant="outline" onClick={closeDialog}>
               No
             </Button>
             <Button
