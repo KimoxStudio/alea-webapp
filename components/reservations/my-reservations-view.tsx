@@ -15,6 +15,70 @@ import {
 } from '@/components/ui/dialog'
 import type { Reservation } from '@/lib/types'
 
+const statusBadgeVariant: Record<Reservation['status'], 'available' | 'reserved' | 'outline'> = {
+  active: 'available',
+  cancelled: 'reserved',
+  completed: 'outline',
+  pending: 'outline',
+  no_show: 'reserved',
+}
+
+interface ReservationCardProps {
+  reservation: Reservation
+  onCancel: (id: string) => void
+}
+
+function ReservationCard({ reservation, onCancel }: ReservationCardProps) {
+  const t = useTranslations('reservations')
+  const tt = useTranslations('tables')
+  return (
+    <div className="rpg-card p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 text-sm font-medium">
+            <MapPin className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <span>
+              {reservation.roomName && reservation.tableName
+                ? `${reservation.roomName} · ${reservation.tableName}`
+                : reservation.tableName ?? reservation.tableId}
+            </span>
+            {reservation.surface && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Layers className="h-3 w-3" aria-hidden="true" />
+                {reservation.surface === 'top' ? tt('surfaceTop') : tt('surfaceBottom')}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+              {formatDate(reservation.date)}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+              {formatTime(reservation.startTime)} — {formatTime(reservation.endTime)}
+            </span>
+          </div>
+        </div>
+        <Badge variant={statusBadgeVariant[reservation.status]}>
+          {t(reservation.status)}
+        </Badge>
+      </div>
+
+      {reservation.status === 'active' && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onCancel(reservation.id)}
+          className="w-full border-destructive/40 text-destructive hover:bg-destructive/15"
+        >
+          {t('cancel')}
+        </Button>
+      )}
+    </div>
+  )
+}
+
 export function MyReservationsView() {
   const t = useTranslations('reservations')
   const { user } = useAuth()
@@ -31,61 +95,6 @@ export function MyReservationsView() {
     } finally {
       setCancelingId(null)
     }
-  }
-
-  const statusBadgeVariant: Record<Reservation['status'], 'available' | 'reserved' | 'outline'> = {
-    active: 'available',
-    cancelled: 'reserved',
-    completed: 'outline',
-  }
-
-  function ReservationCard({ reservation }: { reservation: Reservation }) {
-    return (
-      <div className="rpg-card p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-sm font-medium">
-              <MapPin className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-              <span>
-                {reservation.roomName && reservation.tableName
-                  ? `${reservation.roomName} · ${reservation.tableName}`
-                  : reservation.tableName ?? reservation.tableId}
-              </span>
-              {reservation.surface && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Layers className="h-3 w-3" aria-hidden="true" />
-                  {reservation.surface === 'top' ? 'Superior' : 'Inferior'}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-                {formatDate(reservation.date)}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-                {formatTime(reservation.startTime)} — {formatTime(reservation.endTime)}
-              </span>
-            </div>
-          </div>
-          <Badge variant={statusBadgeVariant[reservation.status]}>
-            {t(reservation.status)}
-          </Badge>
-        </div>
-
-        {reservation.status === 'active' && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCancelingId(reservation.id)}
-            className="w-full border-destructive/40 text-destructive hover:bg-destructive/15"
-          >
-            {t('cancel')}
-          </Button>
-        )}
-      </div>
-    )
   }
 
   return (
@@ -118,7 +127,7 @@ export function MyReservationsView() {
               </div>
             ) : (
               <div className="space-y-3">
-                {activeReservations.map(r => <ReservationCard key={r.id} reservation={r} />)}
+                {activeReservations.map(r => <ReservationCard key={r.id} reservation={r} onCancel={setCancelingId} />)}
               </div>
             )}
           </section>
@@ -130,7 +139,7 @@ export function MyReservationsView() {
                 {t('completed')} / {t('cancelled')} ({pastReservations.length})
               </h2>
               <div className="space-y-3 opacity-70">
-                {pastReservations.map(r => <ReservationCard key={r.id} reservation={r} />)}
+                {pastReservations.map(r => <ReservationCard key={r.id} reservation={r} onCancel={setCancelingId} />)}
               </div>
             </section>
           )}

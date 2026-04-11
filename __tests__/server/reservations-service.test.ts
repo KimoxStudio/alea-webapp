@@ -1,5 +1,5 @@
 import type { SessionUser } from '@/lib/server/auth'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
 
 type ReservationRow = {
   id: string
@@ -8,8 +8,9 @@ type ReservationRow = {
   date: string
   start_time: string
   end_time: string
-  status: 'active' | 'cancelled' | 'completed'
+  status: 'active' | 'cancelled' | 'completed' | 'pending' | 'no_show'
   surface: 'top' | 'bottom' | null
+  activated_at: string | null
   created_at: string
   // enriched join fields populated by the mock
   profiles?: { member_number: string } | null
@@ -56,6 +57,7 @@ function makeReservation(overrides?: Partial<ReservationRow>): ReservationRow {
     end_time: '18:00:00',
     status: 'active',
     surface: null,
+    activated_at: null,
     created_at: '2026-04-04T10:00:00.000Z',
     ...overrides,
   }
@@ -129,12 +131,20 @@ function buildSelectChain<T>(rows: T[]) {
       current = current.filter((row) => String((row as Record<string, unknown>)[column]) !== value)
       return this
     },
+    in(column: string, values: string[]) {
+      current = current.filter((row) => values.includes(String((row as Record<string, unknown>)[column])))
+      return this
+    },
     order(column: string, { ascending }: { ascending: boolean }) {
       current = [...current].sort((left, right) => {
         const a = String((left as Record<string, unknown>)[column] ?? '')
         const b = String((right as Record<string, unknown>)[column] ?? '')
         return ascending ? a.localeCompare(b) : b.localeCompare(a)
       })
+      return this
+    },
+    or(condition: string) {
+      // OR filtering is handled by the actual Supabase client; mock just returns this for chaining
       return this
     },
     then<TResult1 = { data: T[]; error: null }, TResult2 = never>(
@@ -220,8 +230,23 @@ vi.mock('@/lib/supabase/server', () => ({
 
       return {
         select: vi.fn(() => buildSelectChain(reservationsState)),
+        update: vi.fn((payload: Record<string, unknown>) => ({
+          eq: vi.fn((column: string, value: string) => ({
+            select: vi.fn(() => ({
+              single: vi.fn(async () => {
+                const row = reservationsState.find((r) => String((r as Record<string, unknown>)[column]) === value)
+                if (!row) {
+                  return { data: null, error: null }
+                }
+                Object.assign(row, payload)
+                return { data: cloneReservation(row), error: null }
+              }),
+            })),
+          })),
+        })),
       }
     }),
+    rpc: vi.fn(),
   })),
 }))
 
@@ -439,15 +464,40 @@ describe('reservations service', () => {
         endTime: '18:30',
       }))
     })
+
+    it('treats pending reservations as conflicting', async () => {
+      const { createReservationForSession } = await loadReservationModules()
+
+      reservationsState[0]!.status = 'pending'
+
+      await expect(createReservationForSession(memberSession, {
+        tableId: 't1',
+        date: '2026-04-04',
+        startTime: '17:00',
+        endTime: '18:30',
+      })).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 409,
+      })
+    })
   })
 
   describe('updateReservationForSession', () => {
     it('rejects invalid statuses', async () => {
       const { updateReservationForSession } = await loadReservationModules()
 
-      await expect(updateReservationForSession(memberSession, 'r1', { status: 'pending' })).rejects.toMatchObject({
+      await expect(updateReservationForSession(memberSession, 'r1', { status: 'invalid_status' as unknown })).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
+      })
+    })
+
+    it('rejects status active for non-admin users with 403', async () => {
+      const { updateReservationForSession } = await loadReservationModules()
+
+      await expect(updateReservationForSession(memberSession, 'r1', { status: 'active' })).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 403,
       })
     })
 
@@ -466,6 +516,15 @@ describe('reservations service', () => {
       const updated = await updateReservationForSession(adminSession, 'r1', { status: 'completed' })
 
       expect(updated.status).toBe('completed')
+    })
+
+    it('allows admins to set status to active', async () => {
+      const { updateReservationForSession } = await loadReservationModules()
+
+      reservationsState[0]!.status = 'pending'
+      const updated = await updateReservationForSession(adminSession, 'r1', { status: 'active' })
+
+      expect(updated.status).toBe('active')
     })
 
     it('rejects updates from non-owners', async () => {
@@ -611,6 +670,214 @@ describe('reservations service', () => {
 
       await expect(checkReservationAccess(memberSession, 'r1')).resolves.toBeUndefined()
       await expect(checkReservationAccess(adminSession, 'r1')).resolves.toBeUndefined()
+    })
+  })
+
+  describe('activateReservationByTable', () => {
+    // Fixed timestamp: 2025-06-15T14:00:00Z (14:00 UTC)
+    const FIXED_DATE = '2025-06-15'
+    const FIXED_TIME = new Date('2025-06-15T14:00:00Z')
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(FIXED_TIME)
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    function seedPendingReservation(overrides?: Partial<ReservationRow>) {
+      const row: ReservationRow = makeReservation({
+        id: 'rA',
+        table_id: 't3',
+        user_id: '2',
+        date: FIXED_DATE,
+        status: 'pending',
+        surface: 'top',
+        ...overrides,
+      })
+      reservationsState.push(row)
+      return row
+    }
+
+    function makeStartTime(offsetMinutes: number): string {
+      const now = new Date()
+      now.setMinutes(now.getMinutes() - offsetMinutes)
+      const hh = String(now.getHours()).padStart(2, '0')
+      const mm = String(now.getMinutes()).padStart(2, '0')
+      return `${hh}:${mm}:00`
+    }
+
+    it('succeeds within the 20-minute activation window', async () => {
+      const { activateReservationByTable } = await loadReservationModules()
+
+      seedPendingReservation({ start_time: makeStartTime(10) })
+
+      const result = await activateReservationByTable('t3', '2', undefined)
+
+      expect(result).toMatchObject({ tableId: 't3', userId: '2', status: 'active' })
+    })
+
+    it('throws CHECK_IN_TOO_EARLY when called before start_time', async () => {
+      const { activateReservationByTable } = await loadReservationModules()
+
+      seedPendingReservation({ start_time: makeStartTime(-30) })
+
+      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 400,
+        message: expect.stringContaining('CHECK_IN_TOO_EARLY'),
+      })
+    })
+
+    it('throws CHECK_IN_TOO_LATE when called more than 20 minutes after start_time', async () => {
+      const { activateReservationByTable } = await loadReservationModules()
+
+      seedPendingReservation({ start_time: makeStartTime(25) })
+
+      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 400,
+        message: expect.stringContaining('CHECK_IN_TOO_LATE'),
+      })
+    })
+
+    it('throws CHECK_IN_ALREADY_ACTIVE when reservation is already active', async () => {
+      const { activateReservationByTable } = await loadReservationModules()
+
+      reservationsState.push(makeReservation({
+        id: 'rActive',
+        table_id: 't3',
+        user_id: '2',
+        date: FIXED_DATE,
+        status: 'active',
+        surface: 'top',
+        start_time: makeStartTime(10),
+      }))
+
+      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 409,
+        message: expect.stringContaining('CHECK_IN_ALREADY_ACTIVE'),
+      })
+    })
+
+    it('throws CHECK_IN_NO_RESERVATION when no pending reservation exists', async () => {
+      const { activateReservationByTable } = await loadReservationModules()
+
+      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 404,
+        message: expect.stringContaining('CHECK_IN_NO_RESERVATION'),
+      })
+    })
+
+    it('with side=inf: matches reservation with surface bottom', async () => {
+      const { activateReservationByTable } = await loadReservationModules()
+
+      seedPendingReservation({ surface: 'bottom', start_time: makeStartTime(10) })
+
+      const result = await activateReservationByTable('t3', '2', 'inf')
+
+      expect(result).toMatchObject({ tableId: 't3', userId: '2', status: 'active' })
+    })
+
+    it('with side=inf on a non-removable-top table: throws CHECK_IN_NO_RESERVATION', async () => {
+      const { activateReservationByTable } = await loadReservationModules()
+
+      reservationsState.push(makeReservation({
+        id: 'rNonTop',
+        table_id: 't1',
+        user_id: '2',
+        date: FIXED_DATE,
+        status: 'pending',
+        surface: null,
+        start_time: makeStartTime(10),
+      }))
+
+      await expect(activateReservationByTable('t1', '2', 'inf')).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 404,
+        message: expect.stringContaining('CHECK_IN_NO_RESERVATION'),
+      })
+    })
+
+    it('boundary: called exactly at start_time succeeds', async () => {
+      const { activateReservationByTable } = await loadReservationModules()
+
+      seedPendingReservation({ start_time: makeStartTime(0) })
+
+      const result = await activateReservationByTable('t3', '2', undefined)
+
+      expect(result.status).toBe('active')
+    })
+
+    it('boundary: called at start_time+19min succeeds (still within window)', async () => {
+      const { activateReservationByTable } = await loadReservationModules()
+
+      seedPendingReservation({ start_time: makeStartTime(19) })
+
+      const result = await activateReservationByTable('t3', '2', undefined)
+
+      expect(result.status).toBe('active')
+    })
+
+    it('boundary: called at start_time+21min throws CHECK_IN_TOO_LATE', async () => {
+      const { activateReservationByTable } = await loadReservationModules()
+
+      seedPendingReservation({ start_time: makeStartTime(21) })
+
+      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 400,
+        message: expect.stringContaining('CHECK_IN_TOO_LATE'),
+      })
+    })
+  })
+
+  describe('cancelExpiredPendingReservations', () => {
+    it('calls admin.rpc with cancel_expired_pending_reservations and returns count', async () => {
+      // The mock setup is done at the top of the file with vi.mock
+      // Here we just need to configure the rpc mock behavior
+      const mockRpc = vi.fn(async () => ({ data: 3, error: null }))
+      
+      // Reset modules to get a fresh import with our configured mock
+      vi.resetModules()
+      const createAdminMock = vi.fn(() => ({
+        rpc: mockRpc,
+      }))
+      vi.doMock('@/lib/supabase/server', () => ({
+        createSupabaseServerAdminClient: createAdminMock,
+        createSupabaseServerClient: vi.fn(async () => ({ from: vi.fn() })),
+      }))
+      
+      const { cancelExpiredPendingReservations } = await import('@/lib/server/reservations-service')
+      const result = await cancelExpiredPendingReservations()
+
+      expect(mockRpc).toHaveBeenCalledWith('cancel_expired_pending_reservations')
+      expect(result).toBe(3)
+    })
+
+    it('throws serviceError when rpc returns error', async () => {
+      const mockRpc = vi.fn(async () => ({ data: null, error: { message: 'DB error' } }))
+      
+      vi.resetModules()
+      const createAdminMock = vi.fn(() => ({
+        rpc: mockRpc,
+      }))
+      vi.doMock('@/lib/supabase/server', () => ({
+        createSupabaseServerAdminClient: createAdminMock,
+        createSupabaseServerClient: vi.fn(async () => ({ from: vi.fn() })),
+      }))
+      
+      const { cancelExpiredPendingReservations } = await import('@/lib/server/reservations-service')
+
+      await expect(cancelExpiredPendingReservations()).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 500,
+        message: 'Internal server error',
+      })
     })
   })
 })

@@ -17,6 +17,7 @@ type TablesLookupClient = {
 type AdminReservationsQuery = {
   eq: (column: 'id' | 'table_id' | 'date' | 'status', value: string) => AdminReservationsQuery
   neq: (column: 'id', value: string) => AdminReservationsQuery
+  in: (column: 'status', values: string[]) => AdminReservationsQuery
   maybeSingle: () => Promise<{ data: ReservationRow | null; error: unknown }>
   then: Promise<{ data: ReservationRow[] | null; error: unknown }>['then']
 }
@@ -58,8 +59,8 @@ type EnrichedReservationsTableClient = {
   select: (columns: string) => EnrichedReservationsQuery
 }
 
-const RESERVATION_COLUMNS = 'id, table_id, user_id, date, start_time, end_time, status, surface, created_at'
-const RESERVATION_ENRICHED_COLUMNS = 'id, table_id, user_id, date, start_time, end_time, status, surface, created_at, profiles(member_number), tables(name, rooms(name))'
+const RESERVATION_COLUMNS = 'id, table_id, user_id, date, start_time, end_time, status, surface, activated_at, created_at'
+const RESERVATION_ENRICHED_COLUMNS = 'id, table_id, user_id, date, start_time, end_time, status, surface, activated_at, created_at, profiles(member_number), tables(name, rooms(name))'
 
 function parseDate(value: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -101,6 +102,7 @@ function mapReservation(row: ReservationRow): Reservation {
     endTime: normalizeTime(row.end_time),
     status: row.status,
     surface: row.surface,
+    activatedAt: row.activated_at ?? null,
     createdAt: row.created_at,
   }
 }
@@ -115,6 +117,7 @@ function mapEnrichedReservation(row: EnrichedReservationRow): Reservation {
     endTime: normalizeTime(row.end_time),
     status: row.status,
     surface: row.surface,
+    activatedAt: row.activated_at ?? null,
     createdAt: row.created_at,
     memberNumber: row.profiles?.member_number ?? null,
     roomName: row.tables?.rooms?.name ?? null,
@@ -162,7 +165,7 @@ async function listActiveReservationsForConflict(input: {
     .select(RESERVATION_COLUMNS)
     .eq('table_id', input.tableId)
     .eq('date', input.date)
-    .eq('status', 'active')
+    .in('status', ['active', 'pending'])
 
   const result = input.ignoreReservationId
     ? await query.neq('id', input.ignoreReservationId)
@@ -329,11 +332,14 @@ export async function updateReservationForSession(
   assertReservationAccess(session, existingReservation)
 
   const nextStatus = body.status
-  if (nextStatus != null && !['active', 'cancelled', 'completed'].includes(String(nextStatus))) {
+  if (nextStatus != null && !['active', 'cancelled', 'completed', 'pending', 'no_show'].includes(String(nextStatus))) {
     serviceError('Invalid reservation status', 400)
   }
-  if (nextStatus === 'completed' && session.role !== 'admin') {
-    serviceError('Only admins can mark a reservation as completed', 403)
+  if (nextStatus === 'active' && session.role !== 'admin') {
+    serviceError('STATUS_TRANSITION_FORBIDDEN', 403)
+  }
+  if ((nextStatus === 'completed' || nextStatus === 'no_show') && session.role !== 'admin') {
+    serviceError('Only admins can mark a reservation as completed or no_show', 403)
   }
 
   const nextStartTime = body.startTime == null
@@ -387,4 +393,111 @@ export async function updateReservationForSession(
   }
 
   return mapReservation(data as ReservationRow)
+}
+
+export async function cancelExpiredPendingReservations(): Promise<number> {
+  const admin = createSupabaseServerAdminClient()
+  const { data, error } = await admin.rpc('cancel_expired_pending_reservations')
+  if (error) serviceError('Internal server error', 500)
+  return (data as number | null) ?? 0
+}
+
+type ActivationAdminQuery = {
+  eq: (column: 'table_id' | 'date' | 'status' | 'user_id' | 'surface' | 'id', value: string) => ActivationAdminQuery
+  or: (filter: string) => ActivationAdminQuery
+  maybeSingle: () => Promise<{ data: ReservationRow | null; error: unknown }>
+  select: (columns: string) => ActivationAdminQuery
+  update: (values: TablesUpdate<'reservations'>) => ActivationAdminQuery
+  single: () => Promise<{ data: ReservationRow | null; error: PostgrestErrorLike | null }>
+}
+
+export async function activateReservationByTable(
+  tableId: string,
+  userId: string,
+  side?: 'inf',
+): Promise<Reservation> {
+  // NOTE: We use today's UTC date as a string anchor only for the
+  // initial DB query. The time-window check below uses the reservation's own
+  // stored date so the logic is self-consistent even if the request arrives
+  // near midnight. A full timezone fix should pass an IANA zone from the
+  // client or club config and use a proper date library (e.g. date-fns-tz).
+  // TODO(timezone): use venue local timezone instead of UTC — UTC may be off by
+  // 1-2 hours relative to the venue's wall-clock date near midnight.
+  const today = new Date().toISOString().slice(0, 10)
+
+  const admin = createSupabaseServerAdminClient()
+
+  let pendingQuery = (admin.from('reservations') as unknown as { select: (c: string) => ActivationAdminQuery })
+    .select(RESERVATION_COLUMNS)
+    .eq('table_id', tableId)
+    .eq('date', today)
+    .eq('user_id', userId)
+    .eq('status', 'pending')
+
+  if (side === 'inf') {
+    pendingQuery = pendingQuery.eq('surface', 'bottom')
+  } else {
+    // Non-removable (single-surface) tables store surface = null;
+    // removable tables store surface = 'top' for the superior side.
+    pendingQuery = pendingQuery.or('surface.eq.top,surface.is.null')
+  }
+
+  const { data: pendingData, error: pendingError } = await pendingQuery.maybeSingle()
+
+  if (pendingError) {
+    serviceError('Internal server error', 500)
+  }
+
+  if (!pendingData) {
+    let activeQuery = (admin.from('reservations') as unknown as { select: (c: string) => ActivationAdminQuery })
+      .select(RESERVATION_COLUMNS)
+      .eq('table_id', tableId)
+      .eq('date', today)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+
+    if (side === 'inf') {
+      activeQuery = activeQuery.eq('surface', 'bottom')
+    } else {
+      activeQuery = activeQuery.or('surface.eq.top,surface.is.null')
+    }
+
+    const { data: activeData } = await activeQuery.maybeSingle()
+
+    if (activeData) {
+      serviceError('CHECK_IN_ALREADY_ACTIVE', 409)
+    }
+
+    serviceError('CHECK_IN_NO_RESERVATION', 404)
+  }
+
+  const reservation = pendingData as ReservationRow
+
+  const now = new Date()
+  const startTimeParts = normalizeTime(reservation.start_time).split(':')
+  // Anchor on the reservation's own stored date (not the UTC "today" computed
+  // at request time) so the window calculation is self-consistent.
+  const reservationStart = new Date(reservation.date)
+  reservationStart.setHours(parseInt(startTimeParts[0], 10), parseInt(startTimeParts[1], 10), 0, 0)
+
+  const windowEnd = new Date(reservationStart.getTime() + 20 * 60 * 1000)
+
+  if (now < reservationStart) {
+    serviceError('CHECK_IN_TOO_EARLY', 400)
+  }
+  if (now > windowEnd) {
+    serviceError('CHECK_IN_TOO_LATE', 400)
+  }
+
+  const { data: updated, error: updateError } = await (admin.from('reservations') as unknown as { update: (v: TablesUpdate<'reservations'>) => ActivationAdminQuery })
+    .update({ status: 'active', activated_at: now.toISOString() })
+    .eq('id', reservation.id)
+    .select(RESERVATION_COLUMNS)
+    .single()
+
+  if (updateError || !updated) {
+    serviceError('Internal server error', 500)
+  }
+
+  return mapReservation(updated as ReservationRow)
 }

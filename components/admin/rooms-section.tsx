@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { useTranslations } from 'next-intl'
-import { Pencil, Plus, ChevronDown, ChevronRight, DoorOpen, Table2 } from 'lucide-react'
+import { Pencil, Plus, ChevronDown, ChevronRight, DoorOpen, Table2, QrCode, Download, RefreshCw } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +22,7 @@ import {
   useAdminCreateRoom,
   useAdminRoomTables,
   useAdminCreateTable,
+  useAdminRegenerateTableQr,
 } from '@/lib/hooks/use-admin'
 import type { Room, GameTable } from '@/lib/types'
 
@@ -29,6 +31,141 @@ const tableTypeBadge: Record<string, 'outline' | 'partial' | 'available'> = {
   small: 'outline',
   large: 'partial',
   removable_top: 'available',
+}
+
+// Sub-component: QR code display and management for a single table
+function TableQrPanel({ table, roomId }: { table: GameTable; roomId: string }) {
+  const t = useTranslations('admin')
+  const tt = useTranslations('tables')
+  const tc = useTranslations('common')
+  const regenerateQr = useAdminRegenerateTableQr()
+  const [qrCode, setQrCode] = useState<string>(table.qrCode)
+  const [qrCodeInf, setQrCodeInf] = useState<string | null | undefined>(table.qrCodeInf)
+
+  async function handleRegenerate() {
+    const result = await regenerateQr.mutateAsync({ tableId: table.id, roomId })
+    setQrCode(result.qr_code)
+    setQrCodeInf(result.qr_code_inf)
+  }
+
+  return (
+    <div className="mt-2 ml-6 pl-4 border-l-2 border-primary/10 space-y-3 py-2">
+      <div className="flex flex-wrap gap-4">
+        {/* Main QR code */}
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground">
+            {table.type === 'removable_top' ? tt('surfaceTop') : tt('qrCode')}
+          </p>
+          {qrCode ? (
+            <div className="flex flex-col gap-2">
+              <Image
+                src={qrCode}
+                alt={`QR ${table.name}`}
+                width={128}
+                height={128}
+                className="w-32 h-32 rounded-md border border-border/50 bg-white object-cover"
+                unoptimized
+              />
+              <a
+                href={qrCode}
+                download={`QR-${table.name}.png`}
+                className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                <Download className="h-3 w-3" aria-hidden="true" />
+                {tc('save')}
+              </a>
+            </div>
+          ) : (
+            <div className="w-32 h-32 rounded-md border border-border/50 bg-background-secondary/40 flex items-center justify-center">
+              <QrCode className="h-8 w-8 text-muted-foreground/40" aria-hidden="true" />
+            </div>
+          )}
+        </div>
+
+        {/* INF QR code for removable_top tables */}
+        {table.type === 'removable_top' && (
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-muted-foreground">
+              {tt('surfaceBottom')}
+            </p>
+            {qrCodeInf ? (
+              <div className="flex flex-col gap-2">
+                <Image
+                  src={qrCodeInf}
+                  alt={`QR ${table.name} INF`}
+                  width={128}
+                  height={128}
+                  className="w-32 h-32 rounded-md border border-border/50 bg-white object-cover"
+                  unoptimized
+                />
+                <a
+                  href={qrCodeInf}
+                  download={`QR-${table.name}-INF.png`}
+                  className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+                >
+                  <Download className="h-3 w-3" aria-hidden="true" />
+                  {tc('save')}
+                </a>
+              </div>
+            ) : (
+              <div className="w-32 h-32 rounded-md border border-border/50 bg-background-secondary/40 flex items-center justify-center">
+                <QrCode className="h-8 w-8 text-muted-foreground/40" aria-hidden="true" />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleRegenerate}
+        disabled={regenerateQr.isPending}
+        className="gap-1.5 h-8 border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+      >
+        {regenerateQr.isPending ? (
+          <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{tc('loading')}</span></span>
+        ) : (
+          <>
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+            {t('regenerateQr')}
+          </>
+        )}
+      </Button>
+    </div>
+  )
+}
+
+// Sub-component: single table row with QR toggle
+function TableRow({ table, roomId }: { table: GameTable; roomId: string }) {
+  const tt = useTranslations('tables')
+  const [showQr, setShowQr] = useState(false)
+
+  return (
+    <div className="rounded-md bg-background-secondary/40 border border-border/30">
+      <div className="flex items-center justify-between gap-2 py-2 px-3 hover:bg-background-secondary/70 transition-colors">
+        <div className="flex items-center gap-2">
+          <Table2 className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" aria-hidden="true" />
+          <span className="text-sm font-medium text-foreground">{table.name}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={tableTypeBadge[table.type] ?? 'outline'} className="text-xs">
+            {tt(table.type)}
+          </Badge>
+          <button
+            type="button"
+            onClick={() => setShowQr((v) => !v)}
+            aria-expanded={showQr}
+            aria-label={tt('qrCode')}
+            className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground hover:text-primary transition-colors"
+          >
+            <QrCode className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+      {showQr && <TableQrPanel table={table} roomId={roomId} />}
+    </div>
+  )
 }
 
 // Sub-component: expanded room tables list + create table form
@@ -69,18 +206,7 @@ function RoomTablesPanel({ room }: { room: Room }) {
       ) : (
         <div className="space-y-1">
           {(tables as GameTable[]).map((table) => (
-            <div
-              key={table.id}
-              className="flex items-center justify-between gap-2 py-2 px-3 rounded-md bg-background-secondary/40 hover:bg-background-secondary/70 transition-colors border border-border/30"
-            >
-              <div className="flex items-center gap-2">
-                <Table2 className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" aria-hidden="true" />
-                <span className="text-sm font-medium text-foreground">{table.name}</span>
-              </div>
-              <Badge variant={tableTypeBadge[table.type] ?? 'outline'} className="text-xs">
-                {tt(table.type)}
-              </Badge>
-            </div>
+            <TableRow key={table.id} table={table} roomId={room.id} />
           ))}
         </div>
       )}

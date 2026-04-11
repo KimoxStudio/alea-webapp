@@ -26,6 +26,7 @@ export interface GameTable {
   name: string;
   type: TableType;
   qrCode: string;
+  qrCodeInf?: string | null;
   position?: { x: number; y: number };
 }
 
@@ -36,8 +37,9 @@ export interface Reservation {
   date: string;
   startTime: string;
   endTime: string;
-  status: 'active' | 'cancelled' | 'completed';
+  status: 'active' | 'cancelled' | 'completed' | 'pending' | 'no_show';
   surface?: TableSurface | null;
+  activatedAt?: string | null;
   createdAt: string;
   memberNumber?: string | null;
   roomName?: string | null;

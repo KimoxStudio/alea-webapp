@@ -17,6 +17,18 @@ All process rules (language, agent pipeline, worktrees, git, documentation disci
 
 ---
 
+## GitHub communication language
+
+All GitHub-facing text **must be written in English** — this includes:
+- PR comment replies
+- Inline review responses
+- Issue comments
+- Commit messages
+
+The user may write prompts in any language; replies to the user are in their language. All GitHub artifacts are in English.
+
+---
+
 ## Key conventions
 
 - Admin write operations use `createSupabaseServerAdminClient()` (bypasses RLS)
@@ -24,6 +36,7 @@ All process rules (language, agent pipeline, worktrees, git, documentation disci
 - All privilege checks (ownership + role) must live in the **service layer**, never in route handlers
 - i18n keys must maintain full parity between `en.json` and `es.json`
 - Test files must be excluded from `tsconfig.app.json`
+- Test files are owned exclusively by `qa-engineer` — `software-engineer` must never create or modify test files
 
 ---
 

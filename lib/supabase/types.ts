@@ -66,6 +66,7 @@ export type Database = {
       }
       reservations: {
         Row: {
+          activated_at: string | null
           created_at: string
           date: string
           end_time: string
@@ -77,6 +78,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activated_at?: string | null
           created_at?: string
           date: string
           end_time: string
@@ -88,6 +90,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activated_at?: string | null
           created_at?: string
           date?: string
           end_time?: string
@@ -140,6 +143,7 @@ export type Database = {
           pos_x: number | null
           pos_y: number | null
           qr_code: string | null
+          qr_code_inf: string | null
           room_id: string
           type: Database["public"]["Enums"]["table_type"]
         }
@@ -150,6 +154,7 @@ export type Database = {
           pos_x?: number | null
           pos_y?: number | null
           qr_code?: string | null
+          qr_code_inf?: string | null
           room_id: string
           type?: Database["public"]["Enums"]["table_type"]
         }
@@ -160,6 +165,7 @@ export type Database = {
           pos_x?: number | null
           pos_y?: number | null
           qr_code?: string | null
+          qr_code_inf?: string | null
           room_id?: string
           type?: Database["public"]["Enums"]["table_type"]
         }
@@ -178,10 +184,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_expired_pending_reservations: { Args: Record<PropertyKey, never>; Returns: number }
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      reservation_status: "active" | "cancelled" | "completed"
+      reservation_status: "active" | "cancelled" | "completed" | "pending" | "no_show"
       role: "member" | "admin"
       table_surface: "top" | "bottom"
       table_type: "small" | "large" | "removable_top"
@@ -315,7 +322,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      reservation_status: ["active", "cancelled", "completed"],
+      reservation_status: ["active", "cancelled", "completed", "pending", "no_show"],
       role: ["member", "admin"],
       table_surface: ["top", "bottom"],
       table_type: ["small", "large", "removable_top"],

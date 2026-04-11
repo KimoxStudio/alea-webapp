@@ -3,6 +3,7 @@ import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/l
 import { serviceError } from '@/lib/server/service-error'
 import { resolveDate, buildAvailability } from '@/lib/server/availability'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
+import { regenerateQrCodes } from '@/lib/server/tables-service'
 
 type RoomRow = Tables<'rooms'>
 type TableRow = Tables<'tables'>
@@ -41,7 +42,7 @@ type TablesInsertClient = {
 type ReservationsByTableClient = {
   select: (columns: string) => {
     eq: (column: 'date', value: string) => {
-      eq: (column: 'status', value: 'active') => {
+      in: (column: 'status', values: string[]) => {
         in: (column: 'table_id', values: string[]) => Promise<{ data: ReservationRow[] | null; error: unknown }>
       }
     }
@@ -49,7 +50,7 @@ type ReservationsByTableClient = {
 }
 
 const ROOM_COLUMNS = 'id, name, table_count, description'
-const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, pos_x, pos_y'
+const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, qr_code_inf, pos_x, pos_y'
 
 function toRoom(row: RoomRow): Room {
   return {
@@ -67,6 +68,7 @@ function toGameTable(row: TableRow): GameTable {
     name: row.name,
     type: row.type,
     qrCode: row.qr_code ?? '',
+    qrCodeInf: row.qr_code_inf ?? null,
     position: row.pos_x == null || row.pos_y == null ? undefined : { x: row.pos_x, y: row.pos_y },
   }
 }
@@ -188,7 +190,7 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
   const { data, error } = await reservations
     .select('id, table_id, date, start_time, end_time, status, surface, user_id, created_at')
     .eq('date', effectiveDate)
-    .eq('status', 'active')
+    .in('status', ['active', 'pending'])
     .in('table_id', tables.map((table) => table.id))
 
   if (error) {
@@ -249,5 +251,21 @@ export async function createTableEntry(
     serviceError('Internal server error', 500)
   }
 
-  return toGameTable(data as TableRow)
+  const tableRow = data as TableRow
+
+  // Generate QR codes after table creation. If QR generation fails (e.g. missing
+  // NEXT_PUBLIC_APP_URL), log the error and return the table without QR — the admin
+  // can regenerate later via the dashboard.
+  try {
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
+    if (appUrl) {
+      const { qr_code, qr_code_inf } = await regenerateQrCodes(tableRow.id)
+      tableRow.qr_code = qr_code
+      if (qr_code_inf != null) tableRow.qr_code_inf = qr_code_inf
+    }
+  } catch (qrErr) {
+    console.error('[createTableEntry] QR generation failed — table created without QR code:', qrErr)
+  }
+
+  return toGameTable(tableRow)
 }

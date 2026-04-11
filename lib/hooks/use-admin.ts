@@ -117,3 +117,14 @@ export function useAdminCreateTable() {
     },
   })
 }
+
+export function useAdminRegenerateTableQr() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tableId }: { tableId: string; roomId: string }) =>
+      apiClient.post<{ qr_code: string; qr_code_inf: string | null }>(`/tables/${tableId}/qr`),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', variables.roomId, 'tables'] })
+    },
+  })
+}

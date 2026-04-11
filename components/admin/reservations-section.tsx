@@ -33,6 +33,8 @@ export function ReservationsSection() {
     active: 'available',
     cancelled: 'reserved',
     completed: 'outline',
+    pending: 'outline',
+    no_show: 'reserved',
   }
 
   const sorted = [...(reservations ?? [])].sort((a, b) =>
