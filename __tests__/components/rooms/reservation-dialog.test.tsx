@@ -15,10 +15,15 @@ vi.mock('@/lib/auth/auth-context', () => ({
   }),
 }))
 
-// Store the mock function for dynamic updates
-const mockMutateAsync = {
-  fn: vi.fn(),
-}
+// Declare mock functions using vi.hoisted() so they're available during vi.mock() hoisting
+const { mockMutateAsync } = vi.hoisted(() => {
+  const mockMutateAsyncFn = vi.fn()
+  return {
+    mockMutateAsync: {
+      fn: mockMutateAsyncFn,
+    },
+  }
+})
 
 // Mock the hooks
 vi.mock('@/lib/hooks/use-reservations', () => ({
