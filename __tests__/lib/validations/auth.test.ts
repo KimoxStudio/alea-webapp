@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { loginSchema, registerSchema, registerServerSchema, passwordSchema } from '@/lib/validations/auth'
-import { z } from 'zod'
 
 describe('Auth validation schemas - error keys (KIM-325)', () => {
   describe('passwordSchema', () => {
