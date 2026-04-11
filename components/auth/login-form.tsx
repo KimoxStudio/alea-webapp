@@ -17,7 +17,19 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  useFormField,
 } from '@/components/ui/form'
+
+function TranslatedFormMessage({ message }: { message: string | undefined }) {
+  const { formMessageId } = useFormField()
+  const tField = useTranslations('auth')
+  if (!message) return null
+  return (
+    <p id={formMessageId} role="alert" className="text-xs text-destructive">
+      {tField(message as Parameters<typeof tField>[0])}
+    </p>
+  )
+}
 
 interface LoginFormProps { locale: string }
 
@@ -70,11 +82,7 @@ export function LoginForm({ locale }: LoginFormProps) {
                   {...field}
                 />
               </FormControl>
-              {form.formState.errors.identifier && (
-                <p role="alert" className="text-xs text-destructive">
-                  {t(form.formState.errors.identifier.message as Parameters<typeof t>[0])}
-                </p>
-              )}
+              <TranslatedFormMessage message={form.formState.errors.identifier?.message} />
             </FormItem>
           )}
         />
@@ -91,11 +99,7 @@ export function LoginForm({ locale }: LoginFormProps) {
                   {...field}
                 />
               </FormControl>
-              {form.formState.errors.password && (
-                <p role="alert" className="text-xs text-destructive">
-                  {t(form.formState.errors.password.message as Parameters<typeof t>[0])}
-                </p>
-              )}
+              <TranslatedFormMessage message={form.formState.errors.password?.message} />
             </FormItem>
           )}
         />
