@@ -85,7 +85,8 @@
     "errors": {
       "conflictTime": "A reservation already exists at that time",
       "pastDate": "You cannot book dates in the past",
-      "invalidTime": "End time must be after start time"
+      "invalidTime": "End time must be after start time",
+      "userSlotConflict": "You already have a reservation in this time slot"
     }
   },
   "admin": {

@@ -85,7 +85,8 @@
     "errors": {
       "conflictTime": "Ya existe una reserva en ese horario",
       "pastDate": "No puedes reservar en fechas pasadas",
-      "invalidTime": "La hora de fin debe ser posterior a la de inicio"
+      "invalidTime": "La hora de fin debe ser posterior a la de inicio",
+      "userSlotConflict": "Ya tienes una reserva en este horario"
     }
   },
   "admin": {

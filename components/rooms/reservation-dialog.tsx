@@ -92,8 +92,13 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
         setSelectedEndTime(null)
         setSelectedSurface(null)
       }, 1500)
-    } catch {
-      setError(t('errors.conflictTime'))
+    } catch (err) {
+      const errorCode = (err as { message?: string })?.message
+      if (errorCode === 'USER_ALREADY_HAS_RESERVATION_IN_SLOT') {
+        setError(t('errors.userSlotConflict'))
+      } else {
+        setError(t('errors.conflictTime'))
+      }
     }
   }
 
