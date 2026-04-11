@@ -79,6 +79,21 @@ describe('/api/cron/cancel-pending', () => {
 
       expect(response.status).toBe(401)
     })
+
+    it('returns 500 when cancelExpiredPendingReservations throws', async () => {
+      vi.stubEnv('CRON_SECRET', 'test-secret')
+      cancelExpiredPendingReservationsMock.mockRejectedValueOnce(new Error('Database error'))
+
+      const { GET } = await import('@/app/api/cron/cancel-pending/route')
+
+      const request = createRequest('/api/cron/cancel-pending', 'GET', {
+        authorization: 'Bearer test-secret',
+      })
+      const response = await GET(request)
+
+      expect(response.status).toBe(500)
+      expect(await response.json()).toEqual({ error: 'Internal server error' })
+    })
   })
 
   describe('POST method', () => {
@@ -132,6 +147,21 @@ describe('/api/cron/cancel-pending', () => {
       const response = await POST(request)
 
       expect(response.status).toBe(401)
+    })
+
+    it('returns 500 when cancelExpiredPendingReservations throws', async () => {
+      vi.stubEnv('CRON_SECRET', 'test-secret')
+      cancelExpiredPendingReservationsMock.mockRejectedValueOnce(new Error('Database error'))
+
+      const { POST } = await import('@/app/api/cron/cancel-pending/route')
+
+      const request = createRequest('/api/cron/cancel-pending', 'POST', {
+        authorization: 'Bearer test-secret',
+      })
+      const response = await POST(request)
+
+      expect(response.status).toBe(500)
+      expect(await response.json()).toEqual({ error: 'Internal server error' })
     })
   })
 })

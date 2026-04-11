@@ -709,8 +709,8 @@ describe('reservations service', () => {
       return `${hh}:${mm}:00`
     }
 
-    it('succeeds within the 20-minute activation window', async () => {
-      const { activateReservationByTable } = await loadReservationModules()
+    it('succeeds within the grace period activation window', async () => {
+      const { activateReservationByTable, GRACE_PERIOD_MINUTES } = await loadReservationModules()
 
       seedPendingReservation({ start_time: makeStartTime(10) })
 
@@ -731,10 +731,10 @@ describe('reservations service', () => {
       })
     })
 
-    it('throws CHECK_IN_TOO_LATE when called more than 20 minutes after start_time', async () => {
-      const { activateReservationByTable } = await loadReservationModules()
+    it('throws CHECK_IN_TOO_LATE when called more than GRACE_PERIOD_MINUTES minutes after start_time', async () => {
+      const { activateReservationByTable, GRACE_PERIOD_MINUTES } = await loadReservationModules()
 
-      seedPendingReservation({ start_time: makeStartTime(25) })
+      seedPendingReservation({ start_time: makeStartTime(GRACE_PERIOD_MINUTES + 5) })
 
       await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
         name: 'ServiceError',
@@ -813,20 +813,20 @@ describe('reservations service', () => {
       expect(result.status).toBe('active')
     })
 
-    it('boundary: called at start_time+19min succeeds (still within window)', async () => {
-      const { activateReservationByTable } = await loadReservationModules()
+    it('boundary: called at start_time + (GRACE_PERIOD_MINUTES - 1) min succeeds', async () => {
+      const { activateReservationByTable, GRACE_PERIOD_MINUTES } = await loadReservationModules()
 
-      seedPendingReservation({ start_time: makeStartTime(19) })
+      seedPendingReservation({ start_time: makeStartTime(GRACE_PERIOD_MINUTES - 1) })
 
       const result = await activateReservationByTable('t3', '2', undefined)
 
       expect(result.status).toBe('active')
     })
 
-    it('boundary: called at start_time+21min throws CHECK_IN_TOO_LATE', async () => {
-      const { activateReservationByTable } = await loadReservationModules()
+    it('boundary: called at start_time + (GRACE_PERIOD_MINUTES + 1) min throws CHECK_IN_TOO_LATE', async () => {
+      const { activateReservationByTable, GRACE_PERIOD_MINUTES } = await loadReservationModules()
 
-      seedPendingReservation({ start_time: makeStartTime(21) })
+      seedPendingReservation({ start_time: makeStartTime(GRACE_PERIOD_MINUTES + 1) })
 
       await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
         name: 'ServiceError',
