@@ -382,7 +382,7 @@ export async function updateReservationForSession(
     serviceError('Only admins can mark a reservation as completed or no_show', 403)
   }
 
-  if (nextStatus === 'cancelled' && session.role !== 'admin') {
+  if (nextStatus === 'cancelled' && session.role !== 'admin' && existingReservation.status !== 'cancelled') {
     // Date parsed as local time — intentional: reservation times match venue timezone.
     const reservationStart = new Date(`${existingReservation.date}T${normalizeTime(existingReservation.start_time)}`)
     if (isNaN(reservationStart.getTime())) {
