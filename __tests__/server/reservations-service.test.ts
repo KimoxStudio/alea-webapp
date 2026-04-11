@@ -1,5 +1,5 @@
 import type { SessionUser } from '@/lib/server/auth'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
 
 type ReservationRow = {
   id: string
@@ -669,14 +669,25 @@ describe('reservations service', () => {
   })
 
   describe('activateReservationByTable', () => {
-    const TODAY = new Date().toISOString().slice(0, 10)
+    // Fixed timestamp: 2025-06-15T14:00:00Z (14:00 UTC)
+    const FIXED_DATE = '2025-06-15'
+    const FIXED_TIME = new Date('2025-06-15T14:00:00Z')
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(FIXED_TIME)
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
 
     function seedPendingReservation(overrides?: Partial<ReservationRow>) {
       const row: ReservationRow = makeReservation({
         id: 'rA',
         table_id: 't3',
         user_id: '2',
-        date: TODAY,
+        date: FIXED_DATE,
         status: 'pending',
         surface: 'top',
         ...overrides,
@@ -734,7 +745,7 @@ describe('reservations service', () => {
         id: 'rActive',
         table_id: 't3',
         user_id: '2',
-        date: TODAY,
+        date: FIXED_DATE,
         status: 'active',
         surface: 'top',
         start_time: makeStartTime(10),
@@ -774,7 +785,7 @@ describe('reservations service', () => {
         id: 'rNonTop',
         table_id: 't1',
         user_id: '2',
-        date: TODAY,
+        date: FIXED_DATE,
         status: 'pending',
         surface: null,
         start_time: makeStartTime(10),

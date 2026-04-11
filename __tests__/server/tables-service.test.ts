@@ -58,6 +58,14 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
+const qrcodeToDataURLMock = vi.fn()
+
+vi.mock('qrcode', () => ({
+  default: {
+    toDataURL: qrcodeToDataURLMock,
+  },
+}))
+
 async function loadTablesModules() {
   vi.resetModules()
   return import('@/lib/server/tables-service')
@@ -112,6 +120,7 @@ describe('generateTableQrCode', () => {
     vi.resetModules()
     vi.clearAllMocks()
     process.env.NEXT_PUBLIC_APP_URL = 'https://test.example.com'
+    qrcodeToDataURLMock.mockResolvedValue('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==')
   })
 
   it('returns a base64 data URL starting with data:image/png;base64,', async () => {
@@ -127,8 +136,14 @@ describe('generateTableQrCode', () => {
 
     const result = await generateTableQrCode('table-abc')
 
-    expect(result.length).toBeGreaterThan(100)
-    expect(typeof result).toBe('string')
+    // Assert the result is a valid data URL
+    expect(result).toMatch(/^data:image\/png;base64,/)
+    
+    // Assert qrcode.toDataURL was called with the correct URL
+    expect(qrcodeToDataURLMock).toHaveBeenCalledWith(
+      'https://test.example.com/check-in/table-abc',
+      expect.objectContaining({ errorCorrectionLevel: 'M', width: 400 })
+    )
   })
 })
 
@@ -138,6 +153,7 @@ describe('regenerateQrCodes', () => {
     vi.clearAllMocks()
     process.env.NEXT_PUBLIC_APP_URL = 'https://test.example.com'
     adminUpdateEqMock.mockResolvedValue({ error: null })
+    qrcodeToDataURLMock.mockResolvedValue('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==')
   })
 
   it('for a non-removable-top table: qr_code is set, qr_code_inf is null', async () => {
