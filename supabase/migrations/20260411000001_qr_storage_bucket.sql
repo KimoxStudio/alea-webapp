@@ -4,7 +4,7 @@ VALUES (
   'table-qr-codes',
   'table-qr-codes',
   true,
-  52428,  -- 50 KB max per file
+  52428,  -- 52,428 bytes max per file
   ARRAY['image/png']
 )
 ON CONFLICT (id) DO NOTHING;

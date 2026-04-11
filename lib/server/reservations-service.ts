@@ -420,7 +420,7 @@ export async function activateReservationByTable(
   userId: string,
   side?: 'inf',
 ): Promise<Reservation> {
-  // NOTE: We use today's local wall-clock date as a string anchor only for the
+  // NOTE: We use today's UTC date as a string anchor only for the
   // initial DB query. The time-window check below uses the reservation's own
   // stored date so the logic is self-consistent even if the request arrives
   // near midnight. A full timezone fix should pass an IANA zone from the
