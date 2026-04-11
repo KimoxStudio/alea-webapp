@@ -1,8 +1,0 @@
-@@ -206,6 +207,7 @@
-       // Test registerSchema
-       const registerResult = registerSchema.safeParse({
-         memberNumber: '',
-         password: '',
-         confirmPassword: ''
-       })
-+      expect(registerResult.success).toBe(false)

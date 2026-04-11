@@ -367,7 +367,7 @@ VALUES
     '2026-04-12', '10:00', '13:00',
     NULL,
     'active',
-    NULL
+    '2026-04-12 10:05:00+00'
   ),
   -- Future: pending (member2, Biblioteca Arcana, Mesa del Escriba)
   (
@@ -387,7 +387,7 @@ VALUES
     '2026-04-18', '11:00', '14:00',
     'top',
     'active',
-    NULL
+    '2026-04-18 11:05:00+00'
   ),
   -- Future: pending (member4, Torre del Mago, Mesa del Hechicero — large table)
   (
@@ -407,6 +407,6 @@ VALUES
     '2026-04-20', '10:00', '12:00',
     'bottom',
     'active',
-    NULL
+    '2026-04-20 10:05:00+00'
   )
 ON CONFLICT (id) DO NOTHING;
