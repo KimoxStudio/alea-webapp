@@ -21,11 +21,33 @@ function toGameTable(row: TableRow): GameTable {
   }
 }
 
+async function uploadQrCodeToStorage(
+  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  url: string,
+  storagePath: string,
+): Promise<string> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!supabaseUrl) serviceError('NEXT_PUBLIC_SUPABASE_URL is not set — cannot build QR code storage URL', 500)
+
+  const buffer = await qrcode.toBuffer(url, { errorCorrectionLevel: 'M', width: 400, type: 'png' })
+
+  const { error: uploadError } = await admin.storage
+    .from('table-qr-codes')
+    .upload(storagePath, buffer, { contentType: 'image/png', upsert: true })
+
+  if (uploadError) {
+    serviceError('Failed to upload QR code to storage', 500)
+  }
+
+  return `${supabaseUrl}/storage/v1/object/public/table-qr-codes/${storagePath}`
+}
+
 export async function generateTableQrCode(tableId: string): Promise<string> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL
   if (!baseUrl) serviceError('NEXT_PUBLIC_APP_URL is not set — cannot generate QR code URL', 500)
   const url = `${baseUrl}/check-in/${tableId}`
-  return qrcode.toDataURL(url, { errorCorrectionLevel: 'M', width: 400 })
+  const admin = createSupabaseServerAdminClient()
+  return uploadQrCodeToStorage(admin, url, `${tableId}.png`)
 }
 
 export async function regenerateQrCodes(tableId: string): Promise<{ qr_code: string; qr_code_inf: string | null }> {
@@ -46,9 +68,10 @@ export async function regenerateQrCodes(tableId: string): Promise<{ qr_code: str
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL
   if (!baseUrl) serviceError('NEXT_PUBLIC_APP_URL is not set — cannot generate QR code URL', 500)
-  const qr_code = await generateTableQrCode(tableId)
+
+  const qr_code = await uploadQrCodeToStorage(admin, `${baseUrl}/check-in/${tableId}`, `${tableId}.png`)
   const qr_code_inf = table!.type === 'removable_top'
-    ? await qrcode.toDataURL(`${baseUrl}/check-in/${tableId}?side=inf`, { errorCorrectionLevel: 'M', width: 400 })
+    ? await uploadQrCodeToStorage(admin, `${baseUrl}/check-in/${tableId}?side=inf`, `${tableId}-inf.png`)
     : null
 
   const updatePayload: { qr_code: string; qr_code_inf?: string | null } = { qr_code }
