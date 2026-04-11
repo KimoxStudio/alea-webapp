@@ -38,14 +38,6 @@ The user may write prompts in any language; replies to the user are in their lan
 - Test files must be excluded from `tsconfig.app.json`
 - Test files are owned exclusively by `qa-engineer` — `software-engineer` must never create or modify test files
 
-### Reservation status filter rule
-
-When adding a new blocking reservation status (e.g. `pending`, `confirmed`), **grep ALL `.eq('status', ...)` and `.in('status', [...])` in `lib/server/`** and update every availability query to include the new status. Conflict-detection and availability queries must always use the same status set. Failing to do this makes booked slots appear available, which causes booking failures at form submission.
-
-### Supabase RPC typing rule
-
-New Postgres RPC functions must be typed in `lib/supabase/types.ts` under `public.Functions` — never use a local `type SomeRpcClient = { rpc: ... }` workaround with `as unknown as` cast. Format: `your_fn: { Args: Record<PropertyKey, never>; Returns: number }` for no-argument functions. This file is manually maintained in this project (no `supabase gen types` in CI).
-
 ---
 
 ## Parallel worktree file split (for this project)
