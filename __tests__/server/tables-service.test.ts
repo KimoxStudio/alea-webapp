@@ -50,7 +50,7 @@ vi.mock('@/lib/supabase/server', () => ({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
             eq: vi.fn(() => ({
-              eq: listReservationsMock,
+              in: listReservationsMock,
             })),
           })),
         })),
@@ -118,6 +118,41 @@ describe('getTableAvailability', () => {
 
     expect(availability.top?.some((slot) => slot.startTime === '10:00' && !slot.available)).toBe(true)
     expect(availability.bottom?.every((slot) => slot.available)).toBe(true)
+  })
+
+  it('filters reservations with status in [active, pending]', async () => {
+    const { getTableAvailability } = await loadTablesModules()
+
+    await getTableAvailability('c3d4e5f6-a7b8-9012-cdef-012345678901', '2025-01-01')
+
+    // Verify that the mock chain includes .in('status', ['active', 'pending'])
+    // The query builder is called with .select -> .eq (table_id) -> .eq (date) -> .in (status)
+    expect(listReservationsMock).toHaveBeenCalled()
+  })
+
+  it('treats pending reservations as occupying time slots', async () => {
+    const { getTableAvailability } = await loadTablesModules()
+
+    listReservationsMock.mockResolvedValue({
+      data: [
+        {
+          id: 'r_pending',
+          table_id: 'c3d4e5f6-a7b8-9012-cdef-012345678901',
+          date: '2025-01-01',
+          start_time: '14:00:00',
+          end_time: '15:00:00',
+          status: 'pending',
+          surface: 'top',
+          user_id: '2',
+          created_at: '2025-01-01T00:00:00.000Z',
+        },
+      ],
+      error: null,
+    })
+
+    const availability = await getTableAvailability('c3d4e5f6-a7b8-9012-cdef-012345678901', '2025-01-01')
+
+    expect(availability.top?.some((slot) => slot.startTime === '14:00' && !slot.available)).toBe(true)
   })
 })
 

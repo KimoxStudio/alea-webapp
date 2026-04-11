@@ -38,7 +38,7 @@ vi.mock('@/lib/supabase/server', () => ({
       return {
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
+            in: vi.fn(() => ({
               in: listReservationsMock,
             })),
           })),
@@ -81,7 +81,7 @@ vi.mock('@/lib/supabase/server', () => ({
       return {
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
-            eq: vi.fn(() => ({
+            in: vi.fn(() => ({
               in: listReservationsMock,
             })),
           })),
