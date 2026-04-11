@@ -7,52 +7,85 @@
 
 ## Last updated: 2026-04-11
 
+## ⚠️ MVP TARGET: Monday 2026-04-14
+
 ## Current branch
-`feat/overlap-restriction`
+`develop`
 
 ## Open PRs
-| PR | Branch | Status |
-|---|---|---|
-| [#76](https://github.com/KimoxStudio/alea-webapp/pull/76) | `feat/auto-cancel-grace-period` | Open — awaiting merge. Mark KIM-327 Done after merge. |
-| [#77](https://github.com/KimoxStudio/alea-webapp/pull/77) | `feat/overlap-restriction` | Open — awaiting merge. Mark KIM-330 + KIM-338 Done after merge. |
+| PR | Branch | Issues | Status |
+|---|---|---|---|
+| [#78](https://github.com/KimoxStudio/alea-webapp/pull/78) | `fix/auth-i18n-errors` | KIM-325 | Open — awaiting merge. Mark KIM-325 Done after merge. |
 
-## Issues in progress
-| Issue | Title | Status |
+## Merged this session
+| PR | Branch | Issues |
 |---|---|---|
-| KIM-327 | Auto-cancel grace period (M2) | In Progress → Done after PR #76 merge |
-| KIM-330 | Overlap restriction per user (M3) | In Progress → Done after PR #77 merge |
-| KIM-338 | Overlap validation backend (M3) | In Progress → Done after PR #77 merge |
+| ~~#76~~ | `feat/auto-cancel-grace-period` | KIM-327 ✅ Done |
+| ~~#77~~ | `feat/overlap-restriction` | KIM-330 ✅ Done · KIM-338 ✅ Done |
 
 ---
 
-## M2 — What was implemented
+## MVP Critical Path (ordered)
 
-- `export const GRACE_PERIOD_MINUTES = 20` in `lib/server/reservations-service.ts` — shared by activation window and RPC call
-- `cancelExpiredPendingReservations()` passes `{ grace_minutes: GRACE_PERIOD_MINUTES }` to the RPC
-- Migration `20260411000003`: parameterized SQL function + DROP of legacy 0-arg overload
-- Structured audit logging in `/api/cron/cancel-pending` (success + error paths with sanitized error logging)
-- 2 new error-path tests in `__tests__/app/api/cron/cancel-pending.test.ts`
-- Test uses `GRACE_PERIOD_MINUTES` constant for the RPC assertion
-- Total: 239 tests passing
+### ✅ Done
+- **KIM-327** (M2) — auto-cancel grace period — merged PR #76
+- **KIM-330 + KIM-338** (M3) — overlap restriction — merged PR #77
+- **KIM-358** — toGameTable mapper — already in develop (no PR needed)
 
-## Next milestone: M5 (from develop)
+### 🟡 Awaiting merge
+- **KIM-325** — auth i18n double-namespace — PR #78 open
 
-**M3 and M2 are open PRs — start M5 from `develop` immediately.**
+### 🔴 Next: M5 — KIM-331 + KIM-340 — Cancellation cutoff 1h
+**Branch:** `feat/cancellation-cutoff` from `develop`
+**File:** `lib/server/reservations-service.ts` — in `updateReservationForSession`, when `nextStatus === 'cancelled'` and `session.role !== 'admin'`: if reservation starts within 60 min of now → throw `CANCELLATION_CUTOFF` (403)
+**Agent:** `software-engineer`
 
-**Issue:** KIM-331 + KIM-340 — Cancellation cutoff backend (member cannot cancel within 60 min of start)
-**Branch to create:** `feat/cancellation-cutoff` from `develop`
-**File:** `lib/server/reservations-service.ts` — in `updateReservationForSession`, when `nextStatus === 'cancelled'` and `session.role !== 'admin'`: check if reservation starts within 60 min of now → throw `CANCELLATION_CUTOFF` (403)
+### 🟡 After PR #77 merge (unblocked ✅)
+- **KIM-337** — UI feedback for overlap conflict
+  **Branch:** `feat/overlap-ui-feedback` from `develop`
+  **Skill:** `frontend-design`
 
-## Also available (parallel-safe from develop)
+### 🟡 After M5 merged
+- **KIM-341** — UI warning for cancellation cutoff
+  **Branch:** `feat/cancellation-cutoff-ui` from `develop`
+  **Skill:** `frontend-design`
 
-**Any of these can start immediately — they do not depend on M2:**
+### 🟡 6 — KIM-306 — Seed data for manual QA
+**Branch:** `chore/seed-data` from `develop`
+**Agent:** `software-engineer`
 
-- **M3** (KIM-330 + KIM-338): Overlap restriction per user — `feat/overlap-restriction`
-- **M5** (KIM-331 + KIM-340): Cancellation cutoff backend — `feat/cancellation-cutoff`
-- **M8** (KIM-332 + KIM-343): Events data model — `feat/events-schema`
-- **M10** (KIM-322 + KIM-323): Auth hardening — `feat/auth-hardening`
+---
 
-After M2 merge, switch to `develop`, pull, then create the next branch.
+## Post-MVP (do NOT start before launch)
+
+- **KIM-329 epic** (no-show tracking) — KIM-329, 333, 334, 335, 336
+- **KIM-332 epic** (events / room blocking) — KIM-332, 343, 344, 345, 346, 347
+- **KIM-348 epic** (equipment management) — KIM-348–356
+- **KIM-360** — locale switcher redirects to home instead of current route
+- **Auth hardening** (KIM-322, KIM-323)
+- **KIM-357** (checkin hardening)
+- **KIM-359** (QR non-blocking perf)
+- **KIM-328** (Docker doc removal — tech-writer)
+
+---
+
+## Recommended execution order for MVP weekend
+
+```
+Saturday (now):
+  ✅ Merge #76 (KIM-327)
+  ✅ Merge #77 (KIM-330, KIM-338)
+  → Merge #78 when ready (KIM-325)
+  → feat/cancellation-cutoff (M5 — KIM-331+340)
+  → feat/overlap-ui-feedback (KIM-337) — #77 already merged ✅
+
+Sunday:
+  → feat/cancellation-cutoff-ui (KIM-341) — after M5 merged
+  → chore/seed-data (KIM-306)
+  → Final smoke tests
+
+Monday: Launch
+```
 
 ---
 
@@ -68,11 +101,11 @@ After M2 merge, switch to `develop`, pull, then create the next branch.
 
 **At session start:**
 1. Read `docs/HANDOFF.md` (this file) — mandatory before any action
-2. Check `gh pr list --state open` for any PRs awaiting merge
-3. Check `git branch --show-current`
-4. Start from "Next milestone" above
+2. `gh pr list --state open` — check PRs awaiting merge
+3. `git branch --show-current` — confirm on develop
+4. Follow MVP Critical Path above in order
 
 **At session end:**
-1. Update this file with current state before closing
-2. Save a memory entry summarising the session
+1. Update this file with current state
+2. Save memory entry
 3. Prune worktrees: `git worktree prune && rm -rf .claude/worktrees/`
