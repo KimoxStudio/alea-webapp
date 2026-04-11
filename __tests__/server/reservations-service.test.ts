@@ -84,6 +84,15 @@ function seedState() {
     pos_x: 0,
     pos_y: 0,
   })
+  tablesState.set('t2', {
+    id: 't2',
+    room_id: 'room-1',
+    name: 'Mesa 2',
+    type: 'small',
+    qr_code: 'QR-2',
+    pos_x: 1,
+    pos_y: 0,
+  })
   tablesState.set('t3', {
     id: 't3',
     room_id: 'room-1',
@@ -146,6 +155,31 @@ function buildSelectChain<T>(rows: T[]) {
     or(condition: string) {
       // OR filtering is handled by the actual Supabase client; mock just returns this for chaining
       return this
+    },
+    lt(column: string, value: string) {
+      current = current.filter((row) => {
+        let cellValue = String((row as Record<string, unknown>)[column] ?? '')
+        // Normalize time values for comparison (HH:MM:SS -> HH:MM)
+        if (cellValue.match(/^\d{2}:\d{2}:\d{2}$/)) {
+          cellValue = cellValue.slice(0, 5)
+        }
+        return cellValue < value
+      })
+      return this
+    },
+    gt(column: string, value: string) {
+      current = current.filter((row) => {
+        let cellValue = String((row as Record<string, unknown>)[column] ?? '')
+        // Normalize time values for comparison (HH:MM:SS -> HH:MM)
+        if (cellValue.match(/^\d{2}:\d{2}:\d{2}$/)) {
+          cellValue = cellValue.slice(0, 5)
+        }
+        return cellValue > value
+      })
+      return this
+    },
+    limit(count: number) {
+      return Promise.resolve({ data: current.slice(0, count).map((row) => ({ ...row })), error: null })
     },
     then<TResult1 = { data: T[]; error: null }, TResult2 = never>(
       onfulfilled?: ((value: { data: T[]; error: null }) => TResult1 | PromiseLike<TResult1>) | null,
@@ -479,6 +513,68 @@ describe('reservations service', () => {
         name: 'ServiceError',
         statusCode: 409,
       })
+    })
+
+    it('rejects a reservation that overlaps an existing slot for the same user', async () => {
+      const { createReservationForSession } = await loadReservationModules()
+      await expect(
+        createReservationForSession(memberSession, {
+          tableId: 't2',
+          date: '2026-04-04',
+          startTime: '17:00',
+          endTime: '19:00',
+        })
+      ).rejects.toMatchObject({ name: 'ServiceError', statusCode: 409 })
+    })
+
+    it('allows a reservation on a different date even if times overlap', async () => {
+      const { createReservationForSession } = await loadReservationModules()
+      await expect(
+        createReservationForSession(memberSession, {
+          tableId: 't1',
+          date: '2026-04-05',
+          startTime: '16:00',
+          endTime: '18:00',
+        })
+      ).resolves.toEqual(expect.objectContaining({ date: '2026-04-05' }))
+    })
+
+    it('allows a reservation that starts exactly when another ends', async () => {
+      const { createReservationForSession } = await loadReservationModules()
+      await expect(
+        createReservationForSession(memberSession, {
+          tableId: 't1',
+          date: '2026-04-04',
+          startTime: '18:00',
+          endTime: '20:00',
+        })
+      ).resolves.toEqual(expect.objectContaining({ startTime: '18:00' }))
+    })
+
+    it('ignores cancelled reservations when checking user overlap', async () => {
+      reservationsState[0]!.status = 'cancelled'
+      const { createReservationForSession } = await loadReservationModules()
+      await expect(
+        createReservationForSession(memberSession, {
+          tableId: 't1',
+          date: '2026-04-04',
+          startTime: '17:00',
+          endTime: '18:30',
+        })
+      ).resolves.toEqual(expect.objectContaining({ tableId: 't1' }))
+    })
+
+    it('counts pending reservations as blocking overlaps for the same user', async () => {
+      reservationsState[0]!.status = 'pending'
+      const { createReservationForSession } = await loadReservationModules()
+      await expect(
+        createReservationForSession(memberSession, {
+          tableId: 't2',
+          date: '2026-04-04',
+          startTime: '17:00',
+          endTime: '19:00',
+        })
+      ).rejects.toMatchObject({ name: 'ServiceError', statusCode: 409 })
     })
   })
 

@@ -8,17 +8,20 @@
 ## Last updated: 2026-04-11
 
 ## Current branch
-`feat/auto-cancel-grace-period`
+`feat/overlap-restriction`
 
-## Open PR
-[KimoxStudio/alea-webapp#76](https://github.com/KimoxStudio/alea-webapp/pull/76) — feat(M2): auto-cancel grace period constant + cron audit logging (KIM-327)
-- Status: open, awaiting manual merge by user
-- CI: ✅ typecheck, ✅ lint, ✅ 239 tests, ✅ build
+## Open PRs
+| PR | Branch | Status |
+|---|---|---|
+| [#76](https://github.com/KimoxStudio/alea-webapp/pull/76) | `feat/auto-cancel-grace-period` | Open — awaiting merge. Mark KIM-327 Done after merge. |
+| [#77](https://github.com/KimoxStudio/alea-webapp/pull/77) | `feat/overlap-restriction` | Open — awaiting merge. Mark KIM-330 + KIM-338 Done after merge. |
 
 ## Issues in progress
 | Issue | Title | Status |
 |---|---|---|
-| KIM-327 | Auto-cancel reservations not activated within 20-minute grace period | In Progress → mark Done after merge |
+| KIM-327 | Auto-cancel grace period (M2) | In Progress → Done after PR #76 merge |
+| KIM-330 | Overlap restriction per user (M3) | In Progress → Done after PR #77 merge |
+| KIM-338 | Overlap validation backend (M3) | In Progress → Done after PR #77 merge |
 
 ---
 
@@ -32,7 +35,15 @@
 - Test uses `GRACE_PERIOD_MINUTES` constant for the RPC assertion
 - Total: 239 tests passing
 
-## Next milestone after M2 merge: M3 / M5 / M8 / M10 (all parallel-safe from develop)
+## Next milestone: M5 (from develop)
+
+**M3 and M2 are open PRs — start M5 from `develop` immediately.**
+
+**Issue:** KIM-331 + KIM-340 — Cancellation cutoff backend (member cannot cancel within 60 min of start)
+**Branch to create:** `feat/cancellation-cutoff` from `develop`
+**File:** `lib/server/reservations-service.ts` — in `updateReservationForSession`, when `nextStatus === 'cancelled'` and `session.role !== 'admin'`: check if reservation starts within 60 min of now → throw `CANCELLATION_CUTOFF` (403)
+
+## Also available (parallel-safe from develop)
 
 **Any of these can start immediately — they do not depend on M2:**
 

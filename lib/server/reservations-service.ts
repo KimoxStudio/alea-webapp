@@ -29,6 +29,17 @@ type SessionReservationsQuery = {
   order: (column: string, options: { ascending: boolean }) => SessionReservationsQuery
   then: Promise<{ data: ReservationRow[] | null; error: unknown }>['then']
 }
+type UserSlotOverlapQuery = {
+  eq: (column: 'user_id' | 'date', value: string) => UserSlotOverlapQuery
+  in: (column: 'status', values: string[]) => UserSlotOverlapQuery
+  lt: (column: 'start_time' | 'end_time', value: string) => UserSlotOverlapQuery
+  gt: (column: 'start_time' | 'end_time', value: string) => UserSlotOverlapQuery
+  limit: (count: number) => Promise<{ data: Array<{ id: string }> | null; error: unknown }>
+  then: Promise<{ data: ReservationRow[] | null; error: unknown }>['then']
+}
+type UserSlotOverlapTableClient = {
+  select: (columns: string) => UserSlotOverlapQuery
+}
 type SessionReservationsTableClient = {
   select: (columns: string) => SessionReservationsQuery
   insert: (values: TablesInsert<'reservations'>) => {
@@ -262,6 +273,31 @@ export async function listVisibleReservations(input: {
   })
 }
 
+async function checkUserSlotOverlap(
+  userId: string,
+  date: string,
+  startTime: string,
+  endTime: string,
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+) {
+  const { data, error } = await (supabase.from('reservations') as unknown as UserSlotOverlapTableClient)
+    .select('id')
+    .eq('user_id', userId)
+    .eq('date', date)
+    .in('status', ['pending', 'active'])
+    .lt('start_time', endTime)
+    .gt('end_time', startTime)
+    .limit(1)
+
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+
+  if (data && data.length > 0) {
+    serviceError('USER_ALREADY_HAS_RESERVATION_IN_SLOT', 409)
+  }
+}
+
 export async function createReservationForSession(
   session: SessionUser,
   body: { tableId?: unknown; date?: unknown; startTime?: unknown; endTime?: unknown; surface?: unknown },
@@ -291,12 +327,14 @@ export async function createReservationForSession(
     serviceError('Invalid reservation time range', 400)
   }
 
+  const supabase = await createSupabaseServerClient()
+
+  await checkUserSlotOverlap(session.id, date, startTime, endTime, supabase)
+
   const conflictingReservations = await listActiveReservationsForConflict({ tableId, date })
   if (hasReservationConflict(conflictingReservations, { startTime, endTime, surface })) {
     serviceError('Time slot is already reserved', 409)
   }
-
-  const supabase = await createSupabaseServerClient()
   const insertPayload: TablesInsert<'reservations'> = {
     table_id: tableId,
     user_id: session.id,
