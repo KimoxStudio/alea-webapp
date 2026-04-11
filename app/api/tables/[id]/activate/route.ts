@@ -4,7 +4,7 @@ import { toServiceErrorResponse } from '@/lib/server/http-error'
 import { activateReservationByTable } from '@/lib/server/reservations-service'
 import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ tableId: string }> }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const securityError = enforceMutationSecurity(request)
   if (securityError) return securityError
 
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (auth instanceof NextResponse) return auth
 
   try {
-    const { tableId } = await params
+    const { id: tableId } = await params
     const { searchParams } = new URL(request.url)
     const side = searchParams.get('side') === 'inf' ? ('inf' as const) : undefined
 
