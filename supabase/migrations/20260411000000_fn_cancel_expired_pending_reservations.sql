@@ -9,6 +9,7 @@ CREATE OR REPLACE FUNCTION public.cancel_expired_pending_reservations()
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   updated_count integer;
@@ -23,3 +24,13 @@ BEGIN
   RETURN updated_count;
 END;
 $$;
+
+-- Restrict execute permission: only service_role (used by the cron route handler) may call this function.
+REVOKE EXECUTE ON FUNCTION public.cancel_expired_pending_reservations() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.cancel_expired_pending_reservations() TO service_role;
+
+-- Partial index to speed up the WHERE clause used by the cron UPDATE.
+-- Only indexes rows that are still pending, keeping the index small and write-cheap.
+CREATE INDEX IF NOT EXISTS reservations_pending_date_idx
+  ON public.reservations (date, start_time)
+  WHERE status = 'pending';

@@ -15,9 +15,10 @@ export function CheckInActivator({ tableId, side }: CheckInActivatorProps) {
   const [status, setStatus] = useState<CheckInStatus | null>(null)
 
   useEffect(() => {
+    const controller = new AbortController()
     const url = `/api/tables/${encodeURIComponent(tableId)}/activate${side === 'inf' ? '?side=inf' : ''}`
 
-    fetch(url, { method: 'POST' })
+    fetch(url, { method: 'POST', signal: controller.signal })
       .then(async (res) => {
         if (res.ok) {
           setStatus('activated')
@@ -42,9 +43,12 @@ export function CheckInActivator({ tableId, side }: CheckInActivatorProps) {
             setStatus('error')
         }
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return
         setStatus('error')
       })
+
+    return () => controller.abort()
   }, [tableId, side])
 
   if (status === null) {
