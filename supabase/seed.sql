@@ -4,6 +4,11 @@
 -- Idempotent: run cleanup block first, then insert fresh data.
 -- Uses deterministic UUIDs for predictability.
 -- ============================================================
+-- ⚠️  LOCAL DEVELOPMENT ONLY
+-- Never run this file against a staging or production database.
+-- The Supabase CLI applies this file automatically on: supabase db reset / supabase start.
+-- To seed a remote database, apply migrations manually and load fixtures via the Supabase dashboard.
+-- ============================================================
 
 -- ============================================================
 -- Cleanup (idempotent re-run)
@@ -188,6 +193,9 @@ ON CONFLICT (id) DO NOTHING;
 -- INSERT into public.profiles; we handle that via ON CONFLICT.
 -- ============================================================
 
+-- Test password for ALL users: TestPass123!
+-- ⚠️  Never reuse this password on any real account. Local QA use only.
+-- bcrypt cost factor 10 (~100ms/user): adequate for 5 test users; lower to gen_salt('bf', 4) if seed time becomes a CI bottleneck.
 INSERT INTO auth.users (
   id,
   instance_id,
