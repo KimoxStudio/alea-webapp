@@ -17,7 +17,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from '@/components/ui/form'
 
 interface LoginFormProps { locale: string }
@@ -71,7 +70,11 @@ export function LoginForm({ locale }: LoginFormProps) {
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              {form.formState.errors.identifier && (
+                <p role="alert" className="text-xs text-destructive">
+                  {t(form.formState.errors.identifier.message as Parameters<typeof t>[0])}
+                </p>
+              )}
             </FormItem>
           )}
         />
@@ -88,7 +91,11 @@ export function LoginForm({ locale }: LoginFormProps) {
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              {form.formState.errors.password && (
+                <p role="alert" className="text-xs text-destructive">
+                  {t(form.formState.errors.password.message as Parameters<typeof t>[0])}
+                </p>
+              )}
             </FormItem>
           )}
         />

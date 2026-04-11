@@ -4,22 +4,22 @@ const PASSWORD_SPECIAL_CHARS = /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>\/?]/
 
 export const passwordSchema = z
   .string()
-  .min(12, 'auth.errors.passwordMinLength')
-  .max(1024, 'auth.errors.passwordMaxLength')
-  .regex(/[a-zA-Z]/, 'auth.errors.passwordAlphanumeric')
-  .regex(/[0-9]/, 'auth.errors.passwordAlphanumeric')
-  .regex(PASSWORD_SPECIAL_CHARS, 'auth.errors.passwordSpecialChar')
+  .min(12, 'errors.passwordMinLength')
+  .max(1024, 'errors.passwordMaxLength')
+  .regex(/[a-zA-Z]/, 'errors.passwordAlphanumeric')
+  .regex(/[0-9]/, 'errors.passwordAlphanumeric')
+  .regex(PASSWORD_SPECIAL_CHARS, 'errors.passwordSpecialChar')
 
 export const loginSchema = z.object({
-  identifier: z.string().min(1, 'auth.errors.memberNumberRequired'),
-  password: z.string().min(1, 'auth.errors.passwordRequired').max(1024, 'auth.errors.passwordMaxLength'),
+  identifier: z.string().min(1, 'errors.memberNumberRequired'),
+  password: z.string().min(1, 'errors.passwordRequired').max(1024, 'errors.passwordMaxLength'),
 })
 
 const memberNumberSchema = z
   .string()
-  .min(1, 'auth.errors.memberNumberRequired')
-  .max(20, 'auth.errors.memberNumberTooLong')
-  .regex(/^\d+$/, 'auth.errors.memberNumberNumeric')
+  .min(1, 'errors.memberNumberRequired')
+  .max(20, 'errors.memberNumberTooLong')
+  .regex(/^\d+$/, 'errors.memberNumberNumeric')
 
 export const registerSchema = z
   .object({
@@ -28,7 +28,7 @@ export const registerSchema = z
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'auth.errors.passwordsDoNotMatch',
+    message: 'errors.passwordsDoNotMatch',
     path: ['confirmPassword'],
   })
 

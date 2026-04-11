@@ -47,8 +47,11 @@
       "passwordMinLength": "Password must be at least 12 characters",
       "passwordAlphanumeric": "Password must contain letters and numbers",
       "passwordSpecialChar": "Password must contain at least one special symbol (!@#$%^&*...)",
+      "passwordMaxLength": "Password must not exceed 1024 characters",
       "passwordsDoNotMatch": "Passwords do not match",
       "memberNumberRequired": "Member number is required",
+      "memberNumberTooLong": "Member number must not exceed 20 characters",
+      "memberNumberNumeric": "Member number must contain only digits",
       "memberNumberExists": "This member number is already registered"
     }
   },
