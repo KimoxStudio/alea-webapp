@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
 import { CalendarDays, Clock, MapPin, Layers, AlertCircle } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
@@ -87,8 +87,10 @@ export function MyReservationsView() {
   const cancelReservation = useCancelReservation()
   const [cancelingId, setCancelingId] = useState<string | null>(null)
   const [cancelError, setCancelError] = useState<string | null>(null)
+  const dialogOpenRef = useRef(false)
 
   const closeDialog = () => {
+    dialogOpenRef.current = false
     setCancelingId(null)
     setCancelError(null)
   }
@@ -97,11 +99,13 @@ export function MyReservationsView() {
   const pastReservations = reservations?.filter(r => r.status !== 'active') ?? []
 
   async function handleCancel(id: string) {
+    dialogOpenRef.current = true
     setCancelError(null)
     try {
       await cancelReservation.mutateAsync(id)
       closeDialog()
     } catch (error: unknown) {
+      if (!dialogOpenRef.current) return
       const msg = error instanceof Error
         ? error.message
         : (error as { message?: string })?.message ?? ''
