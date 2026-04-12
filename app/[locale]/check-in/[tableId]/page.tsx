@@ -14,9 +14,15 @@ interface CheckInPageProps {
   searchParams: Promise<{ side?: string }>
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export default async function CheckInPage({ params, searchParams }: CheckInPageProps) {
   const { locale, tableId } = await params
   const { side: sideParam } = await searchParams
+
+  if (!UUID_REGEX.test(tableId)) {
+    redirect(`/${locale}/check-in/invalid`)
+  }
 
   const session = await getSessionFromServerCookies()
   if (!session) {
