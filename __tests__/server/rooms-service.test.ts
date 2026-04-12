@@ -260,6 +260,7 @@ describe('createTableEntry', () => {
       data: { id: 't1', room_id: '1', name: 'Mesa 1', type: 'small', qr_code: null, pos_x: null, pos_y: null },
       error: null,
     })
+    regenerateQrCodesMock.mockResolvedValue(undefined)
   })
 
   afterEach(() => {

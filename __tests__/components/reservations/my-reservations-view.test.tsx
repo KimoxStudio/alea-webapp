@@ -120,18 +120,17 @@ describe('MyReservationsView', () => {
       })).toBeInTheDocument()
     })
 
-    it('shows active reservations with cutoff passed in Past section', () => {
+    it('shows active reservations with cutoff passed in Active section', () => {
       // Reservation 30 minutes in the future (within 60-min cutoff)
       const soonRes = createReservationWithTimeOffset(30, { id: 'res-soon' })
       mockUseMyReservations.mockReturnValue({ data: [soonRes], isLoading: false })
       mockUseCancelReservation.mockReturnValue({ mutateAsync: vi.fn(), isPending: false })
 
       render(<MyReservationsView />)
-      // Past section should have the reservation
-      const pastHeading = screen.getByText((content, element) => {
-        return element?.tagName === 'H2' && content.includes('reservations.completed')
-      })
-      expect(pastHeading).toBeInTheDocument()
+      // Active section should have the reservation (with disabled cancel button)
+      expect(screen.getByText('reservations.active (1)')).toBeInTheDocument()
+      const cancelBtn = screen.getByRole('button', { name: 'reservations.cancel' })
+      expect(cancelBtn).toBeDisabled()
     })
 
     it('shows completed reservations in Past section', () => {
@@ -237,7 +236,7 @@ describe('MyReservationsView', () => {
       const cancelBtn = screen.getByRole('button', { name: 'reservations.cancel' })
       await user.click(cancelBtn)
 
-      const dialogNoBtn = screen.getByRole('button', { name: 'No' })
+      const dialogNoBtn = screen.getByRole('button', { name: 'common.no' })
       await user.click(dialogNoBtn)
 
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -278,10 +277,10 @@ describe('MyReservationsView', () => {
 
       render(<MyReservationsView />)
 
-      // Should have active section with 1 reservation (future)
-      expect(screen.getByText('reservations.active (1)')).toBeInTheDocument()
+      // Should have active section with 2 reservations (future + soon, even if cutoff passed)
+      expect(screen.getByText('reservations.active (2)')).toBeInTheDocument()
 
-      // Should have past section with 2 reservations (soon + completed)
+      // Should have past section with 1 reservation (completed)
       const pastHeadings = screen.queryAllByText((content) => {
         return content.includes('reservations.completed') || content.includes('reservations.cancelled')
       })
@@ -306,13 +305,13 @@ describe('MyReservationsView', () => {
 
       render(<MyReservationsView />)
 
-      // Active section should have 1 reservation
-      expect(screen.getByText('reservations.active (1)')).toBeInTheDocument()
+      // Active section should have 2 reservations (both future and soon stay in active)
+      expect(screen.getByText('reservations.active (2)')).toBeInTheDocument()
 
-      // Past section should have 1 reservation - check for the completed/cancelled heading
+      // Past section should not exist since there are no completed/cancelled reservations
       const headings = screen.getAllByRole('heading')
       const pastSectionHeading = headings.find(h => h.textContent?.includes('reservations.completed') || h.textContent?.includes('reservations.cancelled'))
-      expect(pastSectionHeading).toBeInTheDocument()
+      expect(pastSectionHeading).toBeUndefined()
     })
   })
 

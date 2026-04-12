@@ -15,6 +15,13 @@ import {
 } from '@/components/ui/dialog'
 import type { Reservation } from '@/lib/types'
 
+const CANCELLATION_CUTOFF_MS = 60 * 60 * 1000 // 60 minutes
+
+function isCutoffPassed(reservation: Reservation): boolean {
+  const startMs = new Date(`${reservation.date}T${reservation.startTime}`).getTime()
+  return Date.now() >= startMs - CANCELLATION_CUTOFF_MS
+}
+
 const statusBadgeVariant: Record<Reservation['status'], 'available' | 'reserved' | 'outline'> = {
   active: 'available',
   cancelled: 'reserved',
@@ -26,9 +33,10 @@ const statusBadgeVariant: Record<Reservation['status'], 'available' | 'reserved'
 interface ReservationCardProps {
   reservation: Reservation
   onCancel: (id: string) => void
+  cutoffPassed?: boolean
 }
 
-function ReservationCard({ reservation, onCancel }: ReservationCardProps) {
+function ReservationCard({ reservation, onCancel, cutoffPassed }: ReservationCardProps) {
   const t = useTranslations('reservations')
   const tt = useTranslations('tables')
   return (
@@ -66,14 +74,23 @@ function ReservationCard({ reservation, onCancel }: ReservationCardProps) {
       </div>
 
       {(reservation.status === 'active' || reservation.status === 'pending') && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onCancel(reservation.id)}
-          className="w-full border-destructive/40 text-destructive hover:bg-destructive/15"
-        >
-          {t('cancel')}
-        </Button>
+        <div className="space-y-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={cutoffPassed ? undefined : () => onCancel(reservation.id)}
+            disabled={cutoffPassed}
+            className="w-full border-destructive/40 text-destructive hover:bg-destructive/15 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-disabled={cutoffPassed}
+          >
+            {t('cancel')}
+          </Button>
+          {cutoffPassed && (
+            <p className="text-xs text-muted-foreground text-center" role="note">
+              {t('errors.cancellationCutoff')}
+            </p>
+          )}
+        </div>
       )}
     </div>
   )
@@ -153,7 +170,7 @@ export function MyReservationsView() {
               </div>
             ) : (
               <div className="space-y-3">
-                {activeReservations.map(r => <ReservationCard key={r.id} reservation={r} onCancel={openCancelDialog} />)}
+                {activeReservations.map(r => <ReservationCard key={r.id} reservation={r} onCancel={openCancelDialog} cutoffPassed={isCutoffPassed(r)} />)}
               </div>
             )}
           </section>
