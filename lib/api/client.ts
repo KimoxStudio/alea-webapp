@@ -46,6 +46,9 @@ class ApiClient {
   put<T>(path: string, body?: unknown, options?: RequestInit) {
     return this.request<T>(path, { method: 'PUT', body: body ? JSON.stringify(body) : undefined, ...options })
   }
+  patch<T>(path: string, body?: unknown, options?: RequestInit) {
+    return this.request<T>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined, ...options })
+  }
   delete<T>(path: string, options?: RequestInit) { return this.request<T>(path, { method: 'DELETE', ...options }) }
 }
 

@@ -41,6 +41,8 @@ export type Database = {
           id: string
           is_active: boolean
           member_number: string
+          no_show_count: number
+          blocked_until: string | null
           role: Database["public"]["Enums"]["role"]
           updated_at: string
         }
@@ -50,6 +52,8 @@ export type Database = {
           id: string
           is_active?: boolean
           member_number: string
+          no_show_count?: number
+          blocked_until?: string | null
           role?: Database["public"]["Enums"]["role"]
           updated_at?: string
         }
@@ -59,6 +63,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           member_number?: string
+          no_show_count?: number
+          blocked_until?: string | null
           role?: Database["public"]["Enums"]["role"]
           updated_at?: string
         }

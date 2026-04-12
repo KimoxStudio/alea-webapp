@@ -38,6 +38,16 @@ export function useAdminDeleteUser() {
   })
 }
 
+export function useAdminResetNoShows() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.patch<void>(endpoints.users.byId(id), { action: 'reset_no_shows' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+    },
+  })
+}
+
 // ----- Reservations -----
 
 export function useAdminReservations(userId?: string | null, date?: string | null) {

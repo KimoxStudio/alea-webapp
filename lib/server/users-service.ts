@@ -5,7 +5,7 @@ import type { Tables, TablesUpdate } from '@/lib/supabase/types'
 import { memberNumberSchema } from '@/lib/validations/auth'
 
 type ProfileRow = Tables<'profiles'>
-type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'is_active' | 'created_at' | 'updated_at'>
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'is_active' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>
 type ProfilesQuery = {
   eq: (column: string, value: unknown) => ProfilesQuery
   or: (filter: string) => ProfilesQuery
@@ -35,7 +35,7 @@ type AdminProfilesTableClient = {
   }
 }
 
-const PROFILE_COLUMNS = 'id, member_number, email, role, is_active, created_at, updated_at'
+const PROFILE_COLUMNS = 'id, member_number, email, role, is_active, no_show_count, blocked_until, created_at, updated_at'
 
 function toPublicUser(profile: PublicProfileRow): User {
   return {
@@ -44,6 +44,8 @@ function toPublicUser(profile: PublicProfileRow): User {
     email: profile.email ?? null,
     role: profile.role,
     isActive: profile.is_active,
+    noShowCount: profile.no_show_count,
+    blockedUntil: profile.blocked_until ?? null,
     createdAt: profile.created_at,
     updatedAt: profile.updated_at,
   }
@@ -134,6 +136,18 @@ export async function updateUser(id: string, body: { memberNumber?: unknown; rol
   }
 
   return toPublicUser(data as PublicProfileRow)
+}
+
+export async function resetNoShows(userId: string): Promise<void> {
+  const supabase = createSupabaseServerAdminClient()
+  const { error } = await supabase
+    .from('profiles')
+    .update({ no_show_count: 0, blocked_until: null })
+    .eq('id', userId)
+
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
 }
 
 export async function deleteUser(id: string) {

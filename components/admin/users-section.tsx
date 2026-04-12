@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Search, Pencil, Trash2, AlertCircle } from 'lucide-react'
+import { Search, Pencil, Trash2, AlertCircle, RotateCcw, Unlock } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { useAdminUsers, useAdminUpdateUser, useAdminDeleteUser } from '@/lib/hooks/use-admin'
+import { useAdminUsers, useAdminUpdateUser, useAdminDeleteUser, useAdminResetNoShows } from '@/lib/hooks/use-admin'
 import type { User } from '@/lib/types'
 
 type UserRole = 'member' | 'admin'
@@ -60,6 +60,7 @@ export function UsersSection() {
   const { data, isLoading, isError } = useAdminUsers(page, 10, search)
   const updateMutation = useAdminUpdateUser()
   const deleteMutation = useAdminDeleteUser()
+  const resetNoShowsMutation = useAdminResetNoShows()
 
   function openEdit(user: User) {
     setEditState({
@@ -142,6 +143,8 @@ export function UsersSection() {
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{tc('email')}</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('role')}</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('status')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('noShowCount')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('blockedUntil')}</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('joinDate')}</th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">{tc('actions')}</th>
                 </tr>
@@ -159,11 +162,46 @@ export function UsersSection() {
                     <td className="px-4 py-3">
                       <StatusBadge isActive={user.isActive} />
                     </td>
+                    <td className="px-4 py-3 text-center">
+                      {user.noShowCount > 0 ? (
+                        <span className="font-mono text-orange-400">{user.noShowCount}</span>
+                      ) : (
+                        <span className="text-muted-foreground">0</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">
+                      {user.blockedUntil
+                        ? new Date(user.blockedUntil).toLocaleDateString()
+                        : '—'}
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => resetNoShowsMutation.mutate(user.id)}
+                          disabled={resetNoShowsMutation.isPending}
+                          aria-label={t('resetNoShows')}
+                          title={t('resetNoShows')}
+                        >
+                          <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                        {user.blockedUntil && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => resetNoShowsMutation.mutate(user.id)}
+                            disabled={resetNoShowsMutation.isPending}
+                            aria-label={t('unblockUser')}
+                            title={t('unblockUser')}
+                            className="text-amber-400 hover:bg-amber-900/20"
+                          >
+                            <Unlock className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"

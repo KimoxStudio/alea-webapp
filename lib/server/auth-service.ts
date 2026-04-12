@@ -101,6 +101,8 @@ function toPublicUser(profile: PublicProfileRow): User {
     memberNumber: profile.member_number,
     role: profile.role,
     isActive: profile.is_active,
+    noShowCount: 0,
+    blockedUntil: null,
     createdAt: profile.created_at,
     updatedAt: profile.updated_at,
   }
