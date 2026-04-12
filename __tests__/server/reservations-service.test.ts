@@ -854,6 +854,58 @@ describe('reservations service', () => {
         expect(reCancelled.status).toBe('cancelled')
       })
 
+      it('member cancels pending reservation > 60 min away → succeeds', async () => {
+        const { updateReservationForSession } = await loadReservationModules()
+
+        // Set reservation to pending status
+        reservationsState[0]!.status = 'pending'
+
+        // Set current time to 2026-04-04 14:00:00 local time
+        vi.setSystemTime(new Date(2026, 3, 4, 14, 0, 0))
+
+        // Reservation starts at 16:00 (120 minutes from now)
+        // Difference = 120 * 60 * 1000 = 7200000 ms
+        // 7200000 < 3600000 = false, so allowed
+        const updated = await updateReservationForSession(memberSession, 'r1', { status: 'cancelled' })
+
+        expect(updated.status).toBe('cancelled')
+      })
+
+      it('member cancels pending reservation within 60 min → blocked with CANCELLATION_CUTOFF', async () => {
+        const { updateReservationForSession } = await loadReservationModules()
+
+        // Set reservation to pending status
+        reservationsState[0]!.status = 'pending'
+
+        // Set current time to 2026-04-04 15:30:00 local time (30 minutes before 16:00)
+        vi.setSystemTime(new Date(2026, 3, 4, 15, 30, 0))
+
+        // Reservation starts at 16:00
+        // Difference = 1800000 ms (30 min)
+        // 1800000 < 3600000 = true, so blocked with CANCELLATION_CUTOFF
+        await expect(updateReservationForSession(memberSession, 'r1', { status: 'cancelled' })).rejects.toMatchObject({
+          name: 'ServiceError',
+          statusCode: 403,
+          message: expect.stringContaining('CANCELLATION_CUTOFF'),
+        })
+      })
+
+      it('admin cancels pending reservation within 60 min → allowed (bypass)', async () => {
+        const { updateReservationForSession } = await loadReservationModules()
+
+        // Create a new reservation with pending status
+        const pendingAdminReservation = makeReservation({ id: 'r-pending-admin', user_id: '1', table_id: 't2', status: 'pending' })
+        reservationsState.push(pendingAdminReservation)
+
+        // Set current time to 2026-04-04 15:30:00 local time (30 min before 16:00)
+        vi.setSystemTime(new Date(2026, 3, 4, 15, 30, 0))
+
+        // Admin should be able to cancel even within 60 min
+        const updated = await updateReservationForSession(adminSession, 'r-pending-admin', { status: 'cancelled' })
+
+        expect(updated.status).toBe('cancelled')
+      })
+
     })
   })
 
