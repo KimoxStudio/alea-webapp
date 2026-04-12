@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Sword, Menu, Globe, LogOut, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -16,8 +16,10 @@ export function Header({ locale }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const otherLocale = locale === 'es' ? 'en' : 'es'
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '')
-  const switchHref = `/${otherLocale}${pathWithoutLocale}`
+  const qs = searchParams.toString()
+  const switchHref = `/${otherLocale}${pathWithoutLocale}${qs ? `?${qs}` : ''}`
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
