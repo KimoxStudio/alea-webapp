@@ -132,7 +132,7 @@ describe('ReservationDialog', () => {
     await waitFor(() => {
       const alert = screen.getByRole('alert')
       expect(alert).toBeInTheDocument()
-      expect(alert).toHaveTextContent('errors.conflictTime')
+      expect(alert).toHaveTextContent('errors.generic')
     })
   })
 

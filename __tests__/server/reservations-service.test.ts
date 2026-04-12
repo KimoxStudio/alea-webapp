@@ -52,13 +52,13 @@ function makeReservation(overrides?: Partial<ReservationRow>): ReservationRow {
     id: 'r1',
     table_id: 't1',
     user_id: '2',
-    date: '2026-04-04',
+    date: '2026-12-31',
     start_time: '16:00:00',
     end_time: '18:00:00',
     status: 'active',
     surface: null,
     activated_at: null,
-    created_at: '2026-04-04T10:00:00.000Z',
+    created_at: '2026-12-31T10:00:00.000Z',
     ...overrides,
   }
 }
@@ -405,7 +405,7 @@ describe('reservations service', () => {
 
       const created = await createReservationForSession(memberSession, {
         tableId: 't1',
-        date: '2026-04-05',
+        date: '2026-12-31',
         startTime: '12:00',
         endTime: '13:00',
       })
@@ -413,7 +413,7 @@ describe('reservations service', () => {
       expect(created).toEqual(expect.objectContaining({
         tableId: 't1',
         userId: '2',
-        date: '2026-04-05',
+        date: '2026-12-31',
         startTime: '12:00',
         endTime: '13:00',
         status: 'active',
@@ -426,7 +426,7 @@ describe('reservations service', () => {
 
       await expect(createReservationForSession(memberSession, {
         tableId: 't3',
-        date: '2026-04-05',
+        date: '2026-12-31',
         startTime: '12:00',
         endTime: '13:00',
       })).rejects.toMatchObject({
@@ -440,7 +440,7 @@ describe('reservations service', () => {
 
       await expect(createReservationForSession(memberSession, {
         tableId: 't1',
-        date: '2026-04-04',
+        date: '2026-12-31',
         startTime: '17:00',
         endTime: '18:30',
       })).rejects.toMatchObject({
@@ -454,7 +454,7 @@ describe('reservations service', () => {
 
       await expect(createReservationForSession(memberSession, {
         tableId: 't1',
-        date: '2026-04-05',
+        date: '2026-12-31',
         startTime: '9:00',
         endTime: '10:00',
       })).rejects.toMatchObject({ name: 'ServiceError', statusCode: 400 })
@@ -465,7 +465,7 @@ describe('reservations service', () => {
 
       await expect(createReservationForSession(memberSession, {
         tableId: 't1',
-        date: '2026-04-05',
+        date: '2026-12-31',
         startTime: '25:00',
         endTime: '26:00',
       })).rejects.toMatchObject({ name: 'ServiceError', statusCode: 400 })
@@ -476,7 +476,7 @@ describe('reservations service', () => {
 
       await expect(createReservationForSession(memberSession, {
         tableId: 't1',
-        date: '2026-04-05',
+        date: '2026-12-31',
         startTime: '18:70',
         endTime: '19:00',
       })).rejects.toMatchObject({ name: 'ServiceError', statusCode: 400 })
@@ -487,7 +487,7 @@ describe('reservations service', () => {
 
       await expect(createReservationForSession(memberSession, {
         tableId: 't1',
-        date: '2026-04-05',
+        date: '2026-12-31',
         startTime: '00:00',
         endTime: '01:00',
       })).resolves.toEqual(expect.objectContaining({ startTime: '00:00', endTime: '01:00' }))
@@ -500,7 +500,7 @@ describe('reservations service', () => {
 
       await expect(createReservationForSession(memberSession, {
         tableId: 't1',
-        date: '2026-04-04',
+        date: '2026-12-31',
         startTime: '17:00',
         endTime: '18:30',
       })).resolves.toEqual(expect.objectContaining({
@@ -517,7 +517,7 @@ describe('reservations service', () => {
 
       await expect(createReservationForSession(memberSession, {
         tableId: 't1',
-        date: '2026-04-04',
+        date: '2026-12-31',
         startTime: '17:00',
         endTime: '18:30',
       })).rejects.toMatchObject({
@@ -531,7 +531,7 @@ describe('reservations service', () => {
       await expect(
         createReservationForSession(memberSession, {
           tableId: 't2',
-          date: '2026-04-04',
+          date: '2026-12-31',
           startTime: '17:00',
           endTime: '19:00',
         })
@@ -543,11 +543,11 @@ describe('reservations service', () => {
       await expect(
         createReservationForSession(memberSession, {
           tableId: 't1',
-          date: '2026-04-05',
+          date: '2027-01-01',
           startTime: '16:00',
           endTime: '18:00',
         })
-      ).resolves.toEqual(expect.objectContaining({ date: '2026-04-05' }))
+      ).resolves.toEqual(expect.objectContaining({ date: '2027-01-01' }))
     })
 
     it('allows a reservation that starts exactly when another ends', async () => {
@@ -555,7 +555,7 @@ describe('reservations service', () => {
       await expect(
         createReservationForSession(memberSession, {
           tableId: 't1',
-          date: '2026-04-04',
+          date: '2026-12-31',
           startTime: '18:00',
           endTime: '20:00',
         })
@@ -568,7 +568,7 @@ describe('reservations service', () => {
       await expect(
         createReservationForSession(memberSession, {
           tableId: 't1',
-          date: '2026-04-04',
+          date: '2026-12-31',
           startTime: '17:00',
           endTime: '18:30',
         })
@@ -581,7 +581,7 @@ describe('reservations service', () => {
       await expect(
         createReservationForSession(memberSession, {
           tableId: 't2',
-          date: '2026-04-04',
+          date: '2026-12-31',
           startTime: '17:00',
           endTime: '19:00',
         })
@@ -665,7 +665,7 @@ describe('reservations service', () => {
         surface: null,
       })
 
-      expect(updated.date).toBe('2026-04-04')
+      expect(updated.date).toBe('2026-12-31')
       expect(updated.startTime).toBe('16:00')
       expect(updated.endTime).toBe('18:00')
       expect(updated.status).toBe('active')
@@ -792,8 +792,8 @@ describe('reservations service', () => {
       it('member cancels reservation within 60 min → blocked with CANCELLATION_CUTOFF', async () => {
         const { updateReservationForSession } = await loadReservationModules()
 
-        // Set current time to 2026-04-04 15:30:00 local time (30 minutes before 16:00)
-        vi.setSystemTime(new Date(2026, 3, 4, 15, 30, 0))
+        // Set current time to 2026-12-31 15:30:00 local time (30 minutes before 16:00)
+        vi.setSystemTime(new Date(2026, 11, 31, 15, 30, 0))
 
         // Reservation starts at 16:00
         // Difference = 1800000 ms (30 min)
@@ -808,8 +808,8 @@ describe('reservations service', () => {
       it('member cancels reservation after start time → blocked with CANCELLATION_CUTOFF', async () => {
         const { updateReservationForSession } = await loadReservationModules()
 
-        // Set current time to 2026-04-04 16:00:00 local time (reservation start, now in progress)
-        vi.setSystemTime(new Date(2026, 3, 4, 16, 0, 0))
+        // Set current time to 2026-12-31 16:00:00 local time (reservation start, now in progress)
+        vi.setSystemTime(new Date(2026, 11, 31, 16, 0, 0))
 
         // Reservation starts at 16:00 (in the past)
         // Difference is negative, definitely < 3600000, so blocked
@@ -888,8 +888,8 @@ describe('reservations service', () => {
         // Set reservation to pending status
         reservationsState[0]!.status = 'pending'
 
-        // Set current time to 2026-04-04 15:30:00 local time (30 minutes before 16:00)
-        vi.setSystemTime(new Date(2026, 3, 4, 15, 30, 0))
+        // Set current time to 2026-12-31 15:30:00 local time (30 minutes before 16:00)
+        vi.setSystemTime(new Date(2026, 11, 31, 15, 30, 0))
 
         // Reservation starts at 16:00
         // Difference = 1800000 ms (30 min)
