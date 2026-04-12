@@ -76,6 +76,26 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+export interface AdminEventRoomBlock {
+  id: string
+  roomId: string
+  date: string
+  startTime: string
+  endTime: string
+}
+
+export interface AdminEvent {
+  id: string
+  title: string
+  description: string | null
+  date: string
+  startTime: string
+  endTime: string
+  createdBy: string | null
+  createdAt: string
+  roomBlocks: AdminEventRoomBlock[]
+}
+
 export interface ApiError {
   message: string;
   statusCode: number;
