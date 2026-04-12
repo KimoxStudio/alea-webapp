@@ -18,7 +18,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { useAdminUsers, useAdminUpdateUser, useAdminDeleteUser } from '@/lib/hooks/use-admin'
+import { useAdminUsers, useAdminUpdateUser, useAdminDeleteUser, useAdminPatchUser } from '@/lib/hooks/use-admin'
 import type { User } from '@/lib/types'
 
 type UserRole = 'member' | 'admin'
@@ -60,6 +60,7 @@ export function UsersSection() {
   const { data, isLoading, isError } = useAdminUsers(page, 10, search)
   const updateMutation = useAdminUpdateUser()
   const deleteMutation = useAdminDeleteUser()
+  const patchMutation = useAdminPatchUser()
 
   function openEdit(user: User) {
     setEditState({
@@ -142,6 +143,8 @@ export function UsersSection() {
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{tc('email')}</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('role')}</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('status')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('noShowCount')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('blockedUntil')}</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('joinDate')}</th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">{tc('actions')}</th>
                 </tr>
@@ -159,11 +162,55 @@ export function UsersSection() {
                     <td className="px-4 py-3">
                       <StatusBadge isActive={user.isActive} />
                     </td>
+                    <td className="px-4 py-3 text-center">
+                      {user.noShowCount > 0 ? (
+                        <Badge className="border-red-500/40 bg-red-900/20 text-red-400">
+                          {user.noShowCount}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">0</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">
+                      {user.blockedUntil
+                        ? new Date(user.blockedUntil).toLocaleDateString()
+                        : '—'}
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        {user.noShowCount > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-amber-400 hover:bg-amber-900/20 hover:text-amber-300"
+                            disabled={patchMutation.isPending}
+                            onClick={() => patchMutation.mutate({ id: user.id, action: 'reset_no_shows' })}
+                            aria-label={t('resetNoShows')}
+                          >
+                            {patchMutation.isPending && patchMutation.variables?.id === user.id && patchMutation.variables?.action === 'reset_no_shows' ? (
+                              <DiceLoader size="sm" className="mr-1" hideRole />
+                            ) : null}
+                            {t('resetNoShows')}
+                          </Button>
+                        )}
+                        {user.blockedUntil && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-emerald-400 hover:bg-emerald-900/20 hover:text-emerald-300"
+                            disabled={patchMutation.isPending}
+                            onClick={() => patchMutation.mutate({ id: user.id, action: 'unblock' })}
+                            aria-label={t('unblockUser')}
+                          >
+                            {patchMutation.isPending && patchMutation.variables?.id === user.id && patchMutation.variables?.action === 'unblock' ? (
+                              <DiceLoader size="sm" className="mr-1" hideRole />
+                            ) : null}
+                            {t('unblockUser')}
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"

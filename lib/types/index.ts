@@ -6,6 +6,8 @@ export interface User {
   email?: string | null;
   role: Role;
   isActive: boolean;
+  noShowCount: number;
+  blockedUntil: string | null;
   createdAt: string;
   updatedAt: string;
 }

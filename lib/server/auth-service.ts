@@ -6,13 +6,13 @@ import type { Tables } from '@/lib/supabase/types'
 import { registerServerSchema } from '@/lib/validations/auth'
 
 type ProfileRow = Tables<'profiles'>
-type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'is_active' | 'created_at' | 'updated_at'>
-type AuthCredentialRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'is_active' | 'created_at' | 'updated_at'>
-const PUBLIC_PROFILE_COLUMNS = 'id, member_number, role, is_active, created_at, updated_at' as const
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'is_active' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>
+type AuthCredentialRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'is_active' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>
+const PUBLIC_PROFILE_COLUMNS = 'id, member_number, role, is_active, no_show_count, blocked_until, created_at, updated_at' as const
 
 // Auth-only columns: email is needed solely to resolve Supabase Auth credentials.
 // It is not part of the public user model (issue #39) but IS included for admin-facing user data.
-const AUTH_CREDENTIAL_COLUMNS = 'id, member_number, email, role, is_active, created_at, updated_at' as const
+const AUTH_CREDENTIAL_COLUMNS = 'id, member_number, email, role, is_active, no_show_count, blocked_until, created_at, updated_at' as const
 
 type PublicProfileLookupColumn = 'id' | 'member_number'
 type AuthCredentialLookupColumn = 'id' | 'member_number' | 'email'
@@ -101,6 +101,8 @@ function toPublicUser(profile: PublicProfileRow): User {
     memberNumber: profile.member_number,
     role: profile.role,
     isActive: profile.is_active,
+    noShowCount: profile.no_show_count,
+    blockedUntil: profile.blocked_until ?? null,
     createdAt: profile.created_at,
     updatedAt: profile.updated_at,
   }

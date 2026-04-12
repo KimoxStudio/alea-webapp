@@ -113,7 +113,13 @@
     "cancelReservationConfirm": "¿Estás seguro de que deseas cancelar esta reserva? Esta acción no se puede deshacer.",
     "noReservations": "No hay reservas",
     "table": "Mesa", "user": "Usuario",
-    "regenerateQr": "Regenerar QR"
+    "regenerateQr": "Regenerar QR",
+    "noShowCount": "Conteo de no-shows",
+    "blockedUntil": "Bloqueado hasta",
+    "resetNoShows": "Reiniciar no-shows",
+    "unblockUser": "Desbloquear",
+    "noShowsReset": "No-shows reiniciados con éxito",
+    "userUnblocked": "Usuario desbloqueado con éxito"
   },
   "home": {
     "heroTitle": "Tu Aventura Comienza Aquí",

@@ -36,29 +36,35 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          blocked_until: string | null
           created_at: string
           email: string | null
           id: string
           is_active: boolean
           member_number: string
+          no_show_count: number
           role: Database["public"]["Enums"]["role"]
           updated_at: string
         }
         Insert: {
+          blocked_until?: string | null
           created_at?: string
           email?: string | null
           id: string
           is_active?: boolean
           member_number: string
+          no_show_count?: number
           role?: Database["public"]["Enums"]["role"]
           updated_at?: string
         }
         Update: {
+          blocked_until?: string | null
           created_at?: string
           email?: string | null
           id?: string
           is_active?: boolean
           member_number?: string
+          no_show_count?: number
           role?: Database["public"]["Enums"]["role"]
           updated_at?: string
         }

@@ -114,7 +114,13 @@
     "cancelReservationConfirm": "Are you sure you want to cancel this reservation?",
     "noReservations": "No reservations found",
     "table": "Table", "user": "User",
-    "regenerateQr": "Regenerate QR"
+    "regenerateQr": "Regenerate QR",
+    "noShowCount": "No-show count",
+    "blockedUntil": "Blocked until",
+    "resetNoShows": "Reset no-shows",
+    "unblockUser": "Unblock",
+    "noShowsReset": "No-shows reset successfully",
+    "userUnblocked": "User unblocked successfully"
   },
   "home": {
     "heroTitle": "Your Adventure Starts Here",
