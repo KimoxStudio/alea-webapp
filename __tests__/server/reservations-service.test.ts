@@ -1511,5 +1511,24 @@ describe('reservations service', () => {
         message: 'Internal server error',
       })
     })
+
+    it('returns 0 when rpc returns null data without error', async () => {
+      // The service uses `(data as number | null) ?? 0` — verify the null branch returns 0
+      const mockRpc = vi.fn(async () => ({ data: null, error: null }))
+
+      vi.resetModules()
+      const createAdminMock = vi.fn(() => ({
+        rpc: mockRpc,
+      }))
+      vi.doMock('@/lib/supabase/server', () => ({
+        createSupabaseServerAdminClient: createAdminMock,
+        createSupabaseServerClient: vi.fn(async () => ({ from: vi.fn() })),
+      }))
+
+      const { markNoShowReservations } = await import('@/lib/server/reservations-service')
+      const result = await markNoShowReservations()
+
+      expect(result).toBe(0)
+    })
   })
 })
