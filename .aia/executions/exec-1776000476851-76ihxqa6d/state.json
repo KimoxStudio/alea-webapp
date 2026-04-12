@@ -1,0 +1,21 @@
+{
+  "executionId": "exec-1776000476851-76ihxqa6d",
+  "workflowId": "frontend-feature",
+  "projectPath": "/Users/samuelromeroarbelo/Projects/Alea/alea-webapp",
+  "status": "running",
+  "currentAgentId": null,
+  "conversationId": "conv-1776000476851-wt5pnyja1",
+  "cycleCount": 0,
+  "yolo": true,
+  "worktreePath": "/Users/samuelromeroarbelo/Projects/Alea/alea-webapp/.aia/worktrees/exec-1776000476851-76ihxqa6d",
+  "baseCommitSha": "f3ac1860eece80b2a4b93f8b5bc49754918d736c",
+  "pid": 65909,
+  "startedAt": 1776000542008,
+  "updatedAt": 1776000542008,
+  "launchedBy": {
+    "kind": "pilot",
+    "source": "cli"
+  },
+  "baseBranch": "main",
+  "targetBranch": "main"
+}
