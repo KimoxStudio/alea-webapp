@@ -161,6 +161,27 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
         expect(result.error.issues.find(i => i.path[0] === 'password')?.message).toBe('errors.passwordMinLength')
       }
     })
+
+    it('rejects memberNumber of 11 digits', () => {
+      const result = registerSchema.safeParse({
+        memberNumber: '12345678901',
+        password: 'SecurePass123!',
+        confirmPassword: 'SecurePass123!'
+      })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues.find(i => i.path[0] === 'memberNumber')?.message).toBe('errors.memberNumberTooLong')
+      }
+    })
+
+    it('accepts memberNumber of exactly 10 digits', () => {
+      const result = registerSchema.safeParse({
+        memberNumber: '1234567890',
+        password: 'SecurePass123!',
+        confirmPassword: 'SecurePass123!'
+      })
+      expect(result.success).toBe(true)
+    })
   })
 
   describe('registerServerSchema', () => {

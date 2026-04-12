@@ -46,8 +46,7 @@ alea-webapp/
 
 - **Node.js** 20+ (see `.nvmrc` or `engines` in `package.json`)
 - **pnpm** 9+ (`npm install -g pnpm`)
-- **Docker Desktop / Docker Engine** (required to run `supabase start` locally)
-- **Supabase CLI** (`brew install supabase/tap/supabase` or see [docs](https://supabase.com/docs/guides/cli))
+- **Docker Desktop** + **Supabase CLI** *(optional — only required to run `pnpm test:integration` for local schema/migration checks)*
 
 ## Setup
 
@@ -70,19 +69,14 @@ alea-webapp/
    cp .env.example .env.local
    ```
 
-   Open `.env.local` and fill in your Supabase credentials. The example contains hosted-project placeholders that must be replaced. For local development, use `http://127.0.0.1:54321` for `NEXT_PUBLIC_SUPABASE_URL` and run `supabase status` to get the publishable and secret keys.
+   The project uses **Supabase Cloud**. Open `.env.local` and fill in the following credentials from your Supabase project dashboard:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY`
+   - `SUPABASE_SECRET_DEFAULT_KEY`
 
    If the app runs behind a reverse proxy or CDN in deployment, set `TRUST_PROXY_HEADERS=true` and configure `TRUSTED_PROXY_CIDRS` with the proxy source-IP ranges that are allowed to provide `x-forwarded-for`; otherwise rate limiting falls back to `x-real-ip`. Your ingress must also strip and overwrite inbound `x-real-ip` and `x-forwarded-for` headers before the request reaches the app.
 
-4. **Start the local Supabase instance**
-
-   ```bash
-   supabase start
-   ```
-
-   This starts PostgreSQL, Auth, Storage, and the Supabase Studio UI locally via Docker.
-
-5. **Start the development server**
+4. **Start the development server**
 
    ```bash
    pnpm dev
