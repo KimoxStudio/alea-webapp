@@ -581,6 +581,7 @@ export async function activateReservationByTable(
     .from('reservations')
     .update({ status: 'active', activated_at: now.toISOString() })
     .eq('id', reservation.id)
+    .eq('status', 'pending')
     .select(RESERVATION_COLUMNS)
     .single()
 
@@ -588,7 +589,7 @@ export async function activateReservationByTable(
     serviceError('Internal server error', 500)
   }
   if (!updated) {
-    // Row was deleted or a concurrent request already processed it.
+    // Row was deleted, already active, or a concurrent request already processed it (TOCTOU guard).
     serviceError('CHECK_IN_ALREADY_ACTIVE', 409)
   }
 
