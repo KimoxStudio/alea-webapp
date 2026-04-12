@@ -3,16 +3,16 @@
     "save": "Guardar", "cancel": "Cancelar", "delete": "Eliminar",
     "edit": "Editar", "search": "Buscar", "loading": "Cargando...",
     "error": "Ha ocurrido un error", "confirm": "Confirmar", "back": "Volver",
-    "close": "Cerrar", "yes": "Si", "no": "No", "actions": "Acciones",
+    "close": "Cerrar", "yes": "Sí", "no": "No", "actions": "Acciones",
     "status": "Estado", "date": "Fecha", "time": "Hora", "name": "Nombre",
-    "email": "Email", "page": "Pagina", "of": "de", "previous": "Anterior",
+    "email": "Email", "page": "Página", "of": "de", "previous": "Anterior",
     "next": "Siguiente", "showing": "Mostrando", "results": "resultados",
     "noResults": "No se encontraron resultados",
     "loadingPage": "Cargando página..."
   },
   "nav": {
     "rooms": "Salas", "reservations": "Mis Reservas",
-    "admin": "Administracion", "logout": "Cerrar Sesion", "profile": "Mi Perfil",
+    "admin": "Administración", "logout": "Cerrar Sesión", "profile": "Mi Perfil",
     "mainNavAriaLabel": "Navegación principal",
     "mobileNavAriaLabel": "Navegación móvil",
     "skipToContent": "Ir al contenido principal",
@@ -28,7 +28,7 @@
     "registerSubtitle": "Únete a nuestra comunidad de jugadores",
     "registerUnavailableTitle": "El registro está temporalmente deshabilitado",
     "registerUnavailableBody": "Hemos pausado el autoregistro mientras terminamos la migración de autenticación. Inicia sesión con una cuenta existente o contacta con la asociación para solicitar acceso.",
-    "noAccount": "No tienes cuenta?", "hasAccount": "Ya tienes cuenta?",
+    "noAccount": "¿No tienes cuenta?", "hasAccount": "¿Ya tienes cuenta?",
     "showPassword": "Mostrar contraseña", "hidePassword": "Ocultar contraseña",
     "showConfirmation": "Mostrar confirmación", "hideConfirmation": "Ocultar confirmación",
     "rememberMe": "Recordarme", "forgotPassword": "¿Olvidaste tu contraseña?", "verifyingSession": "Verificando sesión...",
@@ -58,16 +58,16 @@
   "rooms": {
     "title": "Salas de Juego", "subtitle": "Explora nuestras salas y reserva tu mesa",
     "available": "Disponible", "reserved": "Reservada", "partial": "Parcialmente ocupada",
-    "selectRoom": "Seleccionar sala", "tables": "mesas", "noTables": "Esta sala no tiene mesas todavia",
+    "selectRoom": "Seleccionar sala", "tables": "mesas", "noTables": "Esta sala no tiene mesas todavía",
     "reserveTable": "Reservar esta mesa", "viewAvailability": "Ver disponibilidad"
   },
   "tables": {
-    "small": "Mesa Pequena", "large": "Mesa Grande", "removable_top": "Mesa con Tapa Removible",
+    "small": "Mesa Pequeña", "large": "Mesa Grande", "removable_top": "Mesa con Tapa Removible",
     "surface": "Superficie", "surfaceTop": "Superior (tapa puesta)",
     "surfaceBottom": "Inferior (tablero de juego)",
     "surfaceConflict": "Esta mesa ya tiene la otra superficie reservada en este horario",
-    "selectSurface": "Que superficie deseas reservar?",
-    "qrCode": "Codigo QR", "position": "Posicion"
+    "selectSurface": "¿Qué superficie deseas reservar?",
+    "qrCode": "Código QR", "position": "Posición"
   },
   "reservations": {
     "title": "Mis Reservas", "subtitle": "Gestiona tus reservas de mesas",
@@ -77,7 +77,7 @@
     "active": "Activa", "cancelled": "Cancelada", "completed": "Completada",
     "pending": "Pendiente", "no_show": "No presentado",
     "cancel": "Cancelar reserva",
-    "cancelConfirm": "Estas seguro de que deseas cancelar esta reserva?",
+    "cancelConfirm": "¿Estás seguro de que deseas cancelar esta reserva?",
     "noReservations": "No tienes reservas activas", "available": "Disponible",
     "occupied": "Ocupado", "myReservation": "Mi reserva",
     "calendar": "Calendario de disponibilidad",
@@ -92,11 +92,11 @@
     }
   },
   "admin": {
-    "dashboard": "Panel de Administracion", "users": "Usuarios", "rooms": "Salas",
+    "dashboard": "Panel de Administración", "users": "Usuarios", "rooms": "Salas",
     "tables": "Mesas", "reservations": "Reservas", "totalUsers": "Total usuarios",
-    "todayReservations": "Reservas hoy", "occupancyRate": "Ocupacion", "activeRooms": "Salas activas",
-    "userManagement": "Gestion de usuarios", "roomManagement": "Gestion de salas",
-    "reservationManagement": "Gestion de reservas", "createRoom": "Crear sala",
+    "todayReservations": "Reservas hoy", "occupancyRate": "Ocupación", "activeRooms": "Salas activas",
+    "userManagement": "Gestión de usuarios", "roomManagement": "Gestión de salas",
+    "reservationManagement": "Gestión de reservas", "createRoom": "Crear sala",
     "createTable": "Crear mesa", "editUser": "Editar usuario", "deleteUser": "Eliminar usuario",
     "deleteUserConfirm": "¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer.",
     "role": "Rol", "member": "Socio", "admin": "Administrador", "joinDate": "Fecha de registro",
