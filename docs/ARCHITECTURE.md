@@ -240,6 +240,7 @@ The client-side architecture is organized under `lib/`:
 - Node.js 20+
 - pnpm 9+
 - Supabase Cloud project
+- Docker Desktop + Supabase CLI *(optional — only required for `pnpm test:integration`)*
 
 ### Steps
 

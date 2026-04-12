@@ -46,6 +46,7 @@ alea-webapp/
 
 - **Node.js** 20+ (see `.nvmrc` or `engines` in `package.json`)
 - **pnpm** 9+ (`npm install -g pnpm`)
+- **Docker Desktop** + **Supabase CLI** *(optional — only required to run `pnpm test:integration` for local schema/migration checks)*
 
 ## Setup
 
