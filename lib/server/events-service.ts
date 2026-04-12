@@ -9,7 +9,7 @@ export type { AdminEvent, AdminEventRoomBlock }
 type ReservationRow = Tables<'reservations'>
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-const TIME_RE = /^\d{2}:\d{2}$/
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 
 function validateDateTimeFields(date: string, startTime: string, endTime: string): void {
   if (!DATE_RE.test(date)) serviceError('date must be in YYYY-MM-DD format', 400)

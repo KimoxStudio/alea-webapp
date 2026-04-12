@@ -97,8 +97,10 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
       const errorCode = (err as { message?: string })?.message
       if (errorCode === 'USER_ALREADY_HAS_RESERVATION_IN_SLOT') {
         setError(t('errors.userSlotConflict'))
+      } else if (errorCode === 'Cannot make a reservation in the past') {
+        setError(t('errors.pastDate'))
       } else {
-        setError(t('errors.conflictTime'))
+        setError(t('errors.generic'))
       }
     }
   }

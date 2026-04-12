@@ -120,7 +120,21 @@
     "resetNoShows": "Reset no-shows",
     "unblockUser": "Unblock",
     "noShowsReset": "No-shows reset successfully",
-    "userUnblocked": "User unblocked successfully"
+    "userUnblocked": "User unblocked successfully",
+    "eventManagement": "Event management",
+    "deleteEventConfirm": "Are you sure you want to delete the event \"{title}\"? This action cannot be undone.",
+    "events": {
+      "title": "Events",
+      "description": "Description",
+      "room": "Room",
+      "startTime": "Start time",
+      "endTime": "End time",
+      "createEvent": "Create event",
+      "editEvent": "Edit event",
+      "deleteEvent": "Delete event",
+      "noEvents": "No events found",
+      "conflictWarning": "This event cannot be deleted because active or pending reservations exist for the affected room during this time."
+    }
   },
   "home": {
     "heroTitle": "Your Adventure Starts Here",

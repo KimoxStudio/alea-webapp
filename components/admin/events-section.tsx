@@ -60,6 +60,7 @@ function EventFormDialog({
   setForm,
   onSubmit,
   isPending,
+  error,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -69,6 +70,7 @@ function EventFormDialog({
   setForm: (f: EventFormState) => void
   onSubmit: (e: React.FormEvent) => void
   isPending: boolean
+  error?: string | null
 }) {
   const t = useTranslations('admin')
   const tc = useTranslations('common')
@@ -173,6 +175,11 @@ function EventFormDialog({
               />
             </div>
           </div>
+          {error && (
+            <div role="alert" className="rounded-md bg-destructive/15 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+              {error}
+            </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="border-border">
               {tc('cancel')}
@@ -334,6 +341,8 @@ export function EventsSection() {
 
   const [deletingEvent, setDeletingEvent] = useState<AdminEvent | null>(null)
   const [deleteConflictError, setDeleteConflictError] = useState<string | null>(null)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [updateError, setUpdateError] = useState<string | null>(null)
 
   function openEdit(event: AdminEvent) {
     setEditingEvent(event)
@@ -347,33 +356,49 @@ export function EventsSection() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
-    await createEvent.mutateAsync({
-      title: createForm.title.trim(),
-      description: createForm.description.trim() || null,
-      date: createForm.date,
-      startTime: createForm.startTime,
-      endTime: createForm.endTime,
-      roomId: createForm.roomId === NONE_ROOM ? null : createForm.roomId,
-    })
-    setCreateForm(emptyForm())
-    setShowCreate(false)
+    setCreateError(null)
+    try {
+      await createEvent.mutateAsync({
+        title: createForm.title.trim(),
+        description: createForm.description.trim() || null,
+        date: createForm.date,
+        startTime: createForm.startTime,
+        endTime: createForm.endTime,
+        roomId: createForm.roomId === NONE_ROOM ? null : createForm.roomId,
+      })
+      setCreateForm(emptyForm())
+      setShowCreate(false)
+    } catch (err: unknown) {
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message ?? String(err)
+      setCreateError(msg)
+    }
   }
 
   async function handleUpdate(e: React.FormEvent) {
     e.preventDefault()
     if (!editingEvent) return
-    await updateEvent.mutateAsync({
-      id: editingEvent.id,
-      data: {
-        title: editForm.title.trim(),
-        description: editForm.description.trim() || null,
-        date: editForm.date,
-        startTime: editForm.startTime,
-        endTime: editForm.endTime,
-        roomId: editForm.roomId === NONE_ROOM ? null : editForm.roomId,
-      },
-    })
-    setEditingEvent(null)
+    setUpdateError(null)
+    try {
+      await updateEvent.mutateAsync({
+        id: editingEvent.id,
+        data: {
+          title: editForm.title.trim(),
+          description: editForm.description.trim() || null,
+          date: editForm.date,
+          startTime: editForm.startTime,
+          endTime: editForm.endTime,
+          roomId: editForm.roomId === NONE_ROOM ? null : editForm.roomId,
+        },
+      })
+      setEditingEvent(null)
+    } catch (err: unknown) {
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message ?? String(err)
+      setUpdateError(msg)
+    }
   }
 
   async function handleDelete() {
@@ -453,25 +478,27 @@ export function EventsSection() {
       {/* Create Dialog */}
       <EventFormDialog
         open={showCreate}
-        onOpenChange={setShowCreate}
+        onOpenChange={(open) => { setShowCreate(open); if (!open) setCreateError(null) }}
         dialogId="create-event"
         title={t('events.createEvent')}
         form={createForm}
         setForm={setCreateForm}
         onSubmit={handleCreate}
         isPending={createEvent.isPending}
+        error={createError}
       />
 
       {/* Edit Dialog */}
       <EventFormDialog
         open={!!editingEvent}
-        onOpenChange={(open) => { if (!open) setEditingEvent(null) }}
+        onOpenChange={(open) => { if (!open) { setEditingEvent(null); setUpdateError(null) } }}
         dialogId="edit-event"
         title={t('events.editEvent')}
         form={editForm}
         setForm={setEditForm}
         onSubmit={handleUpdate}
         isPending={updateEvent.isPending}
+        error={updateError}
       />
 
       {/* Delete Dialog */}

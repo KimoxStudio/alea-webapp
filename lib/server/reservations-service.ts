@@ -328,6 +328,13 @@ export async function createReservationForSession(
     serviceError('Invalid reservation time range', 400)
   }
 
+  // Reject reservations in the past. Compare against the club's local timezone.
+  const clubTz = process.env.CLUB_TIMEZONE ?? 'Europe/Madrid'
+  const todayInClub = new Intl.DateTimeFormat('en-CA', { timeZone: clubTz }).format(new Date())
+  if (date < todayInClub) {
+    serviceError('Cannot make a reservation in the past', 400)
+  }
+
   const supabase = await createSupabaseServerClient()
 
   await checkUserSlotOverlap(session.id, date, startTime, endTime, supabase)

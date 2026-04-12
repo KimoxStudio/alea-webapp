@@ -119,7 +119,21 @@
     "resetNoShows": "Reiniciar no-shows",
     "unblockUser": "Desbloquear",
     "noShowsReset": "No-shows reiniciados con éxito",
-    "userUnblocked": "Usuario desbloqueado con éxito"
+    "userUnblocked": "Usuario desbloqueado con éxito",
+    "eventManagement": "Gestión de eventos",
+    "deleteEventConfirm": "¿Estás seguro de que deseas eliminar el evento \"{title}\"? Esta acción no se puede deshacer.",
+    "events": {
+      "title": "Eventos",
+      "description": "Descripción",
+      "room": "Sala",
+      "startTime": "Hora de inicio",
+      "endTime": "Hora de fin",
+      "createEvent": "Crear evento",
+      "editEvent": "Editar evento",
+      "deleteEvent": "Eliminar evento",
+      "noEvents": "No se encontraron eventos",
+      "conflictWarning": "Este evento no se puede eliminar porque existen reservas activas o pendientes para la sala afectada en este horario."
+    }
   },
   "home": {
     "heroTitle": "Tu Aventura Comienza Aquí",
