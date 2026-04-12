@@ -16,7 +16,8 @@ CREATE TABLE public.events (
   start_time  time NOT NULL,
   end_time    time NOT NULL,
   created_by  uuid REFERENCES auth.users (id) ON DELETE SET NULL,
-  created_at  timestamptz NOT NULL DEFAULT now()
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT events_valid_time_range CHECK (end_time > start_time)
 );
 
 CREATE INDEX events_date_idx ON public.events (date);
@@ -31,7 +32,8 @@ CREATE TABLE public.event_room_blocks (
   room_id    uuid NOT NULL REFERENCES public.rooms (id) ON DELETE CASCADE,
   date       date NOT NULL,
   start_time time NOT NULL,
-  end_time   time NOT NULL
+  end_time   time NOT NULL,
+  CONSTRAINT event_room_blocks_valid_time_range CHECK (end_time > start_time)
 );
 
 CREATE INDEX event_room_blocks_event_id_idx ON public.event_room_blocks (event_id);
