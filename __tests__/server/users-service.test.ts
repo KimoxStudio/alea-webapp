@@ -277,6 +277,14 @@ describe('updateUser', () => {
     await expect(updateUser('1', { memberNumber: '1'.repeat(10) })).resolves.toBeDefined()
   })
 
+  it('throws 400 when memberNumber contains non-numeric characters', async () => {
+    const { updateUser } = await loadUsersModules()
+
+    await expect(updateUser('1', { memberNumber: 'abc12' })).rejects.toMatchObject({
+      statusCode: 400,
+    })
+  })
+
   it('accepts is_active boolean and includes it in the update', async () => {
     let capturedUpdates: Record<string, unknown> | undefined
     vi.mocked(
