@@ -5,7 +5,7 @@
 
 ---
 
-## Last updated: 2026-04-11
+## Last updated: 2026-04-12
 
 ## ⚠️ MVP TARGET: Monday 2026-04-14
 
@@ -15,9 +15,8 @@
 ## Open PRs — ready to merge (team-review clean, all comments resolved)
 | PR | Branch | Issues | Tests |
 |---|---|---|---|
-| [#79](https://github.com/KimoxStudio/alea-webapp/pull/79) | `feat/cancellation-cutoff` | KIM-331, KIM-340, KIM-342 | 266 ✅ |
-| [#80](https://github.com/KimoxStudio/alea-webapp/pull/80) | `chore/seed-data` | KIM-306 | SQL only ✅ |
-| [#81](https://github.com/KimoxStudio/alea-webapp/pull/81) | `feat/overlap-ui-feedback` | KIM-337 | 269 ✅ |
+| [#82](https://github.com/KimoxStudio/alea-webapp/pull/82) | `feat/cancellation-cutoff-ui` | KIM-341 | 279 ✅ — needs manual QA (3 checklist items in PR description) |
+| [#83](https://github.com/KimoxStudio/alea-webapp/pull/83) | `fix/pending-reservation-cancel` | KIM-362 | 279 ✅ ready to merge |
 
 ## Merged this session
 | PR | Branch | Issues |
@@ -25,6 +24,9 @@
 | ~~#76~~ | `feat/auto-cancel-grace-period` | KIM-327 ✅ Done |
 | ~~#77~~ | `feat/overlap-restriction` | KIM-330 ✅ Done · KIM-338 ✅ Done |
 | ~~#78~~ | `fix/auth-i18n-errors` | KIM-325 ✅ Done |
+| ~~#79~~ | `feat/cancellation-cutoff` | KIM-331 ✅ · KIM-340 ✅ · KIM-342 ✅ Done |
+| ~~#80~~ | `chore/seed-data` | KIM-306 ✅ Done |
+| ~~#81~~ | `feat/overlap-ui-feedback` | KIM-337 ✅ Done |
 
 ---
 
@@ -35,27 +37,23 @@
 - **KIM-330 + KIM-338** (M3) — overlap restriction — merged PR #77
 - **KIM-325** — auth i18n double-namespace — merged PR #78
 - **KIM-358** — toGameTable mapper — already in develop (no PR needed)
+- **KIM-331 + KIM-340 + KIM-342** (M5) — cancellation cutoff backend — merged PR #79
+- **KIM-306** — seed data — merged PR #80
+- **KIM-337** — overlap UI feedback — merged PR #81
 
 ### 🟡 Awaiting merge
-- **KIM-331 + KIM-340 + KIM-342** (M5) — cancellation cutoff backend + tests — PR #79 ✅ all comments resolved
-- **KIM-306** — seed data — PR #80 ✅ all comments resolved
-- **KIM-337** — overlap UI feedback — PR #81 ✅ clean
+- **KIM-341** — cancellation cutoff UI — PR #82 ✅ team-review clean · ⚠️ needs manual QA first
+  - Checklist: cancel > 60 min → succeeds, cancel < 60 min → inline error shown, dismiss dialog clears error
+- **KIM-362** — pending reservations cancellable — PR #83 ✅ ready to merge
 
-### 🔴 Next after PR #79 merges: KIM-341 — Cancellation Cutoff UI
-**Branch:** `feat/cancellation-cutoff-ui` from `develop` (after PR #79 merges)
-**Files:** `components/reservations/my-reservations-view.tsx`, `messages/en.json`, `messages/es.json`
-**Skill:** `frontend-design`
-**Add:** Detect `CANCELLATION_CUTOFF` 403 response; show inline warning with `reservations.errors.cancellationCutoff` message
-
-### 🟡 After PRs #79/#80/#81 merge
-Nothing else MVP-critical is blocked. Sunday work:
-- **KIM-341** — cutoff UI (needs M5/PR #79 merged)
-- Final smoke test across all flows
+### 🔴 After PRs merge: Final smoke test → Monday launch
 
 ---
 
 ## Post-MVP (do NOT start before launch)
 
+- **KIM-361** — Spanish translations with missing ñ (open Linear issue)
+- **KIM-317** — 24h time range for reservations (open Linear issue)
 - **KIM-329 epic** (no-show tracking) — KIM-329, 333, 334, 335, 336
 - **KIM-332 epic** (events / room blocking) — KIM-332, 343, 344, 345, 346, 347
 - **KIM-348 epic** (equipment management) — KIM-348–356
@@ -67,23 +65,21 @@ Nothing else MVP-critical is blocked. Sunday work:
 
 ---
 
-## Recommended execution order for MVP weekend
+## Recommended execution order for Monday launch
 
 ```
-Saturday (completed):
-  ✅ Merge #76 (KIM-327)
-  ✅ Merge #77 (KIM-330, KIM-338)
-  ✅ Merge #78 (KIM-325)
-  ✅ Open PR #79 (M5 — KIM-331+340+342) — all comments resolved
-  ✅ Open PR #80 (KIM-306 seed) — all comments resolved
-  ✅ Open PR #81 (KIM-337 overlap UI) — clean
+Sunday (completed):
+  ✅ Merge #79 (KIM-331+340+342)
+  ✅ Merge #80 (KIM-306)
+  ✅ Merge #81 (KIM-337)
+  ✅ Open PR #82 (KIM-341 cutoff UI) — team-review clean
+  ✅ Open PR #83 (KIM-362 pending cancel) — team-review clean
 
-Sunday:
-  → Merge #79, #80, #81
-  → feat/cancellation-cutoff-ui (KIM-341) — after M5 merged
-  → Final smoke tests
-
-Monday: Launch
+Monday:
+  → Manual QA on PR #82 (3 checklist items)
+  → Merge #82 + #83
+  → Final smoke tests across all flows
+  → Launch
 ```
 
 ---

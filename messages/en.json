@@ -50,7 +50,7 @@
       "passwordMaxLength": "Password must not exceed 1024 characters",
       "passwordsDoNotMatch": "Passwords do not match",
       "memberNumberRequired": "Member number is required",
-      "memberNumberTooLong": "Member number must not exceed 20 characters",
+      "memberNumberTooLong": "Member number must not exceed 10 digits",
       "memberNumberNumeric": "Member number must contain only digits",
       "memberNumberExists": "This member number is already registered"
     }

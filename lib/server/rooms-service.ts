@@ -253,18 +253,13 @@ export async function createTableEntry(
 
   const tableRow = data as TableRow
 
-  // Generate QR codes after table creation. If QR generation fails (e.g. missing
-  // NEXT_PUBLIC_APP_URL), log the error and return the table without QR — the admin
-  // can regenerate later via the dashboard.
-  try {
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
-    if (appUrl) {
-      const { qr_code, qr_code_inf } = await regenerateQrCodes(tableRow.id)
-      tableRow.qr_code = qr_code
-      if (qr_code_inf != null) tableRow.qr_code_inf = qr_code_inf
-    }
-  } catch (qrErr) {
-    console.error('[createTableEntry] QR generation failed — table created without QR code:', qrErr)
+  // Fire-and-forget: generate QR codes without blocking the POST response.
+  // If QR generation fails the admin can regenerate later via the dashboard.
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
+  if (appUrl) {
+    regenerateQrCodes(tableRow.id).catch((qrErr: unknown) => {
+      console.error('[createTableEntry] QR generation failed in background:', qrErr)
+    })
   }
 
   return toGameTable(tableRow)

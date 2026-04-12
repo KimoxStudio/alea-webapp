@@ -8,7 +8,7 @@ type ReservationRow = Tables<'reservations'>
 type TableRow = Tables<'tables'>
 type PostgrestErrorLike = { code?: string }
 type TablesLookupClient = {
-  select: () => {
+  select: (columns?: string) => {
     eq: (column: 'id', value: string) => {
       maybeSingle: () => Promise<{ data: TableRow | null; error: unknown }>
     }
@@ -143,7 +143,7 @@ async function getTable(tableId: string) {
   const supabase = await createSupabaseServerClient()
   const tables = supabase.from('tables') as unknown as TablesLookupClient
   const { data, error } = await tables
-    .select()
+    .select('id, type')
     .eq('id', tableId)
     .maybeSingle()
 
@@ -459,9 +459,10 @@ type ActivationAdminQuery = {
   eq: (column: 'table_id' | 'date' | 'status' | 'user_id' | 'surface' | 'id', value: string) => ActivationAdminQuery
   or: (filter: string) => ActivationAdminQuery
   maybeSingle: () => Promise<{ data: ReservationRow | null; error: unknown }>
-  select: (columns: string) => ActivationAdminQuery
+  select: (columns?: string) => ActivationAdminQuery
   update: (values: TablesUpdate<'reservations'>) => ActivationAdminQuery
   single: () => Promise<{ data: ReservationRow | null; error: PostgrestErrorLike | null }>
+  then: Promise<{ data: ReservationRow | null; error: PostgrestErrorLike | null }>['then']
 }
 
 export async function activateReservationByTable(
@@ -469,14 +470,35 @@ export async function activateReservationByTable(
   userId: string,
   side?: 'inf',
 ): Promise<Reservation> {
-  // NOTE: We use today's UTC date as a string anchor only for the
-  // initial DB query. The time-window check below uses the reservation's own
-  // stored date so the logic is self-consistent even if the request arrives
-  // near midnight. A full timezone fix should pass an IANA zone from the
-  // client or club config and use a proper date library (e.g. date-fns-tz).
-  // TODO(timezone): use venue local timezone instead of UTC — UTC may be off by
-  // 1-2 hours relative to the venue's wall-clock date near midnight.
-  const today = new Date().toISOString().slice(0, 10)
+  // Anchor "today" in the club's local timezone so near-midnight requests on
+  // DST transition days resolve to the correct calendar date.
+  const clubTimezone = process.env.CLUB_TIMEZONE ?? 'Europe/Madrid'
+  let today: string
+  try {
+    today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: clubTimezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date())
+  } catch {
+    console.error(`[activateReservationByTable] Invalid CLUB_TIMEZONE: "${clubTimezone}", falling back to Europe/Madrid`)
+    today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Madrid',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date())
+  }
+
+  // Look up the table via the session-scoped client to decide whether to apply
+  // a surface filter. removable_top tables store surface='top'/'bottom'; all
+  // other types store null — filtering by surface for those would always fail.
+  const table = await getTable(tableId)
+  if (!table) {
+    serviceError('Table not found', 404)
+  }
+  const isRemovableTop = table.type === 'removable_top'
 
   const admin = createSupabaseServerAdminClient()
 
@@ -489,10 +511,10 @@ export async function activateReservationByTable(
 
   if (side === 'inf') {
     pendingQuery = pendingQuery.eq('surface', 'bottom')
-  } else {
-    // Non-removable (single-surface) tables store surface = null;
-    // removable tables store surface = 'top' for the superior side.
-    pendingQuery = pendingQuery.or('surface.eq.top,surface.is.null')
+  } else if (isRemovableTop) {
+    // Only filter by surface for removable_top tables — other types store null
+    // and an .eq('surface', 'top') filter would incorrectly exclude their rows.
+    pendingQuery = pendingQuery.eq('surface', 'top')
   }
 
   const { data: pendingData, error: pendingError } = await pendingQuery.maybeSingle()
@@ -511,11 +533,15 @@ export async function activateReservationByTable(
 
     if (side === 'inf') {
       activeQuery = activeQuery.eq('surface', 'bottom')
-    } else {
-      activeQuery = activeQuery.or('surface.eq.top,surface.is.null')
+    } else if (isRemovableTop) {
+      activeQuery = activeQuery.eq('surface', 'top')
     }
 
-    const { data: activeData } = await activeQuery.maybeSingle()
+    const { data: activeData, error: activeError } = await activeQuery.maybeSingle()
+
+    if (activeError) {
+      serviceError('Internal server error', 500)
+    }
 
     if (activeData) {
       serviceError('CHECK_IN_ALREADY_ACTIVE', 409)
@@ -528,10 +554,19 @@ export async function activateReservationByTable(
 
   const now = new Date()
   const startTimeParts = normalizeTime(reservation.start_time).split(':')
-  // Anchor on the reservation's own stored date (not the UTC "today" computed
-  // at request time) so the window calculation is self-consistent.
-  const reservationStart = new Date(reservation.date)
-  reservationStart.setHours(parseInt(startTimeParts[0], 10), parseInt(startTimeParts[1], 10), 0, 0)
+  // Anchor on the reservation's own stored date. The server is expected to run
+  // in the club timezone (CLUB_TIMEZONE). A full UTC-anchored conversion for
+  // the time window requires test fixture updates (tracked separately).
+  const dateParts = reservation.date.split('-')
+  const reservationStart = new Date(
+    parseInt(dateParts[0]!, 10),
+    parseInt(dateParts[1]!, 10) - 1,
+    parseInt(dateParts[2]!, 10),
+    parseInt(startTimeParts[0]!, 10),
+    parseInt(startTimeParts[1]!, 10),
+    0,
+    0,
+  )
 
   const windowEnd = new Date(reservationStart.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
 
@@ -542,14 +577,25 @@ export async function activateReservationByTable(
     serviceError('CHECK_IN_TOO_LATE', 400)
   }
 
-  const { data: updated, error: updateError } = await (admin.from('reservations') as unknown as { update: (v: TablesUpdate<'reservations'>) => ActivationAdminQuery })
+  const { data: updated, error: updateError } = await admin
+    .from('reservations')
     .update({ status: 'active', activated_at: now.toISOString() })
     .eq('id', reservation.id)
+    .eq('status', 'pending')
     .select(RESERVATION_COLUMNS)
     .single()
 
-  if (updateError || !updated) {
+  // PGRST116: PostgREST returns this code when .single() matches zero rows.
+  // Here it means the reservation was already activated by a concurrent request
+  // (TOCTOU race) between our read and this UPDATE. Return 409, not 500.
+  if ((updateError as PostgrestErrorLike | null)?.code === 'PGRST116') {
+    serviceError('CHECK_IN_ALREADY_ACTIVE', 409)
+  }
+  if (updateError) {
     serviceError('Internal server error', 500)
+  }
+  if (!updated) {
+    serviceError('CHECK_IN_ALREADY_ACTIVE', 409)
   }
 
   return mapReservation(updated as ReservationRow)

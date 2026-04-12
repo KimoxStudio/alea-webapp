@@ -1,7 +1,8 @@
 import type { PaginatedResponse, User } from '@/lib/types'
-import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseServerAdminClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
 import type { Tables, TablesUpdate } from '@/lib/supabase/types'
+import { memberNumberSchema } from '@/lib/validations/auth'
 
 type ProfileRow = Tables<'profiles'>
 type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'is_active' | 'created_at' | 'updated_at'>
@@ -103,12 +104,12 @@ export async function listPaginatedUsers(input: {
 
 export async function updateUser(id: string, body: { memberNumber?: unknown; role?: unknown; is_active?: unknown }) {
   const updates: TablesUpdate<'profiles'> = {}
-  if (body.memberNumber) {
-    const memberNumber = String(body.memberNumber)
-    if (memberNumber.length > 20) {
-      serviceError('memberNumber must be at most 20 characters', 400)
+  if (body.memberNumber !== undefined) {
+    const parsed = memberNumberSchema.safeParse(String(body.memberNumber))
+    if (!parsed.success) {
+      serviceError('Invalid member number format', 400)
     }
-    updates.member_number = memberNumber
+    updates.member_number = parsed.data
   }
   if (body.role === 'admin' || body.role === 'member') updates.role = body.role
   if (typeof body.is_active === 'boolean') updates.is_active = body.is_active

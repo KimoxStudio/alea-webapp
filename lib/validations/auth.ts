@@ -15,10 +15,10 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'errors.passwordRequired').max(1024, 'errors.passwordMaxLength'),
 })
 
-const memberNumberSchema = z
+export const memberNumberSchema = z
   .string()
   .min(1, 'errors.memberNumberRequired')
-  .max(20, 'errors.memberNumberTooLong')
+  .max(10, 'errors.memberNumberTooLong')
   .regex(/^\d+$/, 'errors.memberNumberNumeric')
 
 export const registerSchema = z

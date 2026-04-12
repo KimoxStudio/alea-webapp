@@ -6,6 +6,7 @@ const listRoomsMock = vi.fn()
 const listTablesMock = vi.fn()
 const listReservationsMock = vi.fn()
 const updateMock = vi.fn()
+const regenerateQrCodesMock = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn(async () => ({
@@ -89,6 +90,10 @@ vi.mock('@/lib/supabase/server', () => ({
       }
     }),
   })),
+}))
+
+vi.mock('@/lib/server/tables-service', () => ({
+  regenerateQrCodes: regenerateQrCodesMock,
 }))
 
 async function loadRoomsModules() {
@@ -257,6 +262,10 @@ describe('createTableEntry', () => {
     })
   })
 
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('maps a foreign-key violation (23503) to a 400 ServiceError', async () => {
     maybeSingleMock.mockResolvedValue({ data: null, error: { code: '23503', message: 'FK violation' } })
     const { createTableEntry } = await loadRoomsModules()
@@ -291,6 +300,48 @@ describe('createTableEntry', () => {
       name: 'ServiceError',
       statusCode: 400,
     })
+  })
+
+  it('resolves immediately even if QR generation fails', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://test.example.com')
+    regenerateQrCodesMock.mockRejectedValue(new Error('QR generation failed'))
+    const { createTableEntry } = await loadRoomsModules()
+
+    // Should not throw even though regenerateQrCodes rejects
+    const result = await createTableEntry('1', { name: 'Mesa 1', type: 'small' })
+    expect(result).toMatchObject({ name: 'Mesa 1', type: 'small' })
+  })
+
+  it('does not await QR generation (fire-and-forget)', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://test.example.com')
+    let qrResolve: (() => void) | null = null
+    const qrPromise = new Promise<void>((resolve) => {
+      qrResolve = resolve
+    })
+    regenerateQrCodesMock.mockReturnValue(qrPromise)
+    const { createTableEntry } = await loadRoomsModules()
+
+    // Call createTableEntry
+    const resultPromise = createTableEntry('1', { name: 'Mesa 1', type: 'small' })
+
+    // createTableEntry should resolve immediately without waiting for QR generation
+    const result = await resultPromise
+    expect(result).toMatchObject({ name: 'Mesa 1', type: 'small' })
+
+    // Now resolve the QR generation to clean up
+    qrResolve?.()
+    await qrPromise
+  })
+
+  it('skips QR generation when NEXT_PUBLIC_APP_URL is absent', async () => {
+    // Task 6: when NEXT_PUBLIC_APP_URL is empty/unset, regenerateQrCodes must NOT be called
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', '')
+    const { createTableEntry } = await loadRoomsModules()
+
+    const result = await createTableEntry('1', { name: 'Mesa 1', type: 'small' })
+
+    expect(result).toMatchObject({ name: 'Mesa 1', type: 'small' })
+    expect(regenerateQrCodesMock).not.toHaveBeenCalled()
   })
 })
 
