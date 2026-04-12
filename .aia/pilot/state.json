@@ -1,193 +1,99 @@
 {
 	"status": "wait",
-	"currentActivity": "1 other execution(s) also running: exec-1776009115038-mkh0c41j9 — will adopt next",
-	"objective": "Autonomous mode — decide yourself what to work on. Analyze the project state (git log, recent ANALYSIS.md reports, coverage gaps, open bugs) and pick the single highest-impact task. Rotate across areas: coverage, bug hunting, code quality, UX polish, tech debt. Prefer tasks that unblock future work or prevent regressions. Justify your choice briefly in the decision reason.",
-	"priority": "quality",
+	"currentActivity": "Adopted running execution exec-1776000476851-76ihxqa6d: \"Fix cutoff reservations active section KIM-364\"",
+	"objective": "Follow docs/ALEA-EXECUTION-PLAN.md strictly. Read the file to find the next incomplete milestone in sequence. Implement it exactly as described (files, acceptance criteria). Create a feature branch off develop, run pnpm typecheck && pnpm build && pnpm test, open PR targeting develop. Then move to the next milestone. Test files in __tests__/ are exclusively owned by the tester agent — developer must never touch them. Never merge into develop — only open PRs.",
+	"priority": "features",
+	"currentTask": null,
 	"tasksCompleted": 0,
 	"recentActivity": [
 		{
-			"id": "activity-1776008388487-040srn",
+			"id": "activity-1776009977759-ccs7s2",
+			"type": "bootstrap_check",
+			"status": "completed",
+			"title": "Checking project structure...",
+			"description": "Checking project structure...",
+			"timestamp": 1776009977759
+		},
+		{
+			"id": "activity-1776009977761-bgxnmb",
+			"type": "bootstrap_check",
+			"status": "completed",
+			"title": "PROJECT.md found",
+			"description": "PROJECT.md found",
+			"timestamp": 1776009977761
+		},
+		{
+			"id": "activity-1776009977761-m96k6h",
+			"type": "bootstrap_check",
+			"status": "completed",
+			"title": "Found 5 agents",
+			"description": "Found 5 agents",
+			"timestamp": 1776009977761,
+			"meta": {
+				"agents": [
+					"developer.json",
+					"tester.json",
+					"reviewer.json",
+					"backend-developer.json",
+					"frontend-developer.json"
+				]
+			}
+		},
+		{
+			"id": "activity-1776009977761-6lndwz",
+			"type": "bootstrap_check",
+			"status": "completed",
+			"title": "Found 3 workflows",
+			"description": "Found 3 workflows",
+			"timestamp": 1776009977761,
+			"meta": {
+				"workflows": [
+					"feature.json",
+					"backend-feature.json",
+					"frontend-feature.json"
+				]
+			}
+		},
+		{
+			"id": "activity-1776009977761-uhxib3",
 			"type": "info",
 			"status": "completed",
 			"title": "Bootstrap complete",
 			"description": "Ready: 5 agents, 3 workflows",
-			"timestamp": 1776008388487
+			"timestamp": 1776009977761
 		},
 		{
-			"id": "activity-1776008393493-cfo334",
+			"id": "activity-1776009982770-7wzr2i",
 			"type": "info",
 			"status": "pending",
-			"title": "Found unmerged execution exec-1776003533604-svef26h4k — attempting auto-merge",
+			"title": "Found unmerged execution exec-1776009115038-mkh0c41j9 — attempting auto-merge",
 			"description": "Completed execution launched outside this pilot session",
-			"timestamp": 1776008393493,
-			"executionId": "exec-1776003533604-svef26h4k"
+			"timestamp": 1776009982770,
+			"executionId": "exec-1776009115038-mkh0c41j9"
 		},
 		{
-			"id": "activity-1776008426078-rsugqo",
-			"type": "info",
-			"status": "running",
-			"title": "Structured merge failed — spawning LLM to fix repo state",
-			"description": "The LLM will inspect and fix the repo state, then retry the merge.",
-			"timestamp": 1776008426078,
-			"executionId": "exec-1776003533604-svef26h4k"
-		},
-		{
-			"id": "activity-1776008649516-x5vdg6",
-			"type": "info",
-			"status": "completed",
-			"title": "Merge failed after LLM fix attempt — worktree discarded",
-			"description": "All merge strategies exhausted for exec-1776003533604-svef26h4k. The pilot will re-attempt this task from scratch.",
-			"timestamp": 1776008649516,
-			"executionId": "exec-1776003533604-svef26h4k"
-		},
-		{
-			"id": "activity-1776008649517-itkk77",
-			"type": "info",
-			"status": "pending",
-			"title": "Found unmerged execution exec-1776004246685-isj6kyoxy — attempting auto-merge",
-			"description": "Completed execution launched outside this pilot session",
-			"timestamp": 1776008649517,
-			"executionId": "exec-1776004246685-isj6kyoxy"
-		},
-		{
-			"id": "activity-1776008696688-ympwj7",
-			"type": "info",
-			"status": "running",
-			"title": "Structured merge failed — spawning LLM to fix repo state",
-			"description": "The LLM will inspect and fix the repo state, then retry the merge.",
-			"timestamp": 1776008696688,
-			"executionId": "exec-1776004246685-isj6kyoxy"
-		},
-		{
-			"id": "activity-1776008808131-kkq8gr",
-			"type": "info",
-			"status": "completed",
-			"title": "Merge failed after LLM fix attempt — worktree discarded",
-			"description": "All merge strategies exhausted for exec-1776004246685-isj6kyoxy. The pilot will re-attempt this task from scratch.",
-			"timestamp": 1776008808131,
-			"executionId": "exec-1776004246685-isj6kyoxy"
-		},
-		{
-			"id": "activity-1776008808132-esjpca",
-			"type": "info",
-			"status": "pending",
-			"title": "Found unmerged execution exec-1775999489203-14b40340v — attempting auto-merge",
-			"description": "Completed execution launched outside this pilot session",
-			"timestamp": 1776008808132,
-			"executionId": "exec-1775999489203-14b40340v"
-		},
-		{
-			"id": "activity-1776008881711-6lrrzq",
+			"id": "activity-1776009983802-njtmcv",
 			"type": "workflow_complete",
 			"status": "completed",
-			"title": "Auto-merged exec-1775999489203-14b40340v",
-			"description": "Merged 158 commit(s) to main",
-			"timestamp": 1776008881711,
-			"executionId": "exec-1775999489203-14b40340v"
+			"title": "Auto-merged exec-1776009115038-mkh0c41j9",
+			"description": "Merged 1 commit(s) to main",
+			"timestamp": 1776009983802,
+			"executionId": "exec-1776009115038-mkh0c41j9"
 		},
 		{
-			"id": "activity-1776008881729-9u8tvt",
-			"type": "thinking",
-			"status": "running",
-			"title": "Analyzing project state...",
-			"description": "Gathering context: git log, analyses, coverage, workflows",
-			"timestamp": 1776008881729
-		},
-		{
-			"id": "activity-1776008942832-f4zo64",
-			"type": "decision",
-			"status": "running",
-			"title": "Quick check: Audit test coverage gaps in recently hardened areas",
-			"description": "Quick check: Audit test coverage gaps in recently hardened areas",
-			"timestamp": 1776008942832,
-			"thinking": "{\n  \"type\": \"quick_check\",\n  \"task\": \"Audit test coverage gaps in recently hardened areas\",\n  \"prompt\": \"You are auditing the test coverage of recently changed files in this Next.js/Supabase webapp. The project uses Vitest + Testing Library. Recent work touched: check-in activation flow, auth memberNumber validation, reservations cancellation cutoff, and overlap detection.\\n\\nPlease do the following:\\n1. List all test files under `__tests__/` and any `*.test.ts(x)` files in the repo\\n2. List the key service/route files that were recently changed: `lib/server/reservations-service.ts`, `lib/server/users-service.ts`, `lib/server/tables-service.ts`, `app/api/` route handlers, `app/[locale]/checkin/` pages\\n3. For each service file, check if a corresponding test file exists and roughly how many test cases it has (count `it(` or `test(` occurrences)\\n4. Identify the top 3 coverage gaps — service functions or route handlers with no tests or thin coverage\\n5. Check if `pnpm test` or `pnpm vitest run` is configured in package.json\\n\\nReport: a concise gap analysis (under 300 words) listing the 3 highest-priority untested areas with file paths.\"\n}"
-		},
-		{
-			"id": "activity-1776009045839-icgvb5",
-			"type": "info",
-			"status": "completed",
-			"title": "Quick check complete: Audit test coverage gaps in recently hardened areas",
-			"description": "Here is the gap analysis:\n\n---\n\n## Test Coverage Gap Analysis\n\n**Test runner:** `pnpm test` → `vitest run` (configured). `pnpm test:coverage` also available.\n\n### Coverage inventory\n\n| File | Test fil",
-			"timestamp": 1776009045839
-		},
-		{
-			"id": "activity-1776009050881-d21ta1",
-			"type": "thinking",
-			"status": "running",
-			"title": "Analyzing project state...",
-			"description": "Gathering context: git log, analyses, coverage, workflows",
-			"timestamp": 1776009050881
-		},
-		{
-			"id": "activity-1776009109850-ojaai2",
-			"type": "decision",
-			"status": "completed",
-			"title": "Run \"backend-feature\": Add HTTP-layer tests for app/api/tables/[id]/activate/route.ts",
-			"description": "Add comprehensive Vitest unit tests for the check-in activation route handler at `app/api/tables/[id]/activate/route.ts`.\n\nContext: This route is the HTTP entry point for QR check-in activation (KIM-3",
-			"timestamp": 1776009109850,
-			"workflowName": "backend-feature",
-			"thinking": "{\n  \"type\": \"run_workflow\",\n  \"workflow\": \"backend-feature\",\n  \"task\": \"Add HTTP-layer tests for app/api/tables/[id]/activate/route.ts\",\n  \"prompt\": \"Add comprehensive Vitest unit tests for the check-in activation route handler at `app/api/tables/[id]/activate/route.ts`.\\n\\nContext: This route is the HTTP entry point for QR check-in activation (KIM-357). It owns auth/session parsing, locale validation, UUID redirect target, CLUB_TIMEZONE env guard, TOCTOU protection, and null table guard. The service layer (`lib/server/reservations-service.ts` → `activateReservationByTable`) already has 20+ test cases, but the route handler itself has ZERO tests. All critical hardening lives at this boundary.\\n\\nTest file destination: `__tests__/server/activate-route.test.ts` (or `__tests__/api/tables/activate-route.test.ts` — match the pattern used by existing route tests in the repo).\\n\\nCases to cover (minimum):\\n1. Happy path — valid session + valid locale + valid table UUID → calls `activateReservationByTable`, returns 200/redirect\\n2. Missing/invalid session → 401\\n3. Invalid locale in URL → redirect to `/` (not `/rooms`)\\n4. Missing CLUB_TIMEZONE env var → appropriate error or fallback behavior\\n5. Table not found (service returns null/404) → 404\\n6. TOCTOU: already-activated reservation (service returns 409) → 409 propagated correctly\\n7. PGRST116 error from service → mapped to correct HTTP status\\n8. Malformed table UUID in path param → 400 or redirect\\n9. Non-pending reservation attempt → 409\\n\\nConventions to follow:\\n- Look at `__tests__/server/reservations-service.test.ts` and `__tests__/components/check-in/check-in-activator.test.tsx` for mock patterns\\n- Mock `createSupabaseServerClient` and `createSupabaseServerAdminClient` from `lib/supabase/server`\\n- Mock `next/headers` for session/cookie access\\n- Use `vi.mock` with `vi.hoisted()` pattern where needed (see existing test files for the pattern used in this repo)\\n- Do NOT modify any implementation files — tests only\\n- Maintain i18n parity is not required here (this is a route handler, not a component)\\n\\nAfter writing tests, run `pnpm test` to confirm all pass and there are no TypeScript errors. Run `pnpm build` to confirm `tsconfig.app.json` is not broken (test files must be excluded from app tsconfig).\\n\\nDo NOT create or modify any documentation files.\"\n}"
-		},
-		{
-			"id": "activity-1776009114854-zgw7yp",
-			"type": "workflow_start",
-			"status": "running",
-			"title": "Launching backend-feature",
-			"description": "Add HTTP-layer tests for app/api/tables/[id]/activate/route.ts",
-			"timestamp": 1776009114854,
-			"workflowName": "backend-feature"
-		},
-		{
-			"id": "activity-1776009144860-fh2jjr",
-			"type": "error",
-			"status": "failed",
-			"title": "Could not extract execution ID from workflow launch",
-			"description": "timeout: No launch envelope in 30s. stderr: (empty)",
-			"timestamp": 1776009144860,
-			"durationMs": 30006,
-			"workflowName": "backend-feature"
-		},
-		{
-			"id": "activity-1776009154865-vhq42y",
-			"type": "info",
-			"status": "pending",
-			"title": "Found unmerged execution exec-1776004808024-ggkv7oo8r — attempting auto-merge",
-			"description": "Completed execution launched outside this pilot session",
-			"timestamp": 1776009154865,
-			"executionId": "exec-1776004808024-ggkv7oo8r"
-		},
-		{
-			"id": "activity-1776009154890-w2382u",
-			"type": "info",
-			"status": "completed",
-			"title": "Worktree has no commits — discarding",
-			"description": "Execution exec-1776004808024-ggkv7oo8r completed without producing any commits",
-			"timestamp": 1776009154890
-		},
-		{
-			"id": "activity-1776009155084-kpcq74",
+			"id": "activity-1776009983803-4fl3ep",
 			"type": "info",
 			"status": "running",
 			"title": "Adopted running execution exec-1776000476851-76ihxqa6d: \"Fix cutoff reservations active section KIM-364\"",
 			"description": "Externally launched execution detected — adopting and waiting for completion",
-			"timestamp": 1776009155084,
+			"timestamp": 1776009983803,
 			"executionId": "exec-1776000476851-76ihxqa6d"
-		},
-		{
-			"id": "activity-1776009155084-zv3h2q",
-			"type": "info",
-			"status": "completed",
-			"title": "1 other execution(s) also running: exec-1776009115038-mkh0c41j9 — will adopt next",
-			"description": "Multiple external executions detected; adopting oldest first",
-			"timestamp": 1776009155084
 		}
 	],
+	"startedAt": 1776009977758,
 	"lastError": null,
 	"rateLimitUntil": null,
 	"currentExecutionId": "exec-1776000476851-76ihxqa6d",
 	"cyclesCompleted": 0,
-	"lastHeartbeatAt": 1776009721717,
-	"activityLog": [],
-	"startedAt": 1776008388219,
-	"currentTask": "Add HTTP-layer tests for app/api/tables/[id]/activate/route.ts"
+	"lastHeartbeatAt": 1776010007765
 }
