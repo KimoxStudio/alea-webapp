@@ -484,16 +484,13 @@ export async function activateReservationByTable(
     day: '2-digit',
   }).format(new Date()) // produces YYYY-MM-DD
 
+  // Look up the table via the session-scoped client to decide whether to apply
+  // a surface filter. removable_top tables store surface='top'/'bottom'; all
+  // other types store null — filtering by surface for those would always fail.
+  const table = await getTable(tableId)
+  const isRemovableTop = table?.type === 'removable_top'
+
   const admin = createSupabaseServerAdminClient()
-
-  // Look up the table to determine whether to apply a surface filter.
-  // removable_top tables store surface = 'top'/'bottom'; all other types store null.
-  const { data: tableData } = await (admin.from('tables') as unknown as TablesLookupClient)
-    .select()
-    .eq('id', tableId)
-    .maybeSingle()
-
-  const isRemovableTop = (tableData as TableRow | null)?.type === 'removable_top'
 
   let pendingQuery = (admin.from('reservations') as unknown as { select: (c: string) => ActivationAdminQuery })
     .select(RESERVATION_COLUMNS)
