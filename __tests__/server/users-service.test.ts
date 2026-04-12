@@ -262,19 +262,19 @@ describe('updateUser', () => {
     })
   })
 
-  it('throws 400 when memberNumber exceeds 20 characters', async () => {
+  it('throws 400 when memberNumber exceeds 10 digits', async () => {
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', { memberNumber: 'A'.repeat(21) })).rejects.toMatchObject({
+    await expect(updateUser('1', { memberNumber: '1'.repeat(11) })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
   })
 
-  it('accepts memberNumber of exactly 20 characters', async () => {
+  it('accepts memberNumber of exactly 10 digits', async () => {
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', { memberNumber: 'A'.repeat(20) })).resolves.toBeDefined()
+    await expect(updateUser('1', { memberNumber: '1'.repeat(10) })).resolves.toBeDefined()
   })
 
   it('accepts is_active boolean and includes it in the update', async () => {
