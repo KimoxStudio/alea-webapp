@@ -34,6 +34,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_room_blocks: {
+        Row: {
+          date: string
+          end_time: string
+          event_id: string
+          id: string
+          room_id: string
+          start_time: string
+        }
+        Insert: {
+          date: string
+          end_time: string
+          event_id: string
+          id?: string
+          room_id: string
+          start_time: string
+        }
+        Update: {
+          date?: string
+          end_time?: string
+          event_id?: string
+          id?: string
+          room_id?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_room_blocks_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_room_blocks_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string | null
+          end_time: string
+          id: string
+          start_time: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date: string
+          description?: string | null
+          end_time: string
+          id?: string
+          start_time: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          end_time?: string
+          id?: string
+          start_time?: string
+          title?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -316,6 +391,9 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export type EventRow = Database['public']['Tables']['events']['Row'];
+export type EventRoomBlockRow = Database['public']['Tables']['event_room_blocks']['Row'];
 
 export const Constants = {
   graphql_public: {
