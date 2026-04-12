@@ -65,7 +65,7 @@ function ReservationCard({ reservation, onCancel }: ReservationCardProps) {
         </Badge>
       </div>
 
-      {reservation.status === 'active' && (
+      {(reservation.status === 'active' || reservation.status === 'pending') && (
         <Button
           variant="outline"
           size="sm"
@@ -86,8 +86,8 @@ export function MyReservationsView() {
   const cancelReservation = useCancelReservation()
   const [cancelingId, setCancelingId] = useState<string | null>(null)
 
-  const activeReservations = reservations?.filter(r => r.status === 'active') ?? []
-  const pastReservations = reservations?.filter(r => r.status !== 'active') ?? []
+  const activeReservations = reservations?.filter(r => r.status === 'active' || r.status === 'pending') ?? []
+  const pastReservations = reservations?.filter(r => r.status !== 'active' && r.status !== 'pending') ?? []
 
   async function handleCancel(id: string) {
     try {
