@@ -1,8 +1,27 @@
 # Alea Webapp — Execution Plan
 
-> Generated: 2026-04-10
+> Generated: 2026-04-10 · Last updated: 2026-04-12
 > Covers all 39 open Linear issues (Todo status)
 > Ordered: highest → lowest priority
+
+---
+
+## MVP Progress (target: 2026-04-14)
+
+| Milestone | Issues | Status | PR |
+|---|---|---|---|
+| M1 — QR + Check-in | KIM-316, KIM-324 | ✅ Merged | — |
+| M2 — Auto-cancel grace period | KIM-327 | ✅ Merged | #76 |
+| M3 — Overlap restriction backend | KIM-330, KIM-338, KIM-339 | ✅ Merged | #77 |
+| M4 — Overlap UI feedback | KIM-337 | ✅ Merged | #81 |
+| M5 — Cancellation cutoff backend | KIM-331, KIM-340, KIM-342 | ✅ Merged | #79 |
+| M6 — Cancellation cutoff UI | KIM-341 | 🟡 PR open | [#82](https://github.com/KimoxStudio/alea-webapp/pull/82) |
+| M11 partial — Auth i18n fix | KIM-325 | ✅ Merged | #78 |
+| M12A — Seed data | KIM-306 | ✅ Merged | #80 |
+
+> **PR #82 is 2-cycle team-review clean, all Copilot comments resolved, conflicts resolved. Ready to merge.**
+>
+> After #82 merges → final smoke test → Monday launch.
 
 ---
 
@@ -46,7 +65,7 @@
 
 ## Execution Plan — Highest to Lowest Priority
 
-### M1 — QR Generation + Check-in Activation (KIM-316, KIM-324)
+### M1 — QR Generation + Check-in Activation (KIM-316, KIM-324) ✅ Done
 
 **Priority:** Urgent — foundation for all QR-dependent features (KIM-353 equipment QR is blocked by this)
 **Agent:** `software-engineer` × 2 (parallel sub-agents)
@@ -73,7 +92,7 @@
 
 ---
 
-### M2 — Auto-cancel Grace Period (KIM-327)
+### M2 — Auto-cancel Grace Period (KIM-327) ✅ Done — PR #76
 
 **Priority:** High — business rule; depends on `activated_at` column from M1
 **Agent:** `software-engineer`
@@ -91,7 +110,7 @@
 
 ---
 
-### M3 — Overlap Restriction per User — Backend (KIM-330, KIM-338)
+### M3 — Overlap Restriction per User — Backend (KIM-330, KIM-338) ✅ Done — PR #77
 
 **Priority:** High
 **Agent:** `software-engineer`
@@ -106,7 +125,7 @@
 
 ---
 
-### M3-QA — Overlap Restriction Tests (KIM-339)
+### M3-QA — Overlap Restriction Tests (KIM-339) ✅ Done — PR #77
 
 **Priority:** High
 **Agent:** `qa-engineer`
@@ -120,7 +139,7 @@
 
 ---
 
-### M4 — Overlap Restriction — UI Feedback (KIM-337)
+### M4 — Overlap Restriction — UI Feedback (KIM-337) ✅ Done — PR #81
 
 **Priority:** Medium
 **Agent:** `software-engineer`
@@ -137,7 +156,7 @@
 
 ---
 
-### M5 — Cancellation Cutoff — Backend (KIM-331, KIM-340)
+### M5 — Cancellation Cutoff — Backend (KIM-331, KIM-340) ✅ Done — PR #79
 
 **Priority:** High
 **Agent:** `software-engineer`
@@ -152,7 +171,7 @@
 
 ---
 
-### M5-QA — Cancellation Cutoff Tests (KIM-342)
+### M5-QA — Cancellation Cutoff Tests (KIM-342) ✅ Done — PR #79
 
 **Priority:** Medium
 **Agent:** `qa-engineer`
@@ -166,7 +185,7 @@
 
 ---
 
-### M6 — Cancellation Cutoff — UI Warning (KIM-341)
+### M6 — Cancellation Cutoff — UI Warning (KIM-341) 🟡 PR #82 — ready to merge
 
 **Priority:** Low
 **Agent:** `software-engineer`
@@ -183,7 +202,7 @@
 
 ---
 
-### M7 — No-show Tracking — Data Model + Backend Logic (KIM-329, KIM-333, KIM-334)
+### M7 — No-show Tracking — Data Model + Backend Logic (KIM-329, KIM-333, KIM-334) 🚫 Post-MVP
 
 **Priority:** High
 **Agent:** `software-engineer`
@@ -203,7 +222,7 @@
 
 ---
 
-### M7A — No-show Admin Controls (KIM-335)
+### M7A — No-show Admin Controls (KIM-335) 🚫 Post-MVP
 
 **Priority:** Medium
 **Agent:** `software-engineer`
@@ -222,7 +241,7 @@
 
 ---
 
-### M7-QA — No-show Tests (KIM-336)
+### M7-QA — No-show Tests (KIM-336) 🚫 Post-MVP
 
 **Priority:** Medium
 **Agent:** `qa-engineer`
@@ -236,7 +255,7 @@
 
 ---
 
-### M8 — Events — Data Model (KIM-332, KIM-343)
+### M8 — Events — Data Model (KIM-332, KIM-343) 🚫 Post-MVP
 
 **Priority:** High (can start in parallel with M3/M5 — independent new tables)
 **Agent:** `software-engineer`
@@ -255,7 +274,7 @@
 
 ---
 
-### M8A — Events Admin Tab (KIM-344)
+### M8A — Events Admin Tab (KIM-344) 🚫 Post-MVP
 
 **Priority:** High
 **Agent:** `software-engineer` × 2 parallel (M8A-backend + M8A-frontend)
@@ -281,7 +300,7 @@
 
 ---
 
-### M8B — Event-based Room Blocking in Availability (KIM-345)
+### M8B — Event-based Room Blocking in Availability (KIM-345) 🚫 Post-MVP
 
 **Priority:** High
 **Agent:** `software-engineer`
@@ -297,7 +316,7 @@
 
 ---
 
-### M8C — Existing Reservations Affected by Events (KIM-346)
+### M8C — Existing Reservations Affected by Events (KIM-346) 🚫 Post-MVP
 
 **Priority:** High
 **Agent:** `software-engineer`
@@ -314,7 +333,7 @@
 
 ---
 
-### M8-QA — Event Tests (KIM-347)
+### M8-QA — Event Tests (KIM-347) 🚫 Post-MVP
 
 **Priority:** Medium
 **Agent:** `qa-engineer`
@@ -328,7 +347,7 @@
 
 ---
 
-### M9 — Equipment Epic (KIM-348 + children KIM-349 to KIM-356)
+### M9 — Equipment Epic (KIM-348 + children KIM-349 to KIM-356) 🚫 Post-MVP
 
 **Priority:** High (partially Urgent via KIM-353 which is blocked by M1)
 **Mode:** Internal milestones follow the sequence below. M9-M1 can start as soon as M1A is done.
@@ -350,7 +369,7 @@
 
 ---
 
-### M10 — Auth Hardening Batch (KIM-322, KIM-323)
+### M10 — Auth Hardening Batch (KIM-322, KIM-323) 🚫 Post-MVP
 
 **Priority:** Medium (can run in parallel with any non-auth milestone)
 **Agent:** `software-engineer`
@@ -367,7 +386,7 @@
 
 ---
 
-### M11 — UX Hardening Batch (KIM-315, KIM-317, KIM-325)
+### M11 — UX Hardening Batch (KIM-315, KIM-317, KIM-325) 🚫 Post-MVP (KIM-325 ✅ merged PR #78)
 
 **Priority:** Low
 **Agent:** `software-engineer`
@@ -387,7 +406,7 @@
 
 ---
 
-### M11B — Docker Docs Cleanup (KIM-328)
+### M11B — Docker Docs Cleanup (KIM-328) 🚫 Post-MVP
 
 **Priority:** Low
 **Agent:** `tech-writer`
@@ -402,7 +421,7 @@
 
 ---
 
-### M12 — Infra / Tooling (KIM-306, KIM-307)
+### M12 — Infra / Tooling (KIM-306, KIM-307) — KIM-306 ✅ merged PR #80 · KIM-307 🚫 Post-MVP
 
 **Priority:** Low
 **Agent:** `software-engineer` (M12A) + `software-engineer` with `accessibility-wcag` skill (M12B), parallel
