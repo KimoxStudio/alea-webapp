@@ -54,6 +54,7 @@ function formFromEvent(event: AdminEvent): EventFormState {
 function EventFormDialog({
   open,
   onOpenChange,
+  dialogId,
   title,
   form,
   setForm,
@@ -62,6 +63,7 @@ function EventFormDialog({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  dialogId: string
   title: string
   form: EventFormState
   setForm: (f: EventFormState) => void
@@ -77,6 +79,8 @@ function EventFormDialog({
       setForm({ ...form, [key]: e.target.value })
   }
 
+  const id = (suffix: string) => `${dialogId}-${suffix}`
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border sm:max-w-lg">
@@ -90,11 +94,11 @@ function EventFormDialog({
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label htmlFor="event-title" className="text-sm text-muted-foreground font-medium">
+            <Label htmlFor={id('title')} className="text-sm text-muted-foreground font-medium">
               {t('events.title')}
             </Label>
             <Input
-              id="event-title"
+              id={id('title')}
               value={form.title}
               onChange={field('title')}
               required
@@ -102,22 +106,22 @@ function EventFormDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="event-description" className="text-sm text-muted-foreground font-medium">
+            <Label htmlFor={id('description')} className="text-sm text-muted-foreground font-medium">
               {t('events.description')}
             </Label>
             <Input
-              id="event-description"
+              id={id('description')}
               value={form.description}
               onChange={field('description')}
               className="bg-background-secondary border-border focus:border-primary/50"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="event-room" className="text-sm text-muted-foreground font-medium">
+            <Label htmlFor={id('room')} className="text-sm text-muted-foreground font-medium">
               {t('events.room')}
             </Label>
             <Select value={form.roomId} onValueChange={(v) => setForm({ ...form, roomId: v })}>
-              <SelectTrigger id="event-room" className="bg-background-secondary border-border">
+              <SelectTrigger id={id('room')} className="bg-background-secondary border-border">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -130,11 +134,11 @@ function EventFormDialog({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="event-date" className="text-sm text-muted-foreground font-medium">
+              <Label htmlFor={id('date')} className="text-sm text-muted-foreground font-medium">
                 {tc('date')}
               </Label>
               <Input
-                id="event-date"
+                id={id('date')}
                 type="date"
                 value={form.date}
                 onChange={field('date')}
@@ -143,11 +147,11 @@ function EventFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="event-start" className="text-sm text-muted-foreground font-medium">
+              <Label htmlFor={id('start')} className="text-sm text-muted-foreground font-medium">
                 {t('events.startTime')}
               </Label>
               <Input
-                id="event-start"
+                id={id('start')}
                 type="time"
                 value={form.startTime}
                 onChange={field('startTime')}
@@ -156,11 +160,11 @@ function EventFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="event-end" className="text-sm text-muted-foreground font-medium">
+              <Label htmlFor={id('end')} className="text-sm text-muted-foreground font-medium">
                 {t('events.endTime')}
               </Label>
               <Input
-                id="event-end"
+                id={id('end')}
                 type="time"
                 value={form.endTime}
                 onChange={field('endTime')}
@@ -261,7 +265,11 @@ function EventRow({
   onDelete: (event: AdminEvent) => void
 }) {
   const tc = useTranslations('common')
+  const { data: rooms } = useAdminRooms()
   const hasRoom = event.roomBlocks.length > 0
+  const roomName = hasRoom
+    ? (rooms ?? []).find((r) => r.id === event.roomBlocks[0].roomId)?.name ?? event.roomBlocks[0].roomId
+    : null
 
   return (
     <div className="rpg-card px-4 py-3.5">
@@ -278,9 +286,9 @@ function EventRow({
             <span className="text-xs text-muted-foreground">
               {event.startTime.slice(0, 5)} – {event.endTime.slice(0, 5)}
             </span>
-            {hasRoom && (
+            {hasRoom && roomName && (
               <Badge variant="partial" className="text-xs">
-                {event.roomBlocks.length} {tc('name')}
+                {roomName}
               </Badge>
             )}
           </div>
@@ -341,11 +349,11 @@ export function EventsSection() {
     e.preventDefault()
     await createEvent.mutateAsync({
       title: createForm.title.trim(),
-      description: createForm.description.trim() || undefined,
+      description: createForm.description.trim() || null,
       date: createForm.date,
       startTime: createForm.startTime,
       endTime: createForm.endTime,
-      roomId: createForm.roomId === NONE_ROOM ? undefined : createForm.roomId,
+      roomId: createForm.roomId === NONE_ROOM ? null : createForm.roomId,
     })
     setCreateForm(emptyForm())
     setShowCreate(false)
@@ -358,11 +366,11 @@ export function EventsSection() {
       id: editingEvent.id,
       data: {
         title: editForm.title.trim(),
-        description: editForm.description.trim() || undefined,
+        description: editForm.description.trim() || null,
         date: editForm.date,
         startTime: editForm.startTime,
         endTime: editForm.endTime,
-        roomId: editForm.roomId === NONE_ROOM ? undefined : editForm.roomId,
+        roomId: editForm.roomId === NONE_ROOM ? null : editForm.roomId,
       },
     })
     setEditingEvent(null)
@@ -375,7 +383,9 @@ export function EventsSection() {
       setDeletingEvent(null)
       setDeleteConflictError(null)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message ?? String(err)
       setDeleteConflictError(msg)
     }
   }
@@ -444,6 +454,7 @@ export function EventsSection() {
       <EventFormDialog
         open={showCreate}
         onOpenChange={setShowCreate}
+        dialogId="create-event"
         title={t('events.createEvent')}
         form={createForm}
         setForm={setCreateForm}
@@ -455,6 +466,7 @@ export function EventsSection() {
       <EventFormDialog
         open={!!editingEvent}
         onOpenChange={(open) => { if (!open) setEditingEvent(null) }}
+        dialogId="edit-event"
         title={t('events.editEvent')}
         form={editForm}
         setForm={setEditForm}

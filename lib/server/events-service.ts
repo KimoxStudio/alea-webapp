@@ -2,27 +2,20 @@ import 'server-only'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
 import type { Tables, TablesInsert, TablesUpdate, EventRow, EventRoomBlockRow } from '@/lib/supabase/types'
+import type { AdminEvent, AdminEventRoomBlock } from '@/lib/types'
+
+export type { AdminEvent, AdminEventRoomBlock }
 
 type ReservationRow = Tables<'reservations'>
 
-export interface AdminEvent {
-  id: string
-  title: string
-  description: string | null
-  date: string
-  startTime: string
-  endTime: string
-  createdBy: string | null
-  createdAt: string
-  roomBlocks: AdminEventRoomBlock[]
-}
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const TIME_RE = /^\d{2}:\d{2}$/
 
-export interface AdminEventRoomBlock {
-  id: string
-  roomId: string
-  date: string
-  startTime: string
-  endTime: string
+function validateDateTimeFields(date: string, startTime: string, endTime: string): void {
+  if (!DATE_RE.test(date)) serviceError('date must be in YYYY-MM-DD format', 400)
+  if (!TIME_RE.test(startTime)) serviceError('startTime must be in HH:MM format', 400)
+  if (!TIME_RE.test(endTime)) serviceError('endTime must be in HH:MM format', 400)
+  if (endTime <= startTime) serviceError('endTime must be after startTime', 400)
 }
 
 function toAdminEvent(row: EventRow, blocks: EventRoomBlockRow[]): AdminEvent {
@@ -119,6 +112,8 @@ export async function createEvent(body: {
   const endTime = String(body.endTime ?? '').trim()
   if (!endTime) serviceError('Event end time is required', 400)
 
+  validateDateTimeFields(date, startTime, endTime)
+
   const roomId = body.roomId ? String(body.roomId).trim() : undefined
 
   const admin = createSupabaseServerAdminClient()
@@ -180,9 +175,32 @@ export async function updateEvent(
   if (body.description !== undefined) {
     updates.description = body.description === null ? null : String(body.description).trim() || null
   }
-  if (body.date !== undefined) updates.date = String(body.date).trim() || undefined
-  if (body.startTime !== undefined) updates.start_time = String(body.startTime).trim() || undefined
-  if (body.endTime !== undefined) updates.end_time = String(body.endTime).trim() || undefined
+
+  const newDate = body.date !== undefined ? String(body.date).trim() || undefined : undefined
+  const newStartTime = body.startTime !== undefined ? String(body.startTime).trim() || undefined : undefined
+  const newEndTime = body.endTime !== undefined ? String(body.endTime).trim() || undefined : undefined
+
+  if (newDate !== undefined) updates.date = newDate
+  if (newStartTime !== undefined) updates.start_time = newStartTime
+  if (newEndTime !== undefined) updates.end_time = newEndTime
+
+  // Validate date/time fields if any are being updated
+  if (newDate !== undefined || newStartTime !== undefined || newEndTime !== undefined) {
+    // We need all three to validate; load current values for fields not being changed
+    const admin = createSupabaseServerAdminClient()
+    const { data: current } = await admin
+      .from('events')
+      .select('date, start_time, end_time')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (!current) serviceError('Event not found', 404)
+    const currentRow = current as Pick<EventRow, 'date' | 'start_time' | 'end_time'>
+    const validatedDate = newDate ?? currentRow.date
+    const validatedStart = newStartTime ?? currentRow.start_time
+    const validatedEnd = newEndTime ?? currentRow.end_time
+    validateDateTimeFields(validatedDate, validatedStart, validatedEnd)
+  }
 
   const admin = createSupabaseServerAdminClient()
 
@@ -198,20 +216,42 @@ export async function updateEvent(
 
   const eventRow = updatedEvent as EventRow
 
-  // Update room block if roomId provided
-  if (body.roomId !== undefined) {
-    const roomId = body.roomId ? String(body.roomId).trim() : null
-    // Delete existing blocks
-    await admin.from('event_room_blocks').delete().eq('event_id', id)
+  // Update room blocks when roomId or date/time fields change
+  const dateTimeChanged = newDate !== undefined || newStartTime !== undefined || newEndTime !== undefined
+  if (body.roomId !== undefined || dateTimeChanged) {
+    const roomId = body.roomId !== undefined
+      ? (body.roomId ? String(body.roomId).trim() : null)
+      : undefined  // undefined means "keep existing room, just update times"
 
-    if (roomId) {
-      await admin.from('event_room_blocks').insert({
-        event_id: id,
-        room_id: roomId,
-        date: eventRow.date,
-        start_time: eventRow.start_time,
-        end_time: eventRow.end_time,
-      })
+    if (body.roomId !== undefined) {
+      // roomId is explicitly being changed — delete all existing blocks and re-create if needed
+      const { error: deleteError } = await admin
+        .from('event_room_blocks')
+        .delete()
+        .eq('event_id', id)
+      if (deleteError) serviceError('Internal server error', 500)
+
+      if (roomId) {
+        const { error: insertError } = await admin.from('event_room_blocks').insert({
+          event_id: id,
+          room_id: roomId,
+          date: eventRow.date,
+          start_time: eventRow.start_time,
+          end_time: eventRow.end_time,
+        })
+        if (insertError) serviceError('Internal server error', 500)
+      }
+    } else if (dateTimeChanged) {
+      // Only date/time changed — update existing blocks in place
+      const { error: blockUpdateError } = await admin
+        .from('event_room_blocks')
+        .update({
+          date: eventRow.date,
+          start_time: eventRow.start_time,
+          end_time: eventRow.end_time,
+        })
+        .eq('event_id', id)
+      if (blockUpdateError) serviceError('Internal server error', 500)
     }
   }
 
