@@ -455,6 +455,13 @@ export async function cancelExpiredPendingReservations(): Promise<number> {
   return (data as number | null) ?? 0
 }
 
+export async function markNoShowReservations(): Promise<number> {
+  const admin = createSupabaseServerAdminClient()
+  const { data, error } = await admin.rpc('mark_no_show_reservations')
+  if (error) serviceError('Internal server error', 500)
+  return (data as number | null) ?? 0
+}
+
 type ActivationAdminQuery = {
   eq: (column: 'table_id' | 'date' | 'status' | 'user_id' | 'surface' | 'id', value: string) => ActivationAdminQuery
   or: (filter: string) => ActivationAdminQuery
