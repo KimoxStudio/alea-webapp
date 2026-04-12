@@ -31,6 +31,7 @@ interface ReservationCardProps {
 function ReservationCard({ reservation, onCancel }: ReservationCardProps) {
   const t = useTranslations('reservations')
   const tt = useTranslations('tables')
+  const tc = useTranslations('common')
   return (
     <div className="rpg-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -176,7 +177,7 @@ export function MyReservationsView() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>
-              No
+              {tc('no')}
             </Button>
             <Button
               variant="destructive"
