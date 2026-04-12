@@ -277,6 +277,38 @@ describe('updateUser', () => {
     await expect(updateUser('1', { memberNumber: '1'.repeat(10) })).resolves.toBeDefined()
   })
 
+  it('throws 400 when memberNumber contains non-numeric characters', async () => {
+    const { updateUser } = await loadUsersModules()
+
+    await expect(updateUser('1', { memberNumber: 'abc12' })).rejects.toMatchObject({
+      statusCode: 400,
+    })
+  })
+
+  it('throws 400 when memberNumber is null (coerced to string "null")', async () => {
+    const { updateUser } = await loadUsersModules()
+
+    await expect(updateUser('u1', { memberNumber: null as unknown as string })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 400,
+    })
+  })
+
+  it('throws 400 when memberNumber is an empty string', async () => {
+    const { updateUser } = await loadUsersModules()
+
+    await expect(updateUser('u1', { memberNumber: '' })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 400,
+    })
+  })
+
+  it('accepts memberNumber of single digit zero', async () => {
+    const { updateUser } = await loadUsersModules()
+
+    await expect(updateUser('u1', { memberNumber: '0' })).resolves.toBeDefined()
+  })
+
   it('accepts is_active boolean and includes it in the update', async () => {
     let capturedUpdates: Record<string, unknown> | undefined
     vi.mocked(
