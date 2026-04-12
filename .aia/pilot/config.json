@@ -1,0 +1,8 @@
+{
+	"objective": "Work through the post-MVP backlog defined in docs/HANDOFF.md. Start with KIM-364: in the My Reservations page, reservations that have passed the 60-minute cancellation cutoff should stay in the Active section (not move to completed/cancelled). The cancel button should remain visible but disabled, showing an explanation of why cancellation is not possible. After KIM-364, continue with remaining post-MVP items in priority order from docs/HANDOFF.md. Always create a feature branch per issue, run pnpm typecheck && pnpm build && pnpm test before opening a PR, and target develop. Test files are owned exclusively by the tester agent — developer must never create or modify test files.",
+	"priority": "features",
+	"excludeAreas": [],
+	"projectPath": "/Users/samuelromeroarbelo/Projects/Alea/alea-webapp",
+	"provider": "claude",
+	"canAskQuestions": false
+}
