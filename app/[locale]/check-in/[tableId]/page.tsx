@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { getSessionFromServerCookies } from '@/lib/server/auth'
 import { CheckInActivator } from '@/components/check-in/check-in-activator'
+import { locales } from '@/lib/i18n/config'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('checkin')
@@ -20,8 +21,7 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
   const { locale, tableId } = await params
   const { side: sideParam } = await searchParams
 
-  const VALID_LOCALES = ['en', 'es']
-  if (!VALID_LOCALES.includes(locale)) {
+  if (!(locales as readonly string[]).includes(locale)) {
     redirect('/')
   }
 

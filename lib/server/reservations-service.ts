@@ -462,7 +462,7 @@ type ActivationAdminQuery = {
   select: (columns?: string) => ActivationAdminQuery
   update: (values: TablesUpdate<'reservations'>) => ActivationAdminQuery
   single: () => Promise<{ data: ReservationRow | null; error: PostgrestErrorLike | null }>
-  then: Promise<{ data: ReservationRow[] | null; error: PostgrestErrorLike | null }>['then']
+  then: Promise<{ data: ReservationRow | null; error: PostgrestErrorLike | null }>['then']
 }
 
 export async function activateReservationByTable(
@@ -495,7 +495,10 @@ export async function activateReservationByTable(
   // a surface filter. removable_top tables store surface='top'/'bottom'; all
   // other types store null — filtering by surface for those would always fail.
   const table = await getTable(tableId)
-  const isRemovableTop = table?.type === 'removable_top'
+  if (!table) {
+    serviceError('Table not found', 404)
+  }
+  const isRemovableTop = table.type === 'removable_top'
 
   const admin = createSupabaseServerAdminClient()
 
@@ -574,15 +577,19 @@ export async function activateReservationByTable(
     serviceError('CHECK_IN_TOO_LATE', 400)
   }
 
-  const { data: updated, error: updateError } = await admin
-    .from('reservations')
+  const { data: updated, error: updateError } = await (admin
+    .from('reservations') as unknown as ActivationAdminQuery)
     .update({ status: 'active', activated_at: now.toISOString() })
     .eq('id', reservation.id)
+    .eq('status', 'pending')
     .select(RESERVATION_COLUMNS)
     .single()
 
-  if (updateError || !updated) {
+  if (updateError) {
     serviceError('Internal server error', 500)
+  }
+  if (!updated) {
+    serviceError('CHECK_IN_ALREADY_ACTIVE', 409)
   }
 
   return mapReservation(updated as ReservationRow)
