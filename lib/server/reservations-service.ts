@@ -551,21 +551,16 @@ export async function activateReservationByTable(
     serviceError('CHECK_IN_TOO_LATE', 400)
   }
 
-  // Atomic conditional UPDATE: only affects the row if it is still 'pending'.
-  // A second concurrent QR scan will find 0 rows updated (empty array) and
-  // receive CHECK_IN_ALREADY_ACTIVE instead of double-activating.
-  const { data: updated, error: updateError } = await (admin.from('reservations') as unknown as { update: (v: TablesUpdate<'reservations'>) => ActivationAdminQuery })
+  const { data: updated, error: updateError } = await admin
+    .from('reservations')
     .update({ status: 'active', activated_at: now.toISOString() })
     .eq('id', reservation.id)
-    .eq('status', 'pending')
     .select(RESERVATION_COLUMNS)
+    .single()
 
-  if (updateError) {
+  if (updateError || !updated) {
     serviceError('Internal server error', 500)
   }
-  if (!updated || updated.length === 0) {
-    serviceError('CHECK_IN_ALREADY_ACTIVE', 409)
-  }
 
-  return mapReservation((updated as ReservationRow[])[0])
+  return mapReservation(updated as ReservationRow)
 }
