@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Sword, Menu, Globe, LogOut, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,9 @@ export function Header({ locale }: HeaderProps) {
   const { user, logout, isAuthenticated } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const otherLocale = locale === 'es' ? 'en' : 'es'
+  const pathname = usePathname()
+  const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '')
+  const switchHref = `/${otherLocale}${pathWithoutLocale}`
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -45,7 +49,7 @@ export function Header({ locale }: HeaderProps) {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link href={`/${otherLocale}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Switch to ${otherLocale}`}>
+          <Link href={switchHref} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Switch to ${otherLocale}`}>
             <Globe className="h-3.5 w-3.5" aria-hidden="true" />
             <span className="uppercase font-medium">{otherLocale}</span>
           </Link>
