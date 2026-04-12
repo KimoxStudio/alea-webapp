@@ -264,11 +264,21 @@ vi.mock('@/lib/supabase/server', () => ({
 
       return {
         select: vi.fn(() => buildSelectChain(reservationsState)),
-        update: vi.fn((payload: Record<string, unknown>) => ({
-          eq: vi.fn((column: string, value: string) => ({
+        update: vi.fn((payload: Record<string, unknown>) => {
+          // Support chained .eq() calls: update().eq(col, val).eq(col2, val2).select().single()
+          // The first .eq() identifies the row (by 'id'); subsequent .eq() calls act as
+          // TOCTOU conditions — the row is only updated if ALL conditions match.
+          const filters: Array<[string, string]> = []
+          const chain = {
+            eq: vi.fn((column: string, value: string) => {
+              filters.push([column, value])
+              return chain
+            }),
             select: vi.fn(() => ({
               single: vi.fn(async () => {
-                const row = reservationsState.find((r) => String((r as Record<string, unknown>)[column]) === value)
+                const row = reservationsState.find((r) =>
+                  filters.every(([col, val]) => String((r as Record<string, unknown>)[col]) === val)
+                )
                 if (!row) {
                   return { data: null, error: null }
                 }
@@ -276,8 +286,9 @@ vi.mock('@/lib/supabase/server', () => ({
                 return { data: cloneReservation(row), error: null }
               }),
             })),
-          })),
-        })),
+          }
+          return chain
+        }),
       }
     }),
     rpc: vi.fn(),
@@ -948,6 +959,7 @@ describe('reservations service', () => {
 
     afterEach(() => {
       vi.useRealTimers()
+      vi.unstubAllEnvs()
     })
 
     function seedPendingReservation(overrides?: Partial<ReservationRow>) {
@@ -1095,6 +1107,213 @@ describe('reservations service', () => {
         name: 'ServiceError',
         statusCode: 400,
         message: expect.stringContaining('CHECK_IN_TOO_LATE'),
+      })
+    })
+
+    it('non-removable-top (large) table: activates with surface=null without surface filter', async () => {
+      // Task 2: happy-path check-in on a non-removable-top table
+      // t1 is type 'large' — isRemovableTop=false → no surface filter applied
+      const { activateReservationByTable } = await loadReservationModules()
+
+      reservationsState.push(makeReservation({
+        id: 'rLarge',
+        table_id: 't1',
+        user_id: '2',
+        date: FIXED_DATE,
+        status: 'pending',
+        surface: null,
+        start_time: makeStartTime(10),
+      }))
+
+      const result = await activateReservationByTable('t1', '2', undefined)
+
+      expect(result).toMatchObject({ tableId: 't1', userId: '2', status: 'active' })
+    })
+
+    it('activeQuery DB error returns 500', async () => {
+      // Task 3: when the active-reservation query errors, the service should throw 500.
+      // The pendingQuery maybeSingle returns null (no row, no error) → service moves on to activeQuery.
+      // The activeQuery maybeSingle returns an error → service should throw 500.
+      // We use vi.doMock here and restore the original mock factory at the end of the test
+      // to prevent contamination of subsequent tests.
+      vi.resetModules()
+
+      // Track how many times maybeSingle has been called across all chains in this test
+      let maybeSingleCallCount = 0
+
+      vi.doMock('@/lib/supabase/server', () => ({
+        createSupabaseServerClient: vi.fn(async () => ({
+          from: vi.fn((table: string) => {
+            if (table === 'tables') {
+              return {
+                select: vi.fn(() => ({
+                  eq: vi.fn((column: string, value: string) => ({
+                    maybeSingle: vi.fn(async () => ({
+                      data: column === 'id' ? (tablesState.get(value) ?? null) : null,
+                      error: null,
+                    })),
+                  })),
+                })),
+              }
+            }
+            return { select: vi.fn(() => buildSelectChain(reservationsState)) }
+          }),
+        })),
+        createSupabaseServerAdminClient: vi.fn(() => {
+          function makeChain(): {
+            eq: (col: string, val: string) => ReturnType<typeof makeChain>
+            maybeSingle: () => Promise<{ data: null; error: { message: string } | null }>
+            select: (cols?: string) => ReturnType<typeof makeChain>
+            update: (payload: unknown) => ReturnType<typeof makeChain>
+            single: () => Promise<{ data: null; error: null }>
+          } {
+            return {
+              eq: vi.fn(() => makeChain()),
+              select: vi.fn(() => makeChain()),
+              update: vi.fn(() => makeChain()),
+              single: vi.fn(async () => ({ data: null, error: null })),
+              maybeSingle: vi.fn(async () => {
+                maybeSingleCallCount++
+                if (maybeSingleCallCount === 1) {
+                  // First call: pendingQuery — no pending reservation found
+                  return { data: null, error: null }
+                }
+                // Second call: activeQuery — simulate DB error
+                return { data: null, error: { message: 'db error' } }
+              }),
+            }
+          }
+
+          return {
+            from: vi.fn(() => makeChain()),
+            rpc: vi.fn(),
+          }
+        }),
+      }))
+
+      const { activateReservationByTable: activate } = await import('@/lib/server/reservations-service')
+
+      await expect(activate('t3', '2', undefined)).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 500,
+      })
+
+      // Restore the original mock factory so subsequent tests are not contaminated
+      vi.resetModules()
+      vi.doMock('@/lib/supabase/server', () => ({
+        createSupabaseServerClient: vi.fn(async () => ({
+          from: vi.fn((table: string) => {
+            if (table === 'tables') {
+              return {
+                select: vi.fn(() => ({
+                  eq: vi.fn((column: string, value: string) => ({
+                    maybeSingle: vi.fn(async () => ({
+                      data: column === 'id' ? (tablesState.get(value) ?? null) : null,
+                      error: null,
+                    })),
+                  })),
+                })),
+              }
+            }
+            if (table === 'reservations') {
+              return {
+                select: vi.fn(() => buildSelectChain(reservationsState)),
+                insert: vi.fn((payload: Record<string, string | null>) => ({
+                  select: vi.fn(() => ({
+                    single: vi.fn(async () => {
+                      const row = makeReservation({
+                        id: `r${reservationsState.length + 1}`,
+                        table_id: String(payload.table_id),
+                        user_id: String(payload.user_id),
+                        date: String(payload.date),
+                        start_time: `${String(payload.start_time)}:00`,
+                        end_time: `${String(payload.end_time)}:00`,
+                        surface: payload.surface as ReservationRow['surface'],
+                        created_at: '2026-04-04T12:00:00.000Z',
+                      })
+                      reservationsState.push(row)
+                      return { data: cloneReservation(row), error: null }
+                    }),
+                  })),
+                })),
+                update: vi.fn((payload: Record<string, string | null>) => ({
+                  eq: vi.fn((column: string, value: string) => ({
+                    select: vi.fn(() => ({
+                      single: vi.fn(async () => {
+                        const row = reservationsState.find((reservation) => String((reservation as Record<string, unknown>)[column]) === value)
+                        if (!row) {
+                          return { data: null, error: null }
+                        }
+                        Object.assign(row, payload)
+                        if (payload.start_time) row.start_time = `${payload.start_time}:00`
+                        if (payload.end_time) row.end_time = `${payload.end_time}:00`
+                        return { data: cloneReservation(row), error: null }
+                      }),
+                    })),
+                  })),
+                })),
+              }
+            }
+            throw new Error(`Unexpected table ${table}`)
+          }),
+        })),
+        createSupabaseServerAdminClient: vi.fn(() => ({
+          from: vi.fn((table: string) => {
+            if (table !== 'reservations') {
+              throw new Error(`Unexpected admin table ${table}`)
+            }
+            return {
+              select: vi.fn(() => buildSelectChain(reservationsState)),
+              update: vi.fn((payload: Record<string, unknown>) => {
+                const filters: Array<[string, string]> = []
+                const chain = {
+                  eq: vi.fn((column: string, value: string) => {
+                    filters.push([column, value])
+                    return chain
+                  }),
+                  select: vi.fn(() => ({
+                    single: vi.fn(async () => {
+                      const row = reservationsState.find((r) =>
+                        filters.every(([col, val]) => String((r as Record<string, unknown>)[col]) === val)
+                      )
+                      if (!row) {
+                        return { data: null, error: null }
+                      }
+                      Object.assign(row, payload)
+                      return { data: cloneReservation(row), error: null }
+                    }),
+                  })),
+                }
+                return chain
+              }),
+            }
+          }),
+          rpc: vi.fn(),
+        })),
+      }))
+    })
+
+    it('invalid CLUB_TIMEZONE falls back to Europe/Madrid and still activates', async () => {
+      // Task 4: CLUB_TIMEZONE='Invalid/Zone' → catches error → falls back → still activates
+      vi.stubEnv('CLUB_TIMEZONE', 'Invalid/Zone')
+      const { activateReservationByTable } = await loadReservationModules()
+
+      seedPendingReservation({ start_time: makeStartTime(10) })
+
+      const result = await activateReservationByTable('t3', '2', undefined)
+
+      expect(result).toMatchObject({ status: 'active' })
+    })
+
+    it('getTable returning null throws 404 with Table not found', async () => {
+      // Task 5: when the table does not exist in the DB, service throws 404
+      const { activateReservationByTable } = await loadReservationModules()
+
+      // Use a tableId that is not seeded in tablesState
+      await expect(activateReservationByTable('t-nonexistent', '2', undefined)).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 404,
+        message: expect.stringContaining('Table not found'),
       })
     })
   })

@@ -332,6 +332,17 @@ describe('createTableEntry', () => {
     qrResolve?.()
     await qrPromise
   })
+
+  it('skips QR generation when NEXT_PUBLIC_APP_URL is absent', async () => {
+    // Task 6: when NEXT_PUBLIC_APP_URL is empty/unset, regenerateQrCodes must NOT be called
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', '')
+    const { createTableEntry } = await loadRoomsModules()
+
+    const result = await createTableEntry('1', { name: 'Mesa 1', type: 'small' })
+
+    expect(result).toMatchObject({ name: 'Mesa 1', type: 'small' })
+    expect(regenerateQrCodesMock).not.toHaveBeenCalled()
+  })
 })
 
 describe('getRoomTablesAvailability', () => {
