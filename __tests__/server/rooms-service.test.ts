@@ -262,6 +262,10 @@ describe('createTableEntry', () => {
     })
   })
 
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('maps a foreign-key violation (23503) to a 400 ServiceError', async () => {
     maybeSingleMock.mockResolvedValue({ data: null, error: { code: '23503', message: 'FK violation' } })
     const { createTableEntry } = await loadRoomsModules()
