@@ -96,6 +96,7 @@ function ReservationCard({ reservation, onCancel, cutoffPassed }: ReservationCar
   )
 }
 
+
 export function MyReservationsView() {
   const t = useTranslations('reservations')
   const tc = useTranslations('common')
