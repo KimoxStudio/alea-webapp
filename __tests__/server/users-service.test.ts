@@ -363,3 +363,70 @@ describe('deleteUser', () => {
     expect(deleteUserMock).toHaveBeenCalledWith('1')
   })
 })
+
+describe('resetNoShows', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+  })
+
+  it('calls admin client update with no_show_count=0 and blocked_until=null', async () => {
+    let capturedUpdates: unknown | undefined
+    const updateMock = vi.fn()
+    const eqMock = vi.fn()
+    vi.mocked(
+      (await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+    ).mockReturnValue({
+      from: vi.fn(() => ({
+        update: vi.fn((updates: unknown) => {
+          capturedUpdates = updates
+          return { eq: eqMock }
+        }),
+      })),
+    } as never)
+    eqMock.mockResolvedValue({ error: null })
+
+    const { resetNoShows } = await loadUsersModules()
+
+    await expect(resetNoShows('user-123')).resolves.toBeUndefined()
+    expect(capturedUpdates).toEqual({ no_show_count: 0, blocked_until: null })
+    expect(eqMock).toHaveBeenCalledWith('id', 'user-123')
+  })
+
+  it('throws ServiceError on Supabase error', async () => {
+    const dbError = new Error('Database constraint violation')
+    vi.mocked(
+      (await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+    ).mockReturnValue({
+      from: vi.fn(() => ({
+        update: vi.fn(() => ({
+          eq: vi.fn().mockResolvedValue({ error: dbError }),
+        })),
+      })),
+    } as never)
+
+    const { resetNoShows } = await loadUsersModules()
+
+    await expect(resetNoShows('user-123')).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 500,
+      message: 'Internal server error',
+    })
+  })
+
+  it('silently succeeds when userId does not exist (0 rows affected)', async () => {
+    vi.mocked(
+      (await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+    ).mockReturnValue({
+      from: vi.fn(() => ({
+        update: vi.fn(() => ({
+          eq: vi.fn().mockResolvedValue({ error: null }),
+        })),
+      })),
+    } as never)
+
+    const { resetNoShows } = await loadUsersModules()
+
+    await expect(resetNoShows('non-existent-user')).resolves.toBeUndefined()
+  })
+})
