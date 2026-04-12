@@ -33,8 +33,8 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.mark_no_show_reservations() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.mark_no_show_reservations() TO service_role;
 
--- Partial index to speed up the UPDATE in mark_no_show_reservations():
--- only indexes rows that are still eligible candidates (pending + never activated).
+-- Partial index to speed up the WHERE clause used by the cron UPDATE.
+-- Only indexes rows that are still pending and not yet activated, keeping the index small and write-cheap.
 CREATE INDEX IF NOT EXISTS reservations_pending_no_show_idx
   ON public.reservations (date, end_time)
   WHERE status = 'pending' AND activated_at IS NULL;

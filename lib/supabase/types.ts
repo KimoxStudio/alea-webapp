@@ -398,8 +398,8 @@ export type CompositeTypes<
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
-export type EventRow = Database['public']['Tables']['events']['Row'];
-export type EventRoomBlockRow = Database['public']['Tables']['event_room_blocks']['Row'];
+export type EventRow = Database["public"]["Tables"]["events"]["Row"]
+export type EventRoomBlockRow = Database["public"]["Tables"]["event_room_blocks"]["Row"]
 
 export const Constants = {
   graphql_public: {
