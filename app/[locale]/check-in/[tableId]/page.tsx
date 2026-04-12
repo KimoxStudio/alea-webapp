@@ -22,7 +22,7 @@ export default async function CheckInPage({ params, searchParams }: CheckInPageP
 
   const VALID_LOCALES = ['en', 'es']
   if (!VALID_LOCALES.includes(locale)) {
-    redirect('/rooms')
+    redirect('/')
   }
 
   if (!UUID_REGEX.test(tableId)) {
