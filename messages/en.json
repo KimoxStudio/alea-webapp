@@ -114,7 +114,19 @@
     "cancelReservationConfirm": "Are you sure you want to cancel this reservation?",
     "noReservations": "No reservations found",
     "table": "Table", "user": "User",
-    "regenerateQr": "Regenerate QR"
+    "regenerateQr": "Regenerate QR",
+    "eventManagement": "Event management",
+    "deleteEventConfirm": "Are you sure you want to delete the event \"{title}\"? This action cannot be undone.",
+    "events": {
+      "title": "Events",
+      "description": "Description",
+      "room": "Room",
+      "createEvent": "Create event",
+      "editEvent": "Edit event",
+      "deleteEvent": "Delete event",
+      "noEvents": "No events found",
+      "conflictWarning": "This event cannot be deleted because active or pending reservations exist for the affected room during this time."
+    }
   },
   "home": {
     "heroTitle": "Your Adventure Starts Here",

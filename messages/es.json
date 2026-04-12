@@ -113,7 +113,19 @@
     "cancelReservationConfirm": "¿Estás seguro de que deseas cancelar esta reserva? Esta acción no se puede deshacer.",
     "noReservations": "No hay reservas",
     "table": "Mesa", "user": "Usuario",
-    "regenerateQr": "Regenerar QR"
+    "regenerateQr": "Regenerar QR",
+    "eventManagement": "Gestión de eventos",
+    "deleteEventConfirm": "¿Estás seguro de que deseas eliminar el evento \"{title}\"? Esta acción no se puede deshacer.",
+    "events": {
+      "title": "Eventos",
+      "description": "Descripción",
+      "room": "Sala",
+      "createEvent": "Crear evento",
+      "editEvent": "Editar evento",
+      "deleteEvent": "Eliminar evento",
+      "noEvents": "No hay eventos",
+      "conflictWarning": "Este evento no puede eliminarse porque existen reservas activas o pendientes en la sala afectada durante este horario."
+    }
   },
   "home": {
     "heroTitle": "Tu Aventura Comienza Aquí",

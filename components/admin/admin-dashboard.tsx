@@ -1,11 +1,12 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { LayoutDashboard, Users, CalendarDays, DoorOpen } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, DoorOpen, CalendarRange } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UsersSection } from './users-section'
 import { ReservationsSection } from './reservations-section'
 import { RoomsSection } from './rooms-section'
+import { EventsSection } from './events-section'
 
 export function AdminDashboard() {
   const t = useTranslations('admin')
@@ -47,6 +48,10 @@ export function AdminDashboard() {
             <DoorOpen className="h-4 w-4" aria-hidden="true" />
             {t('rooms')}
           </TabsTrigger>
+          <TabsTrigger value="events" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
+            <CalendarRange className="h-4 w-4" aria-hidden="true" />
+            {t('events.title')}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -59,6 +64,10 @@ export function AdminDashboard() {
 
         <TabsContent value="rooms">
           <RoomsSection />
+        </TabsContent>
+
+        <TabsContent value="events">
+          <EventsSection />
         </TabsContent>
       </Tabs>
     </div>
