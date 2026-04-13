@@ -52,7 +52,7 @@
       "memberNumberRequired": "Member number is required",
       "memberNumberTooLong": "Member number must not exceed 10 digits",
       "memberNumberNumeric": "Member number must contain only digits",
-      "memberNumberExists": "Invalid credentials or member number already in use"
+      "memberNumberExists": "Invalid registration details"
     }
   },
   "rooms": {
