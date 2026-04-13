@@ -985,11 +985,10 @@ describe('reservations service', () => {
     }
 
     function makeEndTime(startTimeStr: string, durationMinutes: number): string {
-      // Parse the start time and add duration minutes
       const [hh, mm] = startTimeStr.split(':')
       const date = new Date()
-      date.setHours(parseInt(hh!, 10))
-      date.setMinutes(parseInt(mm!, 10) + durationMinutes)
+      date.setHours(parseInt(hh!, 10), parseInt(mm!, 10), 0, 0)
+      date.setTime(date.getTime() + durationMinutes * 60 * 1000)
       const endHh = String(date.getHours()).padStart(2, '0')
       const endMm = String(date.getMinutes()).padStart(2, '0')
       return `${endHh}:${endMm}:00`
