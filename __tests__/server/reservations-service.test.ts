@@ -977,17 +977,86 @@ describe('reservations service', () => {
     }
 
     function makeStartTime(offsetMinutes: number): string {
-      const now = new Date()
-      now.setMinutes(now.getMinutes() - offsetMinutes)
-      const hh = String(now.getHours()).padStart(2, '0')
-      const mm = String(now.getMinutes()).padStart(2, '0')
+      const nowUtc = new Date()
+      const clubTz = process.env.CLUB_TIMEZONE ?? 'Europe/Madrid'
+      
+      let madridParts: Record<string, number>
+      try {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+          timeZone: clubTz,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        }).formatToParts(nowUtc)
+        madridParts = Object.fromEntries(
+          parts.filter((p: any) => p.type !== 'literal').map((p: any) => [p.type, parseInt(p.value, 10)])
+        )
+      } catch {
+        // Fallback to UTC if timezone is invalid
+        madridParts = {
+          year: nowUtc.getUTCFullYear(),
+          month: nowUtc.getUTCMonth() + 1,
+          day: nowUtc.getUTCDate(),
+          hour: nowUtc.getUTCHours(),
+          minute: nowUtc.getUTCMinutes(),
+          second: nowUtc.getUTCSeconds(),
+        }
+      }
+      
+      // Create a date in "timezone local time space" (treating parts as UTC for comparison)
+      const madridTime = new Date(
+        madridParts.year!,
+        madridParts.month! - 1,
+        madridParts.day!,
+        madridParts.hour!,
+        madridParts.minute!,
+        madridParts.second!,
+      )
+      madridTime.setMinutes(madridTime.getMinutes() - offsetMinutes)
+      const hh = String(madridTime.getHours()).padStart(2, '0')
+      const mm = String(madridTime.getMinutes()).padStart(2, '0')
       return `${hh}:${mm}:00`
     }
 
     function makeEndTime(startTimeStr: string, durationMinutes: number): string {
       const [hh, mm] = startTimeStr.split(':')
-      const date = new Date()
-      date.setHours(parseInt(hh!, 10), parseInt(mm!, 10), 0, 0)
+      const nowUtc = new Date()
+      const clubTz = process.env.CLUB_TIMEZONE ?? 'Europe/Madrid'
+      
+      let madridParts: Record<string, number>
+      try {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+          timeZone: clubTz,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour12: false,
+        }).formatToParts(nowUtc)
+        madridParts = Object.fromEntries(
+          parts.filter((p: any) => p.type !== 'literal').map((p: any) => [p.type, parseInt(p.value, 10)])
+        )
+      } catch {
+        // Fallback to UTC if timezone is invalid
+        madridParts = {
+          year: nowUtc.getUTCFullYear(),
+          month: nowUtc.getUTCMonth() + 1,
+          day: nowUtc.getUTCDate(),
+        }
+      }
+      
+      const date = new Date(
+        madridParts.year!,
+        madridParts.month! - 1,
+        madridParts.day!,
+        parseInt(hh!, 10),
+        parseInt(mm!, 10),
+        0,
+        0,
+      )
       date.setTime(date.getTime() + durationMinutes * 60 * 1000)
       const endHh = String(date.getHours()).padStart(2, '0')
       const endMm = String(date.getMinutes()).padStart(2, '0')
@@ -1016,12 +1085,12 @@ describe('reservations service', () => {
       })
     })
 
-    it('boundary: called exactly 15 minutes before start_time (early window opens) succeeds', async () => {
+    it('boundary: called exactly 5 minutes before start_time (early window opens) succeeds', async () => {
       const { activateReservationByTable } = await loadReservationModules()
 
-      // now is 14:00:00, start_time is 14:15:00 (15 min in future)
-      // This is exactly at [start - 15min, end_time], so check-in should succeed
-      const startTime = makeStartTime(-15)
+      // now is 14:00:00, start_time is 14:05:00 (5 min in future)
+      // This is exactly at [start - 5min, end_time], so check-in should succeed
+      const startTime = makeStartTime(-5)
       seedPendingReservation({ start_time: startTime })
 
       const result = await activateReservationByTable('t3', '2', undefined)
@@ -1029,12 +1098,12 @@ describe('reservations service', () => {
       expect(result.status).toBe('active')
     })
 
-    it('boundary: called 16 minutes before start_time throws CHECK_IN_TOO_EARLY', async () => {
+    it('boundary: called 6 minutes before start_time throws CHECK_IN_TOO_EARLY', async () => {
       const { activateReservationByTable } = await loadReservationModules()
 
-      // now is 14:00:00, start_time is 14:16:00 (16 min in future)
-      // This is before the early window [start - 15min], so check-in should fail
-      seedPendingReservation({ start_time: makeStartTime(-16) })
+      // now is 14:00:00, start_time is 14:06:00 (6 min in future)
+      // This is before the early window [start - 5min], so check-in should fail
+      seedPendingReservation({ start_time: makeStartTime(-6) })
 
       await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
         name: 'ServiceError',
