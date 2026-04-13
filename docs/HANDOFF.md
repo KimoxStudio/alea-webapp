@@ -5,97 +5,74 @@
 
 ---
 
-## Last updated: 2026-04-14
+## Last updated: 2026-04-13
 
 ## Current branch
 `develop`
 
 ## Open PRs — awaiting merge
-| PR | Branch | Bugs | Status |
-|---|---|---|---|
-| #98 | `fix/i18n-navbar-auth-enumeration` | BUG-1 + BUG-2 | APPROVED ✅ |
-| #99 | `fix/admin-reservations-checkin-timing` | BUG-5 + BUG-6 | APPROVED ✅ |
-| #100 | `fix/ui-qr-icon-responsive-cards` | BUG-3 + BUG-4 | APPROVED ✅ |
-
-All 3 PRs passed 2× Security + 2× QA cycles. All Copilot review comments responded to in English. Merge order: #98 → #99 → #100 (independent, any order is fine).
+None.
 
 ## Merged this session
-| PR | Branch | Issues |
+| PR | Branch | Fix |
 |---|---|---|
-| ~~#76~~ | `feat/auto-cancel-grace-period` | KIM-327 ✅ Done |
-| ~~#77~~ | `feat/overlap-restriction` | KIM-330 ✅ Done · KIM-338 ✅ Done |
-| ~~#78~~ | `fix/auth-i18n-errors` | KIM-325 ✅ Done |
-| ~~#79~~ | `feat/cancellation-cutoff` | KIM-331 ✅ · KIM-340 ✅ · KIM-342 ✅ Done |
-| ~~#80~~ | `chore/seed-data` | KIM-306 ✅ Done |
-| ~~#81~~ | `feat/overlap-ui-feedback` | KIM-337 ✅ Done |
-| ~~#82~~ | `feat/cancellation-cutoff-ui` | KIM-341 ✅ Done |
-| ~~#83~~ | `fix/pending-reservation-cancel` | KIM-362 ✅ Done |
-| ~~#84~~ | `fix/auth-hardening` | KIM-322 ✅ Done · KIM-323 ✅ Done |
-| ~~#85~~ | `fix/locale-switcher-redirect` | KIM-360 ✅ Done |
-| ~~#86~~ | `fix/checkin-hardening` | KIM-357 ✅ Done · KIM-359 ✅ Done |
-| ~~#87~~ | `chore/remove-docker-docs` | KIM-328 ✅ Done |
-
----
-
-## MVP Critical Path (ordered)
-
-### ✅ Done
-- **KIM-327** (M2) — auto-cancel grace period — merged PR #76
-- **KIM-330 + KIM-338** (M3) — overlap restriction — merged PR #77
-- **KIM-325** — auth i18n double-namespace — merged PR #78
-- **KIM-358** — toGameTable mapper — already in develop (no PR needed)
-- **KIM-331 + KIM-340 + KIM-342** (M5) — cancellation cutoff backend — merged PR #79
-- **KIM-306** — seed data — merged PR #80
-- **KIM-337** — overlap UI feedback — merged PR #81
-
-### 🟡 Ready for final smoke test → Monday launch
-- **KIM-341** — cancellation cutoff UI — merged PR #82 ✅
-- **KIM-362** — pending reservations cancellable — merged PR #83 ✅
-- **KIM-322, KIM-323** — auth hardening — merged PR #84 ✅
-- **KIM-360** — locale switcher redirect — merged PR #85 ✅
-- **KIM-357, KIM-359** — checkin hardening — merged PR #86 ✅
-- **KIM-328** — Docker docs cleanup — merged PR #87 ✅
-
-**Smoke test completado 2026-04-13. 6 bugs encontrados — todos corregidos en PRs #98–#100.**
-
----
-
-## ✅ Bugs pre-presentación (KIM-365) — todos en PRs aprobados
-
-| # | Bug | PR | Estado |
-|---|---|---|---|
-| BUG-1 | Auth: user enumeration en registro | #98 | APPROVED ✅ |
-| BUG-2 | i18n: navbar desaparece al volver a ES | #98 | APPROVED ✅ |
-| BUG-5 | Admin dashboard: acciones en reservas no cargan | #99 | APPROVED ✅ |
-| BUG-6 | Check-in: error "demasiado pronto" dentro de ventana válida | #99 | APPROVED ✅ |
-| BUG-4 | Responsive: cards de mesa mal a 1440px y mobile | #100 | APPROVED ✅ |
-| BUG-3 | UI: icono QR visible a usuarios no-admin | #100 | APPROVED ✅ |
-
-**Siguiente paso: merge de #98, #99, #100 y smoke test final.**
-
----
-
-## Post-MVP (do NOT start before launch)
-
-- **KIM-364** — After cancellation cutoff passes, reservation moves to completed/cancelled section instead of staying Active. Cancel button should explain why it can't be cancelled. (Open Linear issue)
-- **KIM-365** — Manual QA checklist (Open Linear issue, updated each time manual QA steps are identified)
-- **KIM-361** — Spanish translations with missing ñ (open Linear issue)
-- **KIM-317** — 24h time range for reservations (open Linear issue)
-- **KIM-329 epic** (no-show tracking) — KIM-329, 333, 334, 335, 336
-- **KIM-332 epic** (events / room blocking) — KIM-332, 343, 344, 345, 346, 347
-- **KIM-348 epic** (equipment management) — KIM-348–356
+| ~~#98~~ | `fix/i18n-navbar-auth-enumeration` | BUG-1 + BUG-2 ✅ |
+| ~~#99~~ | `fix/admin-reservations-checkin-timing` | BUG-5 + BUG-6 ✅ |
+| ~~#100~~ | `fix/ui-qr-icon-responsive-cards` | BUG-3 + BUG-4 ✅ |
+| ~~#101~~ | `fix/event-force-delete-i18n` | Admin force-delete events + i18n error ✅ |
+| ~~#102~~ | `fix/auth-service-tests` | Auth test assertions after enumeration hardening ✅ |
+| ~~#103~~ | `fix/slot-end-time-inclusive` | Slot end_time shown as unavailable (18:00 bug) ✅ |
+| ~~#104~~ | `fix/checkin-timezone-window` | Check-in timezone fix + window 15→5 min ✅ |
 
 ---
 
 ## Status Summary
 
-All MVP milestones merged as of 2026-04-12 12:30Z.
+All post-smoke-test bugs fixed and merged as of 2026-04-13.
 
-**Next steps:**
-1. Final smoke test across all flows
-2. Monday 2026-04-14 launch
+**develop is clean. No open PRs.**
 
-**No PRs awaiting merge.**
+---
+
+## Manual QA pending (KIM-365)
+
+All checks require a live browser session. See KIM-365 for full list.
+
+### PR #82 — Cancellation cutoff UI
+- [ ] Cancel a reservation < 60 min away → cutoff error shown in red
+- [ ] Dismiss dialog → error clears on reopen
+
+### PR #86 — Check-in hardening
+- [ ] Valid QR scan → reservation activates to `active`
+- [ ] `/en/check-in/not-a-uuid` → redirects to `/en/rooms`
+- [ ] `/xx/check-in/<valid-uuid>` (invalid locale) → redirects to `/`
+
+### PR #101 — Admin force-delete events
+- [ ] Admin deletes event with active/pending reservations → reservations cancelled, event removed
+- [ ] Delete error displays in active locale (ES or EN)
+
+### PR #103 — Slot end_time inclusive
+- [ ] User A has 17:00–18:00 → User B sees both 17:00 and 18:00 as unavailable
+- [ ] 19:00 remains green
+
+### PR #104 — Check-in timezone fix
+- [ ] Check-in at exact reservation start time → succeeds
+- [ ] Check-in 5 min before start → succeeds
+- [ ] Check-in 6 min before start → "too early" error
+
+---
+
+## Post-MVP backlog
+
+- **KIM-364** — After cancellation cutoff, show explanation instead of hiding cancel button
+- **KIM-365** — Manual QA checklist (In Progress — items above)
+- **KIM-361** — Spanish translations missing ñ
+- **KIM-317** — 24h time range for reservations
+- **KIM-329 epic** — No-show tracking (KIM-329, 333, 334, 335, 336)
+- **KIM-332 epic** — Events / room blocking (KIM-332, 343–347)
+- **KIM-348 epic** — Equipment management (KIM-348–356)
+- **Hardening** — DB overlap constraint alignment with inclusive end_time (UI/DB semantic gap noted in PR #103 review)
+- **Hardening** — UTC-anchored reservation timestamps (noted in PR #104 security review)
 
 ---
 
