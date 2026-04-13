@@ -568,6 +568,10 @@ export async function activateReservationByTable(
 
   const reservation = pendingData as ReservationRow
 
+  if (!reservation.end_time) {
+    serviceError('Invalid reservation data', 500)
+  }
+
   const now = new Date()
   const startTimeParts = normalizeTime(reservation.start_time).split(':')
   const endTimeParts = normalizeTime(reservation.end_time).split(':')
@@ -584,7 +588,7 @@ export async function activateReservationByTable(
     0,
     0,
   )
-  const reservationEnd = new Date(
+  let reservationEnd = new Date(
     parseInt(dateParts[0]!, 10),
     parseInt(dateParts[1]!, 10) - 1,
     parseInt(dateParts[2]!, 10),
@@ -593,6 +597,11 @@ export async function activateReservationByTable(
     0,
     0,
   )
+
+  // If end is at or before start, the reservation spans midnight — advance end by one day.
+  if (reservationEnd <= reservationStart) {
+    reservationEnd.setDate(reservationEnd.getDate() + 1)
+  }
 
   // Allow check-in starting CHECK_IN_EARLY_MINUTES before the slot begins,
   // up to the end of the reserved slot.
