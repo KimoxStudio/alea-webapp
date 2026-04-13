@@ -1,7 +1,7 @@
 import 'server-only'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
-import type { TablesInsert, TablesUpdate, EventRow, EventRoomBlockRow } from '@/lib/supabase/types'
+import type { EventRow, EventRoomBlockRow } from '@/lib/supabase/types'
 import type { AdminEvent, AdminEventRoomBlock } from '@/lib/types'
 
 export type { AdminEvent, AdminEventRoomBlock }
@@ -33,6 +33,30 @@ function toAdminEvent(row: EventRow, blocks: EventRoomBlockRow[]): AdminEvent {
       startTime: b.start_time,
       endTime: b.end_time,
     })),
+  }
+}
+
+function jsonToAdminEvent(obj: Record<string, unknown>): AdminEvent {
+  const rawBlocks = Array.isArray(obj.room_blocks) ? obj.room_blocks : []
+  return {
+    id: String(obj.id),
+    title: String(obj.title),
+    description: obj.description != null ? String(obj.description) : null,
+    date: String(obj.date),
+    startTime: String(obj.start_time),
+    endTime: String(obj.end_time),
+    createdBy: obj.created_by != null ? String(obj.created_by) : null,
+    createdAt: String(obj.created_at),
+    roomBlocks: rawBlocks.map((b: unknown) => {
+      const block = b as Record<string, unknown>
+      return {
+        id: String(block.id),
+        roomId: String(block.room_id),
+        date: String(block.date),
+        startTime: String(block.start_time),
+        endTime: String(block.end_time),
+      }
+    }),
   }
 }
 
@@ -98,86 +122,32 @@ export async function createEvent(body: {
   roomId?: unknown
   createdBy?: unknown
 }): Promise<AdminEvent> {
-  const title = String(body.title ?? '').trim()
-  if (!title) serviceError('Event title is required', 400)
+  const title = String(body.title).trim()
+  if (!title) serviceError('Title is required', 400)
 
-  const date = String(body.date ?? '').trim()
-  if (!date) serviceError('Event date is required', 400)
-
-  const startTime = String(body.startTime ?? '').trim()
-  if (!startTime) serviceError('Event start time is required', 400)
-
-  const endTime = String(body.endTime ?? '').trim()
-  if (!endTime) serviceError('Event end time is required', 400)
+  const date = String(body.date).trim()
+  const startTime = String(body.startTime).trim()
+  const endTime = String(body.endTime).trim()
 
   validateDateTimeFields(date, startTime, endTime)
 
-  const roomId = body.roomId ? String(body.roomId).trim() : undefined
+  const description = body.description ? String(body.description).trim() : null
+  const roomId = body.roomId ? String(body.roomId).trim() : null
 
   const admin = createSupabaseServerAdminClient()
 
-  const insert: TablesInsert<'events'> = {
-    title,
-    description: body.description ? String(body.description).trim() : null,
-    date,
-    start_time: startTime,
-    end_time: endTime,
-    created_by: body.createdBy ? String(body.createdBy) : null,
-  }
+  const { data: result, error: rpcError } = await admin.rpc('create_event_atomic', {
+    p_title: title,
+    p_description: description,
+    p_date: date,
+    p_start_time: startTime,
+    p_end_time: endTime,
+    p_room_id: roomId,
+  })
 
-  const { data: createdEvent, error: insertError } = await admin
-    .from('events')
-    .insert(insert)
-    .select('*')
-    .maybeSingle()
+  if (rpcError) serviceError('Internal server error', 500)
 
-  if (insertError) serviceError('Internal server error', 500)
-  if (!createdEvent) serviceError('Internal server error', 500)
-
-  const eventRow = createdEvent as EventRow
-  let blocks: EventRoomBlockRow[] = []
-
-  if (roomId) {
-    const blockInsert: TablesInsert<'event_room_blocks'> = {
-      event_id: eventRow.id,
-      room_id: roomId,
-      date,
-      start_time: startTime,
-      end_time: endTime,
-    }
-    const { data: blockData, error: blockError } = await admin
-      .from('event_room_blocks')
-      .insert(blockInsert)
-      .select('*')
-
-    if (blockError) serviceError('Internal server error', 500)
-    blocks = (blockData ?? []) as EventRoomBlockRow[]
-
-    // Cancel any reservations that conflict with this new event block
-    const { data: tables, error: tablesError } = await admin
-      .from('tables')
-      .select('id')
-      .eq('room_id', roomId)
-
-    if (tablesError) serviceError('Internal server error', 500)
-
-    const tableIds = ((tables ?? []) as { id: string }[]).map((t) => t.id)
-
-    if (tableIds.length > 0) {
-      const { error: cancelError } = await admin
-        .from('reservations')
-        .update({ status: 'cancelled' })
-        .in('table_id', tableIds)
-        .eq('date', date)
-        .lt('start_time', endTime)
-        .gt('end_time', startTime)
-        .in('status', ['active', 'pending'])
-
-      if (cancelError) serviceError('Internal server error', 500)
-    }
-  }
-
-  return toAdminEvent(eventRow, blocks)
+  return jsonToAdminEvent(result as Record<string, unknown>)
 }
 
 export async function updateEvent(
@@ -191,133 +161,63 @@ export async function updateEvent(
     roomId?: unknown
   },
 ): Promise<AdminEvent> {
-  const updates: TablesUpdate<'events'> = {}
-  if (body.title !== undefined) updates.title = String(body.title).trim() || undefined
-  if (body.description !== undefined) {
-    updates.description = body.description === null ? null : String(body.description).trim() || null
-  }
-
-  const newDate = body.date !== undefined ? String(body.date).trim() || undefined : undefined
-  const newStartTime = body.startTime !== undefined ? String(body.startTime).trim() || undefined : undefined
-  const newEndTime = body.endTime !== undefined ? String(body.endTime).trim() || undefined : undefined
-
-  if (newDate !== undefined) updates.date = newDate
-  if (newStartTime !== undefined) updates.start_time = newStartTime
-  if (newEndTime !== undefined) updates.end_time = newEndTime
-
-  // Validate date/time fields if any are being updated
-  if (newDate !== undefined || newStartTime !== undefined || newEndTime !== undefined) {
-    // We need all three to validate; load current values for fields not being changed
-    const admin = createSupabaseServerAdminClient()
-    const { data: current } = await admin
-      .from('events')
-      .select('date, start_time, end_time')
-      .eq('id', id)
-      .maybeSingle()
-
-    if (!current) serviceError('Event not found', 404)
-    const currentRow = current as Pick<EventRow, 'date' | 'start_time' | 'end_time'>
-    const validatedDate = newDate ?? currentRow.date
-    const validatedStart = newStartTime ?? currentRow.start_time
-    const validatedEnd = newEndTime ?? currentRow.end_time
-    validateDateTimeFields(validatedDate, validatedStart, validatedEnd)
-  }
-
   const admin = createSupabaseServerAdminClient()
 
-  const { data: updatedEvent, error: updateError } = await admin
+  // Load current event to fill in any fields not provided in the body
+  const { data: current, error: fetchError } = await admin
     .from('events')
-    .update(updates)
+    .select('title, description, date, start_time, end_time')
     .eq('id', id)
-    .select('*')
     .maybeSingle()
 
-  if (updateError) serviceError('Internal server error', 500)
-  if (!updatedEvent) serviceError('Event not found', 404)
+  if (fetchError) serviceError('Internal server error', 500)
+  if (!current) serviceError('Event not found', 404)
 
-  const eventRow = updatedEvent as EventRow
+  const currentRow = current as Pick<EventRow, 'title' | 'description' | 'date' | 'start_time' | 'end_time'>
 
-  // Update room blocks when roomId or date/time fields change
-  const dateTimeChanged = newDate !== undefined || newStartTime !== undefined || newEndTime !== undefined
-  if (body.roomId !== undefined || dateTimeChanged) {
-    const roomId = body.roomId !== undefined
-      ? (body.roomId ? String(body.roomId).trim() : null)
-      : undefined  // undefined means "keep existing room, just update times"
+  // Resolve final values (body takes precedence over current row)
+  const title = body.title !== undefined ? String(body.title).trim() || currentRow.title : currentRow.title
+  const description =
+    body.description !== undefined
+      ? body.description === null
+        ? null
+        : String(body.description).trim() || null
+      : currentRow.description
+  const date = body.date !== undefined ? String(body.date).trim() || currentRow.date : currentRow.date
+  const startTime =
+    body.startTime !== undefined ? String(body.startTime).trim() || currentRow.start_time : currentRow.start_time
+  const endTime =
+    body.endTime !== undefined ? String(body.endTime).trim() || currentRow.end_time : currentRow.end_time
 
-    if (body.roomId !== undefined) {
-      // roomId is explicitly being changed — delete all existing blocks and re-create if needed
-      const { error: deleteError } = await admin
-        .from('event_room_blocks')
-        .delete()
-        .eq('event_id', id)
-      if (deleteError) serviceError('Internal server error', 500)
+  validateDateTimeFields(date, startTime, endTime)
 
-      if (roomId) {
-        const { error: insertError } = await admin.from('event_room_blocks').insert({
-          event_id: id,
-          room_id: roomId,
-          date: eventRow.date,
-          start_time: eventRow.start_time,
-          end_time: eventRow.end_time,
-        })
-        if (insertError) serviceError('Internal server error', 500)
-      }
-    } else if (dateTimeChanged) {
-      // Only date/time changed — update existing blocks in place
-      const { error: blockUpdateError } = await admin
-        .from('event_room_blocks')
-        .update({
-          date: eventRow.date,
-          start_time: eventRow.start_time,
-          end_time: eventRow.end_time,
-        })
-        .eq('event_id', id)
-      if (blockUpdateError) serviceError('Internal server error', 500)
-    }
-
-    // Cancel reservations conflicting with the updated event blocks
-    const { data: currentBlocks, error: currentBlocksError } = await admin
+  // Resolve room: if body.roomId is present use it (null means remove), otherwise load existing block
+  let roomId: string | null
+  if (body.roomId !== undefined) {
+    roomId = body.roomId ? String(body.roomId).trim() : null
+  } else {
+    const { data: existingBlocks } = await admin
       .from('event_room_blocks')
       .select('room_id')
       .eq('event_id', id)
-
-    if (currentBlocksError) serviceError('Internal server error', 500)
-
-    const roomIds = ((currentBlocks ?? []) as EventRoomBlockRow[]).map((b) => b.room_id)
-    if (roomIds.length > 0) {
-      const { data: tables, error: tablesError } = await admin
-        .from('tables')
-        .select('id')
-        .in('room_id', roomIds)
-
-      if (tablesError) serviceError('Internal server error', 500)
-
-      const tableIds = ((tables ?? []) as { id: string }[]).map((t) => t.id)
-      if (tableIds.length > 0) {
-        const { error: cancelError } = await admin
-          .from('reservations')
-          .update({ status: 'cancelled' })
-          .in('table_id', tableIds)
-          .eq('date', eventRow.date)
-          .lt('start_time', eventRow.end_time)
-          .gt('end_time', eventRow.start_time)
-          .in('status', ['active', 'pending'])
-
-        if (cancelError) serviceError('Internal server error', 500)
-      }
-    }
+      .limit(1)
+    const firstBlock = (existingBlocks ?? [])[0] as { room_id: string } | undefined
+    roomId = firstBlock ? firstBlock.room_id : null
   }
 
-  const { data: blocks, error: blocksError } = await admin
-    .from('event_room_blocks')
-    .select('*')
-    .eq('event_id', id)
+  const { data: result, error: rpcError } = await admin.rpc('update_event_atomic', {
+    p_id: id,
+    p_title: title,
+    p_description: description,
+    p_date: date,
+    p_start_time: startTime,
+    p_end_time: endTime,
+    p_room_id: roomId,
+  })
 
-  if (blocksError) serviceError('Internal server error', 500)
+  if (rpcError) serviceError('Internal server error', 500)
 
-  const currentBlocks = (blocks ?? []) as EventRoomBlockRow[]
-
-  return toAdminEvent(eventRow, currentBlocks)
+  return jsonToAdminEvent(result as Record<string, unknown>)
 }
 
 export async function deleteEvent(id: string): Promise<void> {

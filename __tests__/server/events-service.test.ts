@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import type { ServiceError } from '@/lib/server/service-error'
 
 /**
@@ -13,7 +13,7 @@ import type { ServiceError } from '@/lib/server/service-error'
  * - updateEvent with changed time cancels overlapping reservations
  * - updateEvent with changed roomId cancels only new room's reservations
  * - updateEvent with title-only changes does not cancel reservations
- * - Error handling when tables or reservation queries fail
+ * - Error handling when RPC calls fail
  */
 
 // Mock 'server-only' before importing the service
@@ -53,11 +53,7 @@ type EventRoomBlockRow = {
   end_time: string
 }
 
-type TableRow = {
-  id: string
-}
-
-// Helper to build a mock Supabase query chain
+// Helper to build a mock Supabase client with RPC support
 function buildSupabaseMock() {
   return {
     from: vi.fn(function (table: string) {
@@ -68,12 +64,12 @@ function buildSupabaseMock() {
           return {
             eq: vi.fn(function (col: string, val: any) {
               state.filters[col] = val
-              
+
               // Build the return object - it needs to be both awaitable and have maybeSingle() method
               const chainObj = {
                 // Make it awaitable
                 [Symbol.toStringTag]: 'Promise',
-                then: async function(onFulfilled?: any, onRejected?: any) {
+                then: async function (onFulfilled?: any, onRejected?: any) {
                   // This is for handling await on eq() for tables queries
                   if (table === 'tables') {
                     // Return tables based on room_id filter
@@ -88,16 +84,19 @@ function buildSupabaseMock() {
                   if (table === 'event_room_blocks' && col === 'event_id') {
                     const eventId = state.filters['event_id']
                     return Promise.resolve({
-                      data: eventId === 'evt-update-1' ? [
-                        {
-                          id: 'block-1',
-                          event_id: eventId,
-                          room_id: 'room-1',
-                          date: '2026-04-20',
-                          start_time: '18:00',
-                          end_time: '22:00',
-                        }
-                      ] : [],
+                      data:
+                        eventId === 'evt-update-1'
+                          ? [
+                              {
+                                id: 'block-1',
+                                event_id: eventId,
+                                room_id: 'room-1',
+                                date: '2026-04-20',
+                                start_time: '18:00',
+                                end_time: '22:00',
+                              },
+                            ]
+                          : [],
                       error: null,
                     }).then(onFulfilled, onRejected)
                   }
@@ -123,6 +122,9 @@ function buildSupabaseMock() {
                     }
                   }
                   return { data: null, error: null }
+                }),
+                limit: vi.fn(function (n: number) {
+                  return chainObj
                 }),
                 order: vi.fn(function () {
                   return {
@@ -160,10 +162,10 @@ function buildSupabaseMock() {
               // For tables query with in(room_id, [...]): return chainable object
               if (table === 'tables') {
                 // Return tables based on room_ids filter
-                const hasAnyTables = vals && vals.length > 0 && !vals.some(rid => rid.includes('empty'))
+                const hasAnyTables = vals && vals.length > 0 && !vals.some((rid) => rid.includes('empty'))
                 return {
                   [Symbol.toStringTag]: 'Promise',
-                  then: async function(onFulfilled?: any, onRejected?: any) {
+                  then: async function (onFulfilled?: any, onRejected?: any) {
                     return Promise.resolve({
                       data: hasAnyTables ? [{ id: 'table-1' }, { id: 'table-2' }] : [],
                       error: null,
@@ -210,7 +212,7 @@ function buildSupabaseMock() {
               if (table === 'event_room_blocks') {
                 return {
                   [Symbol.toStringTag]: 'Promise',
-                  then: async function(onFulfilled?: any, onRejected?: any) {
+                  then: async function (onFulfilled?: any, onRejected?: any) {
                     return Promise.resolve({
                       data: [
                         {
@@ -318,6 +320,7 @@ function buildSupabaseMock() {
         }),
       }
     }),
+    rpc: vi.fn(),
   }
 }
 
@@ -327,8 +330,32 @@ describe('events-service — createEvent with roomId cancellation', () => {
     vi.clearAllMocks()
   })
 
-  it('cancels overlapping active/pending reservations', async () => {
+  it('calls create_event_atomic RPC with correct parameters', async () => {
     const mock = buildSupabaseMock()
+    mock.rpc.mockResolvedValueOnce({
+      data: {
+        id: 'evt-1',
+        title: 'Test Event',
+        description: null,
+        date: '2026-04-20',
+        start_time: '18:00',
+        end_time: '22:00',
+        created_by: null,
+        created_at: '2026-04-13T00:00:00Z',
+        room_blocks: [
+          {
+            id: 'block-1',
+            event_id: 'evt-1',
+            room_id: 'room-1',
+            date: '2026-04-20',
+            start_time: '18:00',
+            end_time: '22:00',
+          },
+        ],
+      },
+      error: null,
+    })
+
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
@@ -345,40 +372,39 @@ describe('events-service — createEvent with roomId cancellation', () => {
     expect(result.id).toBe('evt-1')
     expect(result.title).toBe('Test Event')
     expect(result.roomBlocks).toHaveLength(1)
+    expect(result.roomBlocks[0].roomId).toBe('room-1')
 
-    // Verify that reservations.update() was called with the correct filters
-    const fromCalls = mock.from.mock.calls
-    const reservationsFromCall = fromCalls.find((call) => call[0] === 'reservations')
-    expect(reservationsFromCall).toBeDefined()
-  })
-
-  it('does not cancel non-overlapping reservations', async () => {
-    const mock = buildSupabaseMock()
-    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
-    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
-
-    const { createEvent } = await import('@/lib/server/events-service')
-
-    const result = await createEvent({
-      title: 'Evening Event',
-      date: '2026-04-20',
-      startTime: '18:00',
-      endTime: '22:00',
-      roomId: 'room-1',
-    })
-
-    expect(result.id).toBe('evt-1')
-    expect(result.title).toBe('Evening Event')
-    expect(result.roomBlocks).toHaveLength(1)
-
-    // Verify reservations update was still called (filters determine what gets cancelled)
-    const fromCalls = mock.from.mock.calls
-    const reservationsFromCall = fromCalls.find((call) => call[0] === 'reservations')
-    expect(reservationsFromCall).toBeDefined()
+    // Verify RPC was called with correct parameters
+    expect(mock.rpc).toHaveBeenCalledWith(
+      'create_event_atomic',
+      expect.objectContaining({
+        p_title: 'Test Event',
+        p_description: null,
+        p_date: '2026-04-20',
+        p_start_time: '18:00',
+        p_end_time: '22:00',
+        p_room_id: 'room-1',
+      })
+    )
   })
 
   it('does not attempt cancellation when roomId is not provided', async () => {
     const mock = buildSupabaseMock()
+    mock.rpc.mockResolvedValueOnce({
+      data: {
+        id: 'evt-1',
+        title: 'No Room Event',
+        description: null,
+        date: '2026-04-20',
+        start_time: '18:00',
+        end_time: '22:00',
+        created_by: null,
+        created_at: '2026-04-13T00:00:00Z',
+        room_blocks: [],
+      },
+      error: null,
+    })
+
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
@@ -394,56 +420,65 @@ describe('events-service — createEvent with roomId cancellation', () => {
     expect(result.id).toBe('evt-1')
     expect(result.roomBlocks).toHaveLength(0)
 
-    // Verify that reservations.update() was NOT called
-    const fromCalls = mock.from.mock.calls
-    const reservationsFromCall = fromCalls.find((call) => call[0] === 'reservations')
-    expect(reservationsFromCall).toBeUndefined()
+    // Verify RPC was called with p_room_id: null
+    expect(mock.rpc).toHaveBeenCalledWith(
+      'create_event_atomic',
+      expect.objectContaining({
+        p_room_id: null,
+      })
+    )
   })
 
-  it('skips cancellation when room has no tables', async () => {
+  it('includes description when provided', async () => {
     const mock = buildSupabaseMock()
+    mock.rpc.mockResolvedValueOnce({
+      data: {
+        id: 'evt-1',
+        title: 'Event With Description',
+        description: 'Test description',
+        date: '2026-04-20',
+        start_time: '18:00',
+        end_time: '22:00',
+        created_by: null,
+        created_at: '2026-04-13T00:00:00Z',
+        room_blocks: [],
+      },
+      error: null,
+    })
+
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
     const { createEvent } = await import('@/lib/server/events-service')
 
     const result = await createEvent({
-      title: 'Empty Room Event',
+      title: 'Event With Description',
+      description: 'Test description',
       date: '2026-04-20',
       startTime: '18:00',
       endTime: '22:00',
-      roomId: 'room-empty',
     })
 
-    expect(result.id).toBe('evt-1')
-    expect(result.roomBlocks).toHaveLength(1)
+    expect(result.description).toBe('Test description')
 
-    // Verify that reservations.update() was NOT called (because no tables in room)
-    const fromCalls = mock.from.mock.calls
-    const reservationsFromCall = fromCalls.find((call) => call[0] === 'reservations')
-    expect(reservationsFromCall).toBeUndefined()
+    // Verify RPC was called with description
+    expect(mock.rpc).toHaveBeenCalledWith(
+      'create_event_atomic',
+      expect.objectContaining({
+        p_description: 'Test description',
+      })
+    )
   })
 
-  it('throws 500 when tables query fails', async () => {
-    const mockAdmin = buildSupabaseMock()
-    const originalFrom = mockAdmin.from
-    mockAdmin.from = vi.fn((table: string) => {
-      const result = originalFrom(table) as any
-      if (table === 'tables') {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(async () => ({
-              data: null,
-              error: { code: '500', message: 'Database error' },
-            })),
-          })),
-        }
-      }
-      return result
+  it('throws 500 when RPC fails', async () => {
+    const mock = buildSupabaseMock()
+    mock.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'Database error' },
     })
 
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
-    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mockAdmin as any)
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
     const { createEvent } = await import('@/lib/server/events-service')
 
@@ -471,8 +506,32 @@ describe('events-service — updateEvent with cancellation', () => {
     vi.clearAllMocks()
   })
 
-  it('cancels reservations when time window changes', async () => {
+  it('calls update_event_atomic RPC with updated time values', async () => {
     const mock = buildSupabaseMock()
+    mock.rpc.mockResolvedValueOnce({
+      data: {
+        id: 'evt-1',
+        title: 'Updated Event',
+        description: null,
+        date: '2026-04-20',
+        start_time: '16:00',
+        end_time: '20:00',
+        created_by: null,
+        created_at: '2026-04-13T00:00:00Z',
+        room_blocks: [
+          {
+            id: 'block-1',
+            event_id: 'evt-1',
+            room_id: 'room-1',
+            date: '2026-04-20',
+            start_time: '16:00',
+            end_time: '20:00',
+          },
+        ],
+      },
+      error: null,
+    })
+
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
@@ -484,18 +543,96 @@ describe('events-service — updateEvent with cancellation', () => {
     })
 
     expect(result.id).toBe('evt-1')
-    // Verify the mock returned the updated times
     expect(result.startTime).toBe('16:00')
     expect(result.endTime).toBe('20:00')
 
-    // Verify that reservations.update() was called
-    const fromCalls = mock.from.mock.calls
-    const reservationsFromCall = fromCalls.find((call) => call[0] === 'reservations')
-    expect(reservationsFromCall).toBeDefined()
+    // Verify RPC was called with updated times
+    expect(mock.rpc).toHaveBeenCalledWith(
+      'update_event_atomic',
+      expect.objectContaining({
+        p_id: 'evt-update-1',
+        p_start_time: '16:00',
+        p_end_time: '20:00',
+      })
+    )
   })
 
-  it('cancels only new room reservations when roomId changes', async () => {
+  it('loads existing room when roomId is not provided', async () => {
     const mock = buildSupabaseMock()
+    mock.rpc.mockResolvedValueOnce({
+      data: {
+        id: 'evt-1',
+        title: 'Updated Title',
+        description: null,
+        date: '2026-04-20',
+        start_time: '18:00',
+        end_time: '22:00',
+        created_by: null,
+        created_at: '2026-04-13T00:00:00Z',
+        room_blocks: [
+          {
+            id: 'block-1',
+            event_id: 'evt-1',
+            room_id: 'room-1',
+            date: '2026-04-20',
+            start_time: '18:00',
+            end_time: '22:00',
+          },
+        ],
+      },
+      error: null,
+    })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { updateEvent } = await import('@/lib/server/events-service')
+
+    const result = await updateEvent('evt-update-1', {
+      title: 'Updated Title',
+    })
+
+    expect(result.id).toBe('evt-1')
+
+    // Verify the service fetched current event data
+    expect(mock.from).toHaveBeenCalledWith('events')
+
+    // Verify RPC was called with the existing room (room-1 from mock)
+    expect(mock.rpc).toHaveBeenCalledWith(
+      'update_event_atomic',
+      expect.objectContaining({
+        p_id: 'evt-update-1',
+        p_room_id: 'room-1',
+      })
+    )
+  })
+
+  it('updates room when roomId is provided', async () => {
+    const mock = buildSupabaseMock()
+    mock.rpc.mockResolvedValueOnce({
+      data: {
+        id: 'evt-1',
+        title: 'Updated Event',
+        description: null,
+        date: '2026-04-20',
+        start_time: '18:00',
+        end_time: '22:00',
+        created_by: null,
+        created_at: '2026-04-13T00:00:00Z',
+        room_blocks: [
+          {
+            id: 'block-2',
+            event_id: 'evt-1',
+            room_id: 'room-2',
+            date: '2026-04-20',
+            start_time: '18:00',
+            end_time: '22:00',
+          },
+        ],
+      },
+      error: null,
+    })
+
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
@@ -507,80 +644,67 @@ describe('events-service — updateEvent with cancellation', () => {
 
     expect(result.id).toBe('evt-1')
 
-    // Verify that reservations.update() was called
-    const fromCalls = mock.from.mock.calls
-    const reservationsFromCall = fromCalls.find((call) => call[0] === 'reservations')
-    expect(reservationsFromCall).toBeDefined()
+    // Verify RPC was called with new room
+    expect(mock.rpc).toHaveBeenCalledWith(
+      'update_event_atomic',
+      expect.objectContaining({
+        p_id: 'evt-update-1',
+        p_room_id: 'room-2',
+      })
+    )
   })
 
-  it('does not cancel when only title/description changes', async () => {
+  it('removes room when roomId is explicitly set to null', async () => {
     const mock = buildSupabaseMock()
+    mock.rpc.mockResolvedValueOnce({
+      data: {
+        id: 'evt-1',
+        title: 'Updated Event',
+        description: null,
+        date: '2026-04-20',
+        start_time: '18:00',
+        end_time: '22:00',
+        created_by: null,
+        created_at: '2026-04-13T00:00:00Z',
+        room_blocks: [],
+      },
+      error: null,
+    })
+
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
     const { updateEvent } = await import('@/lib/server/events-service')
 
     const result = await updateEvent('evt-update-1', {
-      title: 'Updated Title',
-      description: 'Updated description',
+      roomId: null,
     })
 
-    expect(result.id).toBe('evt-1')
+    expect(result.roomBlocks).toHaveLength(0)
 
-    // Verify that reservations.update() was NOT called
-    const fromCalls = mock.from.mock.calls
-    const reservationsFromCall = fromCalls.find((call) => call[0] === 'reservations')
-    expect(reservationsFromCall).toBeUndefined()
+    // Verify RPC was called with p_room_id: null
+    expect(mock.rpc).toHaveBeenCalledWith(
+      'update_event_atomic',
+      expect.objectContaining({
+        p_room_id: null,
+      })
+    )
   })
 
-  it('throws 500 when tables query fails on update', async () => {
-    const mockAdmin = buildSupabaseMock()
-    const originalFrom = mockAdmin.from
-    mockAdmin.from = vi.fn((table: string) => {
+  it('throws 500 when event not found', async () => {
+    const mock = buildSupabaseMock()
+    // Override the from('events').select().eq().maybeSingle() to return no event
+    const originalFrom = mock.from
+    mock.from = vi.fn((table: string) => {
       const result = originalFrom(table) as any
-      if (table === 'event_room_blocks') {
-        // Need to return blocks so the code tries to get tables
-        return {
-          select: vi.fn(function () {
-            return {
-              eq: vi.fn(async () => ({
-                // Return a block for the event
-                data: [
-                  {
-                    id: 'block-1',
-                    event_id: 'evt-update-1',
-                    room_id: 'room-1',
-                    date: '2026-04-20',
-                    start_time: '18:00',
-                    end_time: '22:00',
-                  },
-                ],
-                error: null,
-              })),
-            }
-          }),
-          update: vi.fn(() => ({
-            eq: vi.fn(async () => ({
-              data: null,
-              error: null,
-            })),
-          })),
-          delete: vi.fn(() => ({
-            eq: vi.fn(async () => ({
-              data: null,
-              error: null,
-            })),
-          })),
-          insert: vi.fn(() => ({})),
-        }
-      }
-      if (table === 'tables') {
-        // This is where the error happens
+      if (table === 'events') {
         return {
           select: vi.fn(() => ({
-            in: vi.fn(async () => ({
-              data: null,
-              error: { code: '500', message: 'Database error' },
+            eq: vi.fn(() => ({
+              maybeSingle: vi.fn(async () => ({
+                data: null,
+                error: null,
+              })),
             })),
           })),
         }
@@ -589,7 +713,32 @@ describe('events-service — updateEvent with cancellation', () => {
     })
 
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
-    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mockAdmin as any)
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { updateEvent } = await import('@/lib/server/events-service')
+
+    let caught: ServiceError | undefined
+    try {
+      await updateEvent('evt-nonexistent', {
+        title: 'Updated',
+      })
+    } catch (err) {
+      caught = err as ServiceError
+    }
+
+    expect(caught).toBeDefined()
+    expect(caught?.statusCode).toBe(404)
+  })
+
+  it('throws 500 when RPC fails', async () => {
+    const mock = buildSupabaseMock()
+    mock.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'Database error' },
+    })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
     const { updateEvent } = await import('@/lib/server/events-service')
 
@@ -605,39 +754,5 @@ describe('events-service — updateEvent with cancellation', () => {
 
     expect(caught).toBeDefined()
     expect(caught?.statusCode).toBe(500)
-  })
-})
-
-describe('events-service — existing placeholder tests', () => {
-  it('documents the missing time-range filter bug in deleteEvent', () => {
-    expect(true).toBe(true)
-  })
-
-  it('identifies test case for same-date, non-overlapping reservation (BUG TRIGGER)', () => {
-    expect(true).toBe(true)
-  })
-
-  it('identifies test case for truly overlapping reservation (SHOULD STILL BLOCK)', () => {
-    expect(true).toBe(true)
-  })
-
-  it('createEvent validates title is required', () => {
-    expect(true).toBe(true)
-  })
-
-  it('createEvent accepts optional description', () => {
-    expect(true).toBe(true)
-  })
-
-  it('updateEvent partial updates work', () => {
-    expect(true).toBe(true)
-  })
-
-  it('listEvents returns events ordered by date, start_time', () => {
-    expect(true).toBe(true)
-  })
-
-  it('listEventsBlockingRoom returns correct time-overlap matches', () => {
-    expect(true).toBe(true)
   })
 })
