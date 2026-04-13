@@ -42,7 +42,7 @@ export function TableCard({ table, availability, onReserve, currentDate: _curren
   const t = useTranslations('tables')
   const tRooms = useTranslations('rooms')
   const { user } = useAuth()
-  const isAdmin = user?.role === 'admin'
+  const isAdmin = user?.role === 'admin' // UI-only gate: server enforces admin check at POST /api/tables/[id]/qr
   const Icon = TABLE_TYPE_ICONS[table.type]
   const status = getTableStatus(table, availability)
 
@@ -81,9 +81,9 @@ export function TableCard({ table, availability, onReserve, currentDate: _curren
             )}
             aria-hidden="true"
           />
-          <span className="text-sm font-semibold font-cinzel truncate max-w-[5rem] sm:max-w-none xl:max-w-[6rem]">{table.name}</span>
+          <span className="text-sm font-semibold font-cinzel truncate max-w-[5rem] sm:max-w-none xl:max-w-none">{table.name}</span>
         </div>
-        <Badge variant={config.badgeVariant} className="text-[10px] px-1.5 py-0.5 shrink-0 xl:ml-2">
+        <Badge variant={config.badgeVariant} className="text-[10px] px-1.5 py-0.5 shrink-0 ml-auto">
           {config.label}
         </Badge>
       </div>
