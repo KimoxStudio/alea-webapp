@@ -587,14 +587,32 @@ export async function activateReservationByTable(
     }).formatToParts(nowUtc)
     nowParts = Object.fromEntries(parts.filter(p => p.type !== 'literal').map(p => [p.type, parseInt(p.value, 10)]))
   } catch {
-    // fallback: use UTC components (safe default)
-    nowParts = {
-      year: nowUtc.getUTCFullYear(),
-      month: nowUtc.getUTCMonth() + 1,
-      day: nowUtc.getUTCDate(),
-      hour: nowUtc.getUTCHours(),
-      minute: nowUtc.getUTCMinutes(),
-      second: nowUtc.getUTCSeconds(),
+    // Fallback: invalid/unknown CLUB_TIMEZONE — retry with Europe/Madrid (same fallback as 'today').
+    // This keeps 'now' in the same local-clock space as reservationStart/reservationEnd,
+    // which are constructed from stored date+time strings in club local time.
+    try {
+      const fallbackParts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Madrid',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }).formatToParts(nowUtc)
+      nowParts = Object.fromEntries(fallbackParts.filter(p => p.type !== 'literal').map(p => [p.type, parseInt(p.value, 10)]))
+    } catch {
+      // Absolute last resort: UTC components. Consistent with reservationStart only if server runs in UTC.
+      nowParts = {
+        year: nowUtc.getUTCFullYear(),
+        month: nowUtc.getUTCMonth() + 1,
+        day: nowUtc.getUTCDate(),
+        hour: nowUtc.getUTCHours(),
+        minute: nowUtc.getUTCMinutes(),
+        second: nowUtc.getUTCSeconds(),
+      }
+      console.error('[activateReservationByTable] Both primary and fallback timezone failed — using UTC')
     }
   }
   const now = new Date(
