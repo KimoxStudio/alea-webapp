@@ -27,7 +27,7 @@ export function generateDaySlots(reservedSlots: Array<{ start: string; end: stri
     const time = `${String(i).padStart(2, '0')}:00`
     const nextHour = i + 1
     const nextTime = nextHour < 24 ? `${String(nextHour).padStart(2, '0')}:00` : '24:00'
-    const isReserved = reservedSlots.some((reservation) => reservation.start <= time && reservation.end > time)
+    const isReserved = reservedSlots.some((reservation) => reservation.start <= time && reservation.end >= time)
     return { startTime: time, endTime: nextTime, available: !isReserved }
   })
 }
