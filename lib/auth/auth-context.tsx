@@ -56,8 +56,16 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
   )
 }
 
+const AUTH_FALLBACK: AuthContextValue = {
+  user: null,
+  isLoading: false,
+  isAuthenticated: false,
+  login: async () => { throw new Error('useAuth must be used within AuthProvider') },
+  logout: async () => { throw new Error('useAuth must be used within AuthProvider') },
+  register: async () => { throw new Error('useAuth must be used within AuthProvider') },
+}
+
 export function useAuth() {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
+  return ctx ?? AUTH_FALLBACK
 }
