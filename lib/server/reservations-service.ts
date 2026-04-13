@@ -72,7 +72,7 @@ type EnrichedReservationsTableClient = {
 
 export const GRACE_PERIOD_MINUTES = 20
 // How many minutes before the reservation start time check-in is allowed.
-export const CHECK_IN_EARLY_MINUTES = 15
+export const CHECK_IN_EARLY_MINUTES = 5
 const CANCELLATION_CUTOFF_MS = 60 * 60 * 1000 // 60 minutes
 
 const RESERVATION_COLUMNS = 'id, table_id, user_id, date, start_time, end_time, status, surface, activated_at, created_at'
@@ -572,7 +572,39 @@ export async function activateReservationByTable(
     serviceError('Invalid reservation data', 500)
   }
 
-  const now = new Date()
+  const nowUtc = new Date()
+  let nowParts: Record<string, number>
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: clubTimezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(nowUtc)
+    nowParts = Object.fromEntries(parts.filter(p => p.type !== 'literal').map(p => [p.type, parseInt(p.value, 10)]))
+  } catch {
+    // fallback: use UTC components (safe default)
+    nowParts = {
+      year: nowUtc.getUTCFullYear(),
+      month: nowUtc.getUTCMonth() + 1,
+      day: nowUtc.getUTCDate(),
+      hour: nowUtc.getUTCHours(),
+      minute: nowUtc.getUTCMinutes(),
+      second: nowUtc.getUTCSeconds(),
+    }
+  }
+  const now = new Date(
+    nowParts.year!,
+    nowParts.month! - 1,
+    nowParts.day!,
+    nowParts.hour!,
+    nowParts.minute!,
+    nowParts.second!,
+  )
   const startTimeParts = normalizeTime(reservation.start_time).split(':')
   const endTimeParts = normalizeTime(reservation.end_time).split(':')
   // Anchor on the reservation's own stored date. The server is expected to run
@@ -615,7 +647,7 @@ export async function activateReservationByTable(
 
   const { data: updated, error: updateError } = await admin
     .from('reservations')
-    .update({ status: 'active', activated_at: now.toISOString() })
+    .update({ status: 'active', activated_at: nowUtc.toISOString() })
     .eq('id', reservation.id)
     .eq('status', 'pending')
     .select(RESERVATION_COLUMNS)
