@@ -83,11 +83,14 @@
     "occupied": "Occupied", "myReservation": "My reservation",
     "calendar": "Availability calendar",
     "canceling": "Canceling...", "confirmCancel": "Yes, cancel", "submitting": "Submitting...",
+    "eventBlocked": "Blocked by event",
+    "eventBlockLabel": "Reserved - Event",
     "errors": {
       "conflictTime": "A reservation already exists at that time",
       "pastDate": "You cannot book dates in the past",
       "invalidTime": "End time must be after start time",
       "userSlotConflict": "You already have a reservation in this time slot",
+      "eventBlocked": "This time slot is blocked by an event.",
       "cancellationCutoff": "This reservation cannot be cancelled — it starts in less than 60 minutes.",
       "generic": "Something went wrong. Please try again."
     }
@@ -128,6 +131,8 @@
       "title": "Events",
       "description": "Description",
       "room": "Room",
+      "allDay": "All day",
+      "allDayHelp": "Reserve selected room for the full day without setting start and end times.",
       "startTime": "Start time",
       "endTime": "End time",
       "createEvent": "Create event",

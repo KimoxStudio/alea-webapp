@@ -7,6 +7,7 @@ import { DiceLoader } from '@/components/ui/dice-loader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -33,10 +34,11 @@ interface EventFormState {
   startTime: string
   endTime: string
   roomId: string
+  allDay: boolean
 }
 
 function emptyForm(): EventFormState {
-  return { title: '', description: '', date: '', startTime: '', endTime: '', roomId: NONE_ROOM }
+  return { title: '', description: '', date: '', startTime: '', endTime: '', roomId: NONE_ROOM, allDay: false }
 }
 
 function formFromEvent(event: AdminEvent): EventFormState {
@@ -47,6 +49,7 @@ function formFromEvent(event: AdminEvent): EventFormState {
     startTime: event.startTime,
     endTime: event.endTime,
     roomId: event.roomBlocks[0]?.roomId ?? NONE_ROOM,
+    allDay: event.allDay,
   }
 }
 
@@ -134,6 +137,25 @@ function EventFormDialog({
               </SelectContent>
             </Select>
           </div>
+          <div className="flex items-start gap-3 rounded-lg border border-border bg-background-secondary/60 px-3 py-3">
+            <Checkbox
+              id={id('all-day')}
+              checked={form.allDay}
+              onCheckedChange={(checked) => setForm({
+                ...form,
+                allDay: checked === true,
+                startTime: checked === true ? '' : form.startTime,
+                endTime: checked === true ? '' : form.endTime,
+              })}
+              className="mt-0.5"
+            />
+            <div className="space-y-1">
+              <Label htmlFor={id('all-day')} className="text-sm text-foreground font-medium">
+                {t('events.allDay')}
+              </Label>
+              <p className="text-xs text-muted-foreground">{t('events.allDayHelp')}</p>
+            </div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label htmlFor={id('date')} className="text-sm text-muted-foreground font-medium">
@@ -148,32 +170,38 @@ function EventFormDialog({
                 className="bg-background-secondary border-border focus:border-primary/50"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor={id('start')} className="text-sm text-muted-foreground font-medium">
-                {t('events.startTime')}
-              </Label>
-              <Input
-                id={id('start')}
-                type="time"
-                value={form.startTime}
-                onChange={field('startTime')}
-                required
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={id('end')} className="text-sm text-muted-foreground font-medium">
-                {t('events.endTime')}
-              </Label>
-              <Input
-                id={id('end')}
-                type="time"
-                value={form.endTime}
-                onChange={field('endTime')}
-                required
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
-            </div>
+            {!form.allDay && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor={id('start')} className="text-sm text-muted-foreground font-medium">
+                    {t('events.startTime')}
+                  </Label>
+                  <Input
+                    id={id('start')}
+                    type="time"
+                    step={3600}
+                    value={form.startTime}
+                    onChange={field('startTime')}
+                    required={!form.allDay}
+                    className="bg-background-secondary border-border focus:border-primary/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={id('end')} className="text-sm text-muted-foreground font-medium">
+                    {t('events.endTime')}
+                  </Label>
+                  <Input
+                    id={id('end')}
+                    type="time"
+                    step={3600}
+                    value={form.endTime}
+                    onChange={field('endTime')}
+                    required={!form.allDay}
+                    className="bg-background-secondary border-border focus:border-primary/50"
+                  />
+                </div>
+              </>
+            )}
           </div>
           {error && (
             <div role="alert" className="rounded-md bg-destructive/15 border border-destructive/30 px-3 py-2 text-sm text-destructive">
@@ -271,6 +299,7 @@ function EventRow({
   onEdit: (event: AdminEvent) => void
   onDelete: (event: AdminEvent) => void
 }) {
+  const t = useTranslations('admin')
   const tc = useTranslations('common')
   const { data: rooms } = useAdminRooms()
   const hasRoom = event.roomBlocks.length > 0
@@ -291,11 +320,16 @@ function EventRow({
               {event.date}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              {event.startTime.slice(0, 5)} – {event.endTime.slice(0, 5)}
+              {event.allDay ? t('events.allDay') : `${event.startTime.slice(0, 5)} – ${event.endTime.slice(0, 5)}`}
             </span>
             {hasRoom && roomName && (
               <Badge variant="partial" className="text-xs">
                 {roomName}
+              </Badge>
+            )}
+            {event.allDay && (
+              <Badge variant="outline" className="text-xs">
+                {t('events.allDay')}
               </Badge>
             )}
           </div>
@@ -362,9 +396,10 @@ export function EventsSection() {
         title: createForm.title.trim(),
         description: createForm.description.trim() || null,
         date: createForm.date,
-        startTime: createForm.startTime,
-        endTime: createForm.endTime,
+        startTime: createForm.allDay ? undefined : createForm.startTime,
+        endTime: createForm.allDay ? undefined : createForm.endTime,
         roomId: createForm.roomId === NONE_ROOM ? null : createForm.roomId,
+        allDay: createForm.allDay,
       })
       setCreateForm(emptyForm())
       setShowCreate(false)
@@ -387,9 +422,10 @@ export function EventsSection() {
           title: editForm.title.trim(),
           description: editForm.description.trim() || null,
           date: editForm.date,
-          startTime: editForm.startTime,
-          endTime: editForm.endTime,
+          startTime: editForm.allDay ? undefined : editForm.startTime,
+          endTime: editForm.allDay ? undefined : editForm.endTime,
           roomId: editForm.roomId === NONE_ROOM ? null : editForm.roomId,
+          allDay: editForm.allDay,
         },
       })
       setEditingEvent(null)

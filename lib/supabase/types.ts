@@ -36,6 +36,7 @@ export type Database = {
     Tables: {
       event_room_blocks: {
         Row: {
+          all_day: boolean
           date: string
           end_time: string
           event_id: string
@@ -44,6 +45,7 @@ export type Database = {
           start_time: string
         }
         Insert: {
+          all_day?: boolean
           date: string
           end_time: string
           event_id: string
@@ -52,6 +54,7 @@ export type Database = {
           start_time: string
         }
         Update: {
+          all_day?: boolean
           date?: string
           end_time?: string
           event_id?: string

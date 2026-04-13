@@ -8,6 +8,7 @@ import { regenerateQrCodes } from '@/lib/server/tables-service'
 type RoomRow = Tables<'rooms'>
 type TableRow = Tables<'tables'>
 type ReservationRow = Tables<'reservations'>
+type EventBlockRow = Tables<'event_room_blocks'>
 type RoomsTableClient = {
   select: (columns: string) => {
     order: (column: string, options: { ascending: boolean }) => Promise<{ data: RoomRow[] | null; error: unknown }>
@@ -197,6 +198,34 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
     serviceError('Internal server error', 500)
   }
 
+  const eventBlocksResult = await admin
+    .from('event_room_blocks')
+    .select('id, event_id, room_id, date, start_time, end_time, all_day')
+    .eq('room_id', roomId)
+    .eq('date', effectiveDate)
+  const eventBlocks = (eventBlocksResult.data ?? []) as EventBlockRow[]
+
+  if (eventBlocksResult.error) {
+    serviceError('Internal server error', 500)
+  }
+
+  let eventTitleById = new Map<string, string>()
+  const eventIds = [...new Set(eventBlocks.map((block) => block.event_id))]
+  if (eventIds.length > 0) {
+    const eventsResult = await admin
+      .from('events')
+      .select('id, title')
+      .in('id', eventIds)
+
+    if (eventsResult.error) {
+      serviceError('Internal server error', 500)
+    }
+
+    eventTitleById = new Map(
+      ((eventsResult.data ?? []) as Array<{ id: string; title: string }>).map((event) => [event.id, event.title]),
+    )
+  }
+
   const reservationsByTable = new Map<string, ReservationRow[]>()
   for (const reservation of (data ?? []) as ReservationRow[]) {
     const items = reservationsByTable.get(reservation.table_id) ?? []
@@ -204,8 +233,19 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
     reservationsByTable.set(reservation.table_id, items)
   }
 
+  const eventSlots = eventBlocks.map((block) => ({
+    start: block.start_time.slice(0, 5),
+    end: block.end_time.slice(0, 5),
+    label: eventTitleById.get(block.event_id) ?? null,
+  }))
+
   return tables.reduce<Record<string, TableAvailability>>((acc, table) => {
-    acc[table.id] = buildAvailability(table, effectiveDate, reservationsByTable.get(table.id) ?? [])
+    acc[table.id] = buildAvailability(
+      table,
+      effectiveDate,
+      reservationsByTable.get(table.id) ?? [],
+      eventSlots,
+    )
     return acc
   }, {})
 }

@@ -7,6 +7,7 @@ import type { Tables } from '@/lib/supabase/types'
 
 type TableRow = Tables<'tables'>
 type ReservationRow = Tables<'reservations'>
+type EventBlockRow = Tables<'event_room_blocks'>
 
 const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, qr_code_inf, pos_x, pos_y'
 
@@ -132,5 +133,42 @@ export async function getTableAvailability(tableId: string, date?: string | null
     serviceError('Internal server error', 500)
   }
 
-  return buildAvailability(toGameTable(table!), effectiveDate, reservations)
+  const eventBlocksResult = await admin
+    .from('event_room_blocks')
+    .select('id, event_id, room_id, date, start_time, end_time, all_day')
+    .eq('room_id', table.room_id)
+    .eq('date', effectiveDate)
+  const eventBlocks = (eventBlocksResult.data ?? []) as EventBlockRow[]
+
+  if (eventBlocksResult.error) {
+    serviceError('Internal server error', 500)
+  }
+
+  let eventTitleById = new Map<string, string>()
+  const eventIds = [...new Set(eventBlocks.map((block) => block.event_id))]
+  if (eventIds.length > 0) {
+    const eventsResult = await admin
+      .from('events')
+      .select('id, title')
+      .in('id', eventIds)
+
+    if (eventsResult.error) {
+      serviceError('Internal server error', 500)
+    }
+
+    eventTitleById = new Map(
+      ((eventsResult.data ?? []) as Array<{ id: string; title: string }>).map((event) => [event.id, event.title]),
+    )
+  }
+
+  return buildAvailability(
+    toGameTable(table),
+    effectiveDate,
+    reservations,
+    eventBlocks.map((block) => ({
+      start: block.start_time.slice(0, 5),
+      end: block.end_time.slice(0, 5),
+      label: eventTitleById.get(block.event_id) ?? null,
+    })),
+  )
 }

@@ -83,11 +83,14 @@
     "occupied": "Ocupado", "myReservation": "Mi reserva",
     "calendar": "Calendario de disponibilidad",
     "canceling": "Cancelando...", "confirmCancel": "Sí, cancelar", "submitting": "Reservando...",
+    "eventBlocked": "Bloqueado por evento",
+    "eventBlockLabel": "Reservado - Evento",
     "errors": {
       "conflictTime": "Ya existe una reserva en ese horario",
       "pastDate": "No puedes reservar en fechas pasadas",
       "invalidTime": "La hora de fin debe ser posterior a la de inicio",
       "userSlotConflict": "Ya tienes una reserva en este horario",
+      "eventBlocked": "Este horario está bloqueado por un evento.",
       "cancellationCutoff": "Esta reserva no se puede cancelar: comienza en menos de 60 minutos.",
       "generic": "Algo salió mal. Por favor, inténtalo de nuevo."
     }
@@ -127,6 +130,8 @@
       "title": "Eventos",
       "description": "Descripción",
       "room": "Sala",
+      "allDay": "Todo el día",
+      "allDayHelp": "Reserva la sala seleccionada durante todo el día sin indicar hora de inicio ni fin.",
       "startTime": "Hora de inicio",
       "endTime": "Hora de fin",
       "createEvent": "Crear evento",

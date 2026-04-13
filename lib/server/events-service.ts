@@ -8,15 +8,33 @@ export type { AdminEvent, AdminEventRoomBlock }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
+const WHOLE_HOUR_TIME_RE = /^([01]\d|2[0-3]):00$/
 
 function validateDateTimeFields(date: string, startTime: string, endTime: string): void {
   if (!DATE_RE.test(date)) serviceError('date must be in YYYY-MM-DD format', 400)
   if (!TIME_RE.test(startTime)) serviceError('startTime must be in HH:MM format', 400)
   if (!TIME_RE.test(endTime)) serviceError('endTime must be in HH:MM format', 400)
+  if (!WHOLE_HOUR_TIME_RE.test(startTime)) serviceError('startTime must be on a whole-hour boundary', 400)
+  if (!WHOLE_HOUR_TIME_RE.test(endTime)) serviceError('endTime must be on a whole-hour boundary', 400)
   if (endTime <= startTime) serviceError('endTime must be after startTime', 400)
 }
 
+function parseAllDay(value: unknown): boolean {
+  return value === true || value === 'true'
+}
+
+function resolveEventTimes(date: string, startTime: string, endTime: string, allDay: boolean) {
+  if (!DATE_RE.test(date)) serviceError('date must be in YYYY-MM-DD format', 400)
+  if (allDay) {
+    return { startTime: '00:00', endTime: '23:59' }
+  }
+
+  validateDateTimeFields(date, startTime, endTime)
+  return { startTime, endTime }
+}
+
 function toAdminEvent(row: EventRow, blocks: EventRoomBlockRow[]): AdminEvent {
+  const inferredAllDay = row.start_time.slice(0, 5) === '00:00' && row.end_time.slice(0, 5) === '23:59'
   return {
     id: row.id,
     title: row.title,
@@ -32,12 +50,15 @@ function toAdminEvent(row: EventRow, blocks: EventRoomBlockRow[]): AdminEvent {
       date: b.date,
       startTime: b.start_time,
       endTime: b.end_time,
+      allDay: b.all_day,
     })),
+    allDay: blocks.some((b) => b.all_day) || inferredAllDay,
   }
 }
 
 function jsonToAdminEvent(obj: Record<string, unknown>): AdminEvent {
   const rawBlocks = Array.isArray(obj.room_blocks) ? obj.room_blocks : []
+  const inferredAllDay = String(obj.start_time).slice(0, 5) === '00:00' && String(obj.end_time).slice(0, 5) === '23:59'
   return {
     id: String(obj.id),
     title: String(obj.title),
@@ -55,8 +76,10 @@ function jsonToAdminEvent(obj: Record<string, unknown>): AdminEvent {
         date: String(block.date),
         startTime: String(block.start_time),
         endTime: String(block.end_time),
+        allDay: Boolean(block.all_day),
       }
     }),
+    allDay: rawBlocks.some((b: unknown) => Boolean((b as Record<string, unknown>).all_day)) || inferredAllDay,
   }
 }
 
@@ -121,15 +144,14 @@ export async function createEvent(body: {
   endTime?: unknown
   roomId?: unknown
   createdBy?: unknown
+  allDay?: unknown
 }): Promise<AdminEvent> {
   const title = String(body.title).trim()
   if (!title) serviceError('Title is required', 400)
 
   const date = String(body.date).trim()
-  const startTime = String(body.startTime).trim()
-  const endTime = String(body.endTime).trim()
-
-  validateDateTimeFields(date, startTime, endTime)
+  const allDay = parseAllDay(body.allDay)
+  const resolvedTimes = resolveEventTimes(date, String(body.startTime ?? '').trim(), String(body.endTime ?? '').trim(), allDay)
 
   const description = body.description ? String(body.description).trim() : null
   const roomId = body.roomId ? String(body.roomId).trim() : null
@@ -140,9 +162,10 @@ export async function createEvent(body: {
     p_title: title,
     p_description: description,
     p_date: date,
-    p_start_time: startTime,
-    p_end_time: endTime,
+    p_start_time: resolvedTimes.startTime,
+    p_end_time: resolvedTimes.endTime,
     p_room_id: roomId,
+    p_all_day: allDay,
   })
 
   if (rpcError) serviceError('Internal server error', 500)
@@ -159,6 +182,7 @@ export async function updateEvent(
     startTime?: unknown
     endTime?: unknown
     roomId?: unknown
+    allDay?: unknown
   },
 ): Promise<AdminEvent> {
   const admin = createSupabaseServerAdminClient()
@@ -184,35 +208,40 @@ export async function updateEvent(
         : String(body.description).trim() || null
       : currentRow.description
   const date = body.date !== undefined ? String(body.date).trim() || currentRow.date : currentRow.date
-  const startTime =
+  const inputStartTime =
     body.startTime !== undefined ? String(body.startTime).trim() || currentRow.start_time : currentRow.start_time
-  const endTime =
+  const inputEndTime =
     body.endTime !== undefined ? String(body.endTime).trim() || currentRow.end_time : currentRow.end_time
-
-  validateDateTimeFields(date, startTime, endTime)
 
   // Resolve room: if body.roomId is present use it (null means remove), otherwise load existing block
   let roomId: string | null
-  if (body.roomId !== undefined) {
-    roomId = body.roomId ? String(body.roomId).trim() : null
-  } else {
+  let currentAllDay = false
+  if (body.roomId === undefined || body.allDay === undefined) {
     const { data: existingBlocks } = await admin
       .from('event_room_blocks')
-      .select('room_id')
+      .select('room_id, all_day')
       .eq('event_id', id)
       .limit(1)
-    const firstBlock = (existingBlocks ?? [])[0] as { room_id: string } | undefined
-    roomId = firstBlock ? firstBlock.room_id : null
+    const firstBlock = (existingBlocks ?? [])[0] as { room_id: string; all_day: boolean } | undefined
+    currentAllDay = firstBlock?.all_day ?? false
+    roomId = body.roomId !== undefined
+      ? (body.roomId ? String(body.roomId).trim() : null)
+      : (firstBlock ? firstBlock.room_id : null)
+  } else {
+    roomId = body.roomId ? String(body.roomId).trim() : null
   }
+  const allDay = body.allDay !== undefined ? parseAllDay(body.allDay) : currentAllDay
+  const resolvedTimes = resolveEventTimes(date, inputStartTime, inputEndTime, allDay)
 
   const { data: result, error: rpcError } = await admin.rpc('update_event_atomic', {
     p_id: id,
     p_title: title,
     p_description: description,
     p_date: date,
-    p_start_time: startTime,
-    p_end_time: endTime,
+    p_start_time: resolvedTimes.startTime,
+    p_end_time: resolvedTimes.endTime,
     p_room_id: roomId,
+    p_all_day: allDay,
   })
 
   if (rpcError) serviceError('Internal server error', 500)

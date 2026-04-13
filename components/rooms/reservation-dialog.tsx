@@ -63,6 +63,15 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
     return slot?.available ?? true
   }
 
+  function getSlotDetails(time: string, surface?: TableSurface) {
+    if (!availability) return undefined
+    if (table?.type === 'removable_top' && surface) {
+      const surfaceSlots = surface === 'top' ? availability.top : availability.bottom
+      return surfaceSlots?.find((slot) => slot.startTime === time)
+    }
+    return availability.slots.find((slot) => slot.startTime === time)
+  }
+
   function handleSurfaceSelect(surface: TableSurface) {
     setSelectedSurface(surface)
     setSelectedStartTime(null)
@@ -99,6 +108,8 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
         setError(t('errors.userSlotConflict'))
       } else if (errorCode === 'Cannot make a reservation in the past') {
         setError(t('errors.pastDate'))
+      } else if (errorCode === 'ROOM_BLOCKED_BY_EVENT') {
+        setError(t('errors.eventBlocked'))
       } else {
         setError(t('errors.generic'))
       }
@@ -212,6 +223,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
                 >
                   {timeSlots.map((time) => {
                     const available = isSlotAvailable(time, selectedSurface ?? undefined)
+                    const slotDetails = getSlotDetails(time, selectedSurface ?? undefined)
                     const isStart = selectedStartTime === time
                     const isEnd = selectedEndTime === time
                     const isInRange =
@@ -244,15 +256,34 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
                               )
                             : 'border border-crimson/40 bg-crimson-dark/30 text-destructive/70 cursor-not-allowed line-through'
                         )}
-                        aria-label={`${time} — ${available ? 'disponible' : 'ocupado'}`}
+                        title={!available && slotDetails?.source === 'event'
+                          ? `${t('eventBlocked')}: ${slotDetails.label ?? t('eventBlockLabel')}`
+                          : undefined}
+                        aria-label={!available && slotDetails?.source === 'event'
+                          ? `${time} — ${t('eventBlocked')}: ${slotDetails.label ?? t('eventBlockLabel')}`
+                          : `${time} — ${available ? t('available') : t('occupied')}`}
                         aria-pressed={isStart || isEnd || !!isInRange}
                         aria-disabled={!available}
                       >
-                        {time}
+                        {!available && slotDetails?.source === 'event' ? `E ${time}` : time}
                       </button>
                     )
                   })}
                 </div>
+              )}
+
+              {availability?.slots.some((slot) => !slot.available && slot.source === 'event') && (
+                <p className="text-xs text-muted-foreground">
+                  {t('eventBlocked')}
+                  {': '}
+                  {[
+                    ...new Set(
+                      availability.slots
+                        .filter((slot) => !slot.available && slot.source === 'event')
+                        .map((slot) => slot.label ?? t('eventBlockLabel')),
+                    ),
+                  ].join(', ')}
+                </p>
               )}
 
               {selectedStartTime && !selectedEndTime && (

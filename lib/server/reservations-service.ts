@@ -150,7 +150,7 @@ async function getTable(tableId: string) {
   const supabase = await createSupabaseServerClient()
   const tables = supabase.from('tables') as unknown as TablesLookupClient
   const { data, error } = await tables
-    .select('id, type')
+    .select('id, type, room_id')
     .eq('id', tableId)
     .maybeSingle()
 
@@ -159,6 +159,29 @@ async function getTable(tableId: string) {
   }
 
   return data as TableRow | null
+}
+
+async function hasEventBlockConflict(input: {
+  roomId: string
+  date: string
+  startTime: string
+  endTime: string
+}) {
+  const admin = createSupabaseServerAdminClient()
+  const { data, error } = await admin
+    .from('event_room_blocks')
+    .select('id')
+    .eq('room_id', input.roomId)
+    .eq('date', input.date)
+    .lt('start_time', input.endTime)
+    .gt('end_time', input.startTime)
+    .limit(1)
+
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+
+  return Boolean(data && data.length > 0)
 }
 
 async function getReservationForAccess(reservationId: string) {
@@ -349,6 +372,9 @@ export async function createReservationForSession(
   if (hasReservationConflict(conflictingReservations, { startTime, endTime, surface })) {
     serviceError('Time slot is already reserved', 409)
   }
+  if (await hasEventBlockConflict({ roomId: table.room_id, date, startTime, endTime })) {
+    serviceError('ROOM_BLOCKED_BY_EVENT', 409)
+  }
   const insertPayload: TablesInsert<'reservations'> = {
     table_id: tableId,
     user_id: session.id,
@@ -418,6 +444,11 @@ export async function updateReservationForSession(
   const nextSurface = body.surface === undefined || body.surface === null
     ? (existingReservation.surface ?? null)
     : (parseSurface(body.surface) ?? (existingReservation.surface ?? null))
+  const table = await getTable(existingReservation.table_id)
+
+  if (!table) {
+    serviceError('Table not found', 404)
+  }
 
   if (nextStartTime >= nextEndTime) {
     serviceError('Invalid reservation time range', 400)
@@ -434,6 +465,14 @@ export async function updateReservationForSession(
     surface: nextSurface ?? undefined,
   })) {
     serviceError('Time slot is already reserved', 409)
+  }
+  if (await hasEventBlockConflict({
+    roomId: table.room_id,
+    date: nextDate,
+    startTime: nextStartTime,
+    endTime: nextEndTime,
+  })) {
+    serviceError('ROOM_BLOCKED_BY_EVENT', 409)
   }
 
   const supabase = await createSupabaseServerClient()

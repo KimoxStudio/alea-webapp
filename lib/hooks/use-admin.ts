@@ -142,7 +142,7 @@ export function useAdminEvents() {
 export function useAdminCreateEvent() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { title: string; description?: string | null; date: string; startTime: string; endTime: string; roomId?: string | null }) =>
+    mutationFn: (data: { title: string; description?: string | null; date: string; startTime?: string; endTime?: string; roomId?: string | null; allDay?: boolean }) =>
       apiClient.post<AdminEvent>(endpoints.events.list, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'events'] })
@@ -153,7 +153,7 @@ export function useAdminCreateEvent() {
 export function useAdminUpdateEvent() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { title?: string; description?: string | null; date?: string; startTime?: string; endTime?: string; roomId?: string | null } }) =>
+    mutationFn: ({ id, data }: { id: string; data: { title?: string; description?: string | null; date?: string; startTime?: string; endTime?: string; roomId?: string | null; allDay?: boolean } }) =>
       apiClient.put<AdminEvent>(endpoints.events.byId(id), data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'events'] })

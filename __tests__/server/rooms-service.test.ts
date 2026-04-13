@@ -36,6 +36,30 @@ vi.mock('@/lib/supabase/server', () => ({
         }
       }
 
+      if (table === 'event_room_blocks') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(async () => ({
+                data: [],
+                error: null,
+              })),
+            })),
+          })),
+        }
+      }
+
+      if (table === 'events') {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn(async () => ({
+              data: [],
+              error: null,
+            })),
+          })),
+        }
+      }
+
       return {
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
@@ -74,6 +98,30 @@ vi.mock('@/lib/supabase/server', () => ({
           insert: vi.fn(() => ({
             select: vi.fn(() => ({
               maybeSingle: maybeSingleMock,
+            })),
+          })),
+        }
+      }
+
+      if (table === 'event_room_blocks') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(async () => ({
+                data: [],
+                error: null,
+              })),
+            })),
+          })),
+        }
+      }
+
+      if (table === 'events') {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn(async () => ({
+              data: [],
+              error: null,
             })),
           })),
         }

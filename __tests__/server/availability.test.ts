@@ -102,8 +102,8 @@ describe('generateDaySlots', () => {
 
   it('first slot starts at 00:00 and last slot ends at 24:00', () => {
     const slots = generateDaySlots([])
-    expect(slots[0]).toEqual({ startTime: '00:00', endTime: '01:00', available: true })
-    expect(slots[23]).toEqual({ startTime: '23:00', endTime: '24:00', available: true })
+    expect(slots[0]).toMatchObject({ startTime: '00:00', endTime: '01:00', available: true })
+    expect(slots[23]).toMatchObject({ startTime: '23:00', endTime: '24:00', available: true })
   })
 
   it('each slot has startTime, endTime and available fields', () => {

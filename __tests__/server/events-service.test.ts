@@ -607,6 +607,53 @@ describe('events-service — updateEvent with cancellation', () => {
     )
   })
 
+  it('keeps existing room when allDay is updated without roomId', async () => {
+    const mock = buildSupabaseMock()
+    mock.rpc.mockResolvedValueOnce({
+      data: {
+        id: 'evt-1',
+        title: 'Updated Event',
+        description: null,
+        date: '2026-04-20',
+        start_time: '00:00',
+        end_time: '23:59',
+        created_by: null,
+        created_at: '2026-04-13T00:00:00Z',
+        room_blocks: [
+          {
+            id: 'block-1',
+            event_id: 'evt-1',
+            room_id: 'room-1',
+            date: '2026-04-20',
+            start_time: '00:00',
+            end_time: '23:59',
+            all_day: true,
+          },
+        ],
+      },
+      error: null,
+    })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { updateEvent } = await import('@/lib/server/events-service')
+
+    const result = await updateEvent('evt-update-1', {
+      allDay: true,
+    })
+
+    expect(result.allDay).toBe(true)
+    expect(mock.rpc).toHaveBeenCalledWith(
+      'update_event_atomic',
+      expect.objectContaining({
+        p_id: 'evt-update-1',
+        p_room_id: 'room-1',
+        p_all_day: true,
+      })
+    )
+  })
+
   it('updates room when roomId is provided', async () => {
     const mock = buildSupabaseMock()
     mock.rpc.mockResolvedValueOnce({
@@ -754,5 +801,32 @@ describe('events-service — updateEvent with cancellation', () => {
 
     expect(caught).toBeDefined()
     expect(caught?.statusCode).toBe(500)
+  })
+
+  it('rejects non-hour event start times', async () => {
+    const mock = buildSupabaseMock()
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { createEvent } = await import('@/lib/server/events-service')
+
+    let caught: ServiceError | undefined
+    try {
+      await createEvent({
+        title: 'Test Event',
+        date: '2026-04-20',
+        startTime: '18:30',
+        endTime: '20:00',
+        roomId: 'room-1',
+      })
+    } catch (err) {
+      caught = err as ServiceError
+    }
+
+    expect(caught).toBeDefined()
+    expect(caught?.message).toBe('startTime must be on a whole-hour boundary')
+    expect(caught?.statusCode).toBe(400)
+    expect(mock.rpc).not.toHaveBeenCalled()
   })
 })

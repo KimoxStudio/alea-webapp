@@ -81,6 +81,18 @@ describe('ReservationDialog', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
+  it('uses translated availability labels in slot aria-labels', () => {
+    render(
+      <ReservationDialog
+        table={mockTable}
+        open={true}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getAllByRole('button', { name: /\d{2}:\d{2} — available/ }).length).toBeGreaterThan(0)
+  })
+
   it('does not render when table is null', () => {
     render(
       <ReservationDialog

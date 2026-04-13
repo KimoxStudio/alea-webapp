@@ -57,6 +57,8 @@ export interface TimeSlot {
   startTime: string; // HH:mm
   endTime: string;   // HH:mm
   available: boolean;
+  source?: 'reservation' | 'event';
+  label?: string | null;
 }
 
 export interface TableAvailability {
@@ -82,6 +84,7 @@ export interface AdminEventRoomBlock {
   date: string
   startTime: string
   endTime: string
+  allDay: boolean
 }
 
 export interface AdminEvent {
@@ -93,6 +96,7 @@ export interface AdminEvent {
   endTime: string
   createdBy: string | null
   createdAt: string
+  allDay: boolean
   roomBlocks: AdminEventRoomBlock[]
 }
 
