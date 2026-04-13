@@ -276,10 +276,12 @@ export async function updateEvent(
     }
 
     // Cancel reservations conflicting with the updated event blocks
-    const { data: currentBlocks } = await admin
+    const { data: currentBlocks, error: currentBlocksError } = await admin
       .from('event_room_blocks')
       .select('room_id')
       .eq('event_id', id)
+
+    if (currentBlocksError) serviceError('Internal server error', 500)
 
     const roomIds = ((currentBlocks ?? []) as EventRoomBlockRow[]).map((b) => b.room_id)
     if (roomIds.length > 0) {
@@ -306,10 +308,12 @@ export async function updateEvent(
     }
   }
 
-  const { data: blocks } = await admin
+  const { data: blocks, error: blocksError } = await admin
     .from('event_room_blocks')
     .select('*')
     .eq('event_id', id)
+
+  if (blocksError) serviceError('Internal server error', 500)
 
   const currentBlocks = (blocks ?? []) as EventRoomBlockRow[]
 
