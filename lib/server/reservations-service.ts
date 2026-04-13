@@ -75,6 +75,11 @@ export const GRACE_PERIOD_MINUTES = 20
 export const CHECK_IN_EARLY_MINUTES = 5
 const CANCELLATION_CUTOFF_MS = 60 * 60 * 1000 // 60 minutes
 
+// Club timezone: explicit env var or auto-detected from the server's system timezone.
+// On a correctly configured server the system timezone matches the club's location.
+// Override with CLUB_TIMEZONE=Atlantic/Canary (or any IANA name) in .env if needed.
+const CLUB_TZ = process.env.CLUB_TIMEZONE ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+
 const RESERVATION_COLUMNS = 'id, table_id, user_id, date, start_time, end_time, status, surface, activated_at, created_at'
 const RESERVATION_ENRICHED_COLUMNS = 'id, table_id, user_id, date, start_time, end_time, status, surface, activated_at, created_at, profiles(member_number), tables(name, rooms(name))'
 
@@ -331,8 +336,7 @@ export async function createReservationForSession(
   }
 
   // Reject reservations in the past. Compare against the club's local timezone.
-  const clubTz = process.env.CLUB_TIMEZONE ?? 'Europe/Madrid'
-  const todayInClub = new Intl.DateTimeFormat('en-CA', { timeZone: clubTz }).format(new Date())
+  const todayInClub = new Intl.DateTimeFormat('en-CA', { timeZone: CLUB_TZ }).format(new Date())
   if (date < todayInClub) {
     serviceError('Cannot make a reservation in the past', 400)
   }
@@ -488,24 +492,12 @@ export async function activateReservationByTable(
 ): Promise<Reservation> {
   // Anchor "today" in the club's local timezone so near-midnight requests on
   // DST transition days resolve to the correct calendar date.
-  const clubTimezone = process.env.CLUB_TIMEZONE ?? 'Europe/Madrid'
-  let today: string
-  try {
-    today = new Intl.DateTimeFormat('en-CA', {
-      timeZone: clubTimezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(new Date())
-  } catch {
-    console.error(`[activateReservationByTable] Invalid CLUB_TIMEZONE: "${clubTimezone}", falling back to Europe/Madrid`)
-    today = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Europe/Madrid',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(new Date())
-  }
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: CLUB_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
 
   // Look up the table via the session-scoped client to decide whether to apply
   // a surface filter. removable_top tables store surface='top'/'bottom'; all
@@ -573,56 +565,20 @@ export async function activateReservationByTable(
   }
 
   const nowUtc = new Date()
-  let nowParts: Record<string, number>
-  try {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: clubTimezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    }).formatToParts(nowUtc)
-    nowParts = Object.fromEntries(parts.filter(p => p.type !== 'literal').map(p => [p.type, parseInt(p.value, 10)]))
-  } catch {
-    // Fallback: invalid/unknown CLUB_TIMEZONE — retry with Europe/Madrid (same fallback as 'today').
-    // This keeps 'now' in the same local-clock space as reservationStart/reservationEnd,
-    // which are constructed from stored date+time strings in club local time.
-    try {
-      const fallbackParts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Europe/Madrid',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-      }).formatToParts(nowUtc)
-      nowParts = Object.fromEntries(fallbackParts.filter(p => p.type !== 'literal').map(p => [p.type, parseInt(p.value, 10)]))
-    } catch {
-      // Absolute last resort: UTC components. Consistent with reservationStart only if server runs in UTC.
-      nowParts = {
-        year: nowUtc.getUTCFullYear(),
-        month: nowUtc.getUTCMonth() + 1,
-        day: nowUtc.getUTCDate(),
-        hour: nowUtc.getUTCHours(),
-        minute: nowUtc.getUTCMinutes(),
-        second: nowUtc.getUTCSeconds(),
-      }
-      console.error('[activateReservationByTable] Both primary and fallback timezone failed — using UTC')
-    }
-  }
-  const now = new Date(
-    nowParts.year!,
-    nowParts.month! - 1,
-    nowParts.day!,
-    nowParts.hour!,
-    nowParts.minute!,
-    nowParts.second!,
+  const nowLocalParts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: CLUB_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(nowUtc)
+  const np = Object.fromEntries(
+    nowLocalParts.filter(p => p.type !== 'literal').map(p => [p.type, parseInt(p.value, 10)])
   )
+  const now = new Date(np.year!, np.month! - 1, np.day!, np.hour!, np.minute!, np.second!)
   const startTimeParts = normalizeTime(reservation.start_time).split(':')
   const endTimeParts = normalizeTime(reservation.end_time).split(':')
   // Anchor on the reservation's own stored date. The server is expected to run
