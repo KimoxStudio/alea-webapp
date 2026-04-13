@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { Suspense } from 'react'
 import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
@@ -44,9 +43,7 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
           <Providers>
             <AuthProvider initialUser={initialUser}>
               <NavigationProgress />
-              <Suspense fallback={null}>
-                <Header locale={locale} />
-              </Suspense>
+              <Header locale={locale} />
               <main id="main-content" className="flex-1">
                 {children}
               </main>

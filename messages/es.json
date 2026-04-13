@@ -52,7 +52,7 @@
       "memberNumberRequired": "El número de socio es obligatorio",
       "memberNumberTooLong": "El número de socio no puede superar los 10 dígitos",
       "memberNumberNumeric": "El número de socio solo puede contener dígitos",
-      "memberNumberExists": "Este número de socio ya está registrado"
+      "memberNumberExists": "Credenciales inválidas o número de socio ya en uso"
     }
   },
   "rooms": {
