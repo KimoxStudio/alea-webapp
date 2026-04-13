@@ -11,26 +11,21 @@
 `develop`
 
 ## Open PRs — awaiting merge
-None.
+| PR | Branch | Status |
+|---|---|---|
+| #106 | `fix/event-create-update-cancel-reservations` | Ready to merge (3× /team-review passed) |
 
 ## Merged this session
 | PR | Branch | Fix |
 |---|---|---|
-| ~~#98~~ | `fix/i18n-navbar-auth-enumeration` | BUG-1 + BUG-2 ✅ |
-| ~~#99~~ | `fix/admin-reservations-checkin-timing` | BUG-5 + BUG-6 ✅ |
-| ~~#100~~ | `fix/ui-qr-icon-responsive-cards` | BUG-3 + BUG-4 ✅ |
-| ~~#101~~ | `fix/event-force-delete-i18n` | Admin force-delete events + i18n error ✅ |
-| ~~#102~~ | `fix/auth-service-tests` | Auth test assertions after enumeration hardening ✅ |
-| ~~#103~~ | `fix/slot-end-time-inclusive` | Slot end_time shown as unavailable (18:00 bug) ✅ |
-| ~~#104~~ | `fix/checkin-timezone-window` | Check-in timezone fix + window 15→5 min ✅ |
+| ~~#105~~ | `fix/availability-polling` | Availability polling 30s/60s + tests ✅ |
 
 ---
 
 ## Status Summary
 
-All post-smoke-test bugs fixed and merged as of 2026-04-13.
-
-**develop is clean. No open PRs.**
+PR #106 is clean — 3 `/team-review` passes, 415/415 tests, full CI green.
+Merge into `develop` when ready.
 
 ---
 
@@ -59,6 +54,15 @@ All checks require a live browser session. See KIM-365 for full list.
 - [ ] Check-in at exact reservation start time → succeeds
 - [ ] Check-in 5 min before start → succeeds
 - [ ] Check-in 6 min before start → "too early" error
+
+### PR #105 — Availability polling
+- [ ] User A opens reservation dialog → User B books same table/date → within 30s slot appears red in User A's open dialog
+
+### PR #106 — Event create/update cancels reservations
+- [ ] Admin creates event for a room with active/pending reservations in same time window → reservations cancelled immediately
+- [ ] Admin updates event time range to overlap existing reservations → overlapping reservations cancelled
+- [ ] Admin updates event room assignment → only new room's reservations cancelled (old room unaffected)
+- [ ] Admin updates only event title/description → no reservations cancelled
 
 ---
 

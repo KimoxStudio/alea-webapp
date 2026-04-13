@@ -266,8 +266,31 @@ export type Database = {
     }
     Functions: {
       cancel_expired_pending_reservations: { Args: { grace_minutes?: number }; Returns: number }
+      create_event_atomic: {
+        Args: {
+          p_title: string
+          p_description: string | null
+          p_date: string
+          p_start_time: string
+          p_end_time: string
+          p_room_id: string | null
+        }
+        Returns: Json
+      }
       is_admin: { Args: never; Returns: boolean }
       mark_no_show_reservations: { Args: never; Returns: number }
+      update_event_atomic: {
+        Args: {
+          p_id: string
+          p_title: string
+          p_description: string | null
+          p_date: string
+          p_start_time: string
+          p_end_time: string
+          p_room_id: string | null
+        }
+        Returns: Json
+      }
     }
     Enums: {
       reservation_status: "active" | "cancelled" | "completed" | "pending" | "no_show"
