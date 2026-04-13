@@ -140,7 +140,7 @@ export function ReservationsSection() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3.5 text-right">
-                    {r.status === 'active' ? (
+                    {(r.status === 'active' || r.status === 'pending') ? (
                       <Button
                         variant="outline"
                         size="sm"

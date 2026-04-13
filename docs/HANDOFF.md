@@ -5,15 +5,19 @@
 
 ---
 
-## Last updated: 2026-04-13
-
-## ⚠️ PRESENTACIÓN HOY — 2026-04-14
+## Last updated: 2026-04-14
 
 ## Current branch
 `develop`
 
-## Open PRs
-None — all merged.
+## Open PRs — awaiting merge
+| PR | Branch | Bugs | Status |
+|---|---|---|---|
+| #98 | `fix/i18n-navbar-auth-enumeration` | BUG-1 + BUG-2 | APPROVED ✅ |
+| #99 | `fix/admin-reservations-checkin-timing` | BUG-5 + BUG-6 | APPROVED ✅ |
+| #100 | `fix/ui-qr-icon-responsive-cards` | BUG-3 + BUG-4 | APPROVED ✅ |
+
+All 3 PRs passed 2× Security + 2× QA cycles. All Copilot review comments responded to in English. Merge order: #98 → #99 → #100 (independent, any order is fine).
 
 ## Merged this session
 | PR | Branch | Issues |
@@ -52,24 +56,22 @@ None — all merged.
 - **KIM-357, KIM-359** — checkin hardening — merged PR #86 ✅
 - **KIM-328** — Docker docs cleanup — merged PR #87 ✅
 
-**Smoke test completado 2026-04-13. 6 bugs encontrados — deben estar resueltos antes de la presentación de hoy.**
+**Smoke test completado 2026-04-13. 6 bugs encontrados — todos corregidos en PRs #98–#100.**
 
 ---
 
-## 🔴 Siguiente paso: Fix bugs pre-presentación (KIM-365)
+## ✅ Bugs pre-presentación (KIM-365) — todos en PRs aprobados
 
-Bugs documentados en KIM-365 (comentario 2026-04-13). Orden de prioridad:
+| # | Bug | PR | Estado |
+|---|---|---|---|
+| BUG-1 | Auth: user enumeration en registro | #98 | APPROVED ✅ |
+| BUG-2 | i18n: navbar desaparece al volver a ES | #98 | APPROVED ✅ |
+| BUG-5 | Admin dashboard: acciones en reservas no cargan | #99 | APPROVED ✅ |
+| BUG-6 | Check-in: error "demasiado pronto" dentro de ventana válida | #99 | APPROVED ✅ |
+| BUG-4 | Responsive: cards de mesa mal a 1440px y mobile | #100 | APPROVED ✅ |
+| BUG-3 | UI: icono QR visible a usuarios no-admin | #100 | APPROVED ✅ |
 
-| # | Bug | Prioridad |
-|---|---|---|
-| BUG-1 | Auth: mensaje de registro revela si el número existe (user enumeration) | Urgent |
-| BUG-2 | i18n: navbar desaparece + Mis Reservas rota al volver a ES desde EN | Urgent |
-| BUG-5 | Admin dashboard: acciones en sección reservas no cargan | Urgent |
-| BUG-6 | Check-in: error "demasiado pronto" dentro del horario válido | Urgent |
-| BUG-4 | Responsive: cards de mesa mal a 1440px y mobile | High |
-| BUG-3 | UI: icono QR visible en hover sobre mesa (solo admin debería verlo) | Normal |
-
-**Arrancar con BUG-2 primero** — es el más visible y afecta navegación completa en ES.
+**Siguiente paso: merge de #98, #99, #100 y smoke test final.**
 
 ---
 
