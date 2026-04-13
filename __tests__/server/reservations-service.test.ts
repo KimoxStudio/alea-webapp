@@ -1418,16 +1418,14 @@ describe('reservations service', () => {
       }))
     })
 
-    it('invalid CLUB_TIMEZONE falls back to Europe/Madrid and still activates', async () => {
-      // Task 4: CLUB_TIMEZONE='Invalid/Zone' → catches error → falls back → still activates
+    it('invalid CLUB_TIMEZONE propagates as a RangeError', async () => {
+      // Task 4: CLUB_TIMEZONE='Invalid/Zone' → RangeError propagates (no fallback)
       vi.stubEnv('CLUB_TIMEZONE', 'Invalid/Zone')
       const { activateReservationByTable } = await loadReservationModules()
 
       seedPendingReservation({ start_time: makeStartTime(10) })
 
-      const result = await activateReservationByTable('t3', '2', undefined)
-
-      expect(result).toMatchObject({ status: 'active' })
+      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toThrow(RangeError)
     })
 
     it('getTable returning null throws 404 with Table not found', async () => {
