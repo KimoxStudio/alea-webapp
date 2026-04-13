@@ -1,12 +1,10 @@
 import 'server-only'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
-import type { Tables, TablesInsert, TablesUpdate, EventRow, EventRoomBlockRow } from '@/lib/supabase/types'
+import type { TablesInsert, TablesUpdate, EventRow, EventRoomBlockRow } from '@/lib/supabase/types'
 import type { AdminEvent, AdminEventRoomBlock } from '@/lib/types'
 
 export type { AdminEvent, AdminEventRoomBlock }
-
-type ReservationRow = Tables<'reservations'>
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
@@ -294,19 +292,16 @@ export async function deleteEvent(id: string): Promise<void> {
     const tableIds = ((tables ?? []) as { id: string }[]).map((t) => t.id)
 
     if (tableIds.length > 0) {
-      const { data: conflicting } = await admin
+      const { error: cancelError } = await admin
         .from('reservations')
-        .select('id')
+        .update({ status: 'cancelled' })
         .in('table_id', tableIds)
         .eq('date', event.date)
         .lt('start_time', event.end_time)
         .gt('end_time', event.start_time)
         .in('status', ['active', 'pending'])
-        .limit(1)
 
-      if (conflicting && (conflicting as ReservationRow[]).length > 0) {
-        serviceError('Cannot delete event: active or pending reservations exist for this room during the event time', 409)
-      }
+      if (cancelError) serviceError('Internal server error', 500)
     }
   }
 

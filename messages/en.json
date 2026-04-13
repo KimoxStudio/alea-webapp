@@ -134,7 +134,8 @@
       "editEvent": "Edit event",
       "deleteEvent": "Delete event",
       "noEvents": "No events found",
-      "conflictWarning": "This event cannot be deleted because active or pending reservations exist for the affected room during this time."
+      "conflictWarning": "This event cannot be deleted because active or pending reservations exist for the affected room during this time.",
+      "deleteError": "An error occurred while deleting the event. Please try again."
     }
   },
   "home": {

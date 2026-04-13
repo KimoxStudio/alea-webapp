@@ -230,8 +230,7 @@ function DeleteEventDialog({
           </p>
           {conflictError && (
             <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3">
-              <p className="text-sm text-destructive font-medium">{t('events.conflictWarning')}</p>
-              <p className="text-xs text-destructive/80 mt-1">{conflictError}</p>
+              <p className="text-sm text-destructive font-medium">{t('events.deleteError')}</p>
             </div>
           )}
         </div>
@@ -239,22 +238,20 @@ function DeleteEventDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="border-border">
             {tc('cancel')}
           </Button>
-          {!conflictError && (
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={onConfirm}
-              disabled={isPending}
-              className="min-w-[80px]"
-            >
-              {isPending ? (
-                <span className="inline-flex items-center gap-2">
-                  <DiceLoader size="sm" hideRole />
-                  <span>{tc('loading')}</span>
-                </span>
-              ) : tc('delete')}
-            </Button>
-          )}
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isPending}
+            className="min-w-[80px]"
+          >
+            {isPending ? (
+              <span className="inline-flex items-center gap-2">
+                <DiceLoader size="sm" hideRole />
+                <span>{tc('loading')}</span>
+              </span>
+            ) : tc('delete')}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
