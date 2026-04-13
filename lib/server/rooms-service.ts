@@ -233,16 +233,18 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
     reservationsByTable.set(reservation.table_id, items)
   }
 
+  const eventSlots = eventBlocks.map((block) => ({
+    start: block.start_time.slice(0, 5),
+    end: block.end_time.slice(0, 5),
+    label: eventTitleById.get(block.event_id) ?? null,
+  }))
+
   return tables.reduce<Record<string, TableAvailability>>((acc, table) => {
     acc[table.id] = buildAvailability(
       table,
       effectiveDate,
       reservationsByTable.get(table.id) ?? [],
-      eventBlocks.map((block) => ({
-        start: block.start_time.slice(0, 5),
-        end: block.end_time.slice(0, 5),
-        label: eventTitleById.get(block.event_id) ?? null,
-      })),
+      eventSlots,
     )
     return acc
   }, {})

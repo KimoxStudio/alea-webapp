@@ -7,6 +7,8 @@
 ALTER TABLE public.event_room_blocks
   ADD COLUMN IF NOT EXISTS all_day boolean NOT NULL DEFAULT false;
 
+DROP FUNCTION IF EXISTS public.create_event_atomic(text, text, date, time, time, uuid);
+
 CREATE OR REPLACE FUNCTION public.create_event_atomic(
   p_title       text,
   p_description text,
@@ -80,6 +82,8 @@ BEGIN
   );
 END;
 $$;
+
+DROP FUNCTION IF EXISTS public.update_event_atomic(uuid, text, text, date, time, time, uuid);
 
 CREATE OR REPLACE FUNCTION public.update_event_atomic(
   p_id          uuid,

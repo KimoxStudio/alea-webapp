@@ -175,6 +175,7 @@ async function hasEventBlockConflict(input: {
     .eq('date', input.date)
     .lt('start_time', input.endTime)
     .gt('end_time', input.startTime)
+    .limit(1)
 
   if (error) {
     serviceError('Internal server error', 500)

@@ -544,6 +544,34 @@ describe('reservations service', () => {
       })
     })
 
+    it('rejects create when an overlapping event room block exists', async () => {
+      const { createReservationForSession } = await loadReservationModules()
+      reservationsState.forEach((reservation) => {
+        reservation.user_id = 'other-user'
+      })
+
+      eventRoomBlocksState.push({
+        id: 'block-1',
+        event_id: 'event-1',
+        room_id: 'room-1',
+        date: '2026-12-31',
+        start_time: '17:00:00',
+        end_time: '19:00:00',
+        all_day: false,
+      })
+
+      await expect(createReservationForSession(memberSession, {
+        tableId: 't2',
+        date: '2026-12-31',
+        startTime: '17:30',
+        endTime: '18:30',
+      })).rejects.toMatchObject({
+        name: 'ServiceError',
+        message: 'ROOM_BLOCKED_BY_EVENT',
+        statusCode: 409,
+      })
+    })
+
     it('rejects a reservation that overlaps an existing slot for the same user', async () => {
       const { createReservationForSession } = await loadReservationModules()
       await expect(
@@ -756,6 +784,29 @@ describe('reservations service', () => {
 
       expect(updated.startTime).toBe('00:00')
       expect(updated.endTime).toBe('01:00')
+    })
+
+    it('rejects updates that move into an event-blocked range', async () => {
+      const { updateReservationForSession } = await loadReservationModules()
+
+      eventRoomBlocksState.push({
+        id: 'block-2',
+        event_id: 'event-2',
+        room_id: 'room-1',
+        date: '2026-12-31',
+        start_time: '18:00:00',
+        end_time: '20:00:00',
+        all_day: false,
+      })
+
+      await expect(updateReservationForSession(memberSession, 'r1', {
+        startTime: '18:30',
+        endTime: '19:30',
+      })).rejects.toMatchObject({
+        name: 'ServiceError',
+        message: 'ROOM_BLOCKED_BY_EVENT',
+        statusCode: 409,
+      })
     })
 
     it('ignores the current reservation when checking conflicts during updates', async () => {
