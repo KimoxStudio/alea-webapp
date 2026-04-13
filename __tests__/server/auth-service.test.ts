@@ -202,7 +202,7 @@ describe('auth service', () => {
       })
     })
 
-    it('rejects a suspended user (is_active: false) with a 403 ServiceError before signing in', async () => {
+    it('rejects a suspended user (is_active: false) with a 401 ServiceError before signing in', async () => {
       const { login } = await loadService()
       const suspended = makeProfile({
         id: 'user-3',
@@ -219,8 +219,8 @@ describe('auth service', () => {
         login({ identifier: '100003', password: 'Password1234!@#' }),
       ).rejects.toMatchObject({
         name: 'ServiceError',
-        statusCode: 403,
-        message: 'Your account is suspended. Contact an administrator to reactivate it.',
+        statusCode: 401,
+        message: 'Invalid credentials',
       })
       expect(signInWithPassword).not.toHaveBeenCalled()
     })
@@ -258,13 +258,14 @@ describe('auth service', () => {
       })
     })
 
-    it('rejects with 409 when the member number is already taken', async () => {
+    it('rejects with 400 when the member number is already taken', async () => {
       const { register } = await loadService()
 
       // member number '100001' is already in adminState
       await expect(register({ memberNumber: '100001', password: 'Password1234!@#' })).rejects.toMatchObject({
         name: 'ServiceError',
-        statusCode: 409,
+        statusCode: 400,
+        message: 'Invalid registration details',
       })
       expect(adminCreateUser).not.toHaveBeenCalled()
     })
@@ -322,7 +323,7 @@ describe('auth service', () => {
       })
     })
 
-    it('cleans up the auth user and rejects with 409 when profile update hits a unique constraint', async () => {
+    it('cleans up the auth user and rejects with 400 when profile update hits a unique constraint', async () => {
       const { register } = await loadService()
       adminUpdateProfileSelectMaybeSingle.mockResolvedValueOnce({
         data: null,
@@ -331,7 +332,8 @@ describe('auth service', () => {
 
       await expect(register({ memberNumber: '100099', password: 'Password1234!@#' })).rejects.toMatchObject({
         name: 'ServiceError',
-        statusCode: 409,
+        statusCode: 400,
+        message: 'Invalid registration details',
       })
       expect(adminDeleteUser).toHaveBeenCalledWith('new-user-id')
     })
