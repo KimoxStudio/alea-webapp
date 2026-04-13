@@ -56,13 +56,16 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
   )
 }
 
+// AUTH_FALLBACK is used when useAuth() is called outside AuthProvider.
+// Promise.reject is used explicitly (rather than async + throw) so the rejection
+// is always async regardless of whether the caller awaits the return value.
 const AUTH_FALLBACK: AuthContextValue = {
   user: null,
   isLoading: false,
   isAuthenticated: false,
-  login: async () => { throw new Error('useAuth must be used within AuthProvider') },
-  logout: async () => { throw new Error('useAuth must be used within AuthProvider') },
-  register: async () => { throw new Error('useAuth must be used within AuthProvider') },
+  login: () => Promise.reject(new Error('useAuth must be used within AuthProvider')),
+  logout: () => Promise.reject(new Error('useAuth must be used within AuthProvider')),
+  register: () => Promise.reject(new Error('useAuth must be used within AuthProvider')),
 }
 
 export function useAuth() {
