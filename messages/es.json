@@ -17,7 +17,8 @@
     "mobileNavAriaLabel": "Navegación móvil",
     "skipToContent": "Ir al contenido principal",
     "logoAriaLabel": "Alea - Inicio",
-    "menuAriaLabel": "Menú"
+    "menuAriaLabel": "Menú",
+    "switchLocale": "Cambiar a {locale}"
   },
   "auth": {
     "login": "Iniciar Sesión", "register": "Registrarse", "logout": "Cerrar sesión",
@@ -52,7 +53,7 @@
       "memberNumberRequired": "El número de socio es obligatorio",
       "memberNumberTooLong": "El número de socio no puede superar los 10 dígitos",
       "memberNumberNumeric": "El número de socio solo puede contener dígitos",
-      "memberNumberExists": "Datos de registro inválidos"
+      "invalidRegistrationDetails": "Datos de registro inválidos"
     }
   },
   "rooms": {

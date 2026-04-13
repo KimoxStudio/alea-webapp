@@ -19,6 +19,7 @@ function LocaleSwitcherLink({ locale }: { locale: string }) {
   const otherLocale = locale === 'es' ? 'en' : 'es'
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const t = useTranslations()
   const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '')
   const qs = searchParams.toString()
   const switchHref = `/${otherLocale}${pathWithoutLocale}${qs ? `?${qs}` : ''}`
@@ -27,7 +28,7 @@ function LocaleSwitcherLink({ locale }: { locale: string }) {
     <Link
       href={switchHref}
       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      aria-label={`Switch to ${otherLocale}`}
+      aria-label={t('nav.switchLocale', { locale: otherLocale })}
     >
       <Globe className="h-3.5 w-3.5" aria-hidden="true" />
       <span className="uppercase font-medium">{otherLocale}</span>

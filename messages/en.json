@@ -17,7 +17,8 @@
     "mobileNavAriaLabel": "Mobile navigation",
     "skipToContent": "Skip to main content",
     "logoAriaLabel": "Alea - Home",
-    "menuAriaLabel": "Menu"
+    "menuAriaLabel": "Menu",
+    "switchLocale": "Switch to {locale}"
   },
   "auth": {
     "login": "Sign In", "register": "Register", "logout": "Sign out",
@@ -52,7 +53,7 @@
       "memberNumberRequired": "Member number is required",
       "memberNumberTooLong": "Member number must not exceed 10 digits",
       "memberNumberNumeric": "Member number must contain only digits",
-      "memberNumberExists": "Invalid registration details"
+      "invalidRegistrationDetails": "Invalid registration details"
     }
   },
   "rooms": {
