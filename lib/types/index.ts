@@ -3,13 +3,49 @@ export type Role = 'member' | 'admin';
 export interface User {
   id: string;
   memberNumber: string;
+  fullName?: string | null;
   email?: string | null;
+  phone?: string | null;
   role: Role;
   isActive: boolean;
   noShowCount: number;
   blockedUntil: string | null;
+  activeFrom?: string | null;
+  pswChanged?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MemberImportRow {
+  rowNumber: number;
+  memberNumber: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+}
+
+export type MemberImportIssueCode =
+  | 'invalid_member_number'
+  | 'missing_full_name'
+  | 'duplicate_member_number'
+  | 'read_existing_failed'
+  | 'update_existing_failed'
+  | 'create_auth_failed'
+  | 'persist_import_failed';
+
+export interface MemberImportIssue {
+  rowNumber: number;
+  memberNumber?: string | null;
+  code: MemberImportIssueCode;
+}
+
+export interface MemberImportResult {
+  totalRows: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  normalizedRows: MemberImportRow[];
+  issues: MemberImportIssue[];
 }
 
 export interface Room {

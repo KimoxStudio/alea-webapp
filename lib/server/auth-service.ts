@@ -6,13 +6,13 @@ import type { Tables } from '@/lib/supabase/types'
 import { registerServerSchema } from '@/lib/validations/auth'
 
 type ProfileRow = Tables<'profiles'>
-type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'role' | 'is_active' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>
-type AuthCredentialRow = Pick<ProfileRow, 'id' | 'member_number' | 'email' | 'role' | 'is_active' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>
-const PUBLIC_PROFILE_COLUMNS = 'id, member_number, role, is_active, no_show_count, blocked_until, created_at, updated_at' as const
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'full_name' | 'email' | 'phone' | 'role' | 'is_active' | 'active_from' | 'psw_changed' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>
+type AuthCredentialRow = Pick<ProfileRow, 'id' | 'member_number' | 'auth_email' | 'email' | 'full_name' | 'phone' | 'role' | 'is_active' | 'active_from' | 'psw_changed' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>
+const PUBLIC_PROFILE_COLUMNS = 'id, member_number, full_name, email, phone, role, is_active, active_from, psw_changed, no_show_count, blocked_until, created_at, updated_at' as const
 
 // Auth-only columns: email is needed solely to resolve Supabase Auth credentials.
 // It is not part of the public user model (issue #39) but IS included for admin-facing user data.
-const AUTH_CREDENTIAL_COLUMNS = 'id, member_number, email, role, is_active, no_show_count, blocked_until, created_at, updated_at' as const
+const AUTH_CREDENTIAL_COLUMNS = 'id, member_number, auth_email, email, full_name, phone, role, is_active, active_from, psw_changed, no_show_count, blocked_until, created_at, updated_at' as const
 
 type PublicProfileLookupColumn = 'id' | 'member_number'
 type AuthCredentialLookupColumn = 'id' | 'member_number' | 'email'
@@ -99,8 +99,13 @@ function toPublicUser(profile: PublicProfileRow): User {
   return {
     id: profile.id,
     memberNumber: profile.member_number,
+    fullName: profile.full_name ?? null,
+    email: profile.email ?? null,
+    phone: profile.phone ?? null,
     role: profile.role,
     isActive: profile.is_active,
+    activeFrom: profile.active_from ?? null,
+    pswChanged: profile.psw_changed ?? null,
     noShowCount: profile.no_show_count,
     blockedUntil: profile.blocked_until ?? null,
     createdAt: profile.created_at,
@@ -131,7 +136,9 @@ export async function login(
     serviceError('Invalid credentials', 401)
   }
 
-  if (!credentialProfile.email) {
+  const authEmail = credentialProfile.auth_email ?? credentialProfile.email
+
+  if (!authEmail) {
     // Profile has no email set — cannot authenticate via Supabase Auth.
     serviceError('Invalid credentials', 401)
   }
@@ -143,7 +150,7 @@ export async function login(
 
   const supabase = client ?? await createSupabaseServerClient()
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: credentialProfile.email,
+    email: authEmail,
     password,
   })
 
@@ -205,7 +212,7 @@ export async function register(
   // already inserted a row for this user id with a placeholder member_number.
   const { data: profileData, error: profileError } = await adminClient
     .from('profiles')
-    .update({ member_number: memberNumber, email, role: 'member', is_active: true })
+    .update({ member_number: memberNumber, auth_email: email, email, role: 'member', is_active: true })
     .eq('id', userId)
     .select(PUBLIC_PROFILE_COLUMNS)
     .maybeSingle()

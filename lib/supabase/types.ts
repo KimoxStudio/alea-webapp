@@ -114,35 +114,50 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_from: string | null
+          auth_email: string
           blocked_until: string | null
           created_at: string
           email: string | null
+          full_name: string | null
           id: string
           is_active: boolean
           member_number: string
           no_show_count: number
+          phone: string | null
+          psw_changed: string | null
           role: Database["public"]["Enums"]["role"]
           updated_at: string
         }
         Insert: {
+          active_from?: string | null
+          auth_email: string
           blocked_until?: string | null
           created_at?: string
           email?: string | null
+          full_name?: string | null
           id: string
           is_active?: boolean
           member_number: string
           no_show_count?: number
+          phone?: string | null
+          psw_changed?: string | null
           role?: Database["public"]["Enums"]["role"]
           updated_at?: string
         }
         Update: {
+          active_from?: string | null
+          auth_email?: string
           blocked_until?: string | null
           created_at?: string
           email?: string | null
+          full_name?: string | null
           id?: string
           is_active?: boolean
           member_number?: string
           no_show_count?: number
+          phone?: string | null
+          psw_changed?: string | null
           role?: Database["public"]["Enums"]["role"]
           updated_at?: string
         }
