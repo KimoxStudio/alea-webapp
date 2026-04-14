@@ -17,7 +17,10 @@ const profileRows = [
   {
     id: '1',
     member_number: '100001',
+    full_name: 'Admin User',
+    auth_email: '100001@members.alea.internal',
     email: 'admin@alea.club',
+    phone: '600000001',
     role: 'admin' as const,
     is_active: true,
     created_at: '2024-01-01T00:00:00.000Z',
@@ -26,7 +29,10 @@ const profileRows = [
   {
     id: '2',
     member_number: '100002',
+    full_name: 'Member User',
+    auth_email: '100002@members.alea.internal',
     email: 'socio@alea.club',
+    phone: '600000002',
     role: 'member' as const,
     is_active: true,
     created_at: '2024-01-02T00:00:00.000Z',
@@ -46,9 +52,13 @@ function resetQueryMocks() {
   eqMock.mockImplementation(() => listQuery)
   orMock.mockImplementation((filter: string) => {
     capturedOrFilter = filter
-    const match = filter.match(/ilike\.%(.+)%/)
+    const match = filter.match(/ilike\.%([^%]+)%/)
     const filtered = match
-      ? profileRows.filter((r) => r.member_number.toLowerCase().includes(match[1].toLowerCase()))
+      ? profileRows.filter((r) => (
+        r.member_number.toLowerCase().includes(match[1].toLowerCase())
+        || r.full_name.toLowerCase().includes(match[1].toLowerCase())
+        || r.email.toLowerCase().includes(match[1].toLowerCase())
+      ))
       : profileRows
     rangeMock.mockResolvedValue({ data: filtered, error: null, count: filtered.length })
     return { order: orderMock }
@@ -179,8 +189,8 @@ describe('listPaginatedUsers', () => {
 
     await listPaginatedUsers({ page: 1, limit: 10, search: 'ADMIN' })
 
-    expect(orMock).toHaveBeenCalledWith('member_number.ilike.%ADMIN%')
-    expect(capturedOrFilter).toBe('member_number.ilike.%ADMIN%')
+    expect(orMock).toHaveBeenCalledWith('member_number.ilike.%ADMIN%,full_name.ilike.%ADMIN%,email.ilike.%ADMIN%')
+    expect(capturedOrFilter).toBe('member_number.ilike.%ADMIN%,full_name.ilike.%ADMIN%,email.ilike.%ADMIN%')
   })
 
   it('filters by memberNumber substring', async () => {
@@ -190,7 +200,25 @@ describe('listPaginatedUsers', () => {
     const result = await listPaginatedUsers({ page: 1, limit: 10, search: '100002' })
 
     expect(result.data.length).toBeGreaterThan(0)
-    expect(orMock).toHaveBeenCalledWith('member_number.ilike.%100002%')
+    expect(orMock).toHaveBeenCalledWith('member_number.ilike.%100002%,full_name.ilike.%100002%,email.ilike.%100002%')
+  })
+
+  it('filters by full name substring', async () => {
+    const { listPaginatedUsers } = await loadUsersModules()
+
+    const result = await listPaginatedUsers({ page: 1, limit: 10, search: 'member user' })
+
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0]?.id).toBe('2')
+  })
+
+  it('filters by email substring', async () => {
+    const { listPaginatedUsers } = await loadUsersModules()
+
+    const result = await listPaginatedUsers({ page: 1, limit: 10, search: 'admin@alea.club' })
+
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0]?.id).toBe('1')
   })
 
   it('returns all users when search is empty', async () => {
@@ -218,33 +246,39 @@ describe('updateUser', () => {
     resetQueryMocks()
   })
 
-  it('returns the updated public user payload for the correct user id', async () => {
-    let capturedId: string | undefined
-    maybeSingleMock.mockImplementation(async () => {
-      const row = profileRows.find((r) => r.id === capturedId) ?? null
-      return { data: row, error: null }
-    })
+  async function mockAdminClientForUpdateUser() {
     vi.mocked(
       (await import('@/lib/supabase/server')).createSupabaseServerAdminClient
     ).mockReturnValue({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
-          eq: vi.fn(() => ({ maybeSingle: maybeSingleMock })),
-          maybeSingle: maybeSingleMock,
+          eq: vi.fn((_column: string, value: string) => ({
+            maybeSingle: vi.fn(async () => ({
+              data: profileRows.find((row) => row.id === value) ?? null,
+              error: null,
+            })),
+          })),
         })),
-        update: vi.fn(() => ({
-          eq: vi.fn((_col: string, val: string) => {
-            capturedId = val
-            return {
-              select: vi.fn(() => ({
-                maybeSingle: maybeSingleMock,
+        update: vi.fn((updates: Record<string, unknown>) => ({
+          eq: vi.fn((_column: string, value: string) => ({
+            select: vi.fn(() => ({
+              maybeSingle: vi.fn(async () => ({
+                data: (() => {
+                  const row = profileRows.find((profile) => profile.id === value)
+                  return row ? { ...row, ...updates } : null
+                })(),
+                error: null,
               })),
-            }
-          }),
+            })),
+          })),
         })),
       })),
       auth: { admin: { deleteUser: deleteUserMock } },
     } as never)
+  }
+
+  it('returns the updated public user payload for the correct user id', async () => {
+    await mockAdminClientForUpdateUser()
     const { updateUser } = await loadUsersModules()
 
     const updated = await updateUser('2', { role: 'member' })
@@ -272,6 +306,7 @@ describe('updateUser', () => {
   })
 
   it('accepts memberNumber of exactly 10 digits', async () => {
+    await mockAdminClientForUpdateUser()
     const { updateUser } = await loadUsersModules()
 
     await expect(updateUser('1', { memberNumber: '1'.repeat(10) })).resolves.toBeDefined()
@@ -288,7 +323,7 @@ describe('updateUser', () => {
   it('throws 400 when memberNumber is null (coerced to string "null")', async () => {
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('u1', { memberNumber: null as unknown as string })).rejects.toMatchObject({
+    await expect(updateUser('1', { memberNumber: null as unknown as string })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
@@ -297,16 +332,17 @@ describe('updateUser', () => {
   it('throws 400 when memberNumber is an empty string', async () => {
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('u1', { memberNumber: '' })).rejects.toMatchObject({
+    await expect(updateUser('1', { memberNumber: '' })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
   })
 
   it('accepts memberNumber of single digit zero', async () => {
+    await mockAdminClientForUpdateUser()
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('u1', { memberNumber: '0' })).resolves.toBeDefined()
+    await expect(updateUser('1', { memberNumber: '0' })).resolves.toBeDefined()
   })
 
   it('accepts is_active boolean and includes it in the update', async () => {
@@ -337,6 +373,82 @@ describe('updateUser', () => {
     await updateUser('1', { is_active: false })
 
     expect(capturedUpdates).toMatchObject({ is_active: false })
+  })
+
+  it('accepts fullName, email, and phone updates', async () => {
+    let capturedUpdates: Record<string, unknown> | undefined
+    vi.mocked(
+      (await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+    ).mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ maybeSingle: maybeSingleMock })),
+          maybeSingle: maybeSingleMock,
+        })),
+        update: vi.fn((updates: Record<string, unknown>) => {
+          capturedUpdates = updates
+          return {
+            eq: vi.fn(() => ({
+              select: vi.fn(() => ({
+                maybeSingle: maybeSingleMock,
+              })),
+            })),
+          }
+        }),
+      })),
+      auth: { admin: { deleteUser: deleteUserMock } },
+    } as never)
+    const { updateUser } = await loadUsersModules()
+
+    await updateUser('1', { fullName: 'Updated User', email: 'updated@alea.club', phone: '699000111' })
+
+    expect(capturedUpdates).toMatchObject({
+      full_name: 'Updated User',
+      email: 'updated@alea.club',
+      phone: '699000111',
+    })
+  })
+
+  it('keeps internal auth email aligned when memberNumber changes', async () => {
+    let capturedUpdates: Record<string, unknown> | undefined
+    vi.mocked(
+      (await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+    ).mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ maybeSingle: maybeSingleMock })),
+          maybeSingle: maybeSingleMock,
+        })),
+        update: vi.fn((updates: Record<string, unknown>) => {
+          capturedUpdates = updates
+          return {
+            eq: vi.fn(() => ({
+              select: vi.fn(() => ({
+                maybeSingle: maybeSingleMock,
+              })),
+            })),
+          }
+        }),
+      })),
+      auth: { admin: { deleteUser: deleteUserMock } },
+    } as never)
+    const { updateUser } = await loadUsersModules()
+
+    await updateUser('1', { memberNumber: '100123' })
+
+    expect(capturedUpdates).toMatchObject({
+      member_number: '100123',
+      auth_email: '100123@members.alea.internal',
+    })
+  })
+
+  it('rejects blank fullName updates', async () => {
+    const { updateUser } = await loadUsersModules()
+
+    await expect(updateUser('1', { fullName: '   ' })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 400,
+    })
   })
 
   it('rejects is_active when provided as a non-boolean string', async () => {
