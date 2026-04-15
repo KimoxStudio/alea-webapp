@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Search, Pencil, Trash2, AlertCircle, FileUp, Link2 } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
@@ -75,6 +75,16 @@ export function UsersSection() {
   const updateMutation = useAdminUpdateUser()
   const deleteMutation = useAdminDeleteUser()
   const patchMutation = useAdminPatchUser()
+
+  useEffect(() => {
+    if (!activationFeedback) return
+
+    const timeoutId = window.setTimeout(() => {
+      setActivationFeedback(null)
+    }, 5000)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [activationFeedback])
 
   function openEdit(user: User) {
     setEditState({
@@ -225,14 +235,14 @@ export function UsersSection() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-secondary/20">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('memberNumber')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">ID</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{tc('name')}</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{tc('email')}</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('role')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('status')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('noShowCount')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('blockedUntil')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('joinDate')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('statusShort')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('noShowsShort')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('blockedShort')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t('createdShort')}</th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">{tc('actions')}</th>
                 </tr>
               </thead>
