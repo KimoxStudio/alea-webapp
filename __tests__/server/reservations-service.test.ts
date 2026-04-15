@@ -1619,7 +1619,10 @@ describe('reservations service', () => {
       const { cancelExpiredPendingReservations, GRACE_PERIOD_MINUTES } = await import('@/lib/server/reservations-service')
       const result = await cancelExpiredPendingReservations()
 
-      expect(mockRpc).toHaveBeenCalledWith('cancel_expired_pending_reservations', { grace_minutes: GRACE_PERIOD_MINUTES })
+      expect(mockRpc).toHaveBeenCalledWith('cancel_expired_pending_reservations', {
+        grace_minutes: GRACE_PERIOD_MINUTES,
+        club_timezone: process.env.CLUB_TIMEZONE ?? 'Atlantic/Canary',
+      })
       expect(result).toBe(3)
     })
 
@@ -1661,7 +1664,9 @@ describe('reservations service', () => {
       const { markNoShowReservations } = await import('@/lib/server/reservations-service')
       const result = await markNoShowReservations()
 
-      expect(mockRpc).toHaveBeenCalledWith('mark_no_show_reservations')
+      expect(mockRpc).toHaveBeenCalledWith('mark_no_show_reservations', {
+        club_timezone: process.env.CLUB_TIMEZONE ?? 'Atlantic/Canary',
+      })
       expect(result).toBe(2)
     })
 

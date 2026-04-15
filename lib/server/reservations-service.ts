@@ -1,5 +1,7 @@
 import type { Reservation, TableSurface } from '@/lib/types'
 import type { SessionUser } from '@/lib/server/auth'
+import { CLUB_TIMEZONE, getCurrentClubDate, isValidDateOnlyString, zonedDateTimeToUtc } from '@/lib/club-time'
+import { getDatabaseNow } from '@/lib/server/database-time'
 import { serviceError } from '@/lib/server/service-error'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
@@ -75,20 +77,11 @@ export const GRACE_PERIOD_MINUTES = 20
 export const CHECK_IN_EARLY_MINUTES = 5
 const CANCELLATION_CUTOFF_MS = 60 * 60 * 1000 // 60 minutes
 
-// Club timezone: explicit env var or auto-detected from the server's system timezone.
-// On a correctly configured server the system timezone matches the club's location.
-// Override with CLUB_TIMEZONE=Atlantic/Canary (or any IANA name) in .env if needed.
-const CLUB_TZ = process.env.CLUB_TIMEZONE ?? Intl.DateTimeFormat().resolvedOptions().timeZone
-
 const RESERVATION_COLUMNS = 'id, table_id, user_id, date, start_time, end_time, status, surface, activated_at, created_at'
 const RESERVATION_ENRICHED_COLUMNS = 'id, table_id, user_id, date, start_time, end_time, status, surface, activated_at, created_at, profiles(member_number), tables(name, rooms(name))'
 
 function parseDate(value: string): string {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    serviceError('Date must be in YYYY-MM-DD format', 400)
-  }
-  const d = new Date(value)
-  if (isNaN(d.getTime())) {
+  if (!isValidDateOnlyString(value)) {
     serviceError('Invalid date value', 400)
   }
   return value
@@ -359,7 +352,7 @@ export async function createReservationForSession(
   }
 
   // Reject reservations in the past. Compare against the club's local timezone.
-  const todayInClub = new Intl.DateTimeFormat('en-CA', { timeZone: CLUB_TZ }).format(new Date())
+  const todayInClub = getCurrentClubDate()
   if (date < todayInClub) {
     serviceError('Cannot make a reservation in the past', 400)
   }
@@ -423,8 +416,10 @@ export async function updateReservationForSession(
   }
 
   if (nextStatus === 'cancelled' && session.role !== 'admin' && existingReservation.status !== 'cancelled') {
-    // Date parsed as local time — intentional: reservation times match venue timezone.
-    const reservationStart = new Date(`${existingReservation.date}T${normalizeTime(existingReservation.start_time)}`)
+    const reservationStart = zonedDateTimeToUtc(
+      existingReservation.date,
+      normalizeTime(existingReservation.start_time),
+    )
     if (isNaN(reservationStart.getTime())) {
       serviceError('Invalid reservation time format', 500)
     }
@@ -502,14 +497,23 @@ export async function updateReservationForSession(
 
 export async function cancelExpiredPendingReservations(): Promise<number> {
   const admin = createSupabaseServerAdminClient()
-  const { data, error } = await admin.rpc('cancel_expired_pending_reservations', { grace_minutes: GRACE_PERIOD_MINUTES })
+  const { data, error } = await (admin as unknown as {
+    rpc: (fn: string, args?: unknown) => Promise<{ data: number | null; error: unknown }>
+  }).rpc('cancel_expired_pending_reservations', {
+    grace_minutes: GRACE_PERIOD_MINUTES,
+    club_timezone: CLUB_TIMEZONE,
+  })
   if (error) serviceError('Internal server error', 500)
   return (data as number | null) ?? 0
 }
 
 export async function markNoShowReservations(): Promise<number> {
   const admin = createSupabaseServerAdminClient()
-  const { data, error } = await admin.rpc('mark_no_show_reservations')
+  const { data, error } = await (admin as unknown as {
+    rpc: (fn: string, args?: unknown) => Promise<{ data: number | null; error: unknown }>
+  }).rpc('mark_no_show_reservations', {
+    club_timezone: CLUB_TIMEZONE,
+  })
   if (error) serviceError('Internal server error', 500)
   return (data as number | null) ?? 0
 }
@@ -531,12 +535,7 @@ export async function activateReservationByTable(
 ): Promise<Reservation> {
   // Anchor "today" in the club's local timezone so near-midnight requests on
   // DST transition days resolve to the correct calendar date.
-  const today = new Intl.DateTimeFormat('en-CA', {
-    timeZone: CLUB_TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
+  const today = getCurrentClubDate()
 
   // Look up the table via the session-scoped client to decide whether to apply
   // a surface filter. removable_top tables store surface='top'/'bottom'; all
@@ -603,45 +602,9 @@ export async function activateReservationByTable(
     serviceError('Invalid reservation data', 500)
   }
 
-  const nowUtc = new Date()
-  const nowLocalParts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: CLUB_TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).formatToParts(nowUtc)
-  const np = Object.fromEntries(
-    nowLocalParts.filter(p => p.type !== 'literal').map(p => [p.type, parseInt(p.value, 10)])
-  )
-  const now = new Date(np.year!, np.month! - 1, np.day!, np.hour!, np.minute!, np.second!)
-  const startTimeParts = normalizeTime(reservation.start_time).split(':')
-  const endTimeParts = normalizeTime(reservation.end_time).split(':')
-  // Anchor on the reservation's own stored date. The server is expected to run
-  // in the club timezone (CLUB_TIMEZONE). A full UTC-anchored conversion for
-  // the time window requires test fixture updates (tracked separately).
-  const dateParts = reservation.date.split('-')
-  const reservationStart = new Date(
-    parseInt(dateParts[0]!, 10),
-    parseInt(dateParts[1]!, 10) - 1,
-    parseInt(dateParts[2]!, 10),
-    parseInt(startTimeParts[0]!, 10),
-    parseInt(startTimeParts[1]!, 10),
-    0,
-    0,
-  )
-  const reservationEnd = new Date(
-    parseInt(dateParts[0]!, 10),
-    parseInt(dateParts[1]!, 10) - 1,
-    parseInt(dateParts[2]!, 10),
-    parseInt(endTimeParts[0]!, 10),
-    parseInt(endTimeParts[1]!, 10),
-    0,
-    0,
-  )
+  const nowUtc = await getDatabaseNow(admin)
+  const reservationStart = zonedDateTimeToUtc(reservation.date, normalizeTime(reservation.start_time))
+  const reservationEnd = zonedDateTimeToUtc(reservation.date, normalizeTime(reservation.end_time))
 
   if (reservationEnd <= reservationStart) {
     serviceError('Invalid reservation data', 500)
@@ -651,10 +614,10 @@ export async function activateReservationByTable(
   // up to the end of the reserved slot.
   const windowStart = new Date(reservationStart.getTime() - CHECK_IN_EARLY_MINUTES * 60 * 1000)
 
-  if (now < windowStart) {
+  if (nowUtc < windowStart) {
     serviceError('CHECK_IN_TOO_EARLY', 400)
   }
-  if (now > reservationEnd) {
+  if (nowUtc > reservationEnd) {
     serviceError('CHECK_IN_TOO_LATE', 400)
   }
 
