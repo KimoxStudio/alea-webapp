@@ -136,18 +136,29 @@ vi.mock('@/lib/supabase/server', () => ({
             }),
           })),
         })),
-        delete: vi.fn(() => ({
-          eq: vi.fn(async (_column: 'profile_id', value: string) => {
-            const existing = activationTokensByProfileId.get(value)
-            if (existing) {
-              activationTokensById.delete(existing.id)
-              activationTokensByProfileId.delete(existing.profile_id)
-              activationTokensByHash.delete(existing.token_hash)
-            }
-            return { error: null }
-          }),
-        })),
         insert: vi.fn(async (values: ActivationTokenRow) => {
+          const inserted = { ...values, id: 'token-new', created_at: '2026-04-15T10:00:00.000Z', updated_at: '2026-04-15T10:00:00.000Z', used_at: null }
+          activationTokensById.set(inserted.id, inserted)
+          activationTokensByProfileId.set(inserted.profile_id, inserted)
+          activationTokensByHash.set(inserted.token_hash, inserted)
+          return { error: null }
+        }),
+        upsert: vi.fn(async (values: ActivationTokenRow) => {
+          const existing = activationTokensByProfileId.get(values.profile_id)
+          if (existing) {
+            activationTokensByHash.delete(existing.token_hash)
+            const next = {
+              ...existing,
+              ...values,
+              updated_at: '2026-04-15T10:00:00.000Z',
+              used_at: null,
+            }
+            activationTokensById.set(existing.id, next)
+            activationTokensByProfileId.set(next.profile_id, next)
+            activationTokensByHash.set(next.token_hash, next)
+            return { error: null }
+          }
+
           const inserted = { ...values, id: 'token-new', created_at: '2026-04-15T10:00:00.000Z', updated_at: '2026-04-15T10:00:00.000Z', used_at: null }
           activationTokensById.set(inserted.id, inserted)
           activationTokensByProfileId.set(inserted.profile_id, inserted)

@@ -7,27 +7,16 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Check, X } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
-import { registerSchema, type RegisterFormData } from '@/lib/validations/auth'
+import { getPasswordRequirementChecks, registerSchema, type RegisterFormData } from '@/lib/validations/auth'
 import { useAuth } from '@/lib/auth/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
 
-const PASSWORD_SPECIAL_CHARS = /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>\/?]/
-
-function getPasswordChecks(password: string) {
-  return [
-    { key: 'minLength' as const, passed: password.length >= 12 },
-    { key: 'letter' as const, passed: /[a-zA-Z]/.test(password) },
-    { key: 'number' as const, passed: /[0-9]/.test(password) },
-    { key: 'specialChar' as const, passed: PASSWORD_SPECIAL_CHARS.test(password) },
-  ]
-}
-
 function PasswordStrengthIndicator({ password }: { password: string }) {
   const t = useTranslations('auth.passwordRequirements')
-  const checks = getPasswordChecks(password)
+  const checks = getPasswordRequirementChecks(password)
 
   return (
     <ul className="mt-2 space-y-1" aria-label={t('title')}>
@@ -59,7 +48,7 @@ export function RegisterForm({ locale }: RegisterFormProps) {
   })
 
   const passwordValue = watch('password', '')
-  const allPasswordChecksPassed = getPasswordChecks(passwordValue).every((c) => c.passed)
+  const allPasswordChecksPassed = getPasswordRequirementChecks(passwordValue).every((c) => c.passed)
 
   const onSubmit = async (data: RegisterFormData) => {
     setServerError(null)

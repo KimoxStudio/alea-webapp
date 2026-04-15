@@ -52,10 +52,11 @@ type ActivationTokenTableClient = {
       maybeSingle: () => ActivationTokenMaybeSingleResult
     }
   }
-  delete: () => {
-    eq: (column: 'profile_id', value: string) => Promise<{ error: unknown }>
-  }
   insert: (values: TablesInsert<'activation_tokens'>) => Promise<{ error: unknown }>
+  upsert: (
+    values: TablesInsert<'activation_tokens'>,
+    options: { onConflict: 'profile_id' },
+  ) => Promise<{ error: unknown }>
   update: (values: Partial<Tables<'activation_tokens'>>) => {
     eq: (column: 'id', value: string) => Promise<{ error: unknown }>
   }
@@ -218,21 +219,16 @@ export async function generateActivationLink(input: {
   }
 
   const activationTokens = getActivationTokenTable(admin)
-  const deleteExisting = await activationTokens.delete().eq('profile_id', profile.id)
-  if (deleteExisting.error) {
-    serviceError('Internal server error', 500)
-  }
-
   const token = createActivationToken()
   const expiresAt = new Date(Date.now() + ACTIVATION_WINDOW_MS)
-  const insertResult = await activationTokens.insert({
+  const upsertResult = await activationTokens.upsert({
     profile_id: profile.id,
     token_hash: hashActivationToken(token),
     expires_at: expiresAt.toISOString(),
     created_by: input.createdBy,
-  })
+  }, { onConflict: 'profile_id' })
 
-  if (insertResult.error) {
+  if (upsertResult.error) {
     serviceError('Failed to create activation link', 500)
   }
 
@@ -274,9 +270,12 @@ export async function activateAccount(input: { token: unknown; password: unknown
     serviceError('Activation link is invalid or has expired', 400)
   }
   if (profile.is_active) {
-    await activationTokens
+    const { error: markTokenUsedError } = await activationTokens
       .update({ used_at: new Date().toISOString() })
       .eq('id', activationToken.id)
+    if (markTokenUsedError) {
+      serviceError('Failed to activate account', 500)
+    }
     serviceError('Activation link has already been used', 400)
   }
 

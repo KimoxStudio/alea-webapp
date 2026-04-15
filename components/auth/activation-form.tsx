@@ -10,23 +10,12 @@ import { DiceLoader } from '@/components/ui/dice-loader'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
-import { activationSchema, type ActivationFormData } from '@/lib/validations/auth'
+import { activationSchema, getPasswordRequirementChecks, type ActivationFormData } from '@/lib/validations/auth'
 import { apiClient } from '@/lib/api/client'
-
-const PASSWORD_SPECIAL_CHARS = /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>\/?]/
-
-function getPasswordChecks(password: string) {
-  return [
-    { key: 'minLength' as const, passed: password.length >= 12 },
-    { key: 'letter' as const, passed: /[a-zA-Z]/.test(password) },
-    { key: 'number' as const, passed: /[0-9]/.test(password) },
-    { key: 'specialChar' as const, passed: PASSWORD_SPECIAL_CHARS.test(password) },
-  ]
-}
 
 function PasswordStrengthIndicator({ password }: { password: string }) {
   const t = useTranslations('auth.passwordRequirements')
-  const checks = getPasswordChecks(password)
+  const checks = getPasswordRequirementChecks(password)
 
   return (
     <ul className="mt-2 space-y-1" aria-label={t('title')}>
@@ -64,7 +53,7 @@ export function ActivationForm({ locale, token }: ActivationFormProps) {
   })
 
   const passwordValue = watch('password', '')
-  const allPasswordChecksPassed = getPasswordChecks(passwordValue).every((check) => check.passed)
+  const allPasswordChecksPassed = getPasswordRequirementChecks(passwordValue).every((check) => check.passed)
 
   const onSubmit = async (data: ActivationFormData) => {
     setServerError(null)

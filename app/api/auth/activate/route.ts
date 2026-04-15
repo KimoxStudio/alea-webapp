@@ -13,11 +13,28 @@ export async function POST(request: NextRequest) {
 
   try {
     const { supabase, applyCookies } = createSupabaseRouteHandlerClient(request)
-    const body = await request.json()
-    const result = await activateAccount(body)
+    let body: unknown
+
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({
+        message: 'Invalid JSON request body.',
+        statusCode: 400,
+      }, { status: 400 })
+    }
+
+    const requestBody = typeof body === 'object' && body !== null
+      ? body as Record<string, unknown>
+      : {}
+    const result = await activateAccount({
+      token: requestBody.token,
+      password: requestBody.password,
+    })
+    const password = String(requestBody.password ?? '')
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: result.authEmail,
-      password: body.password,
+      password,
     })
 
     if (signInError) {

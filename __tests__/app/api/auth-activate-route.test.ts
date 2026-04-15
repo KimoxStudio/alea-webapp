@@ -111,6 +111,30 @@ describe('POST /api/auth/activate', () => {
     })
   })
 
+  it('returns 400 for invalid JSON request bodies', async () => {
+    const { POST } = await import('@/app/api/auth/activate/route')
+    const response = await POST(new NextRequest('http://localhost:3000/api/auth/activate', {
+      method: 'POST',
+      headers: {
+        host: 'localhost:3000',
+        origin: 'http://localhost:3000',
+        'x-forwarded-for': '10.0.0.1',
+        'x-real-ip': '127.0.0.1',
+        'x-csrf-token': 'test-csrf-token',
+        cookie: 'alea-csrf-token=test-csrf-token',
+        'content-type': 'application/json',
+      },
+      body: '{',
+    }))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({
+      message: 'Invalid JSON request body.',
+      statusCode: 400,
+    })
+    expect(activateAccountMock).not.toHaveBeenCalled()
+  })
+
   it('returns 500 when activation succeeds but automatic sign-in fails', async () => {
     routeSignInWithPasswordMock.mockResolvedValueOnce({
       data: { user: null },

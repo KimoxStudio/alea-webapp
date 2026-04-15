@@ -153,7 +153,7 @@
     "noReservations": "No hay reservas",
     "table": "Mesa", "user": "Usuario",
     "regenerateQr": "Regenerar QR",
-    "noShowCount": "Conteo de no-shows", "noShowsShort": "No-shows",
+    "noShowCount": "Conteo de no-shows", "noShowsShort": "Ausencias",
     "blockedUntil": "Bloqueado hasta", "blockedShort": "Bloqueo", "createdShort": "Alta",
     "resetNoShows": "Reiniciar no-shows",
     "unblockUser": "Desbloquear",

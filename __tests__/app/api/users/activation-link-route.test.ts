@@ -57,7 +57,7 @@ describe('POST /api/users/[id]/activation-link', () => {
     enforceRateLimitMock.mockReturnValue(null)
     requireAdminMock.mockResolvedValue(makeAdminContext())
     generateActivationLinkMock.mockResolvedValue({
-      activationLink: 'http://localhost:3000/es/activate?token=abc',
+      activationLink: 'http://localhost:3000/en/activate?token=abc',
       expiresAt: '2026-04-16T10:00:00.000Z',
     })
   })
@@ -70,7 +70,7 @@ describe('POST /api/users/[id]/activation-link', () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
-      activationLink: 'http://localhost:3000/es/activate?token=abc',
+      activationLink: 'http://localhost:3000/en/activate?token=abc',
       expiresAt: '2026-04-16T10:00:00.000Z',
     })
     expect(generateActivationLinkMock).toHaveBeenCalledWith({

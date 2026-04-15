@@ -174,7 +174,11 @@ export function UsersSection() {
       setActivationFeedback({
         userId: user.id,
         kind: 'error',
-        message: error instanceof Error ? error.message : t('activationLinkFailed'),
+        message: error instanceof Error
+          ? error.message
+          : typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string'
+            ? error.message
+            : t('activationLinkFailed'),
       })
     }
   }
@@ -311,17 +315,17 @@ export function UsersSection() {
                         )}
                         {!user.isActive && user.role === 'member' && (
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs text-sky-400 hover:bg-sky-900/20 hover:text-sky-300"
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 border-sky-500/40 text-sky-400 hover:bg-sky-900/20 hover:text-sky-300"
                             disabled={patchMutation.isPending}
                             onClick={() => handleCopyActivationLink(user)}
                             aria-label={t('copyActivationLink')}
+                            title={t('copyActivationLink')}
                           >
                             {patchMutation.isPending && patchMutation.variables?.id === user.id && patchMutation.variables?.action === 'generate_activation_link'
-                              ? <DiceLoader size="sm" className="mr-1" hideRole />
-                              : <Link2 className="mr-1 h-3.5 w-3.5" aria-hidden="true" />}
-                            {t('copyActivationLink')}
+                              ? <DiceLoader size="sm" hideRole />
+                              : <Link2 className="h-3.5 w-3.5" aria-hidden="true" />}
                           </Button>
                         )}
                         <Button
