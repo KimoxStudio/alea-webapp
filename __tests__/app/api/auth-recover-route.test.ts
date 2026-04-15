@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
 
-const activateAccountMock = vi.fn()
+const recoverAccountMock = vi.fn()
 const enforceMutationSecurityMock = vi.fn()
 const enforceRateLimitMock = vi.fn()
 const routeSignInWithPasswordMock = vi.fn()
 
 vi.mock('@/lib/server/auth-service', () => ({
-  activateAccount: activateAccountMock,
+  recoverAccount: recoverAccountMock,
 }))
 
 vi.mock('@/lib/server/security', async (importOriginal) => {
@@ -37,7 +37,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 function createJsonRequest(body?: unknown) {
-  return new NextRequest('http://localhost:3000/api/auth/activate', {
+  return new NextRequest('http://localhost:3000/api/auth/recover', {
     method: 'POST',
     headers: {
       host: 'localhost:3000',
@@ -52,13 +52,13 @@ function createJsonRequest(body?: unknown) {
   })
 }
 
-describe('POST /api/auth/activate', () => {
+describe('POST /api/auth/recover', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
     enforceMutationSecurityMock.mockReturnValue(null)
     enforceRateLimitMock.mockReturnValue(null)
-    activateAccountMock.mockResolvedValue({
+    recoverAccountMock.mockResolvedValue({
       authEmail: '100020@members.alea.internal',
       user: {
         id: 'user-20',
@@ -75,8 +75,8 @@ describe('POST /api/auth/activate', () => {
     })
   })
 
-  it('activates account, signs member in, returns user payload and cookies', async () => {
-    const { POST } = await import('@/app/api/auth/activate/route')
+  it('recovers account, signs member in, returns user payload and cookies', async () => {
+    const { POST } = await import('@/app/api/auth/recover/route')
     const response = await POST(createJsonRequest({
       token: 'plain-token',
       password: 'Password123',
@@ -94,11 +94,11 @@ describe('POST /api/auth/activate', () => {
     expect(response.cookies.get('sb-access-token')?.value).toBe('test-session')
   })
 
-  it('maps activation failures to service error responses', async () => {
+  it('maps recovery failures to service error responses', async () => {
     const { ServiceError } = await import('@/lib/server/service-error')
-    activateAccountMock.mockRejectedValueOnce(new ServiceError('Activation link has already been used', 400))
+    recoverAccountMock.mockRejectedValueOnce(new ServiceError('Recovery link has already been used', 400))
 
-    const { POST } = await import('@/app/api/auth/activate/route')
+    const { POST } = await import('@/app/api/auth/recover/route')
     const response = await POST(createJsonRequest({
       token: 'used-token',
       password: 'Password123',
@@ -106,14 +106,14 @@ describe('POST /api/auth/activate', () => {
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toMatchObject({
-      message: 'Activation link has already been used',
+      message: 'Recovery link has already been used',
       statusCode: 400,
     })
   })
 
   it('returns 400 for invalid JSON request bodies', async () => {
-    const { POST } = await import('@/app/api/auth/activate/route')
-    const response = await POST(new NextRequest('http://localhost:3000/api/auth/activate', {
+    const { POST } = await import('@/app/api/auth/recover/route')
+    const response = await POST(new NextRequest('http://localhost:3000/api/auth/recover', {
       method: 'POST',
       headers: {
         host: 'localhost:3000',
@@ -132,16 +132,16 @@ describe('POST /api/auth/activate', () => {
       message: 'Invalid JSON request body.',
       statusCode: 400,
     })
-    expect(activateAccountMock).not.toHaveBeenCalled()
+    expect(recoverAccountMock).not.toHaveBeenCalled()
   })
 
-  it('returns 500 when activation succeeds but automatic sign-in fails', async () => {
+  it('returns 500 when recovery succeeds but automatic sign-in fails', async () => {
     routeSignInWithPasswordMock.mockResolvedValueOnce({
       data: { user: null },
       error: { message: 'sign-in failed' },
     })
 
-    const { POST } = await import('@/app/api/auth/activate/route')
+    const { POST } = await import('@/app/api/auth/recover/route')
     const response = await POST(createJsonRequest({
       token: 'plain-token',
       password: 'Password123',
@@ -149,7 +149,7 @@ describe('POST /api/auth/activate', () => {
 
     expect(response.status).toBe(500)
     await expect(response.json()).resolves.toMatchObject({
-      message: 'Account activated, but automatic sign-in failed. Please sign in with your member number and new password.',
+      message: 'Password updated, but automatic sign-in failed. Please sign in with your member number and new password.',
       statusCode: 500,
     })
   })

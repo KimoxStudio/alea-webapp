@@ -603,7 +603,7 @@ async function importMembersFromNormalizedRows(input: {
 
     const authEmail = createInternalAuthEmail(row.memberNumber)
     const contactEmail = row.email ?? authEmail
-    const temporaryPassword = `Temp-${crypto.randomUUID()}-Aa1`
+    const temporaryPassword = `Temp${crypto.randomUUID().replace(/-/g, '')}Aa1`
     const { data: authData, error: createAuthError } = await admin.auth.admin.createUser({
       email: authEmail,
       password: temporaryPassword,

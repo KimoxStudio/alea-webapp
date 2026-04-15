@@ -71,6 +71,17 @@ export function useAdminGenerateActivationLink() {
   })
 }
 
+export function useAdminGenerateRecoveryLink() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, locale }: { id: string; locale?: string }) =>
+      apiClient.post<{ recoveryLink: string; expiresAt: string }>(endpoints.users.recoveryLink(id), { locale }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+    },
+  })
+}
+
 export function useAdminImportUsers() {
   const queryClient = useQueryClient()
   return useMutation({

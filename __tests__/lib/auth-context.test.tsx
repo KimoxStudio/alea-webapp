@@ -103,13 +103,13 @@ describe('AuthProvider', () => {
     const { result } = renderHook(() => useAuth(), { wrapper })
 
     await act(async () => {
-      await result.current.login('admin@alea.club', 'Admin1234!@#')
+      await result.current.login('admin@alea.club', 'Admin123')
     })
 
     expect(result.current.user).toEqual(loggedInUser)
 
     await act(async () => {
-      await result.current.register('100099', 'Password1234!@#')
+      await result.current.register('100099', 'Password123')
     })
 
     expect(result.current.user).toEqual(registeredUser)

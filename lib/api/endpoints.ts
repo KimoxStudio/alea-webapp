@@ -1,6 +1,7 @@
 export const endpoints = {
   auth: {
     activate: '/auth/activate',
+    recover: '/auth/recover',
     login: '/auth/login',
     register: '/auth/register',
     logout: '/auth/logout',
@@ -10,6 +11,7 @@ export const endpoints = {
     list: '/users',
     byId: (id: string) => `/users/${id}`,
     activationLink: (id: string) => `/users/${id}/activation-link`,
+    recoveryLink: (id: string) => `/users/${id}/recovery-link`,
     import: '/users/import',
   },
   rooms: {

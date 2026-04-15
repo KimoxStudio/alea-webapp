@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import { serviceError } from '@/lib/server/service-error'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import type { Tables, TablesInsert } from '@/lib/supabase/types'
-import { activationServerSchema, registerServerSchema } from '@/lib/validations/auth'
+import { activationServerSchema, recoveryServerSchema, registerServerSchema } from '@/lib/validations/auth'
 
 type ProfileRow = Tables<'profiles'>
 type ActivationTokenRow = Tables<'activation_tokens'>
@@ -176,6 +176,10 @@ export type ActivationLinkState =
   | { status: 'valid'; memberNumber: string; fullName: string | null }
   | { status: 'expired' | 'used' | 'invalid'; memberNumber: null; fullName: null }
 
+export type RecoveryLinkState =
+  | { status: 'valid'; memberNumber: string; fullName: string | null }
+  | { status: 'expired' | 'used' | 'invalid'; memberNumber: null; fullName: null }
+
 export async function getActivationLinkState(token: string): Promise<ActivationLinkState> {
   if (!token) {
     return { status: 'invalid', memberNumber: null, fullName: null }
@@ -254,6 +258,84 @@ export async function generateActivationLink(input: {
   }
 }
 
+export async function getRecoveryLinkState(token: string): Promise<RecoveryLinkState> {
+  if (!token) {
+    return { status: 'invalid', memberNumber: null, fullName: null }
+  }
+
+  const admin = createSupabaseServerAdminClient()
+  const activationTokens = getActivationTokenTable(admin)
+  const tokenHash = hashActivationToken(token)
+  const { data: recoveryToken, error: recoveryTokenError } = await activationTokens
+    .select(ACTIVATION_TOKEN_COLUMNS)
+    .eq('token_hash', tokenHash)
+    .maybeSingle()
+
+  if (recoveryTokenError) {
+    serviceError('Internal server error', 500)
+  }
+  if (!recoveryToken) {
+    return { status: 'invalid', memberNumber: null, fullName: null }
+  }
+  if (recoveryToken.used_at) {
+    return { status: 'used', memberNumber: null, fullName: null }
+  }
+  if (isActivationExpired(recoveryToken.expires_at)) {
+    return { status: 'expired', memberNumber: null, fullName: null }
+  }
+
+  const profile = await getAuthCredentialProfileBy(admin, 'id', recoveryToken.profile_id)
+  if (!profile || !profile.is_active) {
+    return { status: 'invalid', memberNumber: null, fullName: null }
+  }
+
+  return {
+    status: 'valid',
+    memberNumber: profile.member_number,
+    fullName: profile.full_name ?? null,
+  }
+}
+
+export async function generateRecoveryLink(input: {
+  userId: string
+  locale: string
+  baseUrl: string
+  createdBy: string
+}) {
+  const admin = createSupabaseServerAdminClient()
+  const profile = await getAuthCredentialProfileBy(admin, 'id', input.userId)
+
+  if (!profile) {
+    serviceError('User not found', 404)
+  }
+  if (profile.role !== 'member') {
+    serviceError('Only member accounts can receive recovery links', 400)
+  }
+  if (!profile.is_active) {
+    serviceError('This member must activate the account before using recovery', 400)
+  }
+
+  const activationTokens = getActivationTokenTable(admin)
+  const token = createActivationToken()
+  const expiresAt = new Date(Date.now() + ACTIVATION_WINDOW_MS)
+  const upsertResult = await activationTokens.upsert({
+    profile_id: profile.id,
+    token_hash: hashActivationToken(token),
+    expires_at: expiresAt.toISOString(),
+    created_by: input.createdBy,
+    used_at: null,
+  }, { onConflict: 'profile_id' })
+
+  if (upsertResult.error) {
+    serviceError('Failed to create recovery link', 500)
+  }
+
+  return {
+    recoveryLink: `${input.baseUrl}/${input.locale}/recover?token=${token}`,
+    expiresAt: expiresAt.toISOString(),
+  }
+}
+
 export async function activateAccount(input: { token: unknown; password: unknown }) {
   const parsed = activationServerSchema.safeParse(input)
   if (!parsed.success) {
@@ -263,6 +345,29 @@ export async function activateAccount(input: { token: unknown; password: unknown
   const admin = createSupabaseServerAdminClient()
   const activationTokens = getActivationTokenTable(admin)
   const tokenHash = hashActivationToken(parsed.data.token)
+  const { data: existingToken, error: activationTokenError } = await activationTokens
+    .select(ACTIVATION_TOKEN_COLUMNS)
+    .eq('token_hash', tokenHash)
+    .maybeSingle()
+
+  if (activationTokenError) {
+    serviceError('Internal server error', 500)
+  }
+  if (!existingToken || isActivationExpired(existingToken.expires_at)) {
+    serviceError('Activation link is invalid or has expired', 400)
+  }
+  if (existingToken.used_at) {
+    serviceError('Activation link has already been used', 400)
+  }
+
+  const profile = await getAuthCredentialProfileBy(admin, 'id', existingToken.profile_id)
+  if (!profile) {
+    serviceError('Activation link is invalid or has expired', 400)
+  }
+  if (profile.is_active) {
+    serviceError('Activation link has already been used', 400)
+  }
+
   const activatedAt = new Date().toISOString()
   const { data: claimedToken, error: claimTokenError } = await activationTokens
     .update({ used_at: activatedAt })
@@ -276,32 +381,23 @@ export async function activateAccount(input: { token: unknown; password: unknown
     serviceError('Failed to activate account', 500)
   }
 
-  let activationToken = claimedToken
-  if (!activationToken) {
-    const { data: existingToken, error: activationTokenError } = await activationTokens
+  if (!claimedToken) {
+    const { data: latestToken, error: latestTokenError } = await activationTokens
       .select(ACTIVATION_TOKEN_COLUMNS)
       .eq('token_hash', tokenHash)
       .maybeSingle()
 
-    if (activationTokenError) {
+    if (latestTokenError) {
       serviceError('Internal server error', 500)
     }
-    if (!existingToken || isActivationExpired(existingToken.expires_at)) {
+    if (!latestToken || isActivationExpired(latestToken.expires_at)) {
       serviceError('Activation link is invalid or has expired', 400)
     }
-    if (existingToken.used_at) {
+    if (latestToken.used_at) {
       serviceError('Activation link has already been used', 400)
     }
 
     serviceError('Activation link is invalid or has expired', 400)
-  }
-
-  const profile = await getAuthCredentialProfileBy(admin, 'id', activationToken.profile_id)
-  if (!profile) {
-    serviceError('Activation link is invalid or has expired', 400)
-  }
-  if (profile.is_active) {
-    serviceError('Activation link has already been used', 400)
   }
 
   const { error: updateAuthError } = await admin.auth.admin.updateUserById(profile.id, {
@@ -309,7 +405,7 @@ export async function activateAccount(input: { token: unknown; password: unknown
     email_confirm: true,
   })
   if (updateAuthError) {
-    await activationTokens.update({ used_at: null }).eq('id', activationToken.id)
+    await activationTokens.update({ used_at: null }).eq('id', claimedToken.id)
     serviceError('Failed to activate account', 500)
   }
 
@@ -325,8 +421,96 @@ export async function activateAccount(input: { token: unknown; password: unknown
     .maybeSingle()
 
   if (updatedProfileError || !updatedProfile) {
-    await activationTokens.update({ used_at: null }).eq('id', activationToken.id)
     serviceError('Failed to activate account', 500)
+  }
+
+  return {
+    authEmail: profile.auth_email ?? profile.email ?? '',
+    user: toPublicUser(updatedProfile),
+  }
+}
+
+export async function recoverAccount(input: { token: unknown; password: unknown }) {
+  const parsed = recoveryServerSchema.safeParse(input)
+  if (!parsed.success) {
+    serviceError('Invalid recovery link', 400)
+  }
+
+  const admin = createSupabaseServerAdminClient()
+  const activationTokens = getActivationTokenTable(admin)
+  const tokenHash = hashActivationToken(parsed.data.token)
+  const { data: existingToken, error: recoveryTokenError } = await activationTokens
+    .select(ACTIVATION_TOKEN_COLUMNS)
+    .eq('token_hash', tokenHash)
+    .maybeSingle()
+
+  if (recoveryTokenError) {
+    serviceError('Internal server error', 500)
+  }
+  if (!existingToken || isActivationExpired(existingToken.expires_at)) {
+    serviceError('Recovery link is invalid or has expired', 400)
+  }
+  if (existingToken.used_at) {
+    serviceError('Recovery link has already been used', 400)
+  }
+
+  const profile = await getAuthCredentialProfileBy(admin, 'id', existingToken.profile_id)
+  if (!profile || !profile.is_active) {
+    serviceError('Recovery link is invalid or has expired', 400)
+  }
+
+  const recoveredAt = new Date().toISOString()
+  const { data: claimedToken, error: claimTokenError } = await activationTokens
+    .update({ used_at: recoveredAt })
+    .eq('token_hash', tokenHash)
+    .gt('expires_at', recoveredAt)
+    .is('used_at', null)
+    .select(ACTIVATION_TOKEN_COLUMNS)
+    .maybeSingle()
+
+  if (claimTokenError) {
+    serviceError('Failed to recover account', 500)
+  }
+
+  if (!claimedToken) {
+    const { data: latestToken, error: latestTokenError } = await activationTokens
+      .select(ACTIVATION_TOKEN_COLUMNS)
+      .eq('token_hash', tokenHash)
+      .maybeSingle()
+
+    if (latestTokenError) {
+      serviceError('Internal server error', 500)
+    }
+    if (!latestToken || isActivationExpired(latestToken.expires_at)) {
+      serviceError('Recovery link is invalid or has expired', 400)
+    }
+    if (latestToken.used_at) {
+      serviceError('Recovery link has already been used', 400)
+    }
+
+    serviceError('Recovery link is invalid or has expired', 400)
+  }
+
+  const { error: updateAuthError } = await admin.auth.admin.updateUserById(profile.id, {
+    password: parsed.data.password,
+    email_confirm: true,
+  })
+  if (updateAuthError) {
+    await activationTokens.update({ used_at: null }).eq('id', claimedToken.id)
+    serviceError('Failed to recover account', 500)
+  }
+
+  const { data: updatedProfile, error: updatedProfileError } = await admin
+    .from('profiles')
+    .update({
+      psw_changed: recoveredAt,
+    })
+    .eq('id', profile.id)
+    .select(PUBLIC_PROFILE_COLUMNS)
+    .maybeSingle()
+
+  if (updatedProfileError || !updatedProfile) {
+    serviceError('Failed to recover account', 500)
   }
 
   return {

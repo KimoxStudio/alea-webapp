@@ -128,7 +128,7 @@ describe('auth API routes', () => {
     const response = await POST(
       createJsonRequest('/api/auth/login', {
         identifier: '100001',
-        password: 'Admin1234!@#',
+        password: 'Admin123',
       }),
     )
 
@@ -148,7 +148,7 @@ describe('auth API routes', () => {
         '/api/auth/login',
         {
           identifier: '100001',
-          password: 'Admin1234!@#',
+          password: 'Admin123',
         },
         { origin: 'https://attacker.example' },
       ),
@@ -165,7 +165,7 @@ describe('auth API routes', () => {
         '/api/auth/login',
         {
           identifier: '100001',
-          password: 'Admin1234!@#',
+          password: 'Admin123',
         },
         { csrfToken: null },
       ),
@@ -183,7 +183,7 @@ describe('auth API routes', () => {
         '/api/auth/login',
         {
           identifier: '100001',
-          password: 'Admin1234!@#',
+          password: 'Admin123',
         },
         { fetchSite: 'cross-site' },
       ),
@@ -218,7 +218,7 @@ describe('auth API routes', () => {
           '/api/auth/login',
           {
             identifier: '100001',
-            password: 'Admin1234!@#',
+            password: 'Admin123',
           },
           { forwardedFor: '203.0.113.10' },
         ),
@@ -232,7 +232,7 @@ describe('auth API routes', () => {
         '/api/auth/login',
         {
           identifier: '100001',
-          password: 'Admin1234!@#',
+          password: 'Admin123',
         },
         { forwardedFor: '203.0.113.10' },
       ),
@@ -248,7 +248,7 @@ describe('auth API routes', () => {
     const response = await POST(
       createJsonRequest('/api/auth/register', {
         memberNumber: '100099',
-        password: 'Password1234!@#',
+        password: 'Password123',
       }),
     )
 
@@ -266,7 +266,7 @@ describe('auth API routes', () => {
     const response = await POST(
       createJsonRequest('/api/auth/register', {
         memberNumber: '100001',
-        password: 'Password1234!@#',
+        password: 'Password123',
       }),
     )
 
@@ -298,7 +298,7 @@ describe('auth API routes', () => {
     const loginResponse = await loginRoute.POST(
       createJsonRequest('/api/auth/login', {
         identifier: '100001',
-        password: 'Admin1234!@#',
+        password: 'Admin123',
       }),
     )
 

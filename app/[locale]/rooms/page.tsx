@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { RoomsView } from '@/components/rooms/rooms-view'
 import { getSessionFromServerCookies } from '@/lib/server/auth'
+import { getCurrentUser } from '@/lib/server/auth-service'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('rooms')
@@ -19,5 +20,12 @@ export default async function RoomsPage({ params }: RoomsPageProps) {
   if (!session) {
     redirect(`/${locale}/login`)
   }
+
+  try {
+    await getCurrentUser(session)
+  } catch {
+    redirect(`/${locale}/login`)
+  }
+
   return <RoomsView />
 }
