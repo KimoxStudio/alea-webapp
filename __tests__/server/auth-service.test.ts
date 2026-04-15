@@ -150,7 +150,7 @@ describe('auth service', () => {
       const { login } = await loadService()
 
       await expect(
-        login({ identifier: '100001', password: 'Admin1234!@#' }),
+        login({ identifier: '100001', password: 'Admin123' }),
       ).resolves.toMatchObject({
         id: 'user-1',
         role: 'admin',
@@ -162,13 +162,13 @@ describe('auth service', () => {
       const { login } = await loadService()
 
       await expect(
-        login({ identifier: '100002', password: 'Socio1234!@#' }),
+        login({ identifier: '100002', password: 'Socio123' }),
       ).resolves.toMatchObject({
         id: 'user-2',
       })
       expect(signInWithPassword).toHaveBeenCalledWith({
         email: 'socio@alea.club',
-        password: 'Socio1234!@#',
+        password: 'Socio123',
       })
     })
 
@@ -185,7 +185,7 @@ describe('auth service', () => {
       const { login } = await loadService()
 
       await expect(
-        login({ identifier: '999999', password: 'Admin1234!@#' }),
+        login({ identifier: '999999', password: 'Admin123' }),
       ).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 401,
@@ -221,7 +221,7 @@ describe('auth service', () => {
       adminState.byId.set(suspended.id, suspended)
 
       await expect(
-        login({ identifier: '100003', password: 'Password1234!@#' }),
+        login({ identifier: '100003', password: 'Password123' }),
       ).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 401,
@@ -236,11 +236,11 @@ describe('auth service', () => {
       const { register } = await loadService()
       const sessionClient = { auth: { signInWithPassword, signOut } }
 
-      const result = await register({ memberNumber: '100099', password: 'Password1234!@#' }, sessionClient)
+      const result = await register({ memberNumber: '100099', password: 'Password123' }, sessionClient)
 
       expect(adminCreateUser).toHaveBeenCalledWith({
         email: '100099@members.alea.internal',
-        password: 'Password1234!@#',
+        password: 'Password123',
         email_confirm: true,
       })
       expect(result).toMatchObject({
@@ -255,11 +255,11 @@ describe('auth service', () => {
       const { register } = await loadService()
       const sessionClient = { auth: { signInWithPassword, signOut } }
 
-      await register({ memberNumber: '100099', password: 'Password1234!@#' }, sessionClient)
+      await register({ memberNumber: '100099', password: 'Password123' }, sessionClient)
 
       expect(signInWithPassword).toHaveBeenCalledWith({
         email: '100099@members.alea.internal',
-        password: 'Password1234!@#',
+        password: 'Password123',
       })
     })
 
@@ -267,7 +267,7 @@ describe('auth service', () => {
       const { register } = await loadService()
       const sessionClient = { auth: { signInWithPassword, signOut } }
 
-      await register({ memberNumber: '100099', password: 'Password1234!@#' }, sessionClient)
+      await register({ memberNumber: '100099', password: 'Password123' }, sessionClient)
 
       expect(adminUpdateProfile).toHaveBeenCalledWith({
         member_number: '100099',
@@ -281,7 +281,7 @@ describe('auth service', () => {
       const { register } = await loadService()
 
       // member number '100001' is already in adminState
-      await expect(register({ memberNumber: '100001', password: 'Password1234!@#' })).rejects.toMatchObject({
+      await expect(register({ memberNumber: '100001', password: 'Password123' })).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
         message: 'Invalid registration details',
@@ -292,7 +292,7 @@ describe('auth service', () => {
     it('rejects with 400 when member number is missing', async () => {
       const { register } = await loadService()
 
-      await expect(register({ password: 'Password1234!@#' })).rejects.toMatchObject({
+      await expect(register({ password: 'Password123' })).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
       })
@@ -302,7 +302,7 @@ describe('auth service', () => {
       const { register } = await loadService()
 
       await expect(
-        register({ memberNumber: '1'.repeat(21), password: 'Password1234!@#' }),
+        register({ memberNumber: '1'.repeat(21), password: 'Password123' }),
       ).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
@@ -313,7 +313,7 @@ describe('auth service', () => {
       const { register } = await loadService()
 
       await expect(
-        register({ memberNumber: 'ABC123', password: 'Password1234!@#' }),
+        register({ memberNumber: 'ABC123', password: 'Password123' }),
       ).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
@@ -336,7 +336,7 @@ describe('auth service', () => {
         error: { message: 'Auth creation failed' },
       })
 
-      await expect(register({ memberNumber: '100099', password: 'Password1234!@#' })).rejects.toMatchObject({
+      await expect(register({ memberNumber: '100099', password: 'Password123' })).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 500,
       })
@@ -349,7 +349,7 @@ describe('auth service', () => {
         error: { code: '23505', message: 'duplicate key value violates unique constraint' },
       })
 
-      await expect(register({ memberNumber: '100099', password: 'Password1234!@#' })).rejects.toMatchObject({
+      await expect(register({ memberNumber: '100099', password: 'Password123' })).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
         message: 'Invalid registration details',
@@ -364,7 +364,7 @@ describe('auth service', () => {
         error: { code: 'PGRST', message: 'unexpected error' },
       })
 
-      await expect(register({ memberNumber: '100099', password: 'Password1234!@#' })).rejects.toMatchObject({
+      await expect(register({ memberNumber: '100099', password: 'Password123' })).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 500,
       })
@@ -379,7 +379,7 @@ describe('auth service', () => {
       })
       const sessionClient = { auth: { signInWithPassword: failingSignIn, signOut } }
 
-      const result = await register({ memberNumber: '100099', password: 'Password1234!@#' }, sessionClient)
+      const result = await register({ memberNumber: '100099', password: 'Password123' }, sessionClient)
 
       expect(result).toMatchObject({ id: 'new-user-id', memberNumber: '100099' })
     })

@@ -4,12 +4,12 @@ import { loginSchema, registerSchema, registerServerSchema, passwordSchema } fro
 describe('Auth validation schemas - error keys (KIM-325)', () => {
   describe('passwordSchema', () => {
     it('validates passwords with all requirements', () => {
-      const result = passwordSchema.safeParse('SecurePass123!')
+      const result = passwordSchema.safeParse('Secure123')
       expect(result.success).toBe(true)
     })
 
-    it('rejects passwords shorter than 12 characters with correct error key', () => {
-      const result = passwordSchema.safeParse('Short1!')
+    it('rejects passwords shorter than 8 characters with correct error key', () => {
+      const result = passwordSchema.safeParse('Shor1A')
       expect(result.success).toBe(false)
       if (!result.success) {
         expect(result.error.issues[0].message).toBe('errors.passwordMinLength')
@@ -17,34 +17,42 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     })
 
     it('rejects passwords exceeding 1024 characters with correct error key', () => {
-      const result = passwordSchema.safeParse('A' + 'a'.repeat(1024) + '1!')
+      const result = passwordSchema.safeParse('A' + 'a'.repeat(1023) + '1')
       expect(result.success).toBe(false)
       if (!result.success) {
         expect(result.error.issues[0].message).toBe('errors.passwordMaxLength')
       }
     })
 
-    it('rejects passwords without letters with correct error key', () => {
-      const result = passwordSchema.safeParse('123456789!@#')
+    it('rejects passwords without lowercase letters with correct error key', () => {
+      const result = passwordSchema.safeParse('PASSWORD123')
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.issues.some(issue => issue.message === 'errors.passwordAlphanumeric')).toBe(true)
+        expect(result.error.issues.some(issue => issue.message === 'errors.passwordLowercase')).toBe(true)
+      }
+    })
+
+    it('rejects passwords without uppercase letters with correct error key', () => {
+      const result = passwordSchema.safeParse('password123')
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues.some(issue => issue.message === 'errors.passwordUppercase')).toBe(true)
       }
     })
 
     it('rejects passwords without numbers with correct error key', () => {
-      const result = passwordSchema.safeParse('ValidPassword!@#')
+      const result = passwordSchema.safeParse('ValidPass')
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.issues.some(issue => issue.message === 'errors.passwordAlphanumeric')).toBe(true)
+        expect(result.error.issues.some(issue => issue.message === 'errors.passwordNumber')).toBe(true)
       }
     })
 
-    it('rejects passwords without special characters with correct error key', () => {
-      const result = passwordSchema.safeParse('ValidPassword123')
+    it('rejects passwords with non-alphanumeric characters with correct error key', () => {
+      const result = passwordSchema.safeParse('Valid123!')
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.issues.some(issue => issue.message === 'errors.passwordSpecialChar')).toBe(true)
+        expect(result.error.issues.some(issue => issue.message === 'errors.passwordAlphanumericOnly')).toBe(true)
       }
     })
   })
@@ -53,7 +61,7 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('validates valid login data', () => {
       const result = loginSchema.safeParse({
         identifier: '100001',
-        password: 'SecurePass123!'
+        password: 'Secure123'
       })
       expect(result.success).toBe(true)
     })
@@ -61,7 +69,7 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('rejects missing identifier with correct error key', () => {
       const result = loginSchema.safeParse({
         identifier: '',
-        password: 'SecurePass123!'
+        password: 'Secure123'
       })
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -96,8 +104,8 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('validates valid registration data', () => {
       const result = registerSchema.safeParse({
         memberNumber: '100099',
-        password: 'SecurePass123!',
-        confirmPassword: 'SecurePass123!'
+        password: 'Secure123',
+        confirmPassword: 'Secure123'
       })
       expect(result.success).toBe(true)
     })
@@ -105,8 +113,8 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('rejects missing member number with correct error key', () => {
       const result = registerSchema.safeParse({
         memberNumber: '',
-        password: 'SecurePass123!',
-        confirmPassword: 'SecurePass123!'
+        password: 'Secure123',
+        confirmPassword: 'Secure123'
       })
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -117,8 +125,8 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('rejects member number exceeding 20 characters with correct error key', () => {
       const result = registerSchema.safeParse({
         memberNumber: '1'.repeat(21),
-        password: 'SecurePass123!',
-        confirmPassword: 'SecurePass123!'
+        password: 'Secure123',
+        confirmPassword: 'Secure123'
       })
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -129,8 +137,8 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('rejects member number with non-numeric characters with correct error key', () => {
       const result = registerSchema.safeParse({
         memberNumber: 'ABC123',
-        password: 'SecurePass123!',
-        confirmPassword: 'SecurePass123!'
+        password: 'Secure123',
+        confirmPassword: 'Secure123'
       })
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -141,8 +149,8 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('rejects mismatched passwords with correct error key', () => {
       const result = registerSchema.safeParse({
         memberNumber: '100099',
-        password: 'SecurePass123!',
-        confirmPassword: 'DifferentPass123!'
+        password: 'Secure123',
+        confirmPassword: 'Different123'
       })
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -153,8 +161,8 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('rejects invalid password with correct error key', () => {
       const result = registerSchema.safeParse({
         memberNumber: '100099',
-        password: 'Short1!',
-        confirmPassword: 'Short1!'
+        password: 'Shor1A',
+        confirmPassword: 'Shor1A'
       })
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -165,8 +173,8 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('rejects memberNumber of 11 digits', () => {
       const result = registerSchema.safeParse({
         memberNumber: '12345678901',
-        password: 'SecurePass123!',
-        confirmPassword: 'SecurePass123!'
+        password: 'Secure123',
+        confirmPassword: 'Secure123'
       })
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -177,8 +185,8 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('accepts memberNumber of exactly 10 digits', () => {
       const result = registerSchema.safeParse({
         memberNumber: '1234567890',
-        password: 'SecurePass123!',
-        confirmPassword: 'SecurePass123!'
+        password: 'Secure123',
+        confirmPassword: 'Secure123'
       })
       expect(result.success).toBe(true)
     })
@@ -188,7 +196,7 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('validates valid server registration data', () => {
       const result = registerServerSchema.safeParse({
         memberNumber: '100099',
-        password: 'SecurePass123!'
+        password: 'Secure123'
       })
       expect(result.success).toBe(true)
     })
@@ -196,7 +204,7 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('rejects missing member number with correct error key', () => {
       const result = registerServerSchema.safeParse({
         memberNumber: '',
-        password: 'SecurePass123!'
+        password: 'Secure123'
       })
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -207,7 +215,7 @@ describe('Auth validation schemas - error keys (KIM-325)', () => {
     it('does not require confirmPassword on server schema', () => {
       const result = registerServerSchema.safeParse({
         memberNumber: '100099',
-        password: 'SecurePass123!'
+        password: 'Secure123'
       })
       expect(result.success).toBe(true)
     })

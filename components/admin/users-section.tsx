@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
-import { Search, Pencil, Trash2, AlertCircle, FileUp, Link2 } from 'lucide-react'
+import { Search, Pencil, Trash2, AlertCircle, FileUp, Link2, KeyRound } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,7 +18,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { useAdminUsers, useAdminUpdateUser, useAdminDeleteUser, useAdminPatchUser, useAdminGenerateActivationLink } from '@/lib/hooks/use-admin'
+import { useAdminUsers, useAdminUpdateUser, useAdminDeleteUser, useAdminPatchUser, useAdminGenerateActivationLink, useAdminGenerateRecoveryLink } from '@/lib/hooks/use-admin'
 import { ImportMembersSection } from './import-members-section'
 import type { User } from '@/lib/types'
 
@@ -76,6 +76,7 @@ export function UsersSection() {
   const deleteMutation = useAdminDeleteUser()
   const patchMutation = useAdminPatchUser()
   const activationLinkMutation = useAdminGenerateActivationLink()
+  const recoveryLinkMutation = useAdminGenerateRecoveryLink()
 
   useEffect(() => {
     if (!activationFeedback) return
@@ -179,6 +180,43 @@ export function UsersSection() {
           : typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string'
             ? error.message
             : t('activationLinkFailed'),
+      })
+    }
+  }
+
+  async function handleCopyRecoveryLink(user: User) {
+    setActivationFeedback(null)
+
+    try {
+      const result = await recoveryLinkMutation.mutateAsync({
+        id: user.id,
+        locale,
+      })
+
+      try {
+        await navigator.clipboard.writeText(result.recoveryLink)
+        setActivationFeedback({
+          userId: user.id,
+          kind: 'success',
+          message: t('recoveryLinkCopied'),
+        })
+      } catch {
+        window.prompt(t('recoveryLinkPrompt'), result.recoveryLink)
+        setActivationFeedback({
+          userId: user.id,
+          kind: 'success',
+          message: t('recoveryLinkReady'),
+        })
+      }
+    } catch (error) {
+      setActivationFeedback({
+        userId: user.id,
+        kind: 'error',
+        message: error instanceof Error
+          ? error.message
+          : typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string'
+            ? error.message
+            : t('recoveryLinkFailed'),
       })
     }
   }
@@ -326,6 +364,21 @@ export function UsersSection() {
                             {activationLinkMutation.isPending && activationLinkMutation.variables?.id === user.id
                               ? <DiceLoader size="sm" hideRole />
                               : <Link2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                          </Button>
+                        )}
+                        {user.isActive && user.role === 'member' && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 border-amber-500/40 text-amber-400 hover:bg-amber-900/20 hover:text-amber-300"
+                            disabled={recoveryLinkMutation.isPending}
+                            onClick={() => handleCopyRecoveryLink(user)}
+                            aria-label={t('copyRecoveryLink')}
+                            title={t('copyRecoveryLink')}
+                          >
+                            {recoveryLinkMutation.isPending && recoveryLinkMutation.variables?.id === user.id
+                              ? <DiceLoader size="sm" hideRole />
+                              : <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />}
                           </Button>
                         )}
                         <Button

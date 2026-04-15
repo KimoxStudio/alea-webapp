@@ -51,8 +51,8 @@ function seedProfile(overrides?: Partial<ProfileRow>): ProfileRow {
     full_name: 'Member 20',
     phone: null,
     role: 'member',
-    is_active: false,
-    active_from: null,
+    is_active: true,
+    active_from: '2026-04-10T00:00:00.000Z',
     psw_changed: null,
     no_show_count: 0,
     blocked_until: null,
@@ -62,7 +62,7 @@ function seedProfile(overrides?: Partial<ProfileRow>): ProfileRow {
   }
 }
 
-function seedActivationToken(overrides?: Partial<ActivationTokenRow>): ActivationTokenRow {
+function seedRecoveryToken(overrides?: Partial<ActivationTokenRow>): ActivationTokenRow {
   const token = {
     id: 'token-1',
     profile_id: 'member-1',
@@ -211,7 +211,7 @@ async function loadService() {
   return import('@/lib/server/auth-service')
 }
 
-describe('auth activation helpers', () => {
+describe('auth recovery helpers', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
@@ -228,70 +228,51 @@ describe('auth activation helpers', () => {
     profilesByMemberNumber.set(profile.member_number, profile)
   })
 
-  it('returns valid activation state for a fresh token', async () => {
-    seedActivationToken()
-    const { getActivationLinkState } = await loadService()
+  it('returns valid recovery state for a fresh token', async () => {
+    seedRecoveryToken()
+    const { getRecoveryLinkState } = await loadService()
 
-    await expect(getActivationLinkState('plain-token')).resolves.toEqual({
+    await expect(getRecoveryLinkState('plain-token')).resolves.toEqual({
       status: 'valid',
       memberNumber: '100020',
       fullName: 'Member 20',
     })
   })
 
-  it('returns expired state for an expired token', async () => {
-    seedActivationToken({ expires_at: '2020-04-16T10:00:00.000Z' })
-    const { getActivationLinkState } = await loadService()
+  it('returns invalid state when recovery token points to inactive profile', async () => {
+    profilesById.set('member-1', seedProfile({ is_active: false, active_from: null }))
+    profilesByMemberNumber.set('100020', profilesById.get('member-1')!)
+    seedRecoveryToken()
+    const { getRecoveryLinkState } = await loadService()
 
-    await expect(getActivationLinkState('plain-token')).resolves.toEqual({
-      status: 'expired',
+    await expect(getRecoveryLinkState('plain-token')).resolves.toEqual({
+      status: 'invalid',
       memberNumber: null,
       fullName: null,
     })
   })
 
-  it('generates a fresh activation link and replaces any previous token', async () => {
-    seedActivationToken({ id: 'token-old', token_hash: hashToken('old-token') })
-    const { generateActivationLink } = await loadService()
+  it('generates a fresh recovery link and replaces any previous token', async () => {
+    seedRecoveryToken({ id: 'token-old', token_hash: hashToken('old-token') })
+    const { generateRecoveryLink } = await loadService()
 
-    const result = await generateActivationLink({
+    const result = await generateRecoveryLink({
       userId: 'member-1',
       locale: 'es',
       baseUrl: 'http://localhost:3000',
       createdBy: 'admin-1',
     })
 
-    expect(result.activationLink).toContain('http://localhost:3000/es/activate?token=')
-    expect(result.activationLink).not.toContain('old-token')
+    expect(result.recoveryLink).toContain('http://localhost:3000/es/recover?token=')
+    expect(result.recoveryLink).not.toContain('old-token')
     expect(activationTokensByProfileId.get('member-1')?.token_hash).not.toBe(hashToken('old-token'))
   })
 
-  it('clears used_at when regenerating an already consumed activation link', async () => {
-    seedActivationToken({
-      id: 'token-old',
-      token_hash: hashToken('old-token'),
-      used_at: '2026-04-15T10:30:00.000Z',
-    })
-    const { generateActivationLink } = await loadService()
+  it('recovers account, updates password, profile state, and marks token used', async () => {
+    seedRecoveryToken()
+    const { recoverAccount } = await loadService()
 
-    await generateActivationLink({
-      userId: 'member-1',
-      locale: 'es',
-      baseUrl: 'http://localhost:3000',
-      createdBy: 'admin-1',
-    })
-
-    expect(activationTokenUpsertMock).toHaveBeenCalledWith(expect.objectContaining({
-      used_at: null,
-    }), { onConflict: 'profile_id' })
-    expect(activationTokensByProfileId.get('member-1')?.used_at).toBeNull()
-  })
-
-  it('activates account, updates password, profile state, and marks token used', async () => {
-    seedActivationToken()
-    const { activateAccount } = await loadService()
-
-    const result = await activateAccount({
+    const result = await recoverAccount({
       token: 'plain-token',
       password: 'Password123',
     })
@@ -307,38 +288,37 @@ describe('auth activation helpers', () => {
         isActive: true,
       },
     })
-    expect(profilesById.get('member-1')?.active_from).toBeTruthy()
     expect(profilesById.get('member-1')?.psw_changed).toBeTruthy()
     expect(activationTokensByProfileId.get('member-1')?.used_at).toBeTruthy()
   })
 
   it('rolls token usage back when auth password update fails', async () => {
-    seedActivationToken()
+    seedRecoveryToken()
     updateUserByIdMock.mockResolvedValueOnce({ error: { message: 'boom' } })
-    const { activateAccount } = await loadService()
+    const { recoverAccount } = await loadService()
 
-    await expect(activateAccount({
+    await expect(recoverAccount({
       token: 'plain-token',
       password: 'Password123',
     })).rejects.toMatchObject({
-      message: 'Failed to activate account',
+      message: 'Failed to recover account',
       statusCode: 500,
     })
 
     expect(activationTokensByProfileId.get('member-1')?.used_at).toBeNull()
   })
 
-  it('does not burn a recovery token when posted to activation flow', async () => {
-    profilesById.set('member-1', seedProfile({ is_active: true, active_from: '2026-04-10T00:00:00.000Z' }))
+  it('does not burn an activation token when posted to recovery flow', async () => {
+    profilesById.set('member-1', seedProfile({ is_active: false, active_from: null }))
     profilesByMemberNumber.set('100020', profilesById.get('member-1')!)
-    seedActivationToken()
-    const { activateAccount } = await loadService()
+    seedRecoveryToken()
+    const { recoverAccount } = await loadService()
 
-    await expect(activateAccount({
+    await expect(recoverAccount({
       token: 'plain-token',
       password: 'Password123',
     })).rejects.toMatchObject({
-      message: 'Activation link has already been used',
+      message: 'Recovery link is invalid or has expired',
       statusCode: 400,
     })
 
@@ -346,19 +326,19 @@ describe('auth activation helpers', () => {
   })
 
   it('keeps token consumed when password changes but profile update fails', async () => {
-    seedActivationToken()
+    seedRecoveryToken()
     updateUserByIdMock.mockImplementationOnce(async () => {
       profilesById.delete('member-1')
       profilesByMemberNumber.delete('100020')
       return { error: null }
     })
-    const { activateAccount } = await loadService()
+    const { recoverAccount } = await loadService()
 
-    await expect(activateAccount({
+    await expect(recoverAccount({
       token: 'plain-token',
       password: 'Password123',
     })).rejects.toMatchObject({
-      message: 'Failed to activate account',
+      message: 'Failed to recover account',
       statusCode: 500,
     })
 

@@ -38,6 +38,7 @@ export function LoginForm({ locale }: LoginFormProps) {
   const { login } = useAuth()
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [recoveryHelpVisible, setRecoveryHelpVisible] = useState(false)
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -51,6 +52,7 @@ export function LoginForm({ locale }: LoginFormProps) {
 
   const onSubmit = async (data: LoginFormData) => {
     setServerError(null)
+    setRecoveryHelpVisible(false)
     try {
       await login(data.identifier, data.password)
       router.push(`/${locale}/rooms`)
@@ -114,6 +116,19 @@ export function LoginForm({ locale }: LoginFormProps) {
             )
             : t('login')}
         </Button>
+
+        <div className="space-y-2 text-center">
+          <button
+            type="button"
+            className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+            onClick={() => setRecoveryHelpVisible((value) => !value)}
+          >
+            {t('forgotPassword')}
+          </button>
+          {recoveryHelpVisible && (
+            <p className="text-sm text-muted-foreground">{t('forgotPasswordContactAdmin')}</p>
+          )}
+        </div>
       </form>
     </Form>
   )

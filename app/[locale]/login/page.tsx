@@ -21,11 +21,10 @@ export default async function LoginPage({ params }: LoginPageProps) {
   if (session) {
     try {
       await getCurrentUser(session)
+      redirect(`/${locale}/rooms`)
     } catch {
       // Ignore stale/invalid session state and render the login form.
     }
-
-    redirect(`/${locale}/rooms`)
   }
   const t = await getTranslations('auth')
 

@@ -1,19 +1,21 @@
 import { z } from 'zod'
 
-const PASSWORD_SPECIAL_CHARS = /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>\/?]/
-const PASSWORD_LETTER_REGEX = /[a-zA-Z]/
+const PASSWORD_LOWERCASE_REGEX = /[a-z]/
+const PASSWORD_UPPERCASE_REGEX = /[A-Z]/
 const PASSWORD_NUMBER_REGEX = /[0-9]/
-const PASSWORD_MIN_LENGTH = 12
+const PASSWORD_ALPHANUMERIC_REGEX = /^[A-Za-z0-9]+$/
+const PASSWORD_MIN_LENGTH = 8
 
-export type PasswordRequirementKey = 'minLength' | 'letter' | 'number' | 'specialChar'
+export type PasswordRequirementKey = 'minLength' | 'lowercase' | 'uppercase' | 'number' | 'alphanumeric'
 
 export const passwordSchema = z
   .string()
   .min(PASSWORD_MIN_LENGTH, 'errors.passwordMinLength')
   .max(1024, 'errors.passwordMaxLength')
-  .regex(PASSWORD_LETTER_REGEX, 'errors.passwordAlphanumeric')
-  .regex(PASSWORD_NUMBER_REGEX, 'errors.passwordAlphanumeric')
-  .regex(PASSWORD_SPECIAL_CHARS, 'errors.passwordSpecialChar')
+  .regex(PASSWORD_LOWERCASE_REGEX, 'errors.passwordLowercase')
+  .regex(PASSWORD_UPPERCASE_REGEX, 'errors.passwordUppercase')
+  .regex(PASSWORD_NUMBER_REGEX, 'errors.passwordNumber')
+  .regex(PASSWORD_ALPHANUMERIC_REGEX, 'errors.passwordAlphanumericOnly')
 
 export function getPasswordRequirementChecks(password: string): Array<{
   key: PasswordRequirementKey
@@ -21,9 +23,10 @@ export function getPasswordRequirementChecks(password: string): Array<{
 }> {
   return [
     { key: 'minLength', passed: password.length >= PASSWORD_MIN_LENGTH },
-    { key: 'letter', passed: PASSWORD_LETTER_REGEX.test(password) },
+    { key: 'lowercase', passed: PASSWORD_LOWERCASE_REGEX.test(password) },
+    { key: 'uppercase', passed: PASSWORD_UPPERCASE_REGEX.test(password) },
     { key: 'number', passed: PASSWORD_NUMBER_REGEX.test(password) },
-    { key: 'specialChar', passed: PASSWORD_SPECIAL_CHARS.test(password) },
+    { key: 'alphanumeric', passed: PASSWORD_ALPHANUMERIC_REGEX.test(password) },
   ]
 }
 
@@ -73,7 +76,13 @@ export const activationServerSchema = z.object({
   password: passwordSchema,
 })
 
+export const recoveryServerSchema = z.object({
+  token: z.string().min(1),
+  password: passwordSchema,
+})
+
 export type LoginFormData = z.infer<typeof loginSchema>
 export type RegisterFormData = z.infer<typeof registerSchema>
 export type RegisterServerData = z.infer<typeof registerServerSchema>
 export type ActivationFormData = z.infer<typeof activationSchema>
+export type RecoveryFormData = ActivationFormData
