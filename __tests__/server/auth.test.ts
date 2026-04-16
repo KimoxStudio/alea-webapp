@@ -35,6 +35,7 @@ function withSession(userId = 'user-1', role: 'member' | 'admin' = 'admin') {
     data: {
       id: userId,
       role,
+      is_active: true,
       email: 'admin@alea.club',
       member_number: '100001',
       created_at: '2024-01-01T00:00:00.000Z',
@@ -82,6 +83,19 @@ describe('server auth helpers', () => {
   it('returns null when the profile lookup fails after a valid auth session', async () => {
     routeGetUser.mockResolvedValueOnce({ data: { user: { id: 'user-1' } }, error: null })
     profileMaybeSingle.mockResolvedValueOnce({ data: null, error: { message: 'db failed' } })
+    const { getSessionFromRequest } = await import('@/lib/server/auth')
+
+    await expect(
+      getSessionFromRequest(new NextRequest('http://localhost:3000/api/auth/me')),
+    ).resolves.toMatchObject({ session: null })
+  })
+
+  it('returns null when the profile is inactive', async () => {
+    routeGetUser.mockResolvedValueOnce({ data: { user: { id: 'user-1' } }, error: null })
+    profileMaybeSingle.mockResolvedValueOnce({
+      data: { id: 'user-1', role: 'admin', is_active: false },
+      error: null,
+    })
     const { getSessionFromRequest } = await import('@/lib/server/auth')
 
     await expect(

@@ -108,7 +108,7 @@ describe('auth API routes', () => {
     logoutWithClientMock.mockResolvedValue({ success: true })
     routeGetUserMock.mockResolvedValue({ data: { user: { id: 'user-2' } }, error: null })
     routeProfileMaybeSingleMock.mockResolvedValue({
-      data: { id: 'user-2', role: 'member' },
+      data: { id: 'user-2', role: 'member', is_active: true },
       error: null,
     })
     getCurrentUserMock.mockResolvedValue({
@@ -284,7 +284,7 @@ describe('auth API routes', () => {
       error: null,
     })
     routeProfileMaybeSingleMock.mockResolvedValueOnce({
-      data: { id: 'user-1', role: 'admin' },
+      data: { id: 'user-1', role: 'admin', is_active: true },
       error: null,
     })
     getCurrentUserMock.mockResolvedValueOnce({

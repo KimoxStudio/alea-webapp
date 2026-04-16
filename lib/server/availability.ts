@@ -28,13 +28,13 @@ export function normalizeTime(time: string) {
 
 export function generateDaySlots(reservedSlots: ReservedSlot[]): TimeSlot[] {
   return Array.from({ length: 24 }, (_, i) => {
-    const time = `${String(i).padStart(2, '0')}:00`
+    const slotStart = `${String(i).padStart(2, '0')}:00`
     const nextHour = i + 1
-    const nextTime = nextHour < 24 ? `${String(nextHour).padStart(2, '0')}:00` : '24:00'
-    const reservation = reservedSlots.find((item) => item.start <= time && item.end >= time)
+    const slotEnd = nextHour < 24 ? `${String(nextHour).padStart(2, '0')}:00` : '24:00'
+    const reservation = reservedSlots.find((item) => item.start < slotEnd && slotStart < item.end)
     return {
-      startTime: time,
-      endTime: nextTime,
+      startTime: slotStart,
+      endTime: slotEnd,
       available: !reservation,
       source: reservation?.source,
       label: reservation?.label ?? null,

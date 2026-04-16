@@ -4,7 +4,6 @@ import { ServiceError } from '@/lib/server/service-error'
 
 // --- Top-level mock functions ---
 
-const requireAuthMock = vi.fn()
 const requireAdminMock = vi.fn()
 const createEventMock = vi.fn()
 const listEventsMock = vi.fn()
@@ -14,7 +13,6 @@ const enforceMutationSecurityMock = vi.fn()
 const enforceRateLimitMock = vi.fn()
 
 vi.mock('@/lib/server/auth', () => ({
-  requireAuth: requireAuthMock,
   requireAdmin: requireAdminMock,
 }))
 
@@ -67,14 +65,13 @@ describe('Events API routes', () => {
     enforceMutationSecurityMock.mockReturnValue(null)
     enforceRateLimitMock.mockReturnValue(null)
     // Auth passes by default
-    requireAuthMock.mockResolvedValue(makeAuthContext())
     requireAdminMock.mockResolvedValue(makeAuthContext('user-admin', 'admin'))
   })
 
   // ===== GET /api/events =====
 
   describe('GET /api/events', () => {
-    it('returns 200 with list of events for authenticated user', async () => {
+    it('returns 200 with list of events for admin user', async () => {
       const mockEvents = [
         {
           id: 'event-1',
@@ -99,7 +96,7 @@ describe('Events API routes', () => {
     })
 
     it('returns 401 when user is not authenticated', async () => {
-      requireAuthMock.mockResolvedValue(
+      requireAdminMock.mockResolvedValue(
         NextResponse.json({ message: 'Unauthorized', statusCode: 401 }, { status: 401 }),
       )
 
@@ -107,6 +104,18 @@ describe('Events API routes', () => {
       const response = await GET(createJsonRequest('/api/events'))
 
       expect(response.status).toBe(401)
+      expect(listEventsMock).not.toHaveBeenCalled()
+    })
+
+    it('returns 403 when user is authenticated but not admin', async () => {
+      requireAdminMock.mockResolvedValue(
+        NextResponse.json({ message: 'Forbidden', statusCode: 403 }, { status: 403 }),
+      )
+
+      const { GET } = await import('@/app/api/events/route')
+      const response = await GET(createJsonRequest('/api/events'))
+
+      expect(response.status).toBe(403)
       expect(listEventsMock).not.toHaveBeenCalled()
     })
 
