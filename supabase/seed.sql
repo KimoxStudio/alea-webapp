@@ -289,15 +289,16 @@ ON CONFLICT (id) DO NOTHING;
 -- and role='member'. We upsert to set the correct values.
 -- ============================================================
 
-INSERT INTO public.profiles (id, member_number, email, role, is_active)
+INSERT INTO public.profiles (id, member_number, auth_email, email, role, is_active)
 VALUES
-  ('10000000-0000-0000-0000-000000000001'::uuid, '00001', 'admin@alea.test',   'admin',  true),
-  ('10000000-0000-0000-0000-000000000002'::uuid, '00002', 'member1@alea.test', 'member', true),
-  ('10000000-0000-0000-0000-000000000003'::uuid, '00003', 'member2@alea.test', 'member', true),
-  ('10000000-0000-0000-0000-000000000004'::uuid, '00004', 'member3@alea.test', 'member', true),
-  ('10000000-0000-0000-0000-000000000005'::uuid, '00005', 'member4@alea.test', 'member', true)
+  ('10000000-0000-0000-0000-000000000001'::uuid, '00001', 'admin@alea.test',   'admin@alea.test',   'admin',  true),
+  ('10000000-0000-0000-0000-000000000002'::uuid, '00002', 'member1@alea.test', 'member1@alea.test', 'member', true),
+  ('10000000-0000-0000-0000-000000000003'::uuid, '00003', 'member2@alea.test', 'member2@alea.test', 'member', true),
+  ('10000000-0000-0000-0000-000000000004'::uuid, '00004', 'member3@alea.test', 'member3@alea.test', 'member', true),
+  ('10000000-0000-0000-0000-000000000005'::uuid, '00005', 'member4@alea.test', 'member4@alea.test', 'member', true)
 ON CONFLICT (id) DO UPDATE
   SET member_number = EXCLUDED.member_number,
+      auth_email    = EXCLUDED.auth_email,
       email         = EXCLUDED.email,
       role          = EXCLUDED.role,
       is_active     = EXCLUDED.is_active,

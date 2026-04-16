@@ -256,6 +256,13 @@ export type Database = {
             referencedRelation: "tables"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reservations_user_id_fkey_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       rooms: {
@@ -331,35 +338,54 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      cancel_expired_pending_reservations: { Args: { grace_minutes?: number }; Returns: number }
+      cancel_expired_pending_reservations: {
+        Args: {
+          club_timezone?: string
+          grace_minutes?: number
+          reference_time?: string
+        }
+        Returns: number
+      }
       create_event_atomic: {
         Args: {
-          p_title: string
-          p_description: string | null
+          p_all_day?: boolean
           p_date: string
-          p_start_time: string
+          p_description: string
           p_end_time: string
-          p_room_id: string | null
+          p_room_id: string
+          p_start_time: string
+          p_title: string
         }
         Returns: Json
       }
+      get_database_time: { Args: never; Returns: string }
+      is_active_member: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
-      mark_no_show_reservations: { Args: never; Returns: number }
+      mark_no_show_reservations: {
+        Args: { club_timezone?: string; reference_time?: string }
+        Returns: number
+      }
       update_event_atomic: {
         Args: {
-          p_id: string
-          p_title: string
-          p_description: string | null
+          p_all_day?: boolean
           p_date: string
-          p_start_time: string
+          p_description: string
           p_end_time: string
-          p_room_id: string | null
+          p_id: string
+          p_room_id: string
+          p_start_time: string
+          p_title: string
         }
         Returns: Json
       }
     }
     Enums: {
-      reservation_status: "active" | "cancelled" | "completed" | "pending" | "no_show"
+      reservation_status:
+        | "active"
+        | "cancelled"
+        | "completed"
+        | "pending"
+        | "no_show"
       role: "member" | "admin"
       table_surface: "top" | "bottom"
       table_type: "small" | "large" | "removable_top"
@@ -487,19 +513,23 @@ export type CompositeTypes<
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
-export type EventRow = Database["public"]["Tables"]["events"]["Row"]
-export type EventRoomBlockRow = Database["public"]["Tables"]["event_room_blocks"]["Row"]
-
 export const Constants = {
   graphql_public: {
     Enums: {},
   },
   public: {
     Enums: {
-      reservation_status: ["active", "cancelled", "completed", "pending", "no_show"],
+      reservation_status: [
+        "active",
+        "cancelled",
+        "completed",
+        "pending",
+        "no_show",
+      ],
       role: ["member", "admin"],
       table_surface: ["top", "bottom"],
       table_type: ["small", "large", "removable_top"],
     },
   },
 } as const
+
