@@ -1,10 +1,13 @@
 import 'server-only'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
-import type { EventRow, EventRoomBlockRow } from '@/lib/supabase/types'
+import type { Tables } from '@/lib/supabase/types'
 import type { AdminEvent, AdminEventRoomBlock } from '@/lib/types'
 
 export type { AdminEvent, AdminEventRoomBlock }
+
+type EventRow = Tables<'events'>
+type EventRoomBlockRow = Tables<'event_room_blocks'>
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
@@ -160,11 +163,11 @@ export async function createEvent(body: {
 
   const { data: result, error: rpcError } = await admin.rpc('create_event_atomic', {
     p_title: title,
-    p_description: description,
+    p_description: description as never,
     p_date: date,
     p_start_time: resolvedTimes.startTime,
     p_end_time: resolvedTimes.endTime,
-    p_room_id: roomId,
+    p_room_id: roomId as never,
     p_all_day: allDay,
   })
 
@@ -236,11 +239,11 @@ export async function updateEvent(
   const { data: result, error: rpcError } = await admin.rpc('update_event_atomic', {
     p_id: id,
     p_title: title,
-    p_description: description,
+    p_description: description as never,
     p_date: date,
     p_start_time: resolvedTimes.startTime,
     p_end_time: resolvedTimes.endTime,
-    p_room_id: roomId,
+    p_room_id: roomId as never,
     p_all_day: allDay,
   })
 
