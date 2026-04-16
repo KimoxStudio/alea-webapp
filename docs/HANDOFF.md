@@ -9,111 +9,87 @@
 ## Last updated: 2026-04-16
 
 ## Current branch
-`develop`
+`feat/KIM-387-review-follow-up-fixes`
 
-## Open PRs — awaiting merge
+## Active PRs — awaiting review / merge
 | PR | Branch | Status |
 |---|---|---|
-| None | — | —
+| #112 | `feat/KIM-387-review-follow-up-fixes` | Ready for review |
 
-## Most recently merged
-| PR | Branch | Fix |
-|---|---|---|
-| #111 | `feat/KIM-386-database-time-drift` | `KIM-386` merged into `develop`: DB-backed timestamp authority, club-time date helpers, deterministic reservation cutoff handling, and one-statement migration split |
-| #110 | `feat/KIM-379-password-recovery` | `KIM-379` merged into `develop`: admin-mediated password recovery, stale-session auth redirects, and root entry redirect hardening |
-| #109 | `feat/KIM-378-member-activation` | `KIM-378` merged into `develop`: activation flow, login-first entry route, and auth redirect fixes |
+## Session status
 
----
+Active work remains on `KIM-387`.
 
-## Status Summary
+Implemented earlier in this branch:
+- inactive profiles lose effective session access immediately
+- `GET /api/events` now requires admin
+- availability overlap logic fixed for partial/adjacent slots
+- reservation create/update rejects same-day past starts
+- reservation update/admin activation overlap enforcement hardened
+- expired pending reservations cron now writes `cancelled`
 
-`develop` is current with `origin/develop` after merge of PR `#111`.
+Additional work completed in this session:
+- restored historical Supabase migration files that were removed locally but already existed in remote migration history:
+  - `20260406000000_profiles_status.sql`
+  - `20260413000000_fn_create_event_atomic.sql`
+  - `20260413000001_fn_update_event_atomic.sql`
+- applied forward-only cleanup migrations instead of deleting migration history:
+  - `20260416114000_drop_reapplied_create_event_atomic_legacy.sql`
+  - `20260416114001_drop_reapplied_update_event_atomic_legacy.sql`
+- updated header behavior so unauthenticated users no longer see:
+  - mobile hamburger menu
+  - login CTA in header
+- header now closes any open mobile menu when auth state becomes unauthenticated
 
-Merged product state now includes:
-- admin-issued activation and recovery links
-- DB-authoritative persisted auth/check-in timestamps
-- explicit club-time helpers for reservation date-only logic
-- timezone-safe reservation/check-in/cancellation comparisons
-- Supabase migration split into one-statement files per repo policy
+## Validation completed this session
 
-Current meaningful next steps:
-- keep closing the manual QA checklist for already merged reservation/event/check-in work
-- after QA/docs are in acceptable shape, branch next implementation from `develop`
-- likely next implementation target: `KIM-380`, unless product priority changes
+- `pnpm typecheck`
+  - passed
+- `pnpm vitest run __tests__/app/auth-pages.test.tsx __tests__/app/api/events.test.ts __tests__/server/auth.test.ts __tests__/server/availability.test.ts __tests__/server/reservations-service.test.ts`
+  - passed: `162/162`
+- `supabase db push --include-all`
+  - passed
+  - applied:
+    - `20260416114000_drop_reapplied_create_event_atomic_legacy.sql`
+    - `20260416114001_drop_reapplied_update_event_atomic_legacy.sql`
 
-Plan source:
-- Use only `docs/PLAN.md`.
-- Ignore removed legacy planning docs and canceled legacy tickets.
+## Still pending before closing the issue
 
----
+- optional broader CI pass if desired
+- stage and commit current changes
+- push branch
+- update PR `#112`
+- if needed, run final QA/review pass for the new header requirement
 
-## Manual QA pending
+## Current working tree at handoff
 
-All checks require a live browser session.
+- modified:
+  - `components/layout/header.tsx`
+- untracked migration files to add:
+  - `supabase/migrations/20260406000000_profiles_status.sql`
+  - `supabase/migrations/20260413000000_fn_create_event_atomic.sql`
+  - `supabase/migrations/20260413000001_fn_update_event_atomic.sql`
+  - `supabase/migrations/20260416114000_drop_reapplied_create_event_atomic_legacy.sql`
+  - `supabase/migrations/20260416114001_drop_reapplied_update_event_atomic_legacy.sql`
 
-### PR #82 — Cancellation cutoff UI
-- [ ] Cancel a reservation < 60 min away → cutoff error shown in red
-- [ ] Dismiss dialog → error clears on reopen
+## Important migration rule learned here
 
-### PR #86 — Check-in hardening
-- [ ] Valid QR scan → reservation activates to `active`
-- [ ] `/en/check-in/not-a-uuid` → redirects to `/en/rooms`
-- [ ] `/xx/check-in/<valid-uuid>` (invalid locale) → redirects to `/`
+Do not delete Supabase migration files that are already present in shared/remote migration history from the active `supabase/migrations` directory.
 
-### PR #101 — Admin force-delete events
-- [ ] Admin deletes event with active/pending reservations → reservations cancelled, event removed
-- [ ] Delete error displays in active locale (ES or EN)
+Robust cleanup path:
+1. preserve historical files
+2. add new forward-only migrations for cleanup
+3. never rewrite active history just to make the directory smaller
 
-### PR #103 — Slot end_time inclusive
-- [ ] User A has 17:00–18:00 → User B sees both 17:00 and 18:00 as unavailable
-- [ ] 19:00 remains green
+## Execution reference
 
-### PR #104 — Check-in timezone fix
-- [ ] Check-in at exact reservation start time → succeeds
-- [ ] Check-in 5 min before start → succeeds
-- [ ] Check-in 6 min before start → "too early" error
+- issue: `KIM-387`
+- PR: https://github.com/KimoxStudio/alea-webapp/pull/112
+- decisions log: `docs/DECISIONS.md`
 
-### PR #105 — Availability polling
-- [ ] User A opens reservation dialog → User B books same table/date → within 30s slot appears red in User A's open dialog
+## Next command to resume
 
-### PR #106 — Event create/update cancels reservations
-- [ ] Admin creates event for a room with active/pending reservations in same time window → reservations cancelled immediately
-- [ ] Admin updates event time range to overlap existing reservations → overlapping reservations cancelled
-- [ ] Admin updates event room assignment → only new room's reservations cancelled (old room unaffected)
-- [ ] Admin updates only event title/description → no reservations cancelled
-
----
-
-## Active roadmap reference
-
-- `KIM-380` — Equipment inventory model
-- `KIM-381` — Equipment-aware reservation flow
-- `KIM-382` — 60-minute QR activation window
-- `KIM-383` — Expanded event scheduling and blocking
-- `KIM-317` — 24h booking times with 30-minute intervals
-- `KIM-384` — Saved Game reservation type
-- `KIM-385` — FAQ route
-
----
-
-## Execution plan reference
-→ `docs/PLAN.md`
-
-## Linear project
-→ https://linear.app/kimox-studio/project/alea-a9a47d8b2bb2/issues
-
----
-
-## How to use this file
-
-**At session start:**
-1. Read `docs/HANDOFF.md` (this file) — mandatory before any action
-2. `gh pr list --state open` — check PRs awaiting merge
-3. `git branch --show-current` — confirm you are on `develop` unless active branch work has started
-4. If operational closure is still pending, use the Manual QA checklist above
-5. Otherwise branch fresh from `develop` for the next planned issue
-
-**At session end:**
-1. Update this file with current state
-2. Do not add handoff-only state to GitHub comments or `CLAUDE.md`
-3. Prune worktrees if needed: `git worktree prune && rm -rf .claude/worktrees/`
+1. `git status --short`
+2. `pnpm typecheck`
+3. `git add components/layout/header.tsx supabase/migrations/20260406000000_profiles_status.sql supabase/migrations/20260413000000_fn_create_event_atomic.sql supabase/migrations/20260413000001_fn_update_event_atomic.sql supabase/migrations/20260416114000_drop_reapplied_create_event_atomic_legacy.sql supabase/migrations/20260416114001_drop_reapplied_update_event_atomic_legacy.sql docs/HANDOFF.md docs/DECISIONS.md`
+4. commit and push

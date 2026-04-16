@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { Sword, Menu, Globe, LogOut, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth/auth-context'
-import { useState, Suspense } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 
 interface HeaderProps { locale: string }
 
@@ -52,6 +52,12 @@ export function Header({ locale }: HeaderProps) {
   const { user, logout, isAuthenticated } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setMobileMenuOpen(false)
+    }
+  }, [isAuthenticated])
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <a href="#main-content" className="skip-link">
@@ -86,29 +92,27 @@ export function Header({ locale }: HeaderProps) {
             <LocaleSwitcherLink locale={locale} />
           </Suspense>
 
-          {isAuthenticated ? (
-            <div className="flex items-center gap-2">
-              <span className="hidden md:block text-sm text-muted-foreground">#{user?.memberNumber}</span>
-              {user?.role === 'admin' && (
-                <Link href={`/${locale}/admin`}>
-                  <Button variant="ghost" size="icon" aria-label={t('nav.admin')}>
-                    <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </Link>
-              )}
-              <Button variant="ghost" size="icon" onClick={logout} aria-label={t('nav.logout')}>
-                <LogOut className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </div>
-          ) : (
-            <Link href={`/${locale}/login`}>
-              <Button size="sm">{t('auth.login')}</Button>
-            </Link>
-          )}
+          {isAuthenticated && (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="hidden md:block text-sm text-muted-foreground">#{user?.memberNumber}</span>
+                {user?.role === 'admin' && (
+                  <Link href={`/${locale}/admin`}>
+                    <Button variant="ghost" size="icon" aria-label={t('nav.admin')}>
+                      <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  </Link>
+                )}
+                <Button variant="ghost" size="icon" onClick={logout} aria-label={t('nav.logout')}>
+                  <LogOut className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
 
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-expanded={mobileMenuOpen} aria-controls="mobile-menu" aria-label={t('nav.menuAriaLabel')}>
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          </Button>
+              <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-expanded={mobileMenuOpen} aria-controls="mobile-menu" aria-label={t('nav.menuAriaLabel')}>
+                <Menu className="h-5 w-5" aria-hidden="true" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
