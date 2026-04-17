@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { User, Room, GameTable, Reservation, PaginatedResponse, AdminEvent, MemberImportResult } from '@/lib/types'
+import type { User, Room, GameTable, Reservation, PaginatedResponse, AdminEvent, MemberImportResult, Equipment } from '@/lib/types'
 import { apiClient } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
 
@@ -214,6 +214,68 @@ export function useAdminDeleteEvent() {
     mutationFn: (id: string) => apiClient.delete<void>(endpoints.events.byId(id)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'events'] })
+    },
+  })
+}
+
+// ----- Equipment -----
+
+export function useAdminEquipment() {
+  return useQuery<Equipment[]>({
+    queryKey: ['admin', 'equipment'],
+    queryFn: () => apiClient.get<Equipment[]>(endpoints.equipment.list),
+    staleTime: 60_000,
+  })
+}
+
+export function useAdminCreateEquipment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; description?: string }) =>
+      apiClient.post<Equipment>(endpoints.equipment.list, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'equipment'] })
+    },
+  })
+}
+
+export function useAdminUpdateEquipment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; description?: string | null } }) =>
+      apiClient.put<Equipment>(endpoints.equipment.byId(id), data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'equipment'] })
+    },
+  })
+}
+
+export function useAdminDeleteEquipment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete<void>(endpoints.equipment.byId(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'equipment'] })
+    },
+  })
+}
+
+export function useAdminRoomDefaultEquipment(roomId: string | null) {
+  return useQuery<Equipment[]>({
+    queryKey: ['admin', 'rooms', roomId, 'default-equipment'],
+    queryFn: () => apiClient.get<Equipment[]>(endpoints.equipment.roomDefaults(roomId!)),
+    enabled: !!roomId,
+    staleTime: 60_000,
+  })
+}
+
+export function useAdminSetRoomDefaultEquipment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ roomId, equipmentIds }: { roomId: string; equipmentIds: string[] }) =>
+      apiClient.put<void>(endpoints.equipment.roomDefaults(roomId), { equipmentIds }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', variables.roomId, 'default-equipment'] })
     },
   })
 }

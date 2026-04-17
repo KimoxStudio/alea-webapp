@@ -200,6 +200,22 @@
       "conflictWarning": "Este evento no se puede eliminar porque existen reservas activas o pendientes para la sala afectada en este horario.",
       "deleteError": "Se produjo un error al eliminar el evento. Por favor, inténtalo de nuevo.",
       "deleteWarning": "Eliminar este evento también cancelará las reservas activas o pendientes de los miembros para esta sala durante el horario del evento."
+    },
+    "equipment": {
+      "title": "Material",
+      "equipmentManagement": "Gestión de material",
+      "equipmentName": "Nombre del material",
+      "equipmentDescription": "Descripción",
+      "createEquipment": "Crear material",
+      "editEquipment": "Editar material",
+      "deleteEquipment": "Eliminar material",
+      "deleteEquipmentConfirm": "¿Estás seguro de que deseas eliminar \"{name}\"? Esta acción no se puede deshacer.",
+      "noEquipment": "No se encontró material",
+      "defaultEquipment": "Material predeterminado",
+      "saveEquipment": "Guardar",
+      "equipmentCreated": "Material creado",
+      "equipmentUpdated": "Material actualizado",
+      "equipmentDeleted": "Material eliminado"
     }
   },
   "home": {

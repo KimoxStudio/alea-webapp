@@ -66,28 +66,18 @@ export async function regenerateQrCodes(tableId: string): Promise<{ qr_code: str
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
   if (!appUrl) serviceError('NEXT_PUBLIC_APP_URL is not set — cannot generate QR code URL', 500)
 
-  const [qr_code, qr_code_inf] = await Promise.all([
-    uploadQrCodeToStorage(admin, `${appUrl}/check-in/${tableId}`, `${tableId}.png`),
-    table!.type === 'removable_top'
-      ? uploadQrCodeToStorage(admin, `${appUrl}/check-in/${tableId}?side=inf`, `${tableId}-inf.png`)
-      : Promise.resolve(null),
-  ])
-
-  const updatePayload: { qr_code: string; qr_code_inf?: string | null } = { qr_code }
-  if (table!.type === 'removable_top') {
-    updatePayload.qr_code_inf = qr_code_inf
-  }
+  const qr_code = await uploadQrCodeToStorage(admin, `${appUrl}/check-in/${tableId}`, `${tableId}.png`)
 
   const { error: updateError } = await admin
     .from('tables')
-    .update(updatePayload)
+    .update({ qr_code, qr_code_inf: null })
     .eq('id', tableId)
 
   if (updateError) {
     serviceError('Internal server error', 500)
   }
 
-  return { qr_code, qr_code_inf }
+  return { qr_code, qr_code_inf: null }
 }
 
 export async function getTableAvailability(tableId: string, date?: string | null) {

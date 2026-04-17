@@ -283,6 +283,22 @@
       "conflictWarning": "This event cannot be deleted because active or pending reservations exist for the affected room during this time.",
       "deleteError": "An error occurred while deleting the event. Please try again.",
       "deleteWarning": "Deleting this event will also cancel any active or pending member reservations for this room during the event time."
+    },
+    "equipment": {
+      "title": "Equipment",
+      "equipmentManagement": "Equipment management",
+      "equipmentName": "Equipment name",
+      "equipmentDescription": "Description",
+      "createEquipment": "Create equipment",
+      "editEquipment": "Edit equipment",
+      "deleteEquipment": "Delete equipment",
+      "deleteEquipmentConfirm": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+      "noEquipment": "No equipment found",
+      "defaultEquipment": "Default equipment",
+      "saveEquipment": "Save",
+      "equipmentCreated": "Equipment created",
+      "equipmentUpdated": "Equipment updated",
+      "equipmentDeleted": "Equipment deleted"
     }
   },
   "home": {

@@ -5,14 +5,15 @@ import { getCurrentUser } from '@/lib/server/auth-service'
 export default async function RootPage() {
   const session = await getSessionFromServerCookies()
 
+  let authenticated = false
   if (session) {
     try {
       await getCurrentUser(session)
-      redirect('/es/rooms')
+      authenticated = true
     } catch {
       // Ignore stale/invalid session state and send the user to login.
     }
   }
 
-  redirect('/es/login')
+  redirect(authenticated ? '/es/rooms' : '/es/login')
 }

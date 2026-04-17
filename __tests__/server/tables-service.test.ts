@@ -260,7 +260,7 @@ describe('regenerateQrCodes', () => {
     expect(result.qr_code_inf).toBeNull()
   })
 
-  it('for a removable-top table: both qr_code and qr_code_inf are set', async () => {
+  it('for a removable-top table: only qr_code is set, qr_code_inf is null', async () => {
     adminTableMaybeSingleMock.mockResolvedValue({
       data: { id: 'c3d4e5f6-a7b8-9012-cdef-012345678901', type: 'removable_top' },
       error: null,
@@ -271,10 +271,10 @@ describe('regenerateQrCodes', () => {
     const result = await regenerateQrCodes('c3d4e5f6-a7b8-9012-cdef-012345678901')
 
     expect(result.qr_code).toMatch(/^https:\/\/supabase\.example\.com\/storage\/v1\/object\/public\/table-qr-codes\/c3d4e5f6-a7b8-9012-cdef-012345678901\.png$/)
-    expect(result.qr_code_inf).toMatch(/^https:\/\/supabase\.example\.com\/storage\/v1\/object\/public\/table-qr-codes\/c3d4e5f6-a7b8-9012-cdef-012345678901-inf\.png$/)
+    expect(result.qr_code_inf).toBeNull()
   })
 
-  it('uploads both QR codes for removable-top table with correct paths', async () => {
+  it('uploads only one QR code for removable-top table', async () => {
     adminTableMaybeSingleMock.mockResolvedValue({
       data: { id: 'c3d4e5f6-a7b8-9012-cdef-012345678901', type: 'removable_top' },
       error: null,
@@ -284,18 +284,12 @@ describe('regenerateQrCodes', () => {
 
     await regenerateQrCodes('c3d4e5f6-a7b8-9012-cdef-012345678901')
 
-    expect(storageUploadMock).toHaveBeenNthCalledWith(
-      1,
+    expect(storageUploadMock).toHaveBeenCalledWith(
       'c3d4e5f6-a7b8-9012-cdef-012345678901.png',
       Buffer.from('fake-png-data'),
       { contentType: 'image/png', upsert: true }
     )
-    expect(storageUploadMock).toHaveBeenNthCalledWith(
-      2,
-      'c3d4e5f6-a7b8-9012-cdef-012345678901-inf.png',
-      Buffer.from('fake-png-data'),
-      { contentType: 'image/png', upsert: true }
-    )
+    expect(storageUploadMock).toHaveBeenCalledTimes(1)
   })
 
   it('handles missing NEXT_PUBLIC_APP_URL gracefully for non-removable-top table', async () => {
