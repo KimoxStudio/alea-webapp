@@ -1,3 +1,4 @@
+import 'server-only'
 import type { User } from '@/lib/types'
 import type { SessionUser } from '@/lib/server/auth'
 import { createHash, randomBytes } from 'node:crypto'

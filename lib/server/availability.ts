@@ -1,3 +1,4 @@
+import 'server-only'
 import type { GameTable, TableAvailability, TimeSlot } from '@/lib/types'
 import type { Tables } from '@/lib/supabase/types'
 import { getCurrentClubDate, isValidDateOnlyString } from '@/lib/club-time'

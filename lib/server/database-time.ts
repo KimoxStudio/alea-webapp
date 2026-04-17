@@ -1,3 +1,4 @@
+import 'server-only'
 import { createSupabaseServerAdminClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
 

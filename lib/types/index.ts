@@ -84,11 +84,6 @@ export interface Reservation {
   tableName?: string | null;
 }
 
-export interface RemovableTopTableStatus {
-  topAvailable: boolean;
-  bottomAvailable: boolean;
-}
-
 export interface TimeSlot {
   startTime: string; // HH:mm
   endTime: string;   // HH:mm
@@ -140,17 +135,6 @@ export interface ApiError {
   message: string;
   statusCode: number;
   error?: string;
-}
-
-export interface LoginRequest {
-  identifier: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  memberNumber: string;
-  email: string;
-  password: string;
 }
 
 export interface CreateReservationRequest {

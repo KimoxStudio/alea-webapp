@@ -1,3 +1,4 @@
+import 'server-only'
 import type { Reservation, TableSurface } from '@/lib/types'
 import type { SessionUser } from '@/lib/server/auth'
 import { CLUB_TIMEZONE, getCurrentClubDate, isValidDateOnlyString, zonedDateTimeToUtc } from '@/lib/club-time'
@@ -530,9 +531,7 @@ export async function updateReservationForSession(
 
 export async function cancelExpiredPendingReservations(): Promise<number> {
   const admin = createSupabaseServerAdminClient()
-  const { data, error } = await (admin as unknown as {
-    rpc: (fn: string, args?: unknown) => Promise<{ data: number | null; error: unknown }>
-  }).rpc('cancel_expired_pending_reservations', {
+  const { data, error } = await admin.rpc('cancel_expired_pending_reservations', {
     grace_minutes: GRACE_PERIOD_MINUTES,
     club_timezone: CLUB_TIMEZONE,
   })
@@ -542,9 +541,7 @@ export async function cancelExpiredPendingReservations(): Promise<number> {
 
 export async function markNoShowReservations(): Promise<number> {
   const admin = createSupabaseServerAdminClient()
-  const { data, error } = await (admin as unknown as {
-    rpc: (fn: string, args?: unknown) => Promise<{ data: number | null; error: unknown }>
-  }).rpc('mark_no_show_reservations', {
+  const { data, error } = await admin.rpc('mark_no_show_reservations', {
     club_timezone: CLUB_TIMEZONE,
   })
   if (error) serviceError('Internal server error', 500)

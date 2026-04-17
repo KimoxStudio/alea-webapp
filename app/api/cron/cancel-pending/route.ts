@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cancelExpiredPendingReservations } from '@/lib/server/reservations-service'
+import { tokensMatch } from '@/lib/server/security'
 
 async function handleCronRequest(request: NextRequest) {
-  const auth = request.headers.get('Authorization')
-  if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  const authHeader = request.headers.get('Authorization')
+  const secret = process.env.CRON_SECRET
+  if (!secret || !authHeader || !authHeader.startsWith('Bearer ') || !tokensMatch(authHeader.slice(7), secret)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {

@@ -1,3 +1,4 @@
+import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseRouteHandlerClient, createSupabaseServerClient } from '@/lib/supabase/server'
 export { enforceSameOriginForMutation } from '@/lib/server/security'

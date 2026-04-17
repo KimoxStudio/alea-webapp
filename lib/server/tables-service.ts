@@ -1,3 +1,4 @@
+import 'server-only'
 import qrcode from 'qrcode'
 import type { GameTable } from '@/lib/types'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'

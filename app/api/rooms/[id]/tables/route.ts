@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { listRoomTables, createTableEntry } from '@/lib/server/rooms-service'
 import { toServiceErrorResponse } from '@/lib/server/http-error'
-import { requireAdmin } from '@/lib/server/auth'
+import { requireAdmin, requireAuth } from '@/lib/server/auth'
 import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireAuth(request)
+  if (auth instanceof NextResponse) return auth
+
   try {
     const { id } = await params
-    return NextResponse.json(await listRoomTables(id))
+    return auth.applyCookies(NextResponse.json(await listRoomTables(id)))
   } catch (error) {
-    return toServiceErrorResponse(error)
+    return auth.applyCookies(toServiceErrorResponse(error))
   }
 }
 

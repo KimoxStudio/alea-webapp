@@ -1,3 +1,4 @@
+import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
 import type { CookieOptionsWithName } from '@supabase/ssr'
 
@@ -280,7 +281,7 @@ function getClientAddress(request: NextRequest) {
   return realIp || 'local'
 }
 
-function tokensMatch(left: string, right: string) {
+export function tokensMatch(left: string, right: string) {
   if (left.length !== right.length) return false
 
   let mismatch = 0

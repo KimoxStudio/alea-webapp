@@ -1,3 +1,4 @@
+import 'server-only'
 import type { MemberImportIssue, MemberImportResult, MemberImportRow, PaginatedResponse, User } from '@/lib/types'
 import { strFromU8, unzipSync } from 'fflate'
 import { createSupabaseServerAdminClient } from '@/lib/supabase/server'
@@ -412,10 +413,6 @@ function createInternalAuthEmail(memberNumber: string) {
   return `${memberNumber}@members.alea.internal`
 }
 
-function pushImportIssue(issues: MemberImportIssue[], issue: MemberImportIssue) {
-  issues.push(issue)
-}
-
 export function parseMemberImportCsv(input: string): ParsedMemberImportResult {
   const rows = parseCsv(input)
   if (rows.length === 0) {
@@ -444,7 +441,7 @@ export function parseMemberImportCsv(input: string): ParsedMemberImportResult {
     const memberNumberResult = memberNumberSchema.safeParse(memberNumberRaw.trim())
 
     if (!memberNumberResult.success) {
-      pushImportIssue(issues, { rowNumber, memberNumber: memberNumberRaw || null, code: 'invalid_member_number' })
+      issues.push({ rowNumber, memberNumber: memberNumberRaw || null, code: 'invalid_member_number' })
       return
     }
 
@@ -452,12 +449,12 @@ export function parseMemberImportCsv(input: string): ParsedMemberImportResult {
     const fullName = fullNameRaw.trim()
 
     if (!fullName) {
-      pushImportIssue(issues, { rowNumber, memberNumber, code: 'missing_full_name' })
+      issues.push({ rowNumber, memberNumber, code: 'missing_full_name' })
       return
     }
 
     if (seenMemberNumbers.has(memberNumber)) {
-      pushImportIssue(issues, { rowNumber, memberNumber, code: 'duplicate_member_number' })
+      issues.push({ rowNumber, memberNumber, code: 'duplicate_member_number' })
       return
     }
     seenMemberNumbers.add(memberNumber)
@@ -670,7 +667,7 @@ async function importMembersFromNormalizedRows(input: {
         auditedRows.push(result.normalizedRow)
       }
       if (result.issue) {
-        pushImportIssue(issues, result.issue)
+        issues.push(result.issue)
       }
     }
   }

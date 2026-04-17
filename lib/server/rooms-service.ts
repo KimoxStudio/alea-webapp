@@ -1,3 +1,4 @@
+import 'server-only'
 import type { GameTable, Room, TableAvailability } from '@/lib/types'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
