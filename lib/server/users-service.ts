@@ -5,10 +5,9 @@ import { serviceError } from '@/lib/server/service-error'
 import type { Tables, TablesUpdate } from '@/lib/supabase/types'
 import { memberNumberSchema } from '@/lib/validations/auth'
 import { read, utils } from 'xlsx'
-import { toPublicUser } from '@/lib/server/profile-mappers'
 
 type ProfileRow = Tables<'profiles'>
-type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'full_name' | 'auth_email' | 'email' | 'phone' | 'role' | 'is_active' | 'active_from' | 'psw_changed' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'full_name' | 'auth_email' | 'email' | 'phone' | 'role' | 'is_active' | 'active_from' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>
 type ProfilesQuery = {
   eq: (column: string, value: unknown) => ProfilesQuery
   or: (filter: string) => ProfilesQuery
@@ -68,7 +67,7 @@ type AuthAdminClient = {
   updateUserById: (id: string, attributes: { email: string }) => Promise<{ error: unknown | null }>
 }
 
-const PROFILE_COLUMNS = 'id, member_number, full_name, auth_email, email, phone, role, is_active, active_from, psw_changed, no_show_count, blocked_until, created_at, updated_at'
+const PROFILE_COLUMNS = 'id, member_number, full_name, auth_email, email, phone, role, is_active, active_from, no_show_count, blocked_until, created_at, updated_at'
 const PROFILE_IMPORT_HEADERS = {
   memberNumber: ['id', 'membernumber', 'member_number', 'numero de socio', 'numerodesocio'],
   fullName: ['usuarios', 'usuario', 'full name', 'fullname', 'nombre', 'name'],
@@ -87,6 +86,23 @@ const ACCEPTED_MEMBER_IMPORT_CONTENT_TYPES_BY_EXTENSION: Record<string, Set<stri
   csv: new Set(['text/csv', 'application/csv', 'application/vnd.ms-excel']),
   xlsx: new Set(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']),
   odt: new Set(['application/vnd.oasis.opendocument.text']),
+}
+
+function toPublicUser(profile: PublicProfileRow): User {
+  return {
+    id: profile.id,
+    memberNumber: profile.member_number,
+    fullName: profile.full_name ?? null,
+    email: profile.email ?? null,
+    phone: profile.phone ?? null,
+    role: profile.role,
+    isActive: profile.is_active,
+    activeFrom: profile.active_from ?? null,
+    noShowCount: profile.no_show_count,
+    blockedUntil: profile.blocked_until ?? null,
+    createdAt: profile.created_at,
+    updatedAt: profile.updated_at,
+  }
 }
 
 function normalizePage(page: number) {

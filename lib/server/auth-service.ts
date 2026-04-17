@@ -6,18 +6,18 @@ import { serviceError } from '@/lib/server/service-error'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import type { Tables, TablesInsert } from '@/lib/supabase/types'
 import { activationServerSchema, recoveryServerSchema, registerServerSchema } from '@/lib/validations/auth'
-import { toPublicUser, type PublicProfileRow } from '@/lib/server/profile-mappers'
 
 type ProfileRow = Tables<'profiles'>
 type ActivationTokenRow = Tables<'activation_tokens'>
-type AuthCredentialRow = Pick<ProfileRow, 'id' | 'member_number' | 'auth_email' | 'email' | 'full_name' | 'phone' | 'role' | 'is_active' | 'active_from' | 'psw_changed' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>
-const PUBLIC_PROFILE_COLUMNS = 'id, member_number, full_name, email, phone, role, is_active, active_from, psw_changed, no_show_count, blocked_until, created_at, updated_at' as const
+type PublicProfileRow = Pick<ProfileRow, 'id' | 'member_number' | 'full_name' | 'email' | 'phone' | 'role' | 'is_active' | 'active_from' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>
+type AuthCredentialRow = Pick<ProfileRow, 'id' | 'member_number' | 'auth_email' | 'email' | 'full_name' | 'phone' | 'role' | 'is_active' | 'active_from' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>
+const PUBLIC_PROFILE_COLUMNS = 'id, member_number, full_name, email, phone, role, is_active, active_from, no_show_count, blocked_until, created_at, updated_at' as const
 const ACTIVATION_TOKEN_COLUMNS = 'id, profile_id, token_hash, expires_at, used_at, created_by, created_at, updated_at' as const
 const ACTIVATION_WINDOW_MS = 24 * 60 * 60 * 1000
 
 // Auth-only columns: auth_email is used to resolve Supabase Auth credentials for sign-in/activation.
 // email is optional contact email; it is not part of the public user model (issue #39) but IS included for admin-facing user data.
-const AUTH_CREDENTIAL_COLUMNS = 'id, member_number, auth_email, email, full_name, phone, role, is_active, active_from, psw_changed, no_show_count, blocked_until, created_at, updated_at' as const
+const AUTH_CREDENTIAL_COLUMNS = 'id, member_number, auth_email, email, full_name, phone, role, is_active, active_from, no_show_count, blocked_until, created_at, updated_at' as const
 
 type PublicProfileLookupColumn = 'id' | 'member_number'
 type AuthCredentialLookupColumn = 'id' | 'member_number' | 'email'
@@ -136,6 +136,23 @@ async function getAuthCredentialProfileBy(
   }
 
   return data
+}
+
+function toPublicUser(profile: PublicProfileRow): User {
+  return {
+    id: profile.id,
+    memberNumber: profile.member_number,
+    fullName: profile.full_name ?? null,
+    email: profile.email ?? null,
+    phone: profile.phone ?? null,
+    role: profile.role,
+    isActive: profile.is_active,
+    activeFrom: profile.active_from ?? null,
+    noShowCount: profile.no_show_count,
+    blockedUntil: profile.blocked_until ?? null,
+    createdAt: profile.created_at,
+    updatedAt: profile.updated_at,
+  }
 }
 
 async function getAuthCredentialByMemberNumber(memberNumber: string) {
