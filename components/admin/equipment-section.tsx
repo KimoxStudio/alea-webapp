@@ -17,7 +17,7 @@ import {
   useAdminUpdateEquipment,
   useAdminDeleteEquipment,
 } from '@/lib/hooks/use-admin'
-import type { Equipment } from '@/lib/server/equipment-service'
+import type { Equipment } from '@/lib/types'
 
 function EquipmentRow({ item }: { item: Equipment }) {
   const t = useTranslations('admin')

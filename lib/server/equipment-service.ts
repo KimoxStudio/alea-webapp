@@ -75,6 +75,10 @@ export async function updateEquipment(
     updates.description = body.description === null ? null : String(body.description) || null
   }
 
+  if (Object.keys(updates).length === 0) {
+    serviceError('No updatable fields provided', 400)
+  }
+
   const supabase = createSupabaseServerAdminClient()
   const { data, error } = await supabase
     .from('equipment')
