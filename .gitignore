@@ -40,10 +40,6 @@ pnpm-debug.log
 *.log
 *.tsbuildinfo
 **/next-env.d.ts
-*.png
-!public/**/*.png
-*.pdf
-*.webm
 *.bak
 
 .aia/
