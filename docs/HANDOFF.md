@@ -14,7 +14,7 @@
 ## Open PRs — awaiting merge
 | PR | Branch | Status |
 |---|---|---|
-| _TBD_ | `feat/KIM-381-equipment-aware-reservations` | Local branch validated; push and open PR pending |
+| #115 | `feat/KIM-381-equipment-aware-reservations` | Open — validated locally, awaiting review |
 
 ## Most recently merged
 | PR | Branch | Fix |
@@ -38,7 +38,7 @@ Current branch state includes:
 - two validation cycles clean on `lint`, `typecheck`, `build`, and targeted Vitest server/route suites
 
 Current meaningful next steps:
-- push branch and open the `KIM-381` PR
+- review and merge PR #115 for `KIM-381`
 - after `KIM-381` merges, continue with `KIM-382`
 - follow-up still needed: fix equipment reservation scoping, because equipment can still be reserved from any room except equipment linked to a room during room creation
 
