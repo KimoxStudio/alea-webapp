@@ -19,11 +19,15 @@ export default async function LoginPage({ params }: LoginPageProps) {
   const { locale } = await params
   const session = await getSessionFromServerCookies()
   if (session) {
+    let authenticated = false
     try {
       await getCurrentUser(session)
-      redirect(`/${locale}/rooms`)
+      authenticated = true
     } catch {
       // Ignore stale/invalid session state and render the login form.
+    }
+    if (authenticated) {
+      redirect(`/${locale}/rooms`)
     }
   }
   const t = await getTranslations('auth')
