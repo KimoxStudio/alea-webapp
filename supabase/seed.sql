@@ -195,7 +195,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Test password for ALL users: TestPass123!
 -- ⚠️  Never reuse this password on any real account. Local QA use only.
--- bcrypt cost factor 10 (~100ms/user): adequate for 5 test users; lower to gen_salt('bf', 4) if seed time becomes a CI bottleneck.
+-- bcrypt cost factor 10 (~100ms/user): adequate for 5 test users; lower to extensions.gen_salt('bf', 4) if seed time becomes a CI bottleneck.
 INSERT INTO auth.users (
   id,
   instance_id,
@@ -215,7 +215,7 @@ VALUES
     '10000000-0000-0000-0000-000000000001'::uuid,
     '00000000-0000-0000-0000-000000000000'::uuid,
     'admin@alea.test',
-    crypt('TestPass123!', gen_salt('bf', 10)),
+    extensions.crypt('TestPass123!', extensions.gen_salt('bf', 10)),
     now(),
     now(),
     now(),
@@ -229,7 +229,7 @@ VALUES
     '10000000-0000-0000-0000-000000000002'::uuid,
     '00000000-0000-0000-0000-000000000000'::uuid,
     'member1@alea.test',
-    crypt('TestPass123!', gen_salt('bf', 10)),
+    extensions.crypt('TestPass123!', extensions.gen_salt('bf', 10)),
     now(),
     now(),
     now(),
@@ -243,7 +243,7 @@ VALUES
     '10000000-0000-0000-0000-000000000003'::uuid,
     '00000000-0000-0000-0000-000000000000'::uuid,
     'member2@alea.test',
-    crypt('TestPass123!', gen_salt('bf', 10)),
+    extensions.crypt('TestPass123!', extensions.gen_salt('bf', 10)),
     now(),
     now(),
     now(),
@@ -257,7 +257,7 @@ VALUES
     '10000000-0000-0000-0000-000000000004'::uuid,
     '00000000-0000-0000-0000-000000000000'::uuid,
     'member3@alea.test',
-    crypt('TestPass123!', gen_salt('bf', 10)),
+    extensions.crypt('TestPass123!', extensions.gen_salt('bf', 10)),
     now(),
     now(),
     now(),
@@ -271,7 +271,7 @@ VALUES
     '10000000-0000-0000-0000-000000000005'::uuid,
     '00000000-0000-0000-0000-000000000000'::uuid,
     'member4@alea.test',
-    crypt('TestPass123!', gen_salt('bf', 10)),
+    extensions.crypt('TestPass123!', extensions.gen_salt('bf', 10)),
     now(),
     now(),
     now(),
