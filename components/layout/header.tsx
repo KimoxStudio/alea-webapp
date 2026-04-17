@@ -106,9 +106,11 @@ export function Header({ locale }: HeaderProps) {
             </Link>
           )}
 
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-expanded={mobileMenuOpen} aria-controls="mobile-menu" aria-label={t('nav.menuAriaLabel')}>
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          </Button>
+          {isAuthenticated && (
+            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-expanded={mobileMenuOpen} aria-controls="mobile-menu" aria-label={t('nav.menuAriaLabel')}>
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            </Button>
+          )}
         </div>
       </div>
 
