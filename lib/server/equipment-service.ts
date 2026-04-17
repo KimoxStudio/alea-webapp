@@ -1,16 +1,12 @@
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
+import type { Equipment } from '@/lib/types'
+
+export type { Equipment }
 
 type EquipmentRow = Tables<'equipment'>
 type RoomDefaultEquipmentRow = Tables<'room_default_equipment'>
-
-export type Equipment = {
-  id: string
-  name: string
-  description?: string | null
-  createdAt: string
-}
 
 function toEquipment(row: EquipmentRow): Equipment {
   return {

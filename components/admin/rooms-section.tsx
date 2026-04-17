@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useTranslations } from 'next-intl'
 import { Pencil, Plus, ChevronDown, ChevronRight, DoorOpen, Table2, QrCode, Download, RefreshCw } from 'lucide-react'
@@ -305,9 +305,6 @@ function RoomRow({ room }: { room: Room }) {
     setEditing(true)
   }
 
-  // When roomEquipment loads, populate selected ids
-  const roomEquipmentIds = (roomEquipment ?? []).map((e) => e.id)
-
   function toggleEquipment(id: string) {
     setSelectedEquipmentIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
@@ -315,14 +312,14 @@ function RoomRow({ room }: { room: Room }) {
   }
 
   // Initialize selectedEquipmentIds from loaded room equipment
-  const [equipmentInitialized, setEquipmentInitialized] = useState(false)
-  if (editing && !equipmentInitialized && roomEquipment !== undefined) {
-    setSelectedEquipmentIds(roomEquipmentIds)
-    setEquipmentInitialized(true)
-  }
-  if (!editing && equipmentInitialized) {
-    setEquipmentInitialized(false)
-  }
+  useEffect(() => {
+    if (editing && roomEquipment !== undefined) {
+      setSelectedEquipmentIds(roomEquipment.map((e) => e.id))
+    }
+    if (!editing) {
+      setSelectedEquipmentIds([])
+    }
+  }, [editing, roomEquipment])
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()

@@ -1,10 +1,9 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { User, Room, GameTable, Reservation, PaginatedResponse, AdminEvent, MemberImportResult } from '@/lib/types'
+import type { User, Room, GameTable, Reservation, PaginatedResponse, AdminEvent, MemberImportResult, Equipment } from '@/lib/types'
 import { apiClient } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
-import type { Equipment } from '@/lib/server/equipment-service'
 
 // ----- Users -----
 

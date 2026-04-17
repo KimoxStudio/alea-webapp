@@ -135,6 +135,13 @@ export interface AdminEvent {
   roomBlocks: AdminEventRoomBlock[]
 }
 
+export interface Equipment {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+}
+
 export interface ApiError {
   message: string;
   statusCode: number;
