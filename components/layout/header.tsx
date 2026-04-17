@@ -52,6 +52,8 @@ export function Header({ locale }: HeaderProps) {
   const { user, logout, isAuthenticated } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  if (!isAuthenticated) return null
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <a href="#main-content" className="skip-link">
@@ -64,20 +66,16 @@ export function Header({ locale }: HeaderProps) {
         </Link>
 
         <nav className="hidden md:flex items-center gap-6" aria-label={t('nav.mainNavAriaLabel')}>
-          {isAuthenticated && (
-            <>
-              <Link href={`/${locale}/rooms`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
-                {t('nav.rooms')}
-              </Link>
-              <Link href={`/${locale}/reservations`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
-                {t('nav.reservations')}
-              </Link>
-              {user?.role === 'admin' && (
-                <Link href={`/${locale}/admin`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
-                  {t('nav.admin')}
-                </Link>
-              )}
-            </>
+          <Link href={`/${locale}/rooms`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
+            {t('nav.rooms')}
+          </Link>
+          <Link href={`/${locale}/reservations`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
+            {t('nav.reservations')}
+          </Link>
+          {user?.role === 'admin' && (
+            <Link href={`/${locale}/admin`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
+              {t('nav.admin')}
+            </Link>
           )}
         </nav>
 
@@ -86,35 +84,27 @@ export function Header({ locale }: HeaderProps) {
             <LocaleSwitcherLink locale={locale} />
           </Suspense>
 
-          {isAuthenticated ? (
-            <div className="flex items-center gap-2">
-              <span className="hidden md:block text-sm text-muted-foreground">#{user?.memberNumber}</span>
-              {user?.role === 'admin' && (
-                <Link href={`/${locale}/admin`}>
-                  <Button variant="ghost" size="icon" aria-label={t('nav.admin')}>
-                    <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </Link>
-              )}
-              <Button variant="ghost" size="icon" onClick={logout} aria-label={t('nav.logout')}>
-                <LogOut className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </div>
-          ) : (
-            <Link href={`/${locale}/login`}>
-              <Button size="sm">{t('auth.login')}</Button>
-            </Link>
-          )}
-
-          {isAuthenticated && (
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-expanded={mobileMenuOpen} aria-controls="mobile-menu" aria-label={t('nav.menuAriaLabel')}>
-              <Menu className="h-5 w-5" aria-hidden="true" />
+          <div className="flex items-center gap-2">
+            <span className="hidden md:block text-sm text-muted-foreground">#{user?.memberNumber}</span>
+            {user?.role === 'admin' && (
+              <Link href={`/${locale}/admin`}>
+                <Button variant="ghost" size="icon" aria-label={t('nav.admin')}>
+                  <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </Link>
+            )}
+            <Button variant="ghost" size="icon" onClick={logout} aria-label={t('nav.logout')}>
+              <LogOut className="h-4 w-4" aria-hidden="true" />
             </Button>
-          )}
+          </div>
+
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-expanded={mobileMenuOpen} aria-controls="mobile-menu" aria-label={t('nav.menuAriaLabel')}>
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </Button>
         </div>
       </div>
 
-      {mobileMenuOpen && isAuthenticated && (
+      {mobileMenuOpen && (
         <nav id="mobile-menu" className="md:hidden border-t border-border bg-background/95 px-4 py-3 space-y-2" aria-label={t('nav.mobileNavAriaLabel')}>
           <Link href={`/${locale}/rooms`} className="block py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>{t('nav.rooms')}</Link>
           <Link href={`/${locale}/reservations`} className="block py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>{t('nav.reservations')}</Link>
