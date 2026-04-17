@@ -6,10 +6,10 @@
 
 ---
 
-## Last updated: 2026-04-17
+## Last updated: 2026-04-16
 
 ## Current branch
-`docs/admin-dashboard-improvement-plan`
+`develop`
 
 ## Open PRs — awaiting merge
 | PR | Branch | Status |
@@ -29,12 +29,6 @@
 
 `develop` is current with `origin/develop` after merge of PR `#111`.
 
-Current branch work:
-- created `docs/admin-dashboard-improvement-plan`
-- added `docs/admin-dashboard-improvement-plan.md`
-- added `.impeccable.md` with persisted design context for admin/dashboard design work
-- no runtime code changes were made in this branch
-
 Merged product state now includes:
 - admin-issued activation and recovery links
 - DB-authoritative persisted auth/check-in timestamps
@@ -46,7 +40,6 @@ Current meaningful next steps:
 - keep closing the manual QA checklist for already merged reservation/event/check-in work
 - after QA/docs are in acceptable shape, branch next implementation from `develop`
 - likely next implementation target: `KIM-380`, unless product priority changes
-- if admin UX work is approved, use `docs/admin-dashboard-improvement-plan.md` as the execution brief for a fresh implementation branch off `develop`
 
 Plan source:
 - Use only `docs/PLAN.md`.
