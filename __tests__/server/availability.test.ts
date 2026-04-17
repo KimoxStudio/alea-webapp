@@ -124,7 +124,7 @@ describe('generateDaySlots', () => {
   it('leaves slots outside the reserved range as available', () => {
     const slots = generateDaySlots([{ start: '10:00', end: '11:00' }])
     expect(slots.find((s) => s.startTime === '09:00')?.available).toBe(true)
-    expect(slots.find((s) => s.startTime === '11:00')?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '11:00')?.available).toBe(true)
   })
 
   it('marks multiple reserved slots correctly', () => {
@@ -134,14 +134,21 @@ describe('generateDaySlots', () => {
     ])
     expect(slots.find((s) => s.startTime === '09:00')?.available).toBe(false)
     expect(slots.find((s) => s.startTime === '14:00')?.available).toBe(false)
-    expect(slots.find((s) => s.startTime === '10:00')?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '10:00')?.available).toBe(true)
   })
 
-  it('marks the end_time slot as unavailable (end is inclusive)', () => {
+  it('treats slot end as exclusive so adjacent bookings stay available', () => {
     const slots = generateDaySlots([{ start: '17:00', end: '18:00' }])
     expect(slots.find((s) => s.startTime === '17:00')?.available).toBe(false)
-    expect(slots.find((s) => s.startTime === '18:00')?.available).toBe(false)
-    expect(slots.find((s) => s.startTime === '19:00')?.available).toBe(true)
+    expect(slots.find((s) => s.startTime === '18:00')?.available).toBe(true)
+  })
+
+  it('marks partial overlaps on both touched slots', () => {
+    const slots = generateDaySlots([{ start: '10:30', end: '12:30' }])
+    expect(slots.find((s) => s.startTime === '10:00')?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '11:00')?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '12:00')?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '13:00')?.available).toBe(true)
   })
 })
 
@@ -171,7 +178,7 @@ describe('buildAvailability', () => {
     const result = buildAvailability(table, '2025-06-15', [reservation])
 
     expect(result.slots.find((s) => s.startTime === '09:00')?.available).toBe(true)
-    expect(result.slots.find((s) => s.startTime === '11:00')?.available).toBe(false)
+    expect(result.slots.find((s) => s.startTime === '11:00')?.available).toBe(true)
   })
 
   it('does not add top/bottom/conflicts for non-removable-top tables', () => {

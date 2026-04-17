@@ -643,6 +643,23 @@ describe('reservations service', () => {
         })
       ).rejects.toMatchObject({ name: 'ServiceError', statusCode: 409 })
     })
+
+    it('rejects same-day reservations whose start time is already in the past', async () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-12-31T15:30:00Z'))
+      const { createReservationForSession } = await loadReservationModules()
+
+      await expect(
+        createReservationForSession(memberSession, {
+          tableId: 't2',
+          date: '2026-12-31',
+          startTime: '15:00',
+          endTime: '16:00',
+        }),
+      ).rejects.toMatchObject({ name: 'ServiceError', statusCode: 400 })
+
+      vi.useRealTimers()
+    })
   })
 
   describe('updateReservationForSession', () => {
@@ -688,6 +705,31 @@ describe('reservations service', () => {
       const updated = await updateReservationForSession(adminSession, 'r1', { status: 'active' })
 
       expect(updated.status).toBe('active')
+    })
+
+    it('rejects admin activation when another reservation for same user already overlaps', async () => {
+      const { updateReservationForSession } = await loadReservationModules()
+
+      reservationsState[0]!.status = 'pending'
+      const overlap = makeReservation({
+        id: 'r-overlap-active',
+        table_id: 't2',
+        user_id: '2',
+        date: '2026-12-31',
+        start_time: '17:00:00',
+        end_time: '19:00:00',
+        status: 'active',
+      })
+      const t2 = tablesState.get(overlap.table_id)!
+      reservationsState.push({
+        ...overlap,
+        profiles: profilesMap.get(overlap.user_id) ?? null,
+        tables: t2 ? { name: t2.name, rooms: roomsMap.get(t2.room_id) ?? null } : null,
+      })
+
+      await expect(updateReservationForSession(adminSession, 'r1', {
+        status: 'active',
+      })).rejects.toMatchObject({ name: 'ServiceError', statusCode: 409 })
     })
 
     it('rejects updates from non-owners', async () => {
@@ -829,6 +871,102 @@ describe('reservations service', () => {
 
       expect(updated.startTime).toBe('16:30')
       expect(updated.endTime).toBe('17:30')
+    })
+
+    it('rejects updates that reschedule a reservation into a past same-day slot', async () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-12-31T15:30:00Z'))
+      const { updateReservationForSession } = await loadReservationModules()
+
+      await expect(updateReservationForSession(memberSession, 'r1', {
+        startTime: '15:00',
+        endTime: '16:00',
+      })).rejects.toMatchObject({ name: 'ServiceError', statusCode: 400 })
+
+      vi.useRealTimers()
+    })
+
+    it('rejects updates that overlap another reservation owned by same user', async () => {
+      const { updateReservationForSession } = await loadReservationModules()
+
+      const r3base = makeReservation({
+        id: 'r3',
+        table_id: 't2',
+        user_id: '2',
+        date: '2026-12-31',
+        start_time: '19:00:00',
+        end_time: '20:00:00',
+      })
+      const t2 = tablesState.get(r3base.table_id)!
+      reservationsState.push({
+        ...r3base,
+        profiles: profilesMap.get(r3base.user_id) ?? null,
+        tables: t2 ? { name: t2.name, rooms: roomsMap.get(t2.room_id) ?? null } : null,
+      })
+
+      await expect(updateReservationForSession(memberSession, 'r3', {
+        startTime: '17:30',
+        endTime: '18:30',
+      })).rejects.toMatchObject({ name: 'ServiceError', statusCode: 409 })
+    })
+
+    it('allows status-only updates even when reservation start is already in the past', async () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-12-31T19:30:00Z'))
+      const { updateReservationForSession } = await loadReservationModules()
+
+      const updated = await updateReservationForSession(adminSession, 'r1', { status: 'completed' })
+
+      expect(updated.status).toBe('completed')
+      vi.useRealTimers()
+    })
+
+    it('checks overlap against reservation owner when admin reschedules another user reservation', async () => {
+      const { updateReservationForSession } = await loadReservationModules()
+
+      const ownerOverlap = makeReservation({
+        id: 'r-owner-overlap',
+        table_id: 't2',
+        user_id: '2',
+        date: '2026-12-31',
+        start_time: '18:30:00',
+        end_time: '19:30:00',
+      })
+      const t2 = tablesState.get(ownerOverlap.table_id)!
+      reservationsState.push({
+        ...ownerOverlap,
+        profiles: profilesMap.get(ownerOverlap.user_id) ?? null,
+        tables: t2 ? { name: t2.name, rooms: roomsMap.get(t2.room_id) ?? null } : null,
+      })
+
+      await expect(updateReservationForSession(adminSession, 'r1', {
+        startTime: '18:00',
+        endTime: '19:00',
+      })).rejects.toMatchObject({ name: 'ServiceError', statusCode: 409 })
+    })
+
+    it('allows status-only updates even when overlapping rows already exist', async () => {
+      const { updateReservationForSession } = await loadReservationModules()
+
+      const duplicate = makeReservation({
+        id: 'r-duplicate',
+        table_id: 't2',
+        user_id: '2',
+        date: '2026-12-31',
+        start_time: '17:00:00',
+        end_time: '19:00:00',
+        status: 'pending',
+      })
+      const t2 = tablesState.get(duplicate.table_id)!
+      reservationsState.push({
+        ...duplicate,
+        profiles: profilesMap.get(duplicate.user_id) ?? null,
+        tables: t2 ? { name: t2.name, rooms: roomsMap.get(t2.room_id) ?? null } : null,
+      })
+
+      const updated = await updateReservationForSession(memberSession, 'r1', { status: 'cancelled' })
+
+      expect(updated.status).toBe('cancelled')
     })
 
     describe('cancellation cutoff (60-minute restriction)', () => {

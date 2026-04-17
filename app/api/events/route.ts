@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin, requireAuth } from '@/lib/server/auth'
+import { requireAdmin } from '@/lib/server/auth'
 import { createEvent, listEvents } from '@/lib/server/events-service'
 import { toServiceErrorResponse } from '@/lib/server/http-error'
 import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth(request)
-  if (auth instanceof NextResponse) return auth
+  const admin = await requireAdmin(request)
+  if (admin instanceof NextResponse) return admin
 
   try {
-    return auth.applyCookies(NextResponse.json(await listEvents()))
+    return admin.applyCookies(NextResponse.json(await listEvents()))
   } catch (error) {
-    return auth.applyCookies(toServiceErrorResponse(error))
+    return admin.applyCookies(toServiceErrorResponse(error))
   }
 }
 

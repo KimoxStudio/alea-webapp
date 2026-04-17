@@ -33,6 +33,7 @@ type SessionReservationsQuery = {
 }
 type UserSlotOverlapQuery = {
   eq: (column: 'user_id' | 'date', value: string) => UserSlotOverlapQuery
+  neq: (column: 'id', value: string) => UserSlotOverlapQuery
   in: (column: 'status', values: string[]) => UserSlotOverlapQuery
   lt: (column: 'start_time' | 'end_time', value: string) => UserSlotOverlapQuery
   gt: (column: 'start_time' | 'end_time', value: string) => UserSlotOverlapQuery
@@ -104,6 +105,19 @@ function requireString(value: unknown): string {
 
 function normalizeTime(value: string) {
   return value.slice(0, 5)
+}
+
+function assertReservationNotInPast(date: string, startTime: string, now: Date = new Date()) {
+  const todayInClub = getCurrentClubDate(now)
+  if (date < todayInClub) {
+    serviceError('Cannot make a reservation in the past', 400)
+  }
+  if (date === todayInClub) {
+    const reservationStart = zonedDateTimeToUtc(date, startTime)
+    if (reservationStart.getTime() < now.getTime()) {
+      serviceError('Cannot make a reservation in the past', 400)
+    }
+  }
 }
 
 function mapReservation(row: ReservationRow): Reservation {
@@ -303,14 +317,21 @@ async function checkUserSlotOverlap(
   startTime: string,
   endTime: string,
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  ignoreReservationId?: string,
 ) {
-  const { data, error } = await (supabase.from('reservations') as unknown as UserSlotOverlapTableClient)
+  let query = (supabase.from('reservations') as unknown as UserSlotOverlapTableClient)
     .select('id')
     .eq('user_id', userId)
     .eq('date', date)
     .in('status', ['pending', 'active'])
     .lt('start_time', endTime)
     .gt('end_time', startTime)
+
+  if (ignoreReservationId) {
+    query = query.neq('id', ignoreReservationId)
+  }
+
+  const { data, error } = await query
     .limit(1)
 
   if (error) {
@@ -351,11 +372,7 @@ export async function createReservationForSession(
     serviceError('Invalid reservation time range', 400)
   }
 
-  // Reject reservations in the past. Compare against the club's local timezone.
-  const todayInClub = getCurrentClubDate()
-  if (date < todayInClub) {
-    serviceError('Cannot make a reservation in the past', 400)
-  }
+  assertReservationNotInPast(date, startTime)
 
   const supabase = await createSupabaseServerClient()
 
@@ -449,6 +466,12 @@ export async function updateReservationForSession(
     serviceError('Invalid reservation time range', 400)
   }
 
+  const isScheduleChange = body.date != null || body.startTime != null || body.endTime != null
+  const needsUserOverlapCheck = isScheduleChange || nextStatus === 'active'
+  if (isScheduleChange) {
+    assertReservationNotInPast(nextDate, nextStartTime)
+  }
+
   const conflictingReservations = await listActiveReservationsForConflict({
     tableId: existingReservation.table_id,
     date: nextDate,
@@ -471,6 +494,16 @@ export async function updateReservationForSession(
   }
 
   const supabase = await createSupabaseServerClient()
+  if (needsUserOverlapCheck) {
+    await checkUserSlotOverlap(
+      existingReservation.user_id,
+      nextDate,
+      nextStartTime,
+      nextEndTime,
+      supabase,
+      existingReservation.id,
+    )
+  }
   const updatePayload: TablesUpdate<'reservations'> = {
     date: nextDate,
     start_time: nextStartTime,

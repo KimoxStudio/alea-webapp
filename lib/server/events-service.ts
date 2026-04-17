@@ -1,10 +1,13 @@
 import 'server-only'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
-import type { EventRow, EventRoomBlockRow } from '@/lib/supabase/types'
+import type { Tables } from '@/lib/supabase/types'
 import type { AdminEvent, AdminEventRoomBlock } from '@/lib/types'
 
 export type { AdminEvent, AdminEventRoomBlock }
+
+type EventRow = Tables<'events'>
+type EventRoomBlockRow = Tables<'event_room_blocks'>
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
