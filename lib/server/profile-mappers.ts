@@ -14,7 +14,6 @@ export type PublicProfileRow = Pick<
   | 'role'
   | 'is_active'
   | 'active_from'
-  | 'psw_changed'
   | 'no_show_count'
   | 'blocked_until'
   | 'created_at'
@@ -31,7 +30,6 @@ export function toPublicUser(profile: PublicProfileRow): User {
     role: profile.role,
     isActive: profile.is_active,
     activeFrom: profile.active_from ?? null,
-    pswChanged: profile.psw_changed ?? null,
     noShowCount: profile.no_show_count,
     blockedUntil: profile.blocked_until ?? null,
     createdAt: profile.created_at,
