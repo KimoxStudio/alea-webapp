@@ -1,2 +1,0 @@
-ALTER TABLE public.profiles
-  ALTER COLUMN email DROP NOT NULL;
