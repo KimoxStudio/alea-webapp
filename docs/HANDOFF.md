@@ -14,7 +14,7 @@
 ## Open PRs — awaiting merge
 | PR | Branch | Status |
 |---|---|---|
-| None | — | —
+| #114 | `feat/kim-380-equipment-inventory` | Ready for merge |
 
 ## Most recently merged
 | PR | Branch | Fix |
@@ -37,7 +37,8 @@ Merged product state now includes:
 - Supabase migration split into one-statement files per repo policy
 
 Current meaningful next steps:
-- branch `KIM-380` from `develop` — manual QA gate cancelled, implementation unblocked
+- merge PR #114 (`KIM-380`) into `develop`
+- next implementation: `KIM-381` (equipment-aware reservation flow)
 
 Plan source:
 - Use only `docs/PLAN.md`.
