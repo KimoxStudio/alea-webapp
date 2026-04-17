@@ -43,12 +43,10 @@ function TableQrPanel({ table, roomId }: { table: GameTable; roomId: string }) {
   const tc = useTranslations('common')
   const regenerateQr = useAdminRegenerateTableQr()
   const [qrCode, setQrCode] = useState<string>(table.qrCode)
-  const [qrCodeInf, setQrCodeInf] = useState<string | null | undefined>(table.qrCodeInf)
 
   async function handleRegenerate() {
     const result = await regenerateQr.mutateAsync({ tableId: table.id, roomId })
     setQrCode(result.qr_code)
-    setQrCodeInf(result.qr_code_inf)
   }
 
   return (
@@ -57,7 +55,7 @@ function TableQrPanel({ table, roomId }: { table: GameTable; roomId: string }) {
         {/* Main QR code */}
         <div className="space-y-1.5">
           <p className="text-xs font-medium text-muted-foreground">
-            {table.type === 'removable_top' ? tt('surfaceTop') : tt('qrCode')}
+            {tt('qrCode')}
           </p>
           {qrCode ? (
             <div className="flex flex-col gap-2">
@@ -85,38 +83,6 @@ function TableQrPanel({ table, roomId }: { table: GameTable; roomId: string }) {
           )}
         </div>
 
-        {/* INF QR code for removable_top tables */}
-        {table.type === 'removable_top' && (
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium text-muted-foreground">
-              {tt('surfaceBottom')}
-            </p>
-            {qrCodeInf ? (
-              <div className="flex flex-col gap-2">
-                <Image
-                  src={qrCodeInf}
-                  alt={`QR ${table.name} INF`}
-                  width={128}
-                  height={128}
-                  className="w-32 h-32 rounded-md border border-border/50 bg-white object-cover"
-                  unoptimized
-                />
-                <a
-                  href={qrCodeInf}
-                  download={`QR-${table.name}-INF.png`}
-                  className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
-                >
-                  <Download className="h-3 w-3" aria-hidden="true" />
-                  {tc('save')}
-                </a>
-              </div>
-            ) : (
-              <div className="w-32 h-32 rounded-md border border-border/50 bg-background-secondary/40 flex items-center justify-center">
-                <QrCode className="h-8 w-8 text-muted-foreground/40" aria-hidden="true" />
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <Button

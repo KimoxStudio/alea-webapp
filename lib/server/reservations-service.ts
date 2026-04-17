@@ -574,8 +574,6 @@ export async function activateReservationByTable(
   if (!table) {
     serviceError('Table not found', 404)
   }
-  const isRemovableTop = table.type === 'removable_top'
-
   const admin = createSupabaseServerAdminClient()
 
   let pendingQuery = (admin.from('reservations') as unknown as { select: (c: string) => ActivationAdminQuery })
@@ -587,10 +585,6 @@ export async function activateReservationByTable(
 
   if (side === 'inf') {
     pendingQuery = pendingQuery.eq('surface', 'bottom')
-  } else if (isRemovableTop) {
-    // Only filter by surface for removable_top tables — other types store null
-    // and an .eq('surface', 'top') filter would incorrectly exclude their rows.
-    pendingQuery = pendingQuery.eq('surface', 'top')
   }
 
   const { data: pendingData, error: pendingError } = await pendingQuery.maybeSingle()
@@ -609,8 +603,6 @@ export async function activateReservationByTable(
 
     if (side === 'inf') {
       activeQuery = activeQuery.eq('surface', 'bottom')
-    } else if (isRemovableTop) {
-      activeQuery = activeQuery.eq('surface', 'top')
     }
 
     const { data: activeData, error: activeError } = await activeQuery.maybeSingle()
