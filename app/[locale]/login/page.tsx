@@ -116,17 +116,24 @@ export default async function LoginPage({ params }: LoginPageProps) {
 
         <div className="relative z-10 w-full max-w-[22rem]">
           {/* Mobile brand header — hidden on lg+ */}
-          <div className="lg:hidden text-center mb-10">
-            <h1
-              className="font-cinzel font-bold tracking-tight mb-2"
-              style={{ fontSize: '2.25rem', color: '#e5e2e1' }}
+          <div className="lg:hidden flex flex-col items-center text-center mb-10 gap-4">
+            <Image
+              src="/alea-logo.png"
+              alt="Alea"
+              width={120}
+              height={120}
+              className="w-[100px] h-auto drop-shadow-[0_0_16px_rgba(255,183,123,0.12)]"
+              priority
+            />
+            <p
+              className="text-[9px] tracking-[0.4em] uppercase font-medium"
+              style={{ color: 'color-mix(in srgb, var(--primary) 55%, transparent)' }}
             >
-              Alea
-            </h1>
-            <p className="text-sm text-muted-foreground">{t('loginSubtitle')}</p>
+              Asociación Cultural
+            </p>
             <div
-              className="w-10 h-px mx-auto mt-5"
-              style={{ background: 'color-mix(in srgb, var(--primary) 40%, transparent)' }}
+              className="w-8 h-px"
+              style={{ background: 'color-mix(in srgb, var(--primary) 35%, transparent)' }}
             />
           </div>
 
