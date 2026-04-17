@@ -42,6 +42,13 @@ vi.mock('@/lib/hooks/use-reservations', () => ({
     },
     isLoading: false,
   }),
+  useAvailableRoomEquipment: () => ({
+    data: [
+      { id: 'eq-1', name: 'Projector', description: 'Ceiling projector', available: true, conflictReason: null },
+      { id: 'eq-2', name: 'Speaker Kit', description: 'Portable speakers', available: false, conflictReason: 'EQUIPMENT_ALREADY_RESERVED' },
+    ],
+    isLoading: false,
+  }),
   useCreateReservation: () => ({
     mutateAsync: mockMutateAsync.fn,
     isPending: false,
@@ -245,6 +252,80 @@ describe('ReservationDialog', () => {
       const status = screen.getByRole('status')
       expect(status).toBeInTheDocument()
     })
+  })
+
+  it('submits selected equipment ids with the reservation payload', async () => {
+    const user = userEvent.setup()
+    mockMutateAsync.fn = vi.fn().mockResolvedValueOnce({
+      id: 'res-123',
+      tableId: 't1',
+      userId: 'user-123',
+      date: '2025-01-15',
+      startTime: '10:00',
+      endTime: '11:00',
+      status: 'pending',
+      surface: null,
+      createdAt: new Date().toISOString(),
+      activatedAt: null,
+      equipment: [],
+    })
+
+    render(
+      <ReservationDialog
+        table={mockTable}
+        open={true}
+        onClose={vi.fn()}
+      />
+    )
+
+    const dateInput = screen.getByLabelText('selectDate') as HTMLInputElement
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const dateString = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+
+    await user.clear(dateInput)
+    await user.type(dateInput, dateString)
+
+    const timeButtons = screen.getAllByRole('button', { name: /\d{2}:\d{2}.*/ })
+    await user.click(timeButtons[0]!)
+    await user.click(timeButtons[1]!)
+    await user.click(screen.getByRole('checkbox', { name: 'Projector' }))
+    await user.click(screen.getByRole('button', { name: 'makeReservation' }))
+
+    await waitFor(() => {
+      expect(mockMutateAsync.fn).toHaveBeenCalledWith(expect.objectContaining({
+        equipmentIds: ['eq-1'],
+      }))
+    })
+  })
+
+  it('renders unavailable equipment guidance when overlaps exist', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ReservationDialog
+        table={mockTable}
+        open={true}
+        onClose={vi.fn()}
+      />
+    )
+
+    const dateInput = screen.getByLabelText('selectDate') as HTMLInputElement
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const dateString = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+
+    await user.clear(dateInput)
+    await user.type(dateInput, dateString)
+
+    const timeButtons = screen.getAllByRole('button', { name: /\d{2}:\d{2}.*/ })
+    await user.click(timeButtons[0]!)
+    await user.click(timeButtons[1]!)
+
+    expect(screen.getByText('equipmentUnavailable')).toBeInTheDocument()
+    expect(screen.getByText('equipmentUnavailableReason')).toBeInTheDocument()
   })
 
   it('clears error when closing dialog after failed submission', async () => {

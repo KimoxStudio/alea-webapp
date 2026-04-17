@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { CalendarDays, Clock, Ban } from 'lucide-react'
+import { CalendarDays, Clock, Ban, Package } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -116,11 +116,19 @@ export function ReservationsSection() {
                     </span>
                   </td>
                   <td className="px-4 py-3.5 hidden md:table-cell">
-                    <span className="text-xs text-muted-foreground">
-                      {r.roomName && r.tableName
-                        ? `${r.roomName} · ${r.tableName}`
-                        : r.tableId.slice(0, 8) + '\u2026'}
-                    </span>
+                    <div className="space-y-1">
+                      <span className="block text-xs text-muted-foreground">
+                        {r.roomName && r.tableName
+                          ? `${r.roomName} · ${r.tableName}`
+                          : r.tableId.slice(0, 8) + '\u2026'}
+                      </span>
+                      {r.equipment && r.equipment.length > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/80">
+                          <Package className="h-3 w-3" aria-hidden="true" />
+                          {r.equipment.map((item) => item.name).join(', ')}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3.5">
                     <span className="flex items-center gap-1.5 text-xs text-muted-foreground">

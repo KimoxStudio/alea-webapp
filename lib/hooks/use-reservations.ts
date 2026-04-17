@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { Reservation, CreateReservationRequest, TableAvailability } from '@/lib/types'
+import type { AvailableEquipment, Reservation, CreateReservationRequest, TableAvailability } from '@/lib/types'
 import { apiClient } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
 
@@ -36,6 +36,22 @@ export function useRoomAvailability(roomId: string | null, date: string | null) 
     enabled: !!roomId && !!date,
     staleTime: 0,
     refetchInterval: 60_000,
+  })
+}
+
+export function useAvailableRoomEquipment(
+  roomId: string | null,
+  date: string | null,
+  startTime: string | null,
+  endTime: string | null,
+) {
+  return useQuery<AvailableEquipment[]>({
+    queryKey: ['rooms', roomId, 'available-equipment', date, startTime, endTime],
+    queryFn: () => apiClient.get<AvailableEquipment[]>(
+      endpoints.rooms.availableEquipment(roomId!, date!, startTime!, endTime!),
+    ),
+    enabled: !!roomId && !!date && !!startTime && !!endTime,
+    staleTime: 0,
   })
 }
 

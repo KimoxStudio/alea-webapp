@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
-import { CalendarDays, Clock, MapPin, Layers, AlertCircle } from 'lucide-react'
+import { CalendarDays, Clock, MapPin, Layers, AlertCircle, Package } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
 import { useAuth } from '@/lib/auth/auth-context'
 import { zonedDateTimeToUtc } from '@/lib/club-time'
@@ -72,6 +72,12 @@ function ReservationCard({ reservation, onCancel, cutoffPassed }: ReservationCar
               {formatTime(reservation.startTime)} — {formatTime(reservation.endTime)}
             </span>
           </div>
+          {reservation.equipment && reservation.equipment.length > 0 && (
+            <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <Package className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>{reservation.equipment.map((item) => item.name).join(', ')}</span>
+            </div>
+          )}
         </div>
         <Badge variant={statusBadgeVariant[reservation.status]}>
           {t(reservation.status)}

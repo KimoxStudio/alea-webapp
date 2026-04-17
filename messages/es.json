@@ -99,8 +99,15 @@
   "reservations": {
     "title": "Mis Reservas", "subtitle": "Gestiona tus reservas de mesas",
     "makeReservation": "Nueva Reserva", "selectDate": "Seleccionar fecha",
+    "success": "¡Reserva confirmada!",
     "selectTime": "Seleccionar hora", "startTime": "Hora de inicio", "endTime": "Hora de fin",
+    "selectTimeForEquipment": "Selecciona un rango horario para cargar el material disponible.",
     "selectRoom": "Seleccionar sala", "selectTable": "Seleccionar mesa",
+    "equipmentOptional": "Material opcional",
+    "equipmentUnavailable": "No disponible para este horario",
+    "equipmentUnavailableReason": "Ya está reservado en otra reserva solapada. Elige otro material u otro horario.",
+    "equipmentNoneConfigured": "Esta sala no tiene material configurado.",
+    "equipmentNoneAvailable": "No hay material disponible para el horario seleccionado.",
     "active": "Activa", "cancelled": "Cancelada", "completed": "Completada",
     "pending": "Pendiente", "no_show": "No presentado",
     "cancel": "Cancelar reserva",
@@ -117,6 +124,8 @@
       "invalidTime": "La hora de fin debe ser posterior a la de inicio",
       "userSlotConflict": "Ya tienes una reserva en este horario",
       "eventBlocked": "Este horario está bloqueado por un evento.",
+      "equipmentConflict": "El material seleccionado ya no está disponible para ese horario.",
+      "bookingWindow": "Las reservas solo se pueden crear con una semana de antelación como máximo.",
       "cancellationCutoff": "Esta reserva no se puede cancelar: comienza en menos de 60 minutos.",
       "generic": "Algo salió mal. Por favor, inténtalo de nuevo."
     }

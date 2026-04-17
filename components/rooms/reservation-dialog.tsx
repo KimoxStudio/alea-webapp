@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Calendar, Clock, Layers } from 'lucide-react'
+import { Calendar, Clock, Layers, Package } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
 import type { GameTable, TableSurface, TableAvailability } from '@/lib/types'
 import { getCurrentClubDate } from '@/lib/club-time'
-import { useTableAvailability, useCreateReservation } from '@/lib/hooks/use-reservations'
+import { useAvailableRoomEquipment, useTableAvailability, useCreateReservation } from '@/lib/hooks/use-reservations'
 import { useAuth } from '@/lib/auth/auth-context'
 import { generateTimeSlots, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -14,9 +14,16 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 
 const ALL_TIME_SLOTS = generateTimeSlots('00:00', '24:00', 60)
+
+function addDaysToDateOnly(date: string, days: number) {
+  const [year, month, day] = date.split('-').map(Number)
+  const next = new Date(Date.UTC(year, month - 1, day + days))
+  return next.toISOString().slice(0, 10)
+}
 
 interface ReservationDialogProps {
   table: GameTable | null
@@ -36,6 +43,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
   const [selectedStartTime, setSelectedStartTime] = useState<string | null>(null)
   const [selectedEndTime, setSelectedEndTime] = useState<string | null>(null)
   const [selectedSurface, setSelectedSurface] = useState<TableSurface | null>(null)
+  const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
@@ -43,15 +51,27 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
     table?.id ?? null,
     selectedDate
   )
+  const { data: equipmentOptions, isLoading: equipmentLoading } = useAvailableRoomEquipment(
+    table?.roomId ?? null,
+    selectedDate,
+    selectedStartTime,
+    selectedEndTime,
+  )
   const createReservation = useCreateReservation()
 
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  const maxDate = addDaysToDateOnly(today, 7)
   const timeSlots = selectedDate === today
     ? ALL_TIME_SLOTS.filter((slot) => {
         const [h, m] = slot.split(':').map(Number)
         return h * 60 + m > nowMinutes
       })
     : ALL_TIME_SLOTS
+
+  useEffect(() => {
+    if (!equipmentOptions) return
+    setSelectedEquipmentIds((current) => current.filter((id) => equipmentOptions.some((item) => item.id === id && item.available)))
+  }, [equipmentOptions])
 
   function isSlotAvailable(time: string, surface?: TableSurface): boolean {
     if (!availability) return true
@@ -78,6 +98,16 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
     setSelectedSurface(surface)
     setSelectedStartTime(null)
     setSelectedEndTime(null)
+    setSelectedEquipmentIds([])
+  }
+
+  function toggleEquipment(equipmentId: string, checked: boolean) {
+    setSelectedEquipmentIds((current) => {
+      if (checked) {
+        return [...current, equipmentId]
+      }
+      return current.filter((id) => id !== equipmentId)
+    })
   }
 
   async function handleSubmit() {
@@ -95,6 +125,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
         startTime: selectedStartTime,
         endTime: selectedEndTime,
         surface: table.type === 'removable_top' ? selectedSurface ?? undefined : undefined,
+        equipmentIds: selectedEquipmentIds,
       })
       setSuccess(true)
       setTimeout(() => {
@@ -103,6 +134,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
         setSelectedStartTime(null)
         setSelectedEndTime(null)
         setSelectedSurface(null)
+        setSelectedEquipmentIds([])
       }, 1500)
     } catch (err) {
       const errorCode = (err as { message?: string })?.message
@@ -110,8 +142,12 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
         setError(t('errors.userSlotConflict'))
       } else if (errorCode === 'Cannot make a reservation in the past') {
         setError(t('errors.pastDate'))
+      } else if (errorCode === 'BOOKING_WINDOW_EXCEEDED') {
+        setError(t('errors.bookingWindow'))
       } else if (errorCode === 'ROOM_BLOCKED_BY_EVENT') {
         setError(t('errors.eventBlocked'))
+      } else if (errorCode === 'EQUIPMENT_ALREADY_RESERVED') {
+        setError(t('errors.equipmentConflict'))
       } else {
         setError(t('errors.generic'))
       }
@@ -122,6 +158,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
     setSelectedStartTime(null)
     setSelectedEndTime(null)
     setSelectedSurface(null)
+    setSelectedEquipmentIds([])
     setError(null)
     setSuccess(false)
     onClose()
@@ -154,10 +191,12 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
               type="date"
               value={selectedDate}
               min={today}
+              max={maxDate}
               onChange={(e) => {
                 setSelectedDate(e.target.value)
                 setSelectedStartTime(null)
                 setSelectedEndTime(null)
+                setSelectedEquipmentIds([])
               }}
               className="flex h-10 w-full rounded-md border border-input bg-background-surface px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={t('selectDate')}
@@ -301,6 +340,72 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
             </div>
           )}
 
+          {(table.type !== 'removable_top' || selectedSurface) && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Package className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                {t('equipmentOptional')}
+              </Label>
+
+              {!selectedStartTime || !selectedEndTime ? (
+                <p className="text-xs text-muted-foreground">{t('selectTimeForEquipment')}</p>
+              ) : equipmentLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <DiceLoader size="sm" />
+                  <span>{tCommon('loading')}</span>
+                </div>
+              ) : !equipmentOptions || equipmentOptions.length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t('equipmentNoneConfigured')}</p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    {equipmentOptions.filter((item) => item.available).length === 0 ? (
+                      <p className="text-xs text-muted-foreground">{t('equipmentNoneAvailable')}</p>
+                    ) : (
+                      equipmentOptions
+                        .filter((item) => item.available)
+                        .map((item) => (
+                          <label
+                            key={item.id}
+                            className="flex items-start gap-3 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:border-primary/40"
+                          >
+                            <Checkbox
+                              checked={selectedEquipmentIds.includes(item.id)}
+                              onCheckedChange={(checked) => toggleEquipment(item.id, checked === true)}
+                              aria-label={item.name}
+                            />
+                            <span className="space-y-0.5">
+                              <span className="block font-medium text-foreground">{item.name}</span>
+                              {item.description && (
+                                <span className="block text-xs text-muted-foreground">{item.description}</span>
+                              )}
+                            </span>
+                          </label>
+                        ))
+                    )}
+                  </div>
+
+                  {equipmentOptions.some((item) => !item.available) && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">{t('equipmentUnavailable')}</p>
+                      {equipmentOptions
+                        .filter((item) => !item.available)
+                        .map((item) => (
+                          <div
+                            key={item.id}
+                            className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-muted-foreground"
+                          >
+                            <span className="block font-medium text-foreground">{item.name}</span>
+                            <span>{t('equipmentUnavailableReason')}</span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {error && (
             <div role="alert" className="rounded-md bg-destructive/15 border border-destructive/30 px-3 py-2 text-sm text-destructive">
               {error}
@@ -309,7 +414,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
 
           {success && (
             <div role="status" className="rounded-md bg-emerald-dark/30 border border-emerald/40 px-3 py-2 text-sm text-emerald-light font-medium text-center">
-              Reserva confirmada!
+              {t('success')}
             </div>
           )}
         </div>
