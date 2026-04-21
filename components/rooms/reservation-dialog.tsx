@@ -364,24 +364,31 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
                     ) : (
                       equipmentOptions
                         .filter((item) => item.available)
-                        .map((item) => (
-                          <label
-                            key={item.id}
-                            className="flex items-start gap-3 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:border-primary/40"
-                          >
-                            <Checkbox
-                              checked={selectedEquipmentIds.includes(item.id)}
-                              onCheckedChange={(checked) => toggleEquipment(item.id, checked === true)}
-                              aria-label={item.name}
-                            />
-                            <span className="space-y-0.5">
-                              <span className="block font-medium text-foreground">{item.name}</span>
-                              {item.description && (
-                                <span className="block text-xs text-muted-foreground">{item.description}</span>
-                              )}
-                            </span>
-                          </label>
-                        ))
+                        .map((item) => {
+                          const checkboxId = `equipment-${item.id}`
+                          const descriptionId = `equipment-${item.id}-description`
+                          return (
+                            <div
+                              key={item.id}
+                              className="flex items-start gap-3 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:border-primary/40"
+                            >
+                              <Checkbox
+                                id={checkboxId}
+                                checked={selectedEquipmentIds.includes(item.id)}
+                                onCheckedChange={(checked) => toggleEquipment(item.id, checked === true)}
+                                aria-describedby={item.description ? descriptionId : undefined}
+                              />
+                              <span className="space-y-0.5">
+                                <Label htmlFor={checkboxId} className="block font-medium text-foreground">
+                                  {item.name}
+                                </Label>
+                                {item.description && (
+                                  <span id={descriptionId} className="block text-xs text-muted-foreground">{item.description}</span>
+                                )}
+                              </span>
+                            </div>
+                          )
+                        })
                     )}
                   </div>
 
