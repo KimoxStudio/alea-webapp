@@ -9,3 +9,4 @@
 - Session handoff state lives only in `docs/HANDOFF.md`. Do not post handoff status in GitHub PR comments and do not use `CLAUDE.md` as a working-memory or handoff target for this repository.
 - [2026-04-11 19:41] QA: validation passed.
 - [2026-04-14 16:40] QA: validation passed.
+- [2026-04-17 18:52] QA: validation FAILED at `test`.
