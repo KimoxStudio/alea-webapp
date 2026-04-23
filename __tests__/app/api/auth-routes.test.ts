@@ -276,6 +276,42 @@ describe('auth API routes', () => {
     expect(registerMock).not.toHaveBeenCalled()
   })
 
+  it('rejects register requests from a different origin before returning 410', async () => {
+    const { POST } = await import('@/app/api/auth/register/route')
+
+    const response = await POST(
+      createJsonRequest('/api/auth/register', {
+        memberNumber: '100099',
+        password: 'Password123',
+      }, {
+        origin: 'https://attacker.example',
+      }),
+    )
+
+    expect(response.status).toBe(403)
+  })
+
+  it('rate limits repeated register attempts from the same client', async () => {
+    const { POST } = await import('@/app/api/auth/register/route')
+    const statuses: number[] = []
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const response = await POST(
+        createJsonRequest('/api/auth/register', {
+          memberNumber: '100099',
+          password: 'Password123',
+        }, {
+          forwardedFor: '203.0.113.99',
+        }),
+      )
+
+      statuses.push(response.status)
+    }
+
+    expect(statuses).toContain(410)
+    expect(statuses.at(-1)).toBe(429)
+  })
+
   it('reads the session from /me after login and signs out through the auth routes', async () => {
     const loginRoute = await import('@/app/api/auth/login/route')
     const meRoute = await import('@/app/api/auth/me/route')
@@ -327,6 +363,17 @@ describe('auth API routes', () => {
 
     expect(response.status).toBe(401)
     await expect(response.json()).resolves.toMatchObject({ statusCode: 401 })
+  })
+
+  it('returns 401 from /me when there is no authenticated session', async () => {
+    const { GET } = await import('@/app/api/auth/me/route')
+    routeGetUserMock.mockResolvedValueOnce({ data: { user: null }, error: null })
+
+    const response = await GET(new NextRequest('http://localhost:3000/api/auth/me'))
+
+    expect(response.status).toBe(401)
+    await expect(response.json()).resolves.toMatchObject({ statusCode: 401 })
+    expect(getCurrentUserMock).not.toHaveBeenCalled()
   })
 
   it('rejects logout requests from a different origin', async () => {
