@@ -1,6 +1,6 @@
 # Alea Plan
 
-**Last updated:** 2026-04-21
+**Last updated:** 2026-04-24
 **Source of truth:** current repository state + active Linear issues for project `Alea`
 **Ignore:** canceled legacy tickets and removed migration-era planning docs
 
@@ -97,7 +97,7 @@ Reason:
 
 ## Recommended Next Build Step
 
-`KIM-382` is in progress on `feat/KIM-382-qr-activation-window`. PR #116 is open. Test suite optimisation is still in progress while review feedback is addressed. Full plan in `docs/HANDOFF.md` under "Pending test optimisation plan".
+`KIM-317` is in progress on `feat/KIM-317-30-minute-reservation-times`. Current focus: switch reservation availability and selection from hourly slots to 30-minute slots across the full day, while keeping validation and overlap checks aligned.
 
 ---
 

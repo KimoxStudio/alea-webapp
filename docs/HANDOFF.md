@@ -9,78 +9,40 @@
 ## Last updated: 2026-04-24
 
 ## Current branch
-`feat/KIM-382-qr-activation-window` (active — do NOT switch to develop)
+`feat/KIM-317-30-minute-reservation-times` (active — do NOT switch to develop)
 
 ## Open PRs — awaiting merge
-| PR | Branch | Fix |
-|---|---|---|
-| #116 | `feat/KIM-382-qr-activation-window` | Extend QR activation window, stabilize auth/test coverage |
+(none)
 
 ## Most recently merged
 | PR | Branch | Fix |
 |---|---|---|
+| #116 | `feat/KIM-382-qr-activation-window` | `KIM-382` merged into `develop`: 60-minute QR activation window, auth coverage expansion, Vitest stability fixes |
 | #115 | `feat/KIM-381-equipment-aware-reservations` | `KIM-381` merged into `develop`: equipment-aware reservation flow, overlap validation, one-week booking window, a11y fix (Radix Checkbox label pattern), ghost reservation safety, and pagination hardening |
 | #111 | `feat/KIM-386-database-time-drift` | `KIM-386` merged into `develop`: DB-backed timestamp authority, club-time date helpers, deterministic reservation cutoff handling, and one-statement migration split |
-| #110 | `feat/KIM-379-password-recovery` | `KIM-379` merged into `develop`: admin-mediated password recovery, stale-session auth redirects, and root entry redirect hardening |
 
 ---
 
 ## Status Summary
 
-`KIM-382` is in progress on branch `feat/KIM-382-qr-activation-window`.
+`KIM-317` is in progress on branch `feat/KIM-317-30-minute-reservation-times`.
 
-Already committed on branch:
-- `lib/server/reservations-service.ts`: `CHECK_IN_LATE_MINUTES = 60` added, `GRACE_PERIOD_MINUTES` 20→60, activation window now `min(start+60min, reservationEnd)` instead of `reservationEnd`
-- `messages/en.json` + `messages/es.json`: `checkin.tooLate` updated to reference 60-minute window
+In progress on branch:
+- `lib/server/availability.ts`: day availability now uses 30-minute slots across the full 24-hour range
+- `components/rooms/reservation-dialog.tsx`: reservation time selection now offers `00:00`–`23:30` in 30-minute steps
+- `lib/server/reservations-service.ts` + `lib/club-time.ts`: reservation end boundary now accepts `24:00`
+- tests updated for half-hour availability, dialog rendering, and `24:00` rollover
 
-Test suite optimisation in progress (NOT yet committed — working tree changes):
-- `@vitest-environment node` added to 28 server/api/utils test files
-- `__tests__/server/reservations-activation.test.ts` created (split from reservations-service.test.ts, 21 tests)
-- `__tests__/server/reservations-service.test.ts` reduced (3 redundant update time-format tests removed, activation block removed → 67 tests)
-- `vitest.config.mts`: `teardownTimeout: 10000` added
+Validation:
+- `pnpm exec vitest run __tests__/server/availability.test.ts` ✅
+- `pnpm exec vitest run __tests__/components/rooms/reservation-dialog.test.tsx` ✅
+- `pnpm exec vitest run __tests__/server/reservations-service.test.ts` ✅
+- `pnpm test` ✅
+- `pnpm test:coverage` ✅
 
-**BLOCKER: `__tests__/components/rooms/reservation-dialog.test.tsx` crashes with `ERR_IPC_CHANNEL_CLOSED` even in isolation.**
-This is the root cause of the non-zero exit on the full suite. Fix is pending — see test optimization plan below.
-
-## Pending test optimisation plan
-
-Execute in this exact order:
-
-### Step 1 — Full audit
-```bash
-find __tests__ -name "*.test.ts" -o -name "*.test.tsx" | sort
-```
-Review every file. Do not assume coverage from prior session.
-
-### Step 2 — Add `@vitest-environment node` to remaining non-DOM files
-Criterion: no `render`, `screen`, `userEvent`, no React component imports → node.
-Confirmed pending candidates: `hooks/`, `lib/` (except `auth-context.test.tsx`), `app/middleware.test.ts`.
-
-### Step 3 — `vitest.config.mts` final config
-```typescript
-fileParallelism: false,
-teardownTimeout: 10000,
-```
-
-### Step 4 — `package.json`
-```json
-"test:coverage": "NODE_OPTIONS=--max-old-space-size=4096 vitest run --coverage"
-```
-
-### Step 5 — Fix `reservation-dialog.test.tsx`
-Crashes with `ERR_IPC_CHANNEL_CLOSED` even in isolation (505 lines, 13 tests, jsdom + userEvent).
-Check: missing `vi.useFakeTimers()`, unresolved async operations, or heavy component imports leaking timers.
-Likely fix: add `cleanup()` from `@testing-library/react` in `afterEach`, ensure all `waitFor` have explicit timeouts.
-
-### Step 6 — Validation
-```bash
-pnpm test          # exit 0, all green
-pnpm test:coverage # exit 0, no OOM
-```
-
-Plan source:
-- Use only `docs/PLAN.md`.
-- Ignore removed legacy planning docs and canceled legacy tickets.
+Next likely work:
+- open PR for `KIM-317`
+- follow-up equipment-model issue created in Linear: `KIM-389`
 
 ---
 
