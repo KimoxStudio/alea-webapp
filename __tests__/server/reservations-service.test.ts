@@ -548,6 +548,17 @@ describe('reservations service', () => {
         expect.objectContaining({ id: 'eq-2', available: true }),
       ]))
     })
+
+    it('accepts 24:00 as an end-time boundary', async () => {
+      const { listAvailableEquipmentForReservation } = await loadReservationModules()
+
+      await expect(listAvailableEquipmentForReservation({
+        roomId: 'room-1',
+        date: '2026-12-31',
+        startTime: '23:30',
+        endTime: '24:00',
+      })).resolves.toEqual(expect.any(Array))
+    })
   })
 
   describe('createReservationForSession', () => {
@@ -671,6 +682,17 @@ describe('reservations service', () => {
         startTime: '00:00',
         endTime: '01:00',
       })).resolves.toEqual(expect.objectContaining({ startTime: '00:00', endTime: '01:00' }))
+    })
+
+    it('accepts 24:00 as a valid reservation end boundary', async () => {
+      const { createReservationForSession } = await loadReservationModules()
+
+      await expect(createReservationForSession(memberSession, {
+        tableId: 't1',
+        date: '2026-12-31',
+        startTime: '23:30',
+        endTime: '24:00',
+      })).resolves.toEqual(expect.objectContaining({ startTime: '23:30', endTime: '24:00' }))
     })
 
     it('ignores non-active reservations when checking conflicts', async () => {
@@ -1027,6 +1049,18 @@ describe('reservations service', () => {
 
       expect(updated.startTime).toBe('00:00')
       expect(updated.endTime).toBe('01:00')
+    })
+
+    it('accepts 24:00 as a valid reservation end boundary on update', async () => {
+      const { updateReservationForSession } = await loadReservationModules()
+
+      const updated = await updateReservationForSession(memberSession, 'r1', {
+        startTime: '23:30',
+        endTime: '24:00',
+      })
+
+      expect(updated.startTime).toBe('23:30')
+      expect(updated.endTime).toBe('24:00')
     })
 
     it('rejects updates that move into an event-blocked range', async () => {

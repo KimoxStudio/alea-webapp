@@ -54,11 +54,12 @@ function getFormatterParts(date: Date, timeZone: string) {
 
 function getTimeZoneOffsetMs(date: Date, timeZone: string) {
   const parts = getFormatterParts(date, timeZone)
+  const normalizedHour = parts.hour === 24 ? 0 : parts.hour!
   const asUtc = Date.UTC(
     parts.year!,
     parts.month! - 1,
     parts.day!,
-    parts.hour!,
+    normalizedHour,
     parts.minute!,
     parts.second!,
     0,
@@ -105,6 +106,13 @@ export function getCurrentClubDate(now: Date = new Date(), timeZone = CLUB_TIMEZ
 export function zonedDateTimeToUtc(date: string, time: string, timeZone = CLUB_TIMEZONE) {
   if (!isValidDateOnlyString(date)) {
     throw new Error(`Invalid date-only value: ${date}`)
+  }
+
+  if (time === '24:00' || time === '24:00:00') {
+    const [year, month, day] = date.split('-').map(Number)
+    const nextDay = new Date(Date.UTC(year!, month! - 1, day! + 1, 0, 0, 0, 0))
+    const nextDate = nextDay.toISOString().slice(0, 10)
+    return zonedDateTimeToUtc(nextDate, '00:00:00', timeZone)
   }
 
   const match = time.match(TIME_PATTERN)

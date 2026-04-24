@@ -100,7 +100,10 @@ function parseDate(value: string): string {
   return value
 }
 
-function parseHHMM(value: string): string {
+function parseHHMM(value: string, options?: { allow24HourBoundary?: boolean }): string {
+  if (options?.allow24HourBoundary && value === '24:00') {
+    return value
+  }
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
     serviceError('Time must be in HH:MM format (00:00–23:59)', 400)
   }
@@ -501,7 +504,7 @@ export async function listAvailableEquipmentForReservation(input: {
 }) {
   const date = parseDate(requireString(input.date))
   const startTime = parseHHMM(requireString(input.startTime))
-  const endTime = parseHHMM(requireString(input.endTime))
+  const endTime = parseHHMM(requireString(input.endTime), { allow24HourBoundary: true })
 
   if (startTime >= endTime) {
     serviceError('Invalid reservation time range', 400)
@@ -577,7 +580,7 @@ export async function createReservationForSession(
 
   const date = parseDate(rawDate)
   const startTime = parseHHMM(rawStartTime)
-  const endTime = parseHHMM(rawEndTime)
+  const endTime = parseHHMM(rawEndTime, { allow24HourBoundary: true })
 
   const table = await getTable(tableId)
   if (!table) {
@@ -693,7 +696,7 @@ export async function updateReservationForSession(
     : parseHHMM(String(body.startTime))
   const nextEndTime = body.endTime == null
     ? normalizeTime(existingReservation.end_time)
-    : parseHHMM(String(body.endTime))
+    : parseHHMM(String(body.endTime), { allow24HourBoundary: true })
   const nextDate = body.date == null ? existingReservation.date : parseDate(String(body.date))
   const nextSurface = body.surface === undefined || body.surface === null
     ? (existingReservation.surface ?? null)
