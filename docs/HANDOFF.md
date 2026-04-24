@@ -6,13 +6,15 @@
 
 ---
 
-## Last updated: 2026-04-22
+## Last updated: 2026-04-24
 
 ## Current branch
 `feat/KIM-382-qr-activation-window` (active — do NOT switch to develop)
 
 ## Open PRs — awaiting merge
-(none — KIM-382 branch not yet PR'd)
+| PR | Branch | Fix |
+|---|---|---|
+| #116 | `feat/KIM-382-qr-activation-window` | Extend QR activation window, stabilize auth/test coverage |
 
 ## Most recently merged
 | PR | Branch | Fix |
@@ -40,9 +42,9 @@ Test suite optimisation in progress (NOT yet committed — working tree changes)
 **BLOCKER: `__tests__/components/rooms/reservation-dialog.test.tsx` crashes with `ERR_IPC_CHANNEL_CLOSED` even in isolation.**
 This is the root cause of the non-zero exit on the full suite. Fix is pending — see test optimization plan below.
 
-## Pending test optimisation plan (complete before opening PR)
+## Pending test optimisation plan
 
-Execute in this exact order — do NOT skip the find step:
+Execute in this exact order:
 
 ### Step 1 — Full audit
 ```bash
@@ -56,12 +58,7 @@ Confirmed pending candidates: `hooks/`, `lib/` (except `auth-context.test.tsx`),
 
 ### Step 3 — `vitest.config.mts` final config
 ```typescript
-pool: 'forks',
-poolOptions: {
-  forks: {
-    execArgv: ['--max-old-space-size=4096'],
-  },
-},
+fileParallelism: false,
 teardownTimeout: 10000,
 ```
 

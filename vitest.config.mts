@@ -11,7 +11,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     teardownTimeout: 10000,
-    singleThread: true,
+    // Keep file execution sequential; parallel workers add memory pressure here.
+    fileParallelism: false,
     setupFiles: ['./vitest.setup.ts'],
     env: {
       // Pin tests to a known IANA timezone so service code and test helpers agree.

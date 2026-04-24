@@ -97,7 +97,7 @@ Reason:
 
 ## Recommended Next Build Step
 
-`KIM-382` is in progress on `feat/KIM-382-qr-activation-window`. Production code is done. Test suite optimisation is in progress — complete it before opening the PR. Full plan in `docs/HANDOFF.md` under "Pending test optimisation plan".
+`KIM-382` is in progress on `feat/KIM-382-qr-activation-window`. PR #116 is open. Test suite optimisation is still in progress while review feedback is addressed. Full plan in `docs/HANDOFF.md` under "Pending test optimisation plan".
 
 ---
 
