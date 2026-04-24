@@ -254,7 +254,7 @@
     "activated": "¡Ya estás registrado! Tu reserva está activa.",
     "alreadyActive": "Esta reserva ya está activa.",
     "tooEarly": "Es demasiado pronto. Tu sesión aún no ha comenzado.",
-    "tooLate": "La ventana de registro ha cerrado. Tu reserva ha expirado.",
+    "tooLate": "La ventana de check-in ha cerrado. Tenías hasta 60 minutos después del inicio de tu reserva para registrarte.",
     "noReservation": "No se ha encontrado ninguna reserva para esta mesa.",
     "loading": "Verificando tu reserva...",
     "error": "Algo salió mal. Por favor, inténtalo de nuevo.",

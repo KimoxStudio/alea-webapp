@@ -337,7 +337,7 @@
     "activated": "You're checked in! Your reservation is now active.",
     "alreadyActive": "This reservation is already active.",
     "tooEarly": "It's too early. Your session hasn't started yet.",
-    "tooLate": "The check-in window has closed. Your reservation has expired.",
+    "tooLate": "Check-in window has closed. You had up to 60 minutes after your reservation started to check in.",
     "noReservation": "No reservation found for this table.",
     "loading": "Checking your reservation...",
     "error": "Something went wrong. Please try again.",

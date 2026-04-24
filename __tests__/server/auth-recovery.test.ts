@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHash } from 'node:crypto'
 
@@ -37,6 +38,8 @@ const activationTokensByHash = new Map<string, ActivationTokenRow>()
 
 const updateUserByIdMock = vi.fn()
 const activationTokenUpsertMock = vi.fn()
+const claimTokenErrorState = { value: null as { message: string } | null }
+const claimMissMutatorState = { value: null as ((tokenHash: string) => void) | null }
 const databaseTimeRpcMock = vi.fn(async (fn: string) => (
   fn === 'get_database_time'
     ? { data: '2026-04-15T10:30:00.000Z', error: null }
@@ -191,6 +194,13 @@ vi.mock('@/lib/supabase/server', () => ({
                 is: vi.fn((_isColumn: 'used_at', isValue: null) => ({
                   select: vi.fn(() => ({
                     maybeSingle: vi.fn(async () => {
+                      if (claimTokenErrorState.value) {
+                        return { data: null, error: claimTokenErrorState.value }
+                      }
+                      if (claimMissMutatorState.value) {
+                        claimMissMutatorState.value(value)
+                        return { data: null, error: null }
+                      }
                       const existing = activationTokensByHash.get(value)
                       if (!existing) return { data: null, error: null }
                       if (existing.expires_at <= gtValue || existing.used_at !== isValue) {
@@ -228,6 +238,8 @@ describe('auth recovery helpers', () => {
     activationTokensByHash.clear()
     updateUserByIdMock.mockResolvedValue({ error: null })
     activationTokenUpsertMock.mockClear()
+    claimTokenErrorState.value = null
+    claimMissMutatorState.value = null
     databaseTimeRpcMock.mockClear()
 
     const profile = seedProfile()
@@ -313,6 +325,41 @@ describe('auth recovery helpers', () => {
     })
 
     expect(activationTokensByProfileId.get('member-1')?.used_at).toBeNull()
+  })
+
+  it('fails with 500 when token claim update errors', async () => {
+    seedRecoveryToken()
+    claimTokenErrorState.value = { message: 'claim failed' }
+    const { recoverAccount } = await loadService()
+
+    await expect(recoverAccount({
+      token: 'plain-token',
+      password: 'Password123',
+    })).rejects.toMatchObject({
+      message: 'Failed to recover account',
+      statusCode: 500,
+    })
+  })
+
+  it('fails with already used when another request consumes the token before claim', async () => {
+    seedRecoveryToken()
+    claimMissMutatorState.value = (tokenHash) => {
+      const existing = activationTokensByHash.get(tokenHash)
+      if (!existing) return
+      const next = { ...existing, used_at: '2026-04-15T10:31:00.000Z' }
+      activationTokensById.set(next.id, next)
+      activationTokensByProfileId.set(next.profile_id, next)
+      activationTokensByHash.set(next.token_hash, next)
+    }
+    const { recoverAccount } = await loadService()
+
+    await expect(recoverAccount({
+      token: 'plain-token',
+      password: 'Password123',
+    })).rejects.toMatchObject({
+      message: 'Recovery link has already been used',
+      statusCode: 400,
+    })
   })
 
   it('does not burn an activation token when posted to recovery flow', async () => {

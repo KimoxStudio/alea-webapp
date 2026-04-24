@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect } from 'vitest'
 import { loginSchema, registerSchema, registerServerSchema, passwordSchema } from '@/lib/validations/auth'
 import type { SafeParseReturnType } from 'zod'

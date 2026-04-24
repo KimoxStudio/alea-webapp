@@ -70,7 +70,13 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
 
   useEffect(() => {
     if (!equipmentOptions) return
-    setSelectedEquipmentIds((current) => current.filter((id) => equipmentOptions.some((item) => item.id === id && item.available)))
+    setSelectedEquipmentIds((current) => {
+      const next = current.filter((id) => equipmentOptions.some((item) => item.id === id && item.available))
+      if (next.length === current.length && next.every((id, index) => id === current[index])) {
+        return current
+      }
+      return next
+    })
   }, [equipmentOptions])
 
   function isSlotAvailable(time: string, surface?: TableSurface): boolean {
@@ -167,7 +173,12 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
   if (!table) return null
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) handleClose()
+      }}
+    >
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-cinzel text-lg flex items-center gap-2">

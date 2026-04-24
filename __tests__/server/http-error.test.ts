@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { ServiceError } from '@/lib/server/service-error'
 import { toServiceErrorResponse } from '@/lib/server/http-error'

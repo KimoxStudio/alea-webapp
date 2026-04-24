@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import type { GameTable } from '@/lib/types'
 import type { Tables } from '@/lib/supabase/types'

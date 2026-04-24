@@ -6,13 +6,15 @@
 
 ---
 
-## Last updated: 2026-04-21
+## Last updated: 2026-04-24
 
 ## Current branch
-`develop`
+`feat/KIM-382-qr-activation-window` (active — do NOT switch to develop)
 
 ## Open PRs — awaiting merge
-(none)
+| PR | Branch | Fix |
+|---|---|---|
+| #116 | `feat/KIM-382-qr-activation-window` | Extend QR activation window, stabilize auth/test coverage |
 
 ## Most recently merged
 | PR | Branch | Fix |
@@ -25,23 +27,56 @@
 
 ## Status Summary
 
-`KIM-381` is merged into `develop` (merge commit `5e10a38`).
+`KIM-382` is in progress on branch `feat/KIM-382-qr-activation-window`.
 
-Delivered in `KIM-381`:
-- optional equipment selection in the reservation flow
-- server-side equipment overlap checks for selected reservation windows
-- one-week reservation booking window enforcement
-- reservation equipment display in member/admin reservation views
-- new room equipment availability API route and route test coverage
-- a11y fix: Radix Checkbox label pattern
-- ghost reservation safety: compensating delete on equipment save failure
-- overlap scan: pagination loop (pageSize=1000) replacing 200-row hard limit
-- migration security: intermediate authenticated grant migrations replaced with no-ops
-- pre-push hook: removed full test suite + build (now typecheck + lint only)
+Already committed on branch:
+- `lib/server/reservations-service.ts`: `CHECK_IN_LATE_MINUTES = 60` added, `GRACE_PERIOD_MINUTES` 20→60, activation window now `min(start+60min, reservationEnd)` instead of `reservationEnd`
+- `messages/en.json` + `messages/es.json`: `checkin.tooLate` updated to reference 60-minute window
 
-Current meaningful next steps:
-- continue with `KIM-382` (60-minute QR activation window)
-- follow-up still needed: fix equipment reservation scoping, because equipment can still be reserved from any room except equipment linked to a room during room creation
+Test suite optimisation in progress (NOT yet committed — working tree changes):
+- `@vitest-environment node` added to 28 server/api/utils test files
+- `__tests__/server/reservations-activation.test.ts` created (split from reservations-service.test.ts, 21 tests)
+- `__tests__/server/reservations-service.test.ts` reduced (3 redundant update time-format tests removed, activation block removed → 67 tests)
+- `vitest.config.mts`: `teardownTimeout: 10000` added
+
+**BLOCKER: `__tests__/components/rooms/reservation-dialog.test.tsx` crashes with `ERR_IPC_CHANNEL_CLOSED` even in isolation.**
+This is the root cause of the non-zero exit on the full suite. Fix is pending — see test optimization plan below.
+
+## Pending test optimisation plan
+
+Execute in this exact order:
+
+### Step 1 — Full audit
+```bash
+find __tests__ -name "*.test.ts" -o -name "*.test.tsx" | sort
+```
+Review every file. Do not assume coverage from prior session.
+
+### Step 2 — Add `@vitest-environment node` to remaining non-DOM files
+Criterion: no `render`, `screen`, `userEvent`, no React component imports → node.
+Confirmed pending candidates: `hooks/`, `lib/` (except `auth-context.test.tsx`), `app/middleware.test.ts`.
+
+### Step 3 — `vitest.config.mts` final config
+```typescript
+fileParallelism: false,
+teardownTimeout: 10000,
+```
+
+### Step 4 — `package.json`
+```json
+"test:coverage": "NODE_OPTIONS=--max-old-space-size=4096 vitest run --coverage"
+```
+
+### Step 5 — Fix `reservation-dialog.test.tsx`
+Crashes with `ERR_IPC_CHANNEL_CLOSED` even in isolation (505 lines, 13 tests, jsdom + userEvent).
+Check: missing `vi.useFakeTimers()`, unresolved async operations, or heavy component imports leaking timers.
+Likely fix: add `cleanup()` from `@testing-library/react` in `afterEach`, ensure all `waitFor` have explicit timeouts.
+
+### Step 6 — Validation
+```bash
+pnpm test          # exit 0, all green
+pnpm test:coverage # exit 0, no OOM
+```
 
 Plan source:
 - Use only `docs/PLAN.md`.

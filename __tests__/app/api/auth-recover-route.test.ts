@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -152,5 +153,35 @@ describe('POST /api/auth/recover', () => {
       message: 'Password updated, but automatic sign-in failed. Please sign in with your member number and new password.',
       statusCode: 500,
     })
+  })
+
+  it('returns the security response before touching recovery logic', async () => {
+    enforceMutationSecurityMock.mockReturnValueOnce(
+      NextResponse.json({ message: 'Forbidden', statusCode: 403 }, { status: 403 }),
+    )
+
+    const { POST } = await import('@/app/api/auth/recover/route')
+    const response = await POST(createJsonRequest({
+      token: 'plain-token',
+      password: 'Password123',
+    }))
+
+    expect(response.status).toBe(403)
+    expect(recoverAccountMock).not.toHaveBeenCalled()
+  })
+
+  it('returns the rate-limit response before touching recovery logic', async () => {
+    enforceRateLimitMock.mockReturnValueOnce(
+      NextResponse.json({ message: 'Too many requests', statusCode: 429 }, { status: 429 }),
+    )
+
+    const { POST } = await import('@/app/api/auth/recover/route')
+    const response = await POST(createJsonRequest({
+      token: 'plain-token',
+      password: 'Password123',
+    }))
+
+    expect(response.status).toBe(429)
+    expect(recoverAccountMock).not.toHaveBeenCalled()
   })
 })

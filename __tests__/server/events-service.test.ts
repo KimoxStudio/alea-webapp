@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import type { ServiceError } from '@/lib/server/service-error'
 

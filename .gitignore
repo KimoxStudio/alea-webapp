@@ -43,6 +43,7 @@ pnpm-debug.log
 *.bak
 
 .aia/
+AGENTS.md
 
 # Claude tooling lockfiles (ephemeral, not for commit)
 .claude/*.lock

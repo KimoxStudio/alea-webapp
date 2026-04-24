@@ -97,7 +97,7 @@ Reason:
 
 ## Recommended Next Build Step
 
-`KIM-381` is merged. Next: `KIM-382` (60-minute QR activation window). Manual QA gate cancelled 2026-04-17.
+`KIM-382` is in progress on `feat/KIM-382-qr-activation-window`. PR #116 is open. Test suite optimisation is still in progress while review feedback is addressed. Full plan in `docs/HANDOFF.md` under "Pending test optimisation plan".
 
 ---
 

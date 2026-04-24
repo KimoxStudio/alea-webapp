@@ -82,9 +82,11 @@ type EnrichedReservationsTableClient = {
   select: (columns: string) => EnrichedReservationsQuery
 }
 
-export const GRACE_PERIOD_MINUTES = 20
+export const GRACE_PERIOD_MINUTES = 60
 // How many minutes before the reservation start time check-in is allowed.
 export const CHECK_IN_EARLY_MINUTES = 5
+// How many minutes after the reservation start time check-in is still allowed.
+export const CHECK_IN_LATE_MINUTES = 60
 export const BOOKING_WINDOW_DAYS = 7
 const CANCELLATION_CUTOFF_MS = 60 * 60 * 1000 // 60 minutes
 
@@ -888,13 +890,15 @@ export async function activateReservationByTable(
   }
 
   // Allow check-in starting CHECK_IN_EARLY_MINUTES before the slot begins,
-  // up to the end of the reserved slot.
+  // up to CHECK_IN_LATE_MINUTES after start (capped at reservation end).
   const windowStart = new Date(reservationStart.getTime() - CHECK_IN_EARLY_MINUTES * 60 * 1000)
+  const lateDeadline = new Date(reservationStart.getTime() + CHECK_IN_LATE_MINUTES * 60 * 1000)
+  const windowEnd = lateDeadline < reservationEnd ? lateDeadline : reservationEnd
 
   if (nowUtc < windowStart) {
     serviceError('CHECK_IN_TOO_EARLY', 400)
   }
-  if (nowUtc > reservationEnd) {
+  if (nowUtc > windowEnd) {
     serviceError('CHECK_IN_TOO_LATE', 400)
   }
 

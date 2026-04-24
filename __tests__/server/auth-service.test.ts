@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 type ProfileRow = {
@@ -229,6 +230,44 @@ describe('auth service', () => {
       })
       expect(signInWithPassword).not.toHaveBeenCalled()
     })
+
+    it('rejects when the credential profile has no auth email to use for Supabase sign-in', async () => {
+      const { login } = await loadService()
+      const noEmail = makeProfile({
+        id: 'user-4',
+        member_number: '100004',
+        email: '',
+        role: 'member',
+      })
+      adminState.byMemberNumber.set(noEmail.member_number, noEmail)
+      adminState.byEmail.delete(noEmail.email)
+      adminState.byId.set(noEmail.id, noEmail)
+
+      await expect(
+        login({ identifier: '100004', password: 'Password123' }),
+      ).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 401,
+        message: 'Invalid credentials',
+      })
+      expect(signInWithPassword).not.toHaveBeenCalled()
+    })
+
+    it('rejects when Supabase signs in a different user id than the resolved profile', async () => {
+      const { login } = await loadService()
+      signInWithPassword.mockResolvedValueOnce({
+        data: { user: { id: 'other-user' } },
+        error: null,
+      })
+
+      await expect(
+        login({ identifier: '100001', password: 'Admin123' }),
+      ).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 401,
+        message: 'Invalid credentials',
+      })
+    })
   })
 
   describe('register', () => {
@@ -383,6 +422,39 @@ describe('auth service', () => {
 
       expect(result).toMatchObject({ id: 'new-user-id', memberNumber: '100099' })
     })
+
+    it('creates a session with the default server client when no session client is provided', async () => {
+      const { register } = await loadService()
+
+      await expect(
+        register({ memberNumber: '100099', password: 'Password123' }),
+      ).resolves.toMatchObject({
+        id: 'new-user-id',
+        memberNumber: '100099',
+      })
+
+      expect(signInWithPassword).toHaveBeenCalledWith({
+        email: '100099@members.alea.internal',
+        password: 'Password123',
+      })
+    })
+
+    it('cleans up the auth user and rejects when profile update returns no row', async () => {
+      const { register } = await loadService()
+      adminUpdateProfileSelectMaybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      })
+
+      await expect(
+        register({ memberNumber: '100099', password: 'Password123' }),
+      ).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 500,
+        message: 'Failed to create user profile',
+      })
+      expect(adminDeleteUser).toHaveBeenCalledWith('new-user-id')
+    })
   })
 
   describe('getCurrentUser', () => {
@@ -446,6 +518,19 @@ describe('auth service', () => {
         name: 'ServiceError',
         statusCode: 500,
       })
+    })
+
+    it('returns success when a route-handler client signs out cleanly', async () => {
+      const { logoutWithClient } = await loadService()
+
+      await expect(
+        logoutWithClient({
+          auth: {
+            signInWithPassword,
+            signOut: vi.fn(async () => ({ error: null })),
+          },
+        }),
+      ).resolves.toEqual({ success: true })
     })
   })
 })

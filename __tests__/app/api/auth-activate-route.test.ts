@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -49,6 +50,22 @@ function createJsonRequest(body?: unknown) {
       'content-type': 'application/json',
     },
     body: body ? JSON.stringify(body) : undefined,
+  })
+}
+
+function createRawJsonRequest(body: string) {
+  return new NextRequest('http://localhost:3000/api/auth/activate', {
+    method: 'POST',
+    headers: {
+      host: 'localhost:3000',
+      origin: 'http://localhost:3000',
+      'x-forwarded-for': '10.0.0.1',
+      'x-real-ip': '127.0.0.1',
+      'x-csrf-token': 'test-csrf-token',
+      cookie: 'alea-csrf-token=test-csrf-token',
+      'content-type': 'application/json',
+    },
+    body,
   })
 }
 
@@ -135,6 +152,20 @@ describe('POST /api/auth/activate', () => {
     expect(activateAccountMock).not.toHaveBeenCalled()
   })
 
+  it('treats valid non-object JSON bodies as empty payloads', async () => {
+    const { ServiceError } = await import('@/lib/server/service-error')
+    activateAccountMock.mockRejectedValueOnce(new ServiceError('Invalid activation link', 400))
+
+    const { POST } = await import('@/app/api/auth/activate/route')
+    const response = await POST(createRawJsonRequest('"plain-string"'))
+
+    expect(response.status).toBe(400)
+    expect(activateAccountMock).toHaveBeenCalledWith({
+      token: undefined,
+      password: undefined,
+    })
+  })
+
   it('returns 500 when activation succeeds but automatic sign-in fails', async () => {
     routeSignInWithPasswordMock.mockResolvedValueOnce({
       data: { user: null },
@@ -152,5 +183,35 @@ describe('POST /api/auth/activate', () => {
       message: 'Account activated, but automatic sign-in failed. Please sign in with your member number and new password.',
       statusCode: 500,
     })
+  })
+
+  it('returns the security response before touching activation logic', async () => {
+    enforceMutationSecurityMock.mockReturnValueOnce(
+      NextResponse.json({ message: 'Forbidden', statusCode: 403 }, { status: 403 }),
+    )
+
+    const { POST } = await import('@/app/api/auth/activate/route')
+    const response = await POST(createJsonRequest({
+      token: 'plain-token',
+      password: 'Password123',
+    }))
+
+    expect(response.status).toBe(403)
+    expect(activateAccountMock).not.toHaveBeenCalled()
+  })
+
+  it('returns the rate-limit response before touching activation logic', async () => {
+    enforceRateLimitMock.mockReturnValueOnce(
+      NextResponse.json({ message: 'Too many requests', statusCode: 429 }, { status: 429 }),
+    )
+
+    const { POST } = await import('@/app/api/auth/activate/route')
+    const response = await POST(createJsonRequest({
+      token: 'plain-token',
+      password: 'Password123',
+    }))
+
+    expect(response.status).toBe(429)
+    expect(activateAccountMock).not.toHaveBeenCalled()
   })
 })
