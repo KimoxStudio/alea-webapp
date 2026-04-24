@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 
-const ALL_TIME_SLOTS = generateTimeSlots('00:00', '24:00', 60)
+const ALL_TIME_SLOTS = generateTimeSlots('00:00', '24:00', 30)
 
 function addDaysToDateOnly(date: string, days: number) {
   const [year, month, day] = date.split('-').map(Number)

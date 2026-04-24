@@ -13,6 +13,16 @@ type ReservedSlot = {
   label?: string | null
 }
 
+const DAY_MINUTES = 24 * 60
+const SLOT_INTERVAL_MINUTES = 30
+
+function formatSlotMinutes(totalMinutes: number) {
+  if (totalMinutes === DAY_MINUTES) return '24:00'
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
 export function resolveDate(date?: string | null): string {
   const today = getCurrentClubDate()
   if (!date || date.trim() === '') return today
@@ -28,10 +38,11 @@ export function normalizeTime(time: string) {
 }
 
 export function generateDaySlots(reservedSlots: ReservedSlot[]): TimeSlot[] {
-  return Array.from({ length: 24 }, (_, i) => {
-    const slotStart = `${String(i).padStart(2, '0')}:00`
-    const nextHour = i + 1
-    const slotEnd = nextHour < 24 ? `${String(nextHour).padStart(2, '0')}:00` : '24:00'
+  return Array.from({ length: DAY_MINUTES / SLOT_INTERVAL_MINUTES }, (_, i) => {
+    const slotStartMinutes = i * SLOT_INTERVAL_MINUTES
+    const slotEndMinutes = slotStartMinutes + SLOT_INTERVAL_MINUTES
+    const slotStart = formatSlotMinutes(slotStartMinutes)
+    const slotEnd = formatSlotMinutes(slotEndMinutes)
     const reservation = reservedSlots.find((item) => item.start < slotEnd && slotStart < item.end)
     return {
       startTime: slotStart,

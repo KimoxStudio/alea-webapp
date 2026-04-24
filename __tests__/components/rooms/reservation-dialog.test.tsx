@@ -32,10 +32,13 @@ vi.mock('@/lib/hooks/use-reservations', () => ({
       tableId: 't1',
       date: '2025-01-15',
       slots: [
-        { startTime: '09:00', available: true },
-        { startTime: '10:00', available: true },
-        { startTime: '11:00', available: true },
-        { startTime: '12:00', available: true },
+        { startTime: '09:00', endTime: '09:30', available: true },
+        { startTime: '09:30', endTime: '10:00', available: true },
+        { startTime: '10:00', endTime: '10:30', available: true },
+        { startTime: '10:30', endTime: '11:00', available: true },
+        { startTime: '11:00', endTime: '11:30', available: true },
+        { startTime: '11:30', endTime: '12:00', available: true },
+        { startTime: '12:00', endTime: '12:30', available: true },
       ],
       top: undefined,
       bottom: undefined,
@@ -98,6 +101,19 @@ describe('ReservationDialog', () => {
     )
 
     expect(screen.getAllByRole('button', { name: /\d{2}:\d{2} — available/ }).length).toBeGreaterThan(0)
+  })
+
+  it('renders half-hour slot options', () => {
+    render(
+      <ReservationDialog
+        table={mockTable}
+        open={true}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: '11:30 — available' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '12:30 — available' })).toBeInTheDocument()
   })
 
   it('does not render when table is null', () => {
