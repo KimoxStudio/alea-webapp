@@ -50,3 +50,60 @@ When running parallel implementation agents on this repo, use this domain split 
 | B (backend)  | `lib/server/`, `lib/supabase/`, `supabase/`, `__tests__/` |
 
 If a task touches both domains, run agents **sequentially**.
+
+---
+
+## Issue Tracking Platform
+
+**issueTracker:** `linear`
+
+The product-manager agent uses this to:
+- Fetch issues from Linear
+- Move issues to "In Progress" when work starts
+- Update issues with PR links when complete
+- Query backlog for prioritization
+
+If this field is missing, product-manager will ask you where issues are tracked.
+
+---
+
+## Agent Logging for Alea Webapp
+
+Progress logging (per `~/.claude/CLAUDE.md` Agent Progress Logging) applies here. Agents append to `.claude/agent-progress.md`.
+
+**What to log:**
+- product-manager: Linear issue fetch, branch creation, team-lead spawn, completion
+- team-lead: task handoffs (impl → qa → security), blocking issues
+- software-engineer: file changes (count + key paths), build/typecheck results, commits pushed
+- qa-engineer: test files created/modified, test run results (pass/fail counts), blocking failures
+- security-reviewer: review findings, PR open + link
+
+**Log template per agent:**
+
+```markdown
+#### [TASK_ID] {agent-name} — {task}
+- [HH:MM] Started
+- [HH:MM] {milestone or significant change}
+- [HH:MM] ✅ Complete — {result} or ⚠️ BLOCKED — {error}
+```
+
+---
+
+## Team Coordination for Alea Webapp
+
+### Always Use Product Manager (Universal Entry Point)
+
+For **every issue** — regardless of size or scope:
+
+1. User: "start KIM-366"
+2. Spawn product-manager agent
+3. Product-manager:
+   - Reads Linear issue
+   - Moves to "In Progress"
+   - Creates feature branch
+   - Spawns team-lead agent
+4. Team-lead orchestrates: impl → qa → security → PR opens
+5. Product-manager returns: "KIM-366 done — PR #XXX"
+6. User merges manually to develop
+
+This is the standard workflow — no exceptions.
