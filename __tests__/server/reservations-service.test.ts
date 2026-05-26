@@ -600,7 +600,7 @@ describe('reservations service', () => {
         })
 
         // Now move time forward but still within grace period
-        const futureTime = new Date(baseTime.getTime() + 55 * 60 * 1000)
+        const futureTime = new Date(baseTime.getTime() + 5 * 60 * 1000)
         vi.setSystemTime(futureTime)
 
         const result = await listVisibleReservations({ session: memberSession })
