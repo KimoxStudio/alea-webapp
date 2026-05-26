@@ -269,9 +269,9 @@ async function listActiveReservationsForConflict(input: {
   const nowUtc = await getDatabaseNow(admin)
   return (data ?? []).filter((row) => {
     if (row.status === 'pending' && row.activated_at === null) {
-      const reservationStart = zonedDateTimeToUtc(row.date, normalizeTime(row.start_time))
-      const expiresAt = new Date(reservationStart.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
-      return nowUtc < expiresAt // Keep only non-expired pending reservations
+      const createdAt = new Date(row.created_at)
+      const expiresAt = new Date(createdAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
+      return nowUtc.getTime() <= expiresAt.getTime() // Keep only non-expired pending reservations
     }
     return true // Keep active reservations
   }) as ReservationRow[]
@@ -313,9 +313,9 @@ async function listOverlappingReservationIds(input: {
     const nowUtc = await getDatabaseNow(admin)
     const filteredRows = rows.filter((row) => {
       if (row.status === 'pending' && row.activated_at === null) {
-        const reservationStart = zonedDateTimeToUtc(row.date, normalizeTime(row.start_time))
-        const expiresAt = new Date(reservationStart.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
-        return nowUtc < expiresAt
+        const createdAt = new Date(row.created_at)
+        const expiresAt = new Date(createdAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
+        return nowUtc.getTime() <= expiresAt.getTime()
       }
       return true
     })
@@ -514,9 +514,9 @@ export async function listVisibleReservations(input: {
     .filter((row) => {
       // Lazy evaluation: treat expired pending reservations as cancelled
       if (row.status === 'pending' && row.activated_at === null) {
-        const reservationStart = zonedDateTimeToUtc(row.date, normalizeTime(row.start_time))
-        const expiresAt = new Date(reservationStart.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
-        if (nowUtc >= expiresAt) {
+        const createdAt = new Date(row.created_at)
+        const expiresAt = new Date(createdAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
+        if (nowUtc.getTime() > expiresAt.getTime()) {
           return false // Exclude expired pending reservations
         }
       }
@@ -594,9 +594,9 @@ async function checkUserSlotOverlap(
   const nowUtc = await getDatabaseNow(supabase)
   const activeReservations = (data ?? []).filter((row) => {
     if (row.status === 'pending' && row.activated_at === null) {
-      const reservationStart = zonedDateTimeToUtc(row.date, normalizeTime(row.start_time))
-      const expiresAt = new Date(reservationStart.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
-      return nowUtc < expiresAt
+      const createdAt = new Date(row.created_at)
+      const expiresAt = new Date(createdAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
+      return nowUtc.getTime() <= expiresAt.getTime()
     }
     return true
   })
