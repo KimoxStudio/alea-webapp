@@ -1,99 +1,46 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
+import { beforeEach, describe, expect, it, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const cancelExpiredPendingReservationsMock = vi.fn()
-
-vi.mock('@/lib/server/reservations-service', () => ({
-  cancelExpiredPendingReservations: cancelExpiredPendingReservationsMock,
-}))
-
-function createRequest(path: string, method: 'GET' | 'POST' = 'GET', options?: { authorization?: string }) {
+function createRequest(path: string, method: 'GET' | 'POST' = 'GET') {
   return new NextRequest(`http://localhost:3000${path}`, {
     method,
     headers: {
       host: 'localhost:3000',
-      ...(options?.authorization ? { authorization: options.authorization } : {}),
     },
   })
 }
 
 describe('/api/cron/cancel-pending', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.unstubAllEnvs()
-  })
-
   afterEach(() => {
     vi.unstubAllEnvs()
   })
 
   describe('POST method', () => {
-    it('returns 401 when Authorization header is missing', async () => {
-      vi.stubEnv('CRON_SECRET', 'test-secret')
+    it('returns 410 Gone with deprecation message', async () => {
       const { POST } = await import('@/app/api/cron/cancel-pending/route')
 
       const request = createRequest('/api/cron/cancel-pending', 'POST')
       const response = await POST(request)
 
-      expect(response.status).toBe(401)
-      expect(await response.json()).toEqual({ error: 'Unauthorized' })
+      expect(response.status).toBe(410)
+      const body = await response.json()
+      expect(body).toMatchObject({
+        error: 'Endpoint deprecated',
+        message: expect.stringContaining('lazy evaluation'),
+      })
     })
 
-    it('returns 401 when Authorization header has wrong value', async () => {
-      vi.stubEnv('CRON_SECRET', 'test-secret')
+    it('returns 410 regardless of Authorization header', async () => {
       const { POST } = await import('@/app/api/cron/cancel-pending/route')
 
-      const request = createRequest('/api/cron/cancel-pending', 'POST', {
-        authorization: 'Bearer wrong-secret',
+      const request = new NextRequest('http://localhost:3000/api/cron/cancel-pending', {
+        method: 'POST',
+        headers: { authorization: 'Bearer any-secret' },
       })
       const response = await POST(request)
 
-      expect(response.status).toBe(401)
-      expect(await response.json()).toEqual({ error: 'Unauthorized' })
-    })
-
-    it('returns 200 with cancelled count when Authorization header is correct', async () => {
-      vi.stubEnv('CRON_SECRET', 'test-secret')
-      cancelExpiredPendingReservationsMock.mockResolvedValueOnce(5)
-
-      const { POST } = await import('@/app/api/cron/cancel-pending/route')
-
-      const request = createRequest('/api/cron/cancel-pending', 'POST', {
-        authorization: 'Bearer test-secret',
-      })
-      const response = await POST(request)
-
-      expect(response.status).toBe(200)
-      expect(await response.json()).toEqual({ cancelled: 5 })
-      expect(cancelExpiredPendingReservationsMock).toHaveBeenCalledOnce()
-    })
-
-    it('returns 401 when CRON_SECRET is not set', async () => {
-      // CRON_SECRET not stubbed - tests default behavior
-      const { POST } = await import('@/app/api/cron/cancel-pending/route')
-
-      const request = createRequest('/api/cron/cancel-pending', 'POST', {
-        authorization: 'Bearer any-secret',
-      })
-      const response = await POST(request)
-
-      expect(response.status).toBe(401)
-    })
-
-    it('returns 500 when cancelExpiredPendingReservations throws', async () => {
-      vi.stubEnv('CRON_SECRET', 'test-secret')
-      cancelExpiredPendingReservationsMock.mockRejectedValueOnce(new Error('Database error'))
-
-      const { POST } = await import('@/app/api/cron/cancel-pending/route')
-
-      const request = createRequest('/api/cron/cancel-pending', 'POST', {
-        authorization: 'Bearer test-secret',
-      })
-      const response = await POST(request)
-
-      expect(response.status).toBe(500)
-      expect(await response.json()).toEqual({ error: 'Internal server error' })
+      expect(response.status).toBe(410)
     })
   })
 })

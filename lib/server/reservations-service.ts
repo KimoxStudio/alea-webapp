@@ -45,7 +45,6 @@ type UserSlotOverlapQuery = {
   in: (column: 'status', values: string[]) => UserSlotOverlapQuery
   lt: (column: 'start_time' | 'end_time', value: string) => UserSlotOverlapQuery
   gt: (column: 'start_time' | 'end_time', value: string) => UserSlotOverlapQuery
-  limit: (count: number) => Promise<{ data: Array<{ id: string }> | null; error: unknown }>
   then: Promise<{ data: ReservationRow[] | null; error: unknown }>['then']
 }
 type UserSlotOverlapTableClient = {
@@ -266,7 +265,16 @@ async function listActiveReservationsForConflict(input: {
     serviceError('Internal server error', 500)
   }
 
-  return (data ?? []) as ReservationRow[]
+  // Lazy evaluation: filter out expired pending reservations
+  const nowUtc = await getDatabaseNow(admin)
+  return (data ?? []).filter((row) => {
+    if (row.status === 'pending' && row.activated_at === null) {
+      const createdAt = new Date(row.created_at)
+      const expiresAt = new Date(createdAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
+      return nowUtc.getTime() <= expiresAt.getTime() // Keep only non-expired pending reservations
+    }
+    return true // Keep active reservations
+  }) as ReservationRow[]
 }
 
 async function listOverlappingReservationIds(input: {
@@ -280,9 +288,10 @@ async function listOverlappingReservationIds(input: {
   const reservationIds: string[] = []
   let from = 0
 
+  // Get full rows to enable lazy evaluation filtering
   while (true) {
     let query = (admin.from('reservations') as unknown as AdminReservationsTableClient)
-      .select('id')
+      .select(RESERVATION_COLUMNS)
       .eq('date', input.date)
       .in('status', ['pending', 'active'])
       .lt('start_time', input.endTime)
@@ -298,8 +307,20 @@ async function listOverlappingReservationIds(input: {
       serviceError('Internal server error', 500)
     }
 
-    const rows = data ?? []
-    reservationIds.push(...rows.map((row) => row.id))
+    const rows = (data ?? []) as ReservationRow[]
+
+    // Lazy evaluation: filter out expired pending reservations
+    const nowUtc = await getDatabaseNow(admin)
+    const filteredRows = rows.filter((row) => {
+      if (row.status === 'pending' && row.activated_at === null) {
+        const createdAt = new Date(row.created_at)
+        const expiresAt = new Date(createdAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
+        return nowUtc.getTime() <= expiresAt.getTime()
+      }
+      return true
+    })
+
+    reservationIds.push(...filteredRows.map((row) => row.id))
 
     if (rows.length < pageSize) break
     from += pageSize
@@ -487,13 +508,27 @@ export async function listVisibleReservations(input: {
   }
 
   const isAdmin = input.session.role === 'admin'
-  return (data ?? []).map((row) => {
-    const reservation = mapEnrichedReservation(row)
-    if (!isAdmin) {
-      reservation.memberNumber = undefined
-    }
-    return reservation
-  })
+  const nowUtc = await getDatabaseNow(supabase)
+
+  return (data ?? [])
+    .filter((row) => {
+      // Lazy evaluation: treat expired pending reservations as cancelled
+      if (row.status === 'pending' && row.activated_at === null) {
+        const createdAt = new Date(row.created_at)
+        const expiresAt = new Date(createdAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
+        if (nowUtc.getTime() > expiresAt.getTime()) {
+          return false // Exclude expired pending reservations
+        }
+      }
+      return true
+    })
+    .map((row) => {
+      const reservation = mapEnrichedReservation(row)
+      if (!isAdmin) {
+        reservation.memberNumber = undefined
+      }
+      return reservation
+    })
 }
 
 export async function listAvailableEquipmentForReservation(input: {
@@ -538,7 +573,7 @@ async function checkUserSlotOverlap(
   ignoreReservationId?: string,
 ) {
   let query = (supabase.from('reservations') as unknown as UserSlotOverlapTableClient)
-    .select('id')
+    .select(RESERVATION_COLUMNS)
     .eq('user_id', userId)
     .eq('date', date)
     .in('status', ['pending', 'active'])
@@ -550,13 +585,23 @@ async function checkUserSlotOverlap(
   }
 
   const { data, error } = await query
-    .limit(1)
 
   if (error) {
     serviceError('Internal server error', 500)
   }
 
-  if (data && data.length > 0) {
+  // Lazy evaluation: filter out expired pending reservations
+  const nowUtc = await getDatabaseNow(supabase)
+  const activeReservations = (data ?? []).filter((row) => {
+    if (row.status === 'pending' && row.activated_at === null) {
+      const createdAt = new Date(row.created_at)
+      const expiresAt = new Date(createdAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
+      return nowUtc.getTime() <= expiresAt.getTime()
+    }
+    return true
+  })
+
+  if (activeReservations.length > 0) {
     serviceError('USER_ALREADY_HAS_RESERVATION_IN_SLOT', 409)
   }
 }
@@ -783,18 +828,6 @@ export async function updateReservationForSession(
   }
 
   return mapReservation(data as ReservationRow)
-}
-
-export async function cancelExpiredPendingReservations(): Promise<number> {
-  const admin = createSupabaseServerAdminClient()
-  const { data, error } = await (admin as unknown as {
-    rpc: (fn: string, args?: unknown) => Promise<{ data: number | null; error: unknown }>
-  }).rpc('cancel_expired_pending_reservations', {
-    grace_minutes: GRACE_PERIOD_MINUTES,
-    club_timezone: CLUB_TIMEZONE,
-  })
-  if (error) serviceError('Internal server error', 500)
-  return (data as number | null) ?? 0
 }
 
 export async function markNoShowReservations(): Promise<number> {

@@ -5,6 +5,12 @@ import { serviceError } from '@/lib/server/service-error'
 import { resolveDate, buildAvailability } from '@/lib/server/availability'
 import type { Tables } from '@/lib/supabase/types'
 import { toGameTable } from '@/lib/server/table-mappers'
+import { getDatabaseNow } from '@/lib/server/database-time'
+
+// A pending reservation that has not been activated within PENDING_EXPIRY_MINUTES
+// of creation is treated as expired for availability purposes (lazy-expiry, no cron).
+// Must stay in sync with GRACE_PERIOD_MINUTES in reservations-service.ts.
+const PENDING_EXPIRY_MINUTES = 60
 
 type TableRow = Tables<'tables'>
 type ReservationRow = Tables<'reservations'>
@@ -100,10 +106,10 @@ export async function getTableAvailability(tableId: string, date?: string | null
   const effectiveDate = resolveDate(date)
   const admin = createSupabaseServerAdminClient()
 
-  const [reservationsResult, eventBlocksResult] = await Promise.all([
+  const [reservationsResult, eventBlocksResult, nowUtc] = await Promise.all([
     admin
       .from('reservations')
-      .select('id, table_id, date, start_time, end_time, status, surface, user_id, created_at')
+      .select('id, table_id, date, start_time, end_time, status, surface, user_id, activated_at, created_at')
       .eq('table_id', tableId)
       .eq('date', effectiveDate)
       .in('status', ['active', 'pending']),
@@ -112,14 +118,27 @@ export async function getTableAvailability(tableId: string, date?: string | null
       .select('id, event_id, room_id, date, start_time, end_time, all_day')
       .eq('room_id', table.room_id)
       .eq('date', effectiveDate),
+    getDatabaseNow(admin),
   ])
 
-  const reservations = (reservationsResult.data ?? []) as ReservationRow[]
+  const allReservations = (reservationsResult.data ?? []) as ReservationRow[]
   const reservationsError = reservationsResult.error
 
   if (reservationsError) {
     serviceError('Internal server error', 500)
   }
+
+  // Lazy-expiry: exclude pending reservations that were never activated and whose
+  // grace window (created_at + PENDING_EXPIRY_MINUTES) has already passed.
+  // These rows will never be activated and must not block availability.
+  const reservations = allReservations.filter((row) => {
+    if (row.status === 'pending' && row.activated_at === null) {
+      const createdAt = new Date(row.created_at)
+      const expiresAt = new Date(createdAt.getTime() + PENDING_EXPIRY_MINUTES * 60 * 1000)
+      return nowUtc.getTime() <= expiresAt.getTime()
+    }
+    return true
+  })
 
   const eventBlocks = (eventBlocksResult.data ?? []) as EventBlockRow[]
 

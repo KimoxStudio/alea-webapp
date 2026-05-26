@@ -85,7 +85,9 @@ const eventRoomBlocksState: EventRoomBlockRow[] = []
 function createDatabaseTimeRpc() {
   return vi.fn(async (fn: string) => {
     if (fn === 'get_database_time') {
-      return { data: new Date(Date.now()).toISOString(), error: null }
+      // Use new Date() to pick up vi.setSystemTime mocking
+      const now = new Date()
+      return { data: now.toISOString(), error: null }
     }
     return { data: null, error: null }
   })
@@ -343,6 +345,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
       throw new Error(`Unexpected table ${table}`)
     }),
+    rpc: createDatabaseTimeRpc(),
   })),
   createSupabaseServerAdminClient: vi.fn(() => ({
     from: vi.fn((table: string) => {
@@ -531,6 +534,158 @@ describe('reservations service', () => {
       ])
     })
   })
+
+
+    describe('lazy evaluation: expired pending reservations', () => {
+      it('excludes pending reservations that have expired (created_at + 60 min < now)', async () => {
+        vi.useFakeTimers()
+        const { listVisibleReservations, GRACE_PERIOD_MINUTES } = await loadReservationModules()
+
+        // Create a pending reservation that was created 65 minutes ago
+        const baseTime = new Date('2026-12-31T12:00:00.000Z')
+        vi.setSystemTime(baseTime)
+
+        const expiredPendingReservation = makeReservation({
+          id: 'r-expired',
+          user_id: '2',
+          status: 'pending',
+          activated_at: null,
+          start_time: '16:00:00',
+          end_time: '17:00:00',
+          created_at: new Date(baseTime.getTime() - (GRACE_PERIOD_MINUTES + 5) * 60 * 1000).toISOString(),
+        })
+
+        const t1 = tablesState.get('t1')!
+        reservationsState.push({
+          ...expiredPendingReservation,
+          profiles: profilesMap.get('2') ?? null,
+          tables: { name: t1.name, rooms: roomsMap.get(t1.room_id) ?? null },
+        })
+
+        // Now move time forward to after the grace period has expired
+        const futureTime = new Date(baseTime.getTime() + 70 * 60 * 1000)
+        vi.setSystemTime(futureTime)
+
+        const result = await listVisibleReservations({ session: memberSession })
+
+        // Should NOT include the expired pending reservation
+        expect(result.some((r) => r.id === 'r-expired')).toBe(false)
+
+        vi.useRealTimers()
+      })
+
+      it('includes pending reservations that have not yet expired (created_at + 60 min >= now)', async () => {
+        vi.useFakeTimers()
+        const { listVisibleReservations, GRACE_PERIOD_MINUTES } = await loadReservationModules()
+
+        // Create a pending reservation that was created 50 minutes ago (within grace period)
+        const baseTime = new Date('2026-12-31T12:00:00.000Z')
+        vi.setSystemTime(baseTime)
+
+        const validPendingReservation = makeReservation({
+          id: 'r-valid-pending',
+          user_id: '2',
+          status: 'pending',
+          activated_at: null,
+          start_time: '18:00:00',
+          end_time: '19:00:00',
+          created_at: new Date(baseTime.getTime() - (GRACE_PERIOD_MINUTES - 10) * 60 * 1000).toISOString(),
+        })
+
+        const t2 = tablesState.get('t2')!
+        reservationsState.push({
+          ...validPendingReservation,
+          profiles: profilesMap.get('2') ?? null,
+          tables: { name: t2.name, rooms: roomsMap.get(t2.room_id) ?? null },
+        })
+
+        // Now move time forward but still within grace period
+        const futureTime = new Date(baseTime.getTime() + 5 * 60 * 1000)
+        vi.setSystemTime(futureTime)
+
+        const result = await listVisibleReservations({ session: memberSession })
+
+        // Should include the non-expired pending reservation
+        expect(result.some((r) => r.id === 'r-valid-pending')).toBe(true)
+
+        vi.useRealTimers()
+      })
+
+      it('respects grace period boundary exactly at 60 minutes', async () => {
+        vi.useFakeTimers()
+        const { listVisibleReservations, GRACE_PERIOD_MINUTES } = await loadReservationModules()
+
+        const baseTime = new Date('2026-12-31T12:00:00.000Z')
+        vi.setSystemTime(baseTime)
+
+        // Create a pending reservation created exactly at t=0
+        const pendingReservation = makeReservation({
+          id: 'r-boundary',
+          user_id: '2',
+          status: 'pending',
+          activated_at: null,
+          start_time: '20:00:00',
+          end_time: '21:00:00',
+          created_at: baseTime.toISOString(),
+        })
+
+        const t1 = tablesState.get('t1')!
+        reservationsState.push({
+          ...pendingReservation,
+          profiles: profilesMap.get('2') ?? null,
+          tables: { name: t1.name, rooms: roomsMap.get(t1.room_id) ?? null },
+        })
+
+        // Test at exactly 60 minutes (should still be included)
+        vi.setSystemTime(new Date(baseTime.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000))
+        let result = await listVisibleReservations({ session: memberSession })
+        expect(result.some((r) => r.id === 'r-boundary')).toBe(true)
+
+        // Test at 60 minutes + 1 second (should be excluded)
+        vi.setSystemTime(new Date(baseTime.getTime() + (GRACE_PERIOD_MINUTES * 60 * 1000) + 1000))
+        result = await listVisibleReservations({ session: memberSession })
+        expect(result.some((r) => r.id === 'r-boundary')).toBe(false)
+
+        vi.useRealTimers()
+      })
+
+      it('always includes active (activated) reservations regardless of grace period', async () => {
+        vi.useFakeTimers()
+        const { listVisibleReservations, GRACE_PERIOD_MINUTES } = await loadReservationModules()
+
+        const baseTime = new Date('2026-12-31T12:00:00.000Z')
+        vi.setSystemTime(baseTime)
+
+        // Create an active (activated) reservation created long ago
+        const activeReservation = makeReservation({
+          id: 'r-active-old',
+          user_id: '2',
+          status: 'active',
+          activated_at: baseTime.toISOString(),
+          start_time: '22:00:00',
+          end_time: '23:00:00',
+          created_at: new Date(baseTime.getTime() - 1000 * 60 * 1000).toISOString(), // 1000 minutes ago
+        })
+
+        const t2 = tablesState.get('t2')!
+        reservationsState.push({
+          ...activeReservation,
+          profiles: profilesMap.get('2') ?? null,
+          tables: { name: t2.name, rooms: roomsMap.get(t2.room_id) ?? null },
+        })
+
+        // Move time far into the future
+        vi.setSystemTime(new Date(baseTime.getTime() + 2000 * 60 * 1000))
+
+        const result = await listVisibleReservations({ session: memberSession })
+
+        // Should always include active reservations
+        expect(result.some((r) => r.id === 'r-active-old')).toBe(true)
+
+        vi.useRealTimers()
+      })
+    })
+
 
   describe('listAvailableEquipmentForReservation', () => {
     it('marks overlapping equipment as unavailable', async () => {
@@ -1389,56 +1544,6 @@ describe('reservations service', () => {
     })
   })
 
-  describe('cancelExpiredPendingReservations', () => {
-    it('calls admin.rpc with cancel_expired_pending_reservations and returns count', async () => {
-      // The mock setup is done at the top of the file with vi.mock
-      // Here we just need to configure the rpc mock behavior
-      const mockRpc = vi.fn(async () => ({ data: 3, error: null }))
-      
-      // Reset modules to get a fresh import with our configured mock
-      vi.resetModules()
-      const createAdminMock = vi.fn(() => ({
-        rpc: mockRpc,
-      }))
-      vi.doMock('@/lib/supabase/server', () => ({
-        createSupabaseServerAdminClient: createAdminMock,
-        createSupabaseServerClient: vi.fn(async () => ({ from: vi.fn() })),
-      }))
-      
-      const { cancelExpiredPendingReservations, GRACE_PERIOD_MINUTES } = await import('@/lib/server/reservations-service')
-      const result = await cancelExpiredPendingReservations()
-
-      expect(mockRpc).toHaveBeenCalledWith('cancel_expired_pending_reservations', {
-        grace_minutes: GRACE_PERIOD_MINUTES,
-        club_timezone:
-          process.env.NEXT_PUBLIC_CLUB_TIMEZONE ??
-          process.env.CLUB_TIMEZONE ??
-          'Atlantic/Canary',
-      })
-      expect(result).toBe(3)
-    })
-
-    it('throws serviceError when rpc returns error', async () => {
-      const mockRpc = vi.fn(async () => ({ data: null, error: { message: 'DB error' } }))
-      
-      vi.resetModules()
-      const createAdminMock = vi.fn(() => ({
-        rpc: mockRpc,
-      }))
-      vi.doMock('@/lib/supabase/server', () => ({
-        createSupabaseServerAdminClient: createAdminMock,
-        createSupabaseServerClient: vi.fn(async () => ({ from: vi.fn() })),
-      }))
-      
-      const { cancelExpiredPendingReservations } = await import('@/lib/server/reservations-service')
-
-      await expect(cancelExpiredPendingReservations()).rejects.toMatchObject({
-        name: 'ServiceError',
-        statusCode: 500,
-        message: 'Internal server error',
-      })
-    })
-  })
 
   describe('markNoShowReservations', () => {
     it('calls admin.rpc with mark_no_show_reservations and returns count', async () => {
