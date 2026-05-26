@@ -6,6 +6,7 @@ const listReservationsMock = vi.fn()
 const adminTableMaybeSingleMock = vi.fn()
 const adminUpdateEqMock = vi.fn()
 const storageUploadMock = vi.fn()
+const rpcMock = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn(async () => ({
@@ -57,6 +58,7 @@ vi.mock('@/lib/supabase/server', () => ({
         })),
       }
     }),
+    rpc: rpcMock,
     storage: {
       from: vi.fn().mockReturnValue({
         upload: storageUploadMock,
@@ -82,6 +84,7 @@ describe('getTableAvailability', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
+    rpcMock.mockResolvedValue({ data: '2026-05-26T12:00:00Z', error: null })
     maybeSingleMock.mockResolvedValue({
       data: {
         id: 'c3d4e5f6-a7b8-9012-cdef-012345678901',

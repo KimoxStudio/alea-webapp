@@ -329,7 +329,7 @@ async function listOverlappingReservationIds(input: {
   return reservationIds
 }
 
-async function listRoomEquipment(roomId: string) {
+async function listRoomDefaultEquipment(roomId: string) {
   const admin = createSupabaseServerAdminClient()
   const { data, error } = await admin
     .from('room_default_equipment')
@@ -343,6 +343,73 @@ async function listRoomEquipment(roomId: string) {
   return ((data ?? []) as Array<{ equipment: EquipmentRow | null }>)
     .map((row) => row.equipment)
     .filter((row): row is EquipmentRow => row !== null)
+}
+
+async function listAllEquipment() {
+  const admin = createSupabaseServerAdminClient()
+  const { data, error } = await admin
+    .from('equipment')
+    .select('id, name, description, created_at')
+    .order('name', { ascending: true })
+
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+
+  return (data ?? []) as EquipmentRow[]
+}
+
+async function listEquipmentLockedToOtherRooms(roomId: string): Promise<Set<string>> {
+  const admin = createSupabaseServerAdminClient()
+  const { data, error } = await admin
+    .from('room_default_equipment')
+    .select('equipment_id, room_id')
+
+  if (error) {
+    serviceError('Internal server error', 500)
+  }
+
+  const lockedToOther = new Set<string>()
+  for (const row of (data ?? []) as Array<{ equipment_id: string; room_id: string }>) {
+    if (row.room_id !== roomId) {
+      lockedToOther.add(row.equipment_id)
+    }
+  }
+  return lockedToOther
+}
+
+async function listReservableEquipment(input: {
+  roomId: string
+  date: string
+  startTime: string
+  endTime: string
+  ignoreReservationId?: string
+}) {
+  const [allEquipment, lockedToOther] = await Promise.all([
+    listAllEquipment(),
+    listEquipmentLockedToOtherRooms(input.roomId),
+  ])
+
+  // Global pool minus equipment locked to other rooms
+  const availablePool = allEquipment.filter((item) => !lockedToOther.has(item.id))
+  const poolIds = availablePool.map((item) => item.id)
+
+  if (poolIds.length === 0) {
+    return []
+  }
+
+  const poolConflicts = await listConflictingEquipmentIds({
+    equipmentIds: poolIds,
+    date: input.date,
+    startTime: input.startTime,
+    endTime: input.endTime,
+    ignoreReservationId: input.ignoreReservationId,
+  })
+
+  return availablePool.map((item) => ({
+    ...item,
+    available: !poolConflicts.has(item.id),
+  }))
 }
 
 async function listConflictingEquipmentIds(input: {
@@ -387,10 +454,24 @@ async function assertEquipmentSelectionAllowed(input: {
     return
   }
 
-  const roomEquipment = await listRoomEquipment(input.roomId)
-  const roomEquipmentIds = new Set(roomEquipment.map((item) => item.id))
-  if (input.equipmentIds.some((equipmentId) => !roomEquipmentIds.has(equipmentId))) {
+  // Check that all requested equipment actually exists in the global pool
+  const [allEquipment, lockedToOther] = await Promise.all([
+    listAllEquipment(),
+    listEquipmentLockedToOtherRooms(input.roomId),
+  ])
+
+  const globalEquipmentIds = new Set(allEquipment.map((item) => item.id))
+
+  // Reject any equipment that does not exist at all
+  const unknownIds = input.equipmentIds.filter((id) => !globalEquipmentIds.has(id))
+  if (unknownIds.length > 0) {
     serviceError('INVALID_ROOM_EQUIPMENT', 400)
+  }
+
+  // Reject any equipment locked as default to a different room
+  const lockedIds = input.equipmentIds.filter((id) => lockedToOther.has(id))
+  if (lockedIds.length > 0) {
+    serviceError('EQUIPMENT_LOCKED_TO_ANOTHER_ROOM', 400)
   }
 
   const conflictingEquipmentIds = await listConflictingEquipmentIds(input)
@@ -545,23 +626,13 @@ export async function listAvailableEquipmentForReservation(input: {
     serviceError('Invalid reservation time range', 400)
   }
 
-  const roomEquipment = await listRoomEquipment(input.roomId)
-  const conflictingEquipmentIds = await listConflictingEquipmentIds({
-    equipmentIds: roomEquipment.map((item) => item.id),
-    date,
-    startTime,
-    endTime,
-  })
+  const reservableEquipment = await listReservableEquipment({ roomId: input.roomId, date, startTime, endTime })
 
-  return roomEquipment.reduce<AvailableEquipment[]>((items, equipment) => {
-    const available = !conflictingEquipmentIds.has(equipment.id)
-    items.push({
-      ...toEquipment(equipment),
-      available,
-      conflictReason: available ? null : 'EQUIPMENT_ALREADY_RESERVED',
-    })
-    return items
-  }, [])
+  return reservableEquipment.map<AvailableEquipment>((item) => ({
+    ...toEquipment(item),
+    available: item.available,
+    conflictReason: item.available ? null : 'EQUIPMENT_ALREADY_RESERVED',
+  }))
 }
 
 async function checkUserSlotOverlap(
@@ -691,11 +762,13 @@ export async function createReservationForSession(
     serviceError('Failed to save equipment. Reservation was cancelled. Please try again.', 500)
   }
 
+  const selectedEquipment = equipmentIds.length > 0
+    ? (await listAllEquipment()).filter((item) => equipmentIds.includes(item.id)).map(toEquipment)
+    : []
+
   return {
     ...mapReservation(data as ReservationRow),
-    equipment: (await listRoomEquipment(table.room_id))
-      .filter((item) => equipmentIds.includes(item.id))
-      .map(toEquipment),
+    equipment: selectedEquipment,
   }
 }
 
