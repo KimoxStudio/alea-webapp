@@ -134,6 +134,25 @@ export async function getRoomDefaultEquipment(roomId: string): Promise<Equipment
 export async function setRoomDefaultEquipment(roomId: string, equipmentIds: string[]): Promise<void> {
   const supabase = createSupabaseServerAdminClient()
 
+  if (equipmentIds.length > 0) {
+    // Enforce exclusivity: reject any equipment already locked to a different room
+    const { data: existingDefaults, error: fetchError } = await supabase
+      .from('room_default_equipment')
+      .select('equipment_id, room_id')
+      .in('equipment_id', equipmentIds)
+
+    if (fetchError) {
+      serviceError('Internal server error', 500)
+    }
+
+    const conflicts = ((existingDefaults ?? []) as Array<{ equipment_id: string; room_id: string }>)
+      .filter((row) => row.room_id !== roomId)
+
+    if (conflicts.length > 0) {
+      serviceError('EQUIPMENT_LOCKED_TO_ANOTHER_ROOM', 400)
+    }
+  }
+
   // Delete existing defaults for this room
   const { error: deleteError } = await supabase
     .from('room_default_equipment')

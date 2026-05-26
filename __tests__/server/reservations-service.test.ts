@@ -355,6 +355,12 @@ vi.mock('@/lib/supabase/server', () => ({
         }
       }
 
+      if (table === 'equipment') {
+        return {
+          select: vi.fn(() => buildSelectChain([...equipmentState.values()])),
+        }
+      }
+
       if (table === 'room_default_equipment') {
         return {
           select: vi.fn(() => buildSelectChain(roomDefaultEquipmentState)),
