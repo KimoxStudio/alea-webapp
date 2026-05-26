@@ -15,6 +15,17 @@ vi.mock('@/lib/auth/auth-context', () => ({
   }),
 }))
 
+// Mock club-time so getCurrentClubDate returns a fixed date.
+// This freezes "today" to 2025-01-15 at 00:05, so nowMinutes = 5 and
+// all mock slots (09:00 onward) pass the > nowMinutes filter deterministically.
+vi.mock('@/lib/club-time', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/club-time')>('@/lib/club-time')
+  return {
+    ...actual,
+    getCurrentClubDate: () => '2025-01-15',
+  }
+})
+
 // Declare mock functions using vi.hoisted() so they're available during vi.mock() hoisting
 const { mockMutateAsync } = vi.hoisted(() => {
   const mockMutateAsyncFn = vi.fn()
@@ -75,10 +86,18 @@ describe('ReservationDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockMutateAsync.fn = vi.fn()
+    // Freeze only the Date constructor to 2025-01-15T00:05:00Z (00:05 UTC).
+    // nowMinutes = 0*60+5 = 5, so all mock slots (09:00 = 540 min onward) pass
+    // the `slot > nowMinutes` filter deterministically.
+    // toFake: ['Date'] leaves setTimeout/setInterval real so waitFor and
+    // userEvent async interactions continue to work normally.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2025-01-15T00:05:00.000Z'))
   })
 
   afterEach(() => {
     vi.clearAllMocks()
+    vi.useRealTimers()
   })
 
   it('renders dialog when open is true', () => {
