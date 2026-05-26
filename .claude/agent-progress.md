@@ -71,6 +71,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
 
 ---
 
+#### [KIM-366] Merge & Close
+- [13:15] User merged PR #118 to develop
+- [13:15] ✅ Moved KIM-366 to "Done" on Linear
+- [13:15] Deleted stale test backup file: __tests__/server/reservations-service.test.ts.bak
+
 #### [KIM-389] product-manager — Select & Start Next Issue
 - [13:04] Fetched backlog (3 issues open: KIM-389, KIM-385, KIM-384)
 - [13:04] Selected: KIM-389 — Decouple reservable equipment from room defaults and enforce exclusive room assignment (Priority: Medium, no blockers)
@@ -78,3 +83,13 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [13:05] Moved to "In Progress" on Linear
 - [13:05] Task 98b50442 created for team-lead agent
 - [13:05] Spawning team-lead for execution
+
+#### [KIM-389] Test Suite Fix — Unmocked Supabase Calls
+- [13:17] Audit: All tests verified (no real Supabase calls found, all properly mocked)
+- [13:17] Issue 1: getDatabaseNow RPC not mocked in tables-service.test.ts
+  - Fixed: Added rpcMock to createSupabaseServerAdminClient mock
+  - Commit cb9878c: Mock setup corrected
+- [13:17] Issue 2: reservation-dialog.test.tsx time filtering logic broke test
+  - Fixed: Mocked getCurrentClubDate + vi.useFakeTimers to freeze date/time
+  - Commit (last in branch): Test now deterministic regardless of wall-clock time
+- [13:18] ✅ All 543 tests PASSING (was 4 failing, now 0 failing)
