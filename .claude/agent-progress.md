@@ -177,3 +177,17 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [12:25] Commit ac0e920: drop REVOKE on nonexistent function
 - [12:25] Build ✅ | Typecheck ✅ | Lint ✅ | 548 tests ✅
 - [12:25] ✅ PR #121 ready for user merge — all migrations validated
+
+---
+
+#### [KIM-392] Force-fix SECURITY DEFINER permissions (KIM-391 exception case)
+- [12:47] Started — applying KIM-392 migration to Supabase cloud (user authorization: "haz tu lo que sea necesario")
+- [12:47] Staged KIM-392 migration file (20260527140001_kim392_force_fix_permissions.sql)
+- [12:47] Commit 5f6dd17: add KIM-392 force-fix migration
+- [12:47] Push to remote — CI: typecheck ✅, lint ✅
+- [12:47] First apply attempt: REVOKE on nonexistent cancel_expired_pending_reservations failed despite IF EXISTS check
+- [12:47] Root cause: Full signature REVOKE fails even when IF EXISTS checks function name only
+- [12:47] Fix: Removed REVOKE block for cancel_expired_pending_reservations (already dropped in KIM-366)
+- [12:47] Commit e9a4737: remove REVOKE on dropped function
+- [12:47] Second apply attempt: ✅ Migration 20260527140001_kim392_force_fix_permissions.sql applied successfully
+- [12:47] ✅ KIM-392 complete — force-fix permissions applied to Supabase cloud
