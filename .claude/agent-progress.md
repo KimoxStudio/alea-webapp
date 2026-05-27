@@ -93,3 +93,43 @@ Real-time log of all agent work. Agents append entries as work progresses.
   - Fixed: Mocked getCurrentClubDate + vi.useFakeTimers to freeze date/time
   - Commit (last in branch): Test now deterministic regardless of wall-clock time
 - [13:18] ✅ All 543 tests PASSING (was 4 failing, now 0 failing)
+
+#### [26d3deb4] team-lead — KIM-390 orchestration
+- [11:29] Started
+- [11:30] Created software-engineer task c59b2bed
+
+#### [c59b2bed] software-engineer — KIM-390 fix security linter warnings
+- [11:30] Started
+- [11:31] Audited all 33 migrations — 5 SECURITY DEFINER functions still have SET search_path TO 'public', 'pg_catalog' (not fixed in migration 4): create_event_atomic, get_database_time, handle_new_user, mark_no_show_reservations, update_event_atomic
+- [11:33] Created supabase/migrations/20260527112934_fix_security_linter_warnings.sql — 5 SECURITY DEFINER functions updated: SET search_path TO '' (was 'public', 'pg_catalog')
+- [11:33] pnpm build ✅ | pnpm typecheck ✅ | CI local ✅ — pushed to origin
+- [11:33] ✅ Complete — 1 migration file, 5 functions hardened, branch pushed
+- [11:34] software-engineer complete
+- [11:34] Created qa-engineer task 60e37a78
+
+#### [60e37a78] qa-engineer — KIM-390 test validation
+- [11:34] Started — running pnpm test on feat/KIM-390-fix-supabase-security-linter-warnings
+- [11:35] Test run complete — 42 test files, 548 tests, 0 failures
+- [11:35] ✅ Complete — 548 passed, 0 failed. No regressions from KIM-390 migration changes.
+- [11:35] qa-engineer complete — 548 tests passed
+- [11:35] Created security-reviewer task 45ef6314
+
+#### [45ef6314] security-reviewer — KIM-390 review and PR
+- [11:36] Started — reviewing diff develop..feat/KIM-390-fix-supabase-security-linter-warnings
+- [11:36] All checks passed: RLS unchanged, search_path='' safe (all refs fully-qualified), no secrets, additive migration
+- [11:36] ✅ Complete — PR opened: https://github.com/KimoxStudio/alea-webapp/pull/120
+- [11:37] ✅ Complete — PR opened: https://github.com/KimoxStudio/alea-webapp/pull/120
+
+---
+
+#### [KIM-391] team-lead — Orchestrate security linter fixes
+- [11:54] Started orchestration — feat/KIM-391-fix-remaining-security-warnings
+- [11:54] Scope: 4 migration categories (revoke anon/authenticated EXECUTE on 9 functions, verify btree_gist, document leaked password)
+- [11:56] Created 4 SQL migrations:
+  1. 20260527120001: REVOKE EXECUTE on 9 SECURITY DEFINER functions from anon role
+  2. 20260527120002: REVOKE EXECUTE on same 9 functions from authenticated role
+  3. 20260527120003: DROP btree_gist from public schema, CREATE in postgres schema
+  4. 20260527120004: Documentation migration for auth_leaked_password_protection (project-level setting, cannot be fixed via SQL)
+- [11:56] Build ✅ | Typecheck ✅ | Tests 548/548 passed ✅
+- [11:56] Committed: cd10db4 — feat(security): revoke SECURITY DEFINER function access from anon/authenticated roles, fix btree_gist schema (KIM-391)
+- [11:56] Spawning qa-engineer for test validation and then security-reviewer for PR
