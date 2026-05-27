@@ -204,3 +204,18 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [13:05] Tests: 548/548 passed ✅
 - [13:05] Posted PR #121 comment explaining KIM-393 approach
 - [13:05] ✅ KIM-393 complete — RLS helpers moved to internal schema, not publicly exposed
+
+#### [KIM-394] Force-revoke action functions from anon/authenticated
+- [13:07] Started — user reported cancel_expired_pending_reservations and handle_new_user still executable in Supabase
+- [13:07] Root cause: KIM-391 REVOKEs didn't fully apply to Supabase (likely signature/function existence issue)
+- [13:07] Created KIM-394: direct REVOKE EXECUTE on cancel_expired_pending_reservations() and handle_new_user() from anon/authenticated
+- [13:07] Migration applied to Supabase successfully
+- [13:07] Tests: 548/548 passed ✅
+- [13:07] ✅ KIM-394 complete — action functions now revoked
+
+#### Security Linter Status After KIM-391/392/393/394
+- ✅ is_admin() / is_active_member() — moved to internal schema (not exposed via /rpc/)
+- ✅ cancel_expired_pending_reservations() — revoked from anon/authenticated
+- ✅ handle_new_user() — revoked from anon/authenticated
+- ⚠️ auth_leaked_password_protection — cannot fix via SQL, requires Supabase Dashboard (project setting)
+- ℹ️ auth_rls_initplan / multiple_permissive_policies — PERFORMANCE warnings, separate scope (RLS policy rewrites needed)
