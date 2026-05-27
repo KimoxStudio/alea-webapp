@@ -56,12 +56,10 @@ ALTER POLICY "reservations_update" ON "public"."reservations" USING (((("user_id
 
 ALTER POLICY "rooms_admin_delete" ON "public"."rooms" USING ("internal"."is_admin"());
 ALTER POLICY "rooms_admin_insert" ON "public"."rooms" WITH CHECK ("internal"."is_admin"());
-ALTER POLICY "rooms_admin_select" ON "public"."rooms" USING ("internal"."is_admin"());
 ALTER POLICY "rooms_admin_update" ON "public"."rooms" USING ("internal"."is_admin"()) WITH CHECK ("internal"."is_admin"());
 
 ALTER POLICY "tables_admin_delete" ON "public"."tables" USING ("internal"."is_admin"());
 ALTER POLICY "tables_admin_insert" ON "public"."tables" WITH CHECK ("internal"."is_admin"());
-ALTER POLICY "tables_admin_select" ON "public"."tables" USING ("internal"."is_admin"());
 ALTER POLICY "tables_admin_update" ON "public"."tables" USING ("internal"."is_admin"()) WITH CHECK ("internal"."is_admin"());
 
 -- Drop public schema functions (no longer needed)
