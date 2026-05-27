@@ -191,3 +191,16 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [12:47] Commit e9a4737: remove REVOKE on dropped function
 - [12:47] Second apply attempt: ✅ Migration 20260527140001_kim392_force_fix_permissions.sql applied successfully
 - [12:47] ✅ KIM-392 complete — force-fix permissions applied to Supabase cloud
+
+#### [KIM-393] Move RLS helpers to internal schema (security hardening)
+- [13:02] Started — responding to user request for safer approach to RLS helper exposure
+- [13:02] Rationale: is_admin() / is_active_member() only called by RLS policies (server-side), never via /rpc/
+- [13:02] Solution: Move functions to internal schema (not exposed via PostgREST)
+- [13:03] Created KIM-393 migration: create internal schema, recreate functions, update RLS policies
+- [13:03] First error: non-existent rooms_admin_select policy removed (doesn't exist in baseline)
+- [13:04] Second error: equipment and room_default_equipment tables have additional RLS policies that reference is_admin()
+- [13:04] Updated migration to include 16 total RLS policy updates across 7 tables
+- [13:05] Migration 20260527150001_kim393_move_rls_helpers_to_internal_schema applied successfully
+- [13:05] Tests: 548/548 passed ✅
+- [13:05] Posted PR #121 comment explaining KIM-393 approach
+- [13:05] ✅ KIM-393 complete — RLS helpers moved to internal schema, not publicly exposed
