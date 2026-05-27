@@ -164,3 +164,15 @@ Real-time log of all agent work. Agents append entries as work progresses.
   - Comment 3310370278 (schema fix): extensions schema match confirmed
   - Comment 3310370299 (RLS functions): is_admin/is_active_member preservation confirmed
 - [12:15] ✅ PR #121 ready for user merge to develop
+
+#### PR #121 Final Bug Fixes
+- [12:20] Copilot flagged wrong columns in exclusion constraint (nonexistent started_at/ended_at)
+- [12:20] Fixed: constraint now uses date + start_time, date + end_time (matches baseline)
+- [12:20] Fixed: restored status = 'active' filter (not '<> cancelled')
+- [12:20] Commit bb2c89b: exclusion constraint column fix
+- [12:20] Responded to Copilot comment 3310469244 — fix confirmed
+- [12:20] User error: cancel_expired_pending_reservations REVOKE fails (function dropped by KIM-366)
+- [12:20] Fixed migrations 20260527120001 and 20260527120002: wrapped cancel_expired_pending_reservations revoke in DO block with function existence check
+- [12:20] Commit eb10883: conditional revoke on dropped function
+- [12:20] Build ✅ | Typecheck ✅ | Lint ✅ | 548 tests ✅
+- [12:20] ✅ PR #121 ready for user merge — all Copilot feedback resolved
