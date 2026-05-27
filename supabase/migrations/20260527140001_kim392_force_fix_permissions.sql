@@ -2,14 +2,9 @@
 -- Ensures correct state regardless of prior migration issues
 
 -- Functions that should NOT be callable by anon/authenticated (action functions)
--- Only revoke if they exist
+-- Note: cancel_expired_pending_reservations was dropped in KIM-366, omitted here
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'cancel_expired_pending_reservations' AND pronamespace = 'public'::regnamespace) THEN
-    REVOKE ALL ON FUNCTION "public"."cancel_expired_pending_reservations"(integer, timestamp with time zone, text) FROM "anon" CASCADE;
-    REVOKE ALL ON FUNCTION "public"."cancel_expired_pending_reservations"(integer, timestamp with time zone, text) FROM "authenticated" CASCADE;
-  END IF;
-  
   IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'handle_new_user' AND pronamespace = 'public'::regnamespace) THEN
     REVOKE ALL ON FUNCTION "public"."handle_new_user"() FROM "anon" CASCADE;
     REVOKE ALL ON FUNCTION "public"."handle_new_user"() FROM "authenticated" CASCADE;
