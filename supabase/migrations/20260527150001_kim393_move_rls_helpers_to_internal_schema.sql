@@ -62,6 +62,13 @@ ALTER POLICY "tables_admin_delete" ON "public"."tables" USING ("internal"."is_ad
 ALTER POLICY "tables_admin_insert" ON "public"."tables" WITH CHECK ("internal"."is_admin"());
 ALTER POLICY "tables_admin_update" ON "public"."tables" USING ("internal"."is_admin"()) WITH CHECK ("internal"."is_admin"());
 
+ALTER POLICY "equipment_admin_delete" ON "public"."equipment" USING ("internal"."is_admin"());
+ALTER POLICY "equipment_admin_insert" ON "public"."equipment" WITH CHECK ("internal"."is_admin"());
+ALTER POLICY "equipment_admin_update" ON "public"."equipment" USING ("internal"."is_admin"()) WITH CHECK ("internal"."is_admin"());
+
+ALTER POLICY "room_default_equipment_admin_delete" ON "public"."room_default_equipment" USING ("internal"."is_admin"());
+ALTER POLICY "room_default_equipment_admin_insert" ON "public"."room_default_equipment" WITH CHECK ("internal"."is_admin"());
+
 -- Drop public schema functions (no longer needed)
 DROP FUNCTION IF EXISTS "public"."is_active_member"();
 DROP FUNCTION IF EXISTS "public"."is_admin"();
