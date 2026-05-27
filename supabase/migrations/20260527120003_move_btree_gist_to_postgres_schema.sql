@@ -10,5 +10,5 @@ ALTER TABLE ONLY "public"."reservations"
   ADD CONSTRAINT "reservations_no_active_overlap"
   EXCLUDE USING "gist" (
     "table_id" WITH =,
-    tsrange("started_at", "ended_at", '[)') WITH &&
-  ) WHERE (("status" <> 'cancelled'::"public"."reservation_status"));
+    tsrange("date" + "start_time", "date" + "end_time", '[)') WITH &&
+  ) WHERE (("status" = 'active'::"public"."reservation_status"));
