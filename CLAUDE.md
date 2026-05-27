@@ -29,6 +29,21 @@ The user may write prompts in any language; replies to the user are in their lan
 
 ---
 
+## PR Inline Comment Replies — Individual Thread Responses
+
+**CRITICAL RULE:** When responding to PR inline review comments (especially from automated reviewers like Copilot), post individual threaded replies to EACH comment. Never post a single consolidated response addressing all issues.
+
+**Why:** Individual threaded replies keep feedback organized, allow reviewers to mark specific comments as resolved, and prevent threads from becoming confusing.
+
+**How to apply:**
+- For each inline comment on a PR, post a reply directly to that comment's thread
+- Use GitHub API: `POST /repos/owner/repo/pulls/{pr}/comments/{comment_id}/replies`
+- Each reply addresses ONLY that specific comment — no batching
+- Mark fix-related replies with ✅ when issue is fixed
+- Never post a single general PR comment trying to address multiple inline comments
+
+---
+
 ## Key conventions
 
 - Admin write operations use `createSupabaseServerAdminClient()` (bypasses RLS)
