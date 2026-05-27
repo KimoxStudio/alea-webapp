@@ -107,3 +107,5 @@ For **every issue** — regardless of size or scope:
 6. User merges manually to develop
 
 This is the standard workflow — no exceptions.
+
+**CRITICAL RULE:** Product-manager NEVER spawns software-engineer, qa-engineer, or security-reviewer directly. Product-manager ALWAYS spawns team-lead to orchestrate the pipeline. Team-lead then manages: impl → qa → security → PR. This preserves agent isolation: product-manager = coordinator, team-lead = orchestrator, impl agents = workers.
