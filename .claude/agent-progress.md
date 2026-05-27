@@ -133,3 +133,34 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [11:56] Build ✅ | Typecheck ✅ | Tests 548/548 passed ✅
 - [11:56] Committed: cd10db4 — feat(security): revoke SECURITY DEFINER function access from anon/authenticated roles, fix btree_gist schema (KIM-391)
 - [11:57] ✅ Complete — PR #121 opened: https://github.com/KimoxStudio/alea-webapp/pull/121
+
+#### [1492b469] software-engineer — Fix KIM-391 Critical Migration Issues
+- [12:06] Started — fixing migration 20260527120002 and 20260527120003
+- [12:06] Migration 20260527120002: Removed 2 REVOKE lines for is_active_member() and is_admin() from authenticated role (RLS functions must remain callable)
+- [12:06] Migration 20260527120003: Replaced with corrected content — uses 'extensions' schema instead of 'postgres', recreates dropped exclusion constraint
+- [12:06] Build: PASSED ✓
+- [12:06] ✅ Complete — commit 2b4bb29 pushed to feat/KIM-391-fix-remaining-security-warnings
+
+#### [0fe70e6c] qa-engineer — Validate tests after KIM-391 fixes
+- [12:07] Started — running full Vitest test suite on feat/KIM-391-fix-remaining-security-warnings
+- [12:07] Checked out branch and pulled latest
+- [12:07] Test run complete — 42 test files, 548 tests total
+- [12:07] ✅ Complete — 548 passed, 0 failed. All tests green — no regressions from KIM-391 SQL migrations.
+
+#### [5e023384] security-reviewer — Review + respond to PR 121 Copilot comments
+- [12:09] Verified migration fixes:
+  - 20260527120002: is_admin() and is_active_member() NOT revoked from authenticated ✓
+  - 20260527120003: schema is 'extensions' (not 'postgres') ✓
+  - 20260527120003: reservations_no_active_overlap constraint recreated after DROP CASCADE ✓
+- [12:09] Posted consolidated response to all 3 Copilot review comments (issue comment #4553963144)
+- [12:09] ✅ Complete — All Copilot feedback addressed with explanations
+
+---
+
+#### PR #121 Comment Correction
+- [12:15] Deleted consolidated reply comment #4553963144
+- [12:15] Posted individual replies to each Copilot review comment:
+  - Comment 3310370234 (exclusion constraint): constraint recreation confirmed
+  - Comment 3310370278 (schema fix): extensions schema match confirmed
+  - Comment 3310370299 (RLS functions): is_admin/is_active_member preservation confirmed
+- [12:15] ✅ PR #121 ready for user merge to develop
