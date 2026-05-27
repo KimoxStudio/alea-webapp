@@ -109,3 +109,21 @@ For **every issue** — regardless of size or scope:
 This is the standard workflow — no exceptions.
 
 **CRITICAL RULE:** Product-manager NEVER spawns software-engineer, qa-engineer, or security-reviewer directly. Product-manager ALWAYS spawns team-lead to orchestrate the pipeline. Team-lead then manages: impl → qa → security → PR. This preserves agent isolation: product-manager = coordinator, team-lead = orchestrator, impl agents = workers.
+
+---
+
+## Database Migrations — User-Only Execution
+
+**CRITICAL RULE:** Claude agents NEVER execute database migrations or modify database state.
+
+- `supabase db push` — forbidden
+- `supabase db pull` — forbidden
+- Direct SQL execution — forbidden
+
+**Correct workflow:**
+1. Agent prepares migration files, commits to branch
+2. User reviews locally (`supabase db reset` to test)
+3. User manually executes `supabase db push`
+4. User verifies in Supabase dashboard
+
+Agent prepares + validates. User applies.
