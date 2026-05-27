@@ -1,8 +1,21 @@
 -- Revoke EXECUTE permission on SECURITY DEFINER functions from anon role.
 -- KIM-391: Fix remaining Supabase security linter warnings.
--- These 9 functions are SECURITY DEFINER and should not be callable by anonymous users.
+-- These functions are SECURITY DEFINER and should not be callable by anonymous users.
+-- Note: cancel_expired_pending_reservations was dropped in KIM-366, so conditional revoke.
 
-REVOKE EXECUTE ON FUNCTION "public"."cancel_expired_pending_reservations"("grace_minutes" integer, "reference_time" timestamp with time zone, "club_timezone" "text") FROM "anon";
+DO $$
+BEGIN
+  -- Only revoke if the function still exists (may be dropped by newer migrations like KIM-366)
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'public' AND p.proname = 'cancel_expired_pending_reservations'
+  ) THEN
+    REVOKE EXECUTE ON FUNCTION "public"."cancel_expired_pending_reservations"("grace_minutes" integer, "reference_time" timestamp with time zone, "club_timezone" "text") FROM "anon";
+  END IF;
+END
+$$;
+
 REVOKE EXECUTE ON FUNCTION "public"."create_event_atomic"("p_title" "text", "p_description" "text", "p_date" "date", "p_start_time" time without time zone, "p_end_time" time without time zone, "p_room_id" "uuid", "p_all_day" boolean) FROM "anon";
 REVOKE EXECUTE ON FUNCTION "public"."get_database_time"() FROM "anon";
 REVOKE EXECUTE ON FUNCTION "public"."handle_new_user"() FROM "anon";
