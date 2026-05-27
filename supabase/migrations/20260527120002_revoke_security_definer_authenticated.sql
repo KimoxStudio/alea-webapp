@@ -7,7 +7,5 @@ REVOKE EXECUTE ON FUNCTION "public"."cancel_expired_pending_reservations"("grace
 REVOKE EXECUTE ON FUNCTION "public"."create_event_atomic"("p_title" "text", "p_description" "text", "p_date" "date", "p_start_time" time without time zone, "p_end_time" time without time zone, "p_room_id" "uuid", "p_all_day" boolean) FROM "authenticated";
 REVOKE EXECUTE ON FUNCTION "public"."get_database_time"() FROM "authenticated";
 REVOKE EXECUTE ON FUNCTION "public"."handle_new_user"() FROM "authenticated";
-REVOKE EXECUTE ON FUNCTION "public"."is_active_member"() FROM "authenticated";
-REVOKE EXECUTE ON FUNCTION "public"."is_admin"() FROM "authenticated";
 REVOKE EXECUTE ON FUNCTION "public"."mark_no_show_reservations"("reference_time" timestamp with time zone, "club_timezone" "text") FROM "authenticated";
 REVOKE EXECUTE ON FUNCTION "public"."update_event_atomic"("p_id" "uuid", "p_title" "text", "p_description" "text", "p_date" "date", "p_start_time" time without time zone, "p_end_time" time without time zone, "p_room_id" "uuid", "p_all_day" boolean) FROM "authenticated";

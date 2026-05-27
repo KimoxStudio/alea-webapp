@@ -1,6 +1,14 @@
--- Move btree_gist extension from public schema to postgres schema.
+-- Move btree_gist extension from public schema to extensions schema.
 -- KIM-391: Fix remaining Supabase security linter warnings.
--- Extensions should be installed in the postgres schema, not public.
+-- Extensions should be installed in the extensions schema, not public.
 
 DROP EXTENSION IF EXISTS "btree_gist" CASCADE;
-CREATE EXTENSION IF NOT EXISTS "btree_gist" WITH SCHEMA "postgres";
+CREATE EXTENSION IF NOT EXISTS "btree_gist" WITH SCHEMA "extensions";
+
+-- Recreate exclusion constraint dropped by CASCADE above.
+ALTER TABLE ONLY "public"."reservations"
+  ADD CONSTRAINT "reservations_no_active_overlap"
+  EXCLUDE USING "gist" (
+    "table_id" WITH =,
+    tsrange("started_at", "ended_at", '[)') WITH &&
+  ) WHERE (("status" <> 'cancelled'::"public"."reservation_status"));
