@@ -38,9 +38,50 @@ CREATE POLICY "reservation_equipment_authenticated_select" ON "public"."reservat
   FOR SELECT
   TO authenticated
   USING (
-    "reservation_id" IN (
-      SELECT "id" FROM "public"."reservations"
-      WHERE "user_id" = "auth"."uid"()
+    EXISTS (
+      SELECT 1 FROM "public"."reservations"
+      WHERE "id" = "reservation_equipment"."reservation_id"
+        AND "user_id" = (SELECT "auth"."uid"())
+    )
+  );
+
+CREATE POLICY "reservation_equipment_authenticated_insert" ON "public"."reservation_equipment"
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM "public"."reservations"
+      WHERE "id" = "reservation_equipment"."reservation_id"
+        AND "user_id" = (SELECT "auth"."uid"())
+    )
+  );
+
+CREATE POLICY "reservation_equipment_authenticated_update" ON "public"."reservation_equipment"
+  FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM "public"."reservations"
+      WHERE "id" = "reservation_equipment"."reservation_id"
+        AND "user_id" = (SELECT "auth"."uid"())
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM "public"."reservations"
+      WHERE "id" = "reservation_equipment"."reservation_id"
+        AND "user_id" = (SELECT "auth"."uid"())
+    )
+  );
+
+CREATE POLICY "reservation_equipment_authenticated_delete" ON "public"."reservation_equipment"
+  FOR DELETE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM "public"."reservations"
+      WHERE "id" = "reservation_equipment"."reservation_id"
+        AND "user_id" = (SELECT "auth"."uid"())
     )
   );
 
