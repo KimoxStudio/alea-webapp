@@ -32,6 +32,31 @@ CREATE POLICY "activation_tokens_service_role_all" ON "public"."activation_token
   WITH CHECK (TRUE);
 
 -- ============================================================================
+-- Add RLS policies for reservation_equipment (junction table)
+-- ============================================================================
+CREATE POLICY "reservation_equipment_authenticated_select" ON "public"."reservation_equipment"
+  FOR SELECT
+  TO authenticated
+  USING (
+    "reservation_id" IN (
+      SELECT "id" FROM "public"."reservations"
+      WHERE "user_id" = "auth"."uid"()
+    )
+  );
+
+CREATE POLICY "reservation_equipment_admin_all" ON "public"."reservation_equipment"
+  FOR ALL
+  TO authenticated
+  USING ("internal"."is_admin"())
+  WITH CHECK ("internal"."is_admin"());
+
+CREATE POLICY "reservation_equipment_service_role_all" ON "public"."reservation_equipment"
+  FOR ALL
+  TO service_role
+  USING (TRUE)
+  WITH CHECK (TRUE);
+
+-- ============================================================================
 -- 3. Add indexes for other unindexed FKs
 -- ============================================================================
 CREATE INDEX IF NOT EXISTS "events_created_by_idx" ON "public"."events"("created_by");
