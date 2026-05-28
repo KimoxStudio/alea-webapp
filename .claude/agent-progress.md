@@ -219,3 +219,10 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - ✅ handle_new_user() — revoked from anon/authenticated
 - ⚠️ auth_leaked_password_protection — cannot fix via SQL, requires Supabase Dashboard (project setting)
 - ℹ️ auth_rls_initplan / multiple_permissive_policies — PERFORMANCE warnings, separate scope (RLS policy rewrites needed)
+
+#### [KIM-391] software-engineer — Fix remaining security warnings (RLS initplan + multiple permissive policies)
+- [07:31] Started — verified branch feat/KIM-391-fix-remaining-security-warnings
+- [07:31] Migration 20260528000001_kim391_fix_rls_initplan.sql — wraps auth.uid() in SELECT for 5 policies
+- [07:31] Migration 20260528000002_kim391_consolidate_profiles_select_policy.sql — drops profiles_admin_select, consolidates into profiles_member_select with OR logic
+- [07:31] Build: green, Typecheck: green, Tests: 548/548 passed
+- [07:31] ✅ Complete — 2 migration files committed to branch, all validations green

@@ -39,10 +39,12 @@ CREATE INDEX IF NOT EXISTS "reservation_equipment_equipment_id_idx" ON "public".
 CREATE INDEX IF NOT EXISTS "room_default_equipment_equipment_id_idx" ON "public"."room_default_equipment"("equipment_id");
 
 -- ============================================================================
--- 4. Drop unused indexes on reservations
+-- 4. Drop unused indexes on reservations (NOT the EXCLUSION CONSTRAINT)
 -- ============================================================================
 DROP INDEX IF EXISTS "reservations_activation_lookup_idx";
 DROP INDEX IF EXISTS "reservations_user_date_status_idx";
 DROP INDEX IF EXISTS "reservations_pending_no_show_idx";
-DROP INDEX IF EXISTS "reservations_no_active_overlap";
 DROP INDEX IF EXISTS "reservations_pending_date_idx";
+
+-- NOTE: reservations_no_active_overlap is an EXCLUSION CONSTRAINT (not an index)
+-- that prevents overlapping reservations. It is used and must NOT be dropped.
