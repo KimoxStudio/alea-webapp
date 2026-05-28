@@ -17,13 +17,13 @@ CREATE POLICY "activation_tokens_anon_select_by_hash" ON "public"."activation_to
 CREATE POLICY "activation_tokens_authenticated_select_own" ON "public"."activation_tokens"
   FOR SELECT
   TO authenticated
-  USING ("profile_id" = "auth"."uid"());
+  USING ("profile_id" = (SELECT "auth"."uid"()));
 
 CREATE POLICY "activation_tokens_authenticated_update_own" ON "public"."activation_tokens"
   FOR UPDATE
   TO authenticated
-  USING ("profile_id" = "auth"."uid"())
-  WITH CHECK ("profile_id" = "auth"."uid"());
+  USING ("profile_id" = (SELECT "auth"."uid"()))
+  WITH CHECK ("profile_id" = (SELECT "auth"."uid"()));
 
 CREATE POLICY "activation_tokens_service_role_all" ON "public"."activation_tokens"
   FOR ALL
