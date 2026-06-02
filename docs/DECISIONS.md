@@ -10,3 +10,16 @@
 - [2026-04-11 19:41] QA: validation passed.
 - [2026-04-14 16:40] QA: validation passed.
 - [2026-04-17 18:52] QA: validation FAILED at `test`.
+- [2026-06-02 10:48] QA: validation passed.
+
+## [2026-06-02 11:20] Cycle — KIM-391 Approved Fixes
+- Fingerprint: branch feat/KIM-391-fix-remaining-security-warnings @ 06f2250
+- Milestone: KIM-391-approved-fixes (Cycle 2)
+- Tasks created: 32dafd28 (software-engineer), 76e50246 (security-reviewer)
+- Executed: software-engineer → security-reviewer
+- Decisions:
+  - activation_tokens: dropped anon SELECT policy (server-side admin client handles all token validation)
+  - reservation_equipment: added GRANT authenticated (required for 4 RLS policies to take effect); design change from service-role-only to authenticated+RLS access model
+  - Reservations indexes: restored 4 performance indexes dropped in 20260528000006 (user decision: keep for performance)
+  - Exception handling: narrowed WHEN OTHERS to WHEN UNDEFINED_FUNCTION (SQLSTATE 42883) to prevent silently swallowing real errors
+- Result: SUCCESS — 3 migration files, commit 06f2250, 548/548 tests, PR #121 description updated
