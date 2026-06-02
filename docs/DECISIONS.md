@@ -23,3 +23,4 @@
   - Reservations indexes: restored 4 performance indexes dropped in 20260528000006 (user decision: keep for performance)
   - Exception handling: narrowed WHEN OTHERS to WHEN UNDEFINED_FUNCTION (SQLSTATE 42883) to prevent silently swallowing real errors
 - Result: SUCCESS — 3 migration files, commit 06f2250, 548/548 tests, PR #121 description updated
+- [2026-06-02 11:34] QA: validation passed.
