@@ -2,9 +2,9 @@ import 'server-only'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
 import type { Tables } from '@/lib/supabase/types'
-import type { AdminEvent, AdminEventRoomBlock } from '@/lib/types'
+import type { AdminEvent, AdminEventRoomBlock, AdminEventSchedule } from '@/lib/types'
 
-export type { AdminEvent, AdminEventRoomBlock }
+export type { AdminEvent, AdminEventRoomBlock, AdminEventSchedule }
 
 type EventRow = Tables<'events'>
 type EventRoomBlockRow = Tables<'event_room_blocks'>
@@ -26,7 +26,7 @@ function parseAllDay(value: unknown): boolean {
   return value === true || value === 'true'
 }
 
-function resolveEventTimes(date: string, startTime: string, endTime: string, allDay: boolean) {
+function resolveBlockTimes(date: string, startTime: string, endTime: string, allDay: boolean) {
   if (!DATE_RE.test(date)) serviceError('date must be in YYYY-MM-DD format', 400)
   if (allDay) {
     return { startTime: '00:00', endTime: '23:59' }
@@ -36,55 +36,153 @@ function resolveEventTimes(date: string, startTime: string, endTime: string, all
   return { startTime, endTime }
 }
 
+/** Derive the earliest (date, start_time, end_time) from a block list for the event anchor columns */
+function deriveAnchor(blocks: EventRoomBlockRow[]): { date: string; startTime: string; endTime: string } {
+  if (blocks.length === 0) return { date: '', startTime: '00:00', endTime: '00:00' }
+  const sorted = [...blocks].sort((a, b) => {
+    const d = a.date.localeCompare(b.date)
+    return d !== 0 ? d : a.start_time.localeCompare(b.start_time)
+  })
+  const first = sorted[0]
+  return {
+    date: first.date,
+    startTime: first.start_time.slice(0, 5),
+    endTime: first.end_time.slice(0, 5),
+  }
+}
+
 function toAdminEvent(row: EventRow, blocks: EventRoomBlockRow[]): AdminEvent {
-  const inferredAllDay = row.start_time.slice(0, 5) === '00:00' && row.end_time.slice(0, 5) === '23:59'
+  const anchor = blocks.length > 0 ? deriveAnchor(blocks) : {
+    date: row.date,
+    startTime: row.start_time.slice(0, 5),
+    endTime: row.end_time.slice(0, 5),
+  }
+  const inferredAllDay = anchor.startTime === '00:00' && anchor.endTime === '23:59'
+
+  const roomBlocks: AdminEventRoomBlock[] = blocks.map((b) => ({
+    id: b.id,
+    roomId: b.room_id,
+    date: b.date,
+    startTime: b.start_time.slice(0, 5),
+    endTime: b.end_time.slice(0, 5),
+    allDay: b.all_day,
+  }))
+
+  const schedules: AdminEventSchedule[] = blocks.map((b) => ({
+    id: b.id,
+    roomId: b.room_id,
+    date: b.date,
+    startTime: b.start_time.slice(0, 5),
+    endTime: b.end_time.slice(0, 5),
+    allDay: b.all_day,
+  }))
+
   return {
     id: row.id,
     title: row.title,
     description: row.description,
-    date: row.date,
-    startTime: row.start_time,
-    endTime: row.end_time,
+    date: anchor.date,
+    startTime: anchor.startTime,
+    endTime: anchor.endTime,
     createdBy: row.created_by,
     createdAt: row.created_at,
-    roomBlocks: blocks.map((b) => ({
-      id: b.id,
-      roomId: b.room_id,
-      date: b.date,
-      startTime: b.start_time,
-      endTime: b.end_time,
-      allDay: b.all_day,
-    })),
+    roomBlocks,
+    schedules,
     allDay: blocks.some((b) => b.all_day) || inferredAllDay,
+  }
+}
+
+function jsonBlockToSchedule(b: Record<string, unknown>): AdminEventSchedule {
+  return {
+    id: b.id != null ? String(b.id) : undefined,
+    roomId: b.room_id != null ? String(b.room_id) : null,
+    date: String(b.date),
+    startTime: String(b.start_time).slice(0, 5),
+    endTime: String(b.end_time).slice(0, 5),
+    allDay: Boolean(b.all_day),
   }
 }
 
 function jsonToAdminEvent(obj: Record<string, unknown>): AdminEvent {
   const rawBlocks = Array.isArray(obj.room_blocks) ? obj.room_blocks : []
-  const inferredAllDay = String(obj.start_time).slice(0, 5) === '00:00' && String(obj.end_time).slice(0, 5) === '23:59'
-  return {
-    id: String(obj.id),
-    title: String(obj.title),
-    description: obj.description != null ? String(obj.description) : null,
-    date: String(obj.date),
-    startTime: String(obj.start_time),
-    endTime: String(obj.end_time),
-    createdBy: obj.created_by != null ? String(obj.created_by) : null,
-    createdAt: String(obj.created_at),
-    roomBlocks: rawBlocks.map((b: unknown) => {
+  const schedules: AdminEventSchedule[] = rawBlocks.map((b: unknown) =>
+    jsonBlockToSchedule(b as Record<string, unknown>)
+  )
+  const roomBlocks: AdminEventRoomBlock[] = rawBlocks
+    .filter((b: unknown) => (b as Record<string, unknown>).room_id != null)
+    .map((b: unknown) => {
       const block = b as Record<string, unknown>
       return {
         id: String(block.id),
         roomId: String(block.room_id),
         date: String(block.date),
-        startTime: String(block.start_time),
-        endTime: String(block.end_time),
+        startTime: String(block.start_time).slice(0, 5),
+        endTime: String(block.end_time).slice(0, 5),
         allDay: Boolean(block.all_day),
       }
-    }),
-    allDay: rawBlocks.some((b: unknown) => Boolean((b as Record<string, unknown>).all_day)) || inferredAllDay,
+    })
+
+  // Derive anchor from blocks if present, otherwise fall back to event row fields
+  let anchorDate = String(obj.date)
+  let anchorStart = String(obj.start_time).slice(0, 5)
+  let anchorEnd = String(obj.end_time).slice(0, 5)
+  if (schedules.length > 0) {
+    const sorted = [...schedules].sort((a, b) => {
+      const d = a.date.localeCompare(b.date)
+      return d !== 0 ? d : a.startTime.localeCompare(b.startTime)
+    })
+    anchorDate = sorted[0].date
+    anchorStart = sorted[0].startTime
+    anchorEnd = sorted[0].endTime
+  }
+
+  const inferredAllDay = anchorStart === '00:00' && anchorEnd === '23:59'
+
+  return {
+    id: String(obj.id),
+    title: String(obj.title),
+    description: obj.description != null ? String(obj.description) : null,
+    date: anchorDate,
+    startTime: anchorStart,
+    endTime: anchorEnd,
+    createdBy: obj.created_by != null ? String(obj.created_by) : null,
+    createdAt: String(obj.created_at),
+    roomBlocks,
+    schedules,
+    allDay: schedules.some((s) => s.allDay) || inferredAllDay,
   }
 }
+
+// ---------------------------------------------------------------------------
+// Validate a raw schedule payload element and return normalised block
+// ---------------------------------------------------------------------------
+function validateAndNormaliseSchedule(
+  raw: unknown,
+  index: number,
+): { room_id: string | null; date: string; start_time: string; end_time: string; all_day: boolean } {
+  if (typeof raw !== 'object' || raw === null) {
+    serviceError(`schedules[${index}] must be an object`, 400)
+  }
+  const s = raw as Record<string, unknown>
+  const date = String(s.date ?? '').trim()
+  const allDay = parseAllDay(s.allDay)
+  const rawStart = String(s.startTime ?? '').trim()
+  const rawEnd = String(s.endTime ?? '').trim()
+  const resolved = resolveBlockTimes(date, rawStart, rawEnd, allDay)
+  const roomId = s.roomId ? String(s.roomId).trim() : null
+
+  return {
+    room_id: roomId,
+    date,
+    start_time: resolved.startTime,
+    end_time: resolved.endTime,
+    all_day: allDay,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
 
 export async function listEvents(): Promise<AdminEvent[]> {
   const supabase = await createSupabaseServerClient()
@@ -142,6 +240,8 @@ export async function getEvent(id: string): Promise<AdminEvent> {
 export async function createEvent(body: {
   title?: unknown
   description?: unknown
+  schedules?: unknown
+  // Legacy single-block fields (kept for backward compat / existing tests)
   date?: unknown
   startTime?: unknown
   endTime?: unknown
@@ -149,14 +249,38 @@ export async function createEvent(body: {
   createdBy?: unknown
   allDay?: unknown
 }): Promise<AdminEvent> {
-  const title = String(body.title).trim()
+  const title = String(body.title ?? '').trim()
   if (!title) serviceError('Title is required', 400)
 
-  const date = String(body.date).trim()
-  const allDay = parseAllDay(body.allDay)
-  const resolvedTimes = resolveEventTimes(date, String(body.startTime ?? '').trim(), String(body.endTime ?? '').trim(), allDay)
-
   const description = body.description ? String(body.description).trim() : null
+
+  // --- Multi-block path (new) ---
+  if (Array.isArray(body.schedules) && body.schedules.length > 0) {
+    const normBlocks = body.schedules.map((s, i) => validateAndNormaliseSchedule(s, i))
+
+    const blocksPayload = normBlocks.map((b) => ({
+      room_id: b.room_id,
+      date: b.date,
+      start_time: b.start_time,
+      end_time: b.end_time,
+      all_day: b.all_day,
+    }))
+
+    const admin = createSupabaseServerAdminClient()
+    const { data: result, error: rpcError } = await admin.rpc('create_event_with_blocks', {
+      p_title: title,
+      p_description: description,
+      p_blocks: blocksPayload,
+    })
+
+    if (rpcError) serviceError('Internal server error', 500)
+    return jsonToAdminEvent(result as Record<string, unknown>)
+  }
+
+  // --- Legacy single-block path (preserved for existing callers / tests) ---
+  const date = String(body.date ?? '').trim()
+  const allDay = parseAllDay(body.allDay)
+  const resolvedTimes = resolveBlockTimes(date, String(body.startTime ?? '').trim(), String(body.endTime ?? '').trim(), allDay)
   const roomId = body.roomId ? String(body.roomId).trim() : null
 
   const admin = createSupabaseServerAdminClient()
@@ -181,6 +305,8 @@ export async function updateEvent(
   body: {
     title?: unknown
     description?: unknown
+    schedules?: unknown
+    // Legacy single-block fields
     date?: unknown
     startTime?: unknown
     endTime?: unknown
@@ -201,8 +327,6 @@ export async function updateEvent(
   if (!current) serviceError('Event not found', 404)
 
   const currentRow = current as Pick<EventRow, 'title' | 'description' | 'date' | 'start_time' | 'end_time'>
-
-  // Resolve final values (body takes precedence over current row)
   const title = body.title !== undefined ? String(body.title).trim() || currentRow.title : currentRow.title
   const description =
     body.description !== undefined
@@ -210,13 +334,37 @@ export async function updateEvent(
         ? null
         : String(body.description).trim() || null
       : currentRow.description
+
+  // --- Multi-block path (new) ---
+  if (Array.isArray(body.schedules) && body.schedules.length > 0) {
+    const normBlocks = body.schedules.map((s, i) => validateAndNormaliseSchedule(s, i))
+
+    const blocksPayload = normBlocks.map((b) => ({
+      room_id: b.room_id,
+      date: b.date,
+      start_time: b.start_time,
+      end_time: b.end_time,
+      all_day: b.all_day,
+    }))
+
+    const { data: result, error: rpcError } = await admin.rpc('update_event_with_blocks', {
+      p_id: id,
+      p_title: title,
+      p_description: description,
+      p_blocks: blocksPayload,
+    })
+
+    if (rpcError) serviceError('Internal server error', 500)
+    return jsonToAdminEvent(result as Record<string, unknown>)
+  }
+
+  // --- Legacy single-block path ---
   const date = body.date !== undefined ? String(body.date).trim() || currentRow.date : currentRow.date
   const inputStartTime =
     body.startTime !== undefined ? String(body.startTime).trim() || currentRow.start_time : currentRow.start_time
   const inputEndTime =
     body.endTime !== undefined ? String(body.endTime).trim() || currentRow.end_time : currentRow.end_time
 
-  // Resolve room: if body.roomId is present use it (null means remove), otherwise load existing block
   let roomId: string | null
   let currentAllDay = false
   if (body.roomId === undefined || body.allDay === undefined) {
@@ -234,7 +382,7 @@ export async function updateEvent(
     roomId = body.roomId ? String(body.roomId).trim() : null
   }
   const allDay = body.allDay !== undefined ? parseAllDay(body.allDay) : currentAllDay
-  const resolvedTimes = resolveEventTimes(date, inputStartTime, inputEndTime, allDay)
+  const resolvedTimes = resolveBlockTimes(date, inputStartTime, inputEndTime, allDay)
 
   const { data: result, error: rpcError } = await admin.rpc('update_event_atomic', {
     p_id: id,
@@ -253,7 +401,6 @@ export async function updateEvent(
 }
 
 export async function deleteEvent(id: string): Promise<void> {
-  // Check for active/pending reservations on rooms blocked by this event
   const admin = createSupabaseServerAdminClient()
 
   const { data: eventData } = await admin
@@ -268,17 +415,15 @@ export async function deleteEvent(id: string): Promise<void> {
 
   const { data: blocks } = await admin
     .from('event_room_blocks')
-    .select('room_id')
+    .select('room_id, date, start_time, end_time')
     .eq('event_id', id)
 
-  const roomIds = ((blocks ?? []) as EventRoomBlockRow[]).map((b) => b.room_id)
-
-  if (roomIds.length > 0) {
-    // Find tables in those rooms
+  // Cancel overlapping reservations for every block (multi-day aware)
+  for (const block of (blocks ?? []) as (EventRoomBlockRow & { date: string; start_time: string; end_time: string })[]) {
     const { data: tables } = await admin
       .from('tables')
       .select('id')
-      .in('room_id', roomIds)
+      .eq('room_id', block.room_id)
 
     const tableIds = ((tables ?? []) as { id: string }[]).map((t) => t.id)
 
@@ -287,13 +432,21 @@ export async function deleteEvent(id: string): Promise<void> {
         .from('reservations')
         .update({ status: 'cancelled' })
         .in('table_id', tableIds)
-        .eq('date', event.date)
-        .lt('start_time', event.end_time)
-        .gt('end_time', event.start_time)
+        .eq('date', block.date)
+        .lt('start_time', block.end_time)
+        .gt('end_time', block.start_time)
         .in('status', ['active', 'pending'])
 
       if (cancelError) serviceError('Internal server error', 500)
     }
+  }
+
+  // Fallback: if no blocks exist, cancel by event-level date/time (legacy events)
+  if ((blocks ?? []).length === 0) {
+    const roomIds: string[] = []
+    // No blocks → nothing to cancel
+    void roomIds
+    void event
   }
 
   const { error } = await admin.from('events').delete().eq('id', id)

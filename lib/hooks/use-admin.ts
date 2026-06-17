@@ -174,10 +174,30 @@ export function useAdminEvents() {
   })
 }
 
+/** Schedule entry used in create/update payloads */
+export interface EventSchedulePayload {
+  roomId?: string | null
+  date: string
+  startTime?: string
+  endTime?: string
+  allDay?: boolean
+}
+
 export function useAdminCreateEvent() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { title: string; description?: string | null; date: string; startTime?: string; endTime?: string; roomId?: string | null; allDay?: boolean }) =>
+    mutationFn: (data: {
+      title: string
+      description?: string | null
+      /** Multi-day: one entry per (room × date × time) block */
+      schedules?: EventSchedulePayload[]
+      /** Legacy single-block fields */
+      date?: string
+      startTime?: string
+      endTime?: string
+      roomId?: string | null
+      allDay?: boolean
+    }) =>
       apiClient.post<AdminEvent>(endpoints.events.list, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
   })
@@ -186,7 +206,21 @@ export function useAdminCreateEvent() {
 export function useAdminUpdateEvent() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { title?: string; description?: string | null; date?: string; startTime?: string; endTime?: string; roomId?: string | null; allDay?: boolean } }) =>
+    mutationFn: ({ id, data }: {
+      id: string
+      data: {
+        title?: string
+        description?: string | null
+        /** Multi-day: one entry per (room × date × time) block */
+        schedules?: EventSchedulePayload[]
+        /** Legacy single-block fields */
+        date?: string
+        startTime?: string
+        endTime?: string
+        roomId?: string | null
+        allDay?: boolean
+      }
+    }) =>
       apiClient.put<AdminEvent>(endpoints.events.byId(id), data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
   })
