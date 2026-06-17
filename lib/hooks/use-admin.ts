@@ -33,9 +33,7 @@ export function useAdminUpdateUser() {
       }
     }) =>
       apiClient.put<User>(endpoints.users.byId(id), data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   })
 }
 
@@ -43,9 +41,7 @@ export function useAdminDeleteUser() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => apiClient.delete<void>(endpoints.users.byId(id)),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   })
 }
 
@@ -54,9 +50,7 @@ export function useAdminPatchUser() {
   return useMutation({
     mutationFn: ({ id, action }: { id: string; action: 'reset_no_shows' | 'unblock' }) =>
       apiClient.patch<void>(endpoints.users.byId(id), { action }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   })
 }
 
@@ -65,9 +59,7 @@ export function useAdminGenerateActivationLink() {
   return useMutation({
     mutationFn: ({ id, locale }: { id: string; locale?: string }) =>
       apiClient.post<{ activationLink: string; expiresAt: string }>(endpoints.users.activationLink(id), { locale }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   })
 }
 
@@ -76,9 +68,7 @@ export function useAdminGenerateRecoveryLink() {
   return useMutation({
     mutationFn: ({ id, locale }: { id: string; locale?: string }) =>
       apiClient.post<{ recoveryLink: string; expiresAt: string }>(endpoints.users.recoveryLink(id), { locale }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   })
 }
 
@@ -90,9 +80,7 @@ export function useAdminImportUsers() {
       formData.append('file', file)
       return apiClient.post<MemberImportResult>(endpoints.users.import, formData)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   })
 }
 
@@ -114,10 +102,10 @@ export function useAdminCancelReservation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => apiClient.put<Reservation>(endpoints.reservations.byId(id), { status: 'cancelled' }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'reservations'] })
-      queryClient.invalidateQueries({ queryKey: ['reservations'] })
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reservations'] }),
+      queryClient.invalidateQueries({ queryKey: ['reservations'] }),
+    ]),
   })
 }
 
@@ -136,10 +124,10 @@ export function useAdminUpdateRoom() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: { name?: string; description?: string; tableCount?: number } }) =>
       apiClient.put<Room>(endpoints.rooms.byId(id), data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'] })
-      queryClient.invalidateQueries({ queryKey: ['rooms'] })
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'] }),
+      queryClient.invalidateQueries({ queryKey: ['rooms'] }),
+    ]),
   })
 }
 
@@ -148,10 +136,10 @@ export function useAdminCreateRoom() {
   return useMutation({
     mutationFn: (data: { name: string; description?: string; tableCount: number }) =>
       apiClient.post<Room>(endpoints.rooms.list, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'] })
-      queryClient.invalidateQueries({ queryKey: ['rooms'] })
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'] }),
+      queryClient.invalidateQueries({ queryKey: ['rooms'] }),
+    ]),
   })
 }
 
@@ -169,10 +157,10 @@ export function useAdminCreateTable() {
   return useMutation({
     mutationFn: ({ roomId, data }: { roomId: string; data: { name: string; type: string } }) =>
       apiClient.post<GameTable>(endpoints.rooms.tables(roomId), data),
-    onSuccess: (_created, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', variables.roomId, 'tables'] })
-      queryClient.invalidateQueries({ queryKey: ['rooms', variables.roomId, 'tables'] })
-    },
+    onSuccess: (_created, variables) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', variables.roomId, 'tables'] }),
+      queryClient.invalidateQueries({ queryKey: ['rooms', variables.roomId, 'tables'] }),
+    ]),
   })
 }
 
@@ -191,9 +179,7 @@ export function useAdminCreateEvent() {
   return useMutation({
     mutationFn: (data: { title: string; description?: string | null; date: string; startTime?: string; endTime?: string; roomId?: string | null; allDay?: boolean }) =>
       apiClient.post<AdminEvent>(endpoints.events.list, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
   })
 }
 
@@ -202,9 +188,7 @@ export function useAdminUpdateEvent() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: { title?: string; description?: string | null; date?: string; startTime?: string; endTime?: string; roomId?: string | null; allDay?: boolean } }) =>
       apiClient.put<AdminEvent>(endpoints.events.byId(id), data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
   })
 }
 
@@ -212,9 +196,7 @@ export function useAdminDeleteEvent() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => apiClient.delete<void>(endpoints.events.byId(id)),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
   })
 }
 
@@ -233,9 +215,7 @@ export function useAdminCreateEquipment() {
   return useMutation({
     mutationFn: (data: { name: string; description?: string }) =>
       apiClient.post<Equipment>(endpoints.equipment.list, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'equipment'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'equipment'] }),
   })
 }
 
@@ -244,9 +224,7 @@ export function useAdminUpdateEquipment() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: { name?: string; description?: string | null } }) =>
       apiClient.put<Equipment>(endpoints.equipment.byId(id), data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'equipment'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'equipment'] }),
   })
 }
 
@@ -254,9 +232,7 @@ export function useAdminDeleteEquipment() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => apiClient.delete<void>(endpoints.equipment.byId(id)),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'equipment'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'equipment'] }),
   })
 }
 
@@ -274,9 +250,8 @@ export function useAdminSetRoomDefaultEquipment() {
   return useMutation({
     mutationFn: ({ roomId, equipmentIds }: { roomId: string; equipmentIds: string[] }) =>
       apiClient.put<void>(endpoints.equipment.roomDefaults(roomId), { equipmentIds }),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', variables.roomId, 'default-equipment'] })
-    },
+    onSuccess: (_data, variables) =>
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', variables.roomId, 'default-equipment'] }),
   })
 }
 
@@ -285,8 +260,7 @@ export function useAdminRegenerateTableQr() {
   return useMutation({
     mutationFn: ({ tableId }: { tableId: string; roomId: string }) =>
       apiClient.post<{ qr_code: string; qr_code_inf: string | null }>(`/tables/${tableId}/qr`),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', variables.roomId, 'tables'] })
-    },
+    onSuccess: (_data, variables) =>
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', variables.roomId, 'tables'] }),
   })
 }

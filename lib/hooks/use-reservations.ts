@@ -60,12 +60,12 @@ export function useCreateReservation() {
   return useMutation({
     mutationFn: (data: CreateReservationRequest) =>
       apiClient.post<Reservation>('/reservations', data),
-    onSuccess: (created) => {
-      queryClient.invalidateQueries({ queryKey: ['reservations', 'my'] })
-      queryClient.invalidateQueries({ queryKey: ['reservations', 'table', created.tableId, created.date] })
-      queryClient.invalidateQueries({ queryKey: ['availability', created.tableId, created.date] })
-      queryClient.invalidateQueries({ queryKey: ['availability', 'room'] })
-    },
+    onSuccess: (created) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['reservations', 'my'] }),
+      queryClient.invalidateQueries({ queryKey: ['reservations', 'table', created.tableId, created.date] }),
+      queryClient.invalidateQueries({ queryKey: ['availability', created.tableId, created.date] }),
+      queryClient.invalidateQueries({ queryKey: ['availability', 'room'] }),
+    ]),
   })
 }
 
@@ -74,8 +74,6 @@ export function useCancelReservation() {
   return useMutation({
     mutationFn: (id: string) =>
       apiClient.put<Reservation>(`/reservations/${id}`, { status: 'cancelled' }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reservations'] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reservations'] }),
   })
 }
