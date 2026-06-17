@@ -5,19 +5,19 @@ DO $$
 BEGIN
   -- Revoke cancel_expired_pending_reservations (may not exist if dropped)
   BEGIN
-    REVOKE EXECUTE ON FUNCTION "public"."cancel_expired_pending_reservations"() FROM "anon";
-  EXCEPTION WHEN OTHERS THEN NULL; END;
+    REVOKE EXECUTE ON FUNCTION "public"."cancel_expired_pending_reservations"("grace_minutes" integer, "reference_time" timestamp with time zone, "club_timezone" "text") FROM "anon";
+  EXCEPTION WHEN UNDEFINED_FUNCTION THEN NULL; END;
 
   BEGIN
-    REVOKE EXECUTE ON FUNCTION "public"."cancel_expired_pending_reservations"() FROM "authenticated";
-  EXCEPTION WHEN OTHERS THEN NULL; END;
+    REVOKE EXECUTE ON FUNCTION "public"."cancel_expired_pending_reservations"("grace_minutes" integer, "reference_time" timestamp with time zone, "club_timezone" "text") FROM "authenticated";
+  EXCEPTION WHEN UNDEFINED_FUNCTION THEN NULL; END;
 
   -- Revoke handle_new_user
   BEGIN
     REVOKE EXECUTE ON FUNCTION "public"."handle_new_user"() FROM "anon";
-  EXCEPTION WHEN OTHERS THEN NULL; END;
+  EXCEPTION WHEN UNDEFINED_FUNCTION THEN NULL; END;
 
   BEGIN
     REVOKE EXECUTE ON FUNCTION "public"."handle_new_user"() FROM "authenticated";
-  EXCEPTION WHEN OTHERS THEN NULL; END;
+  EXCEPTION WHEN UNDEFINED_FUNCTION THEN NULL; END;
 END $$;

@@ -104,13 +104,5 @@ CREATE INDEX IF NOT EXISTS "events_created_by_idx" ON "public"."events"("created
 CREATE INDEX IF NOT EXISTS "reservation_equipment_equipment_id_idx" ON "public"."reservation_equipment"("equipment_id");
 CREATE INDEX IF NOT EXISTS "room_default_equipment_equipment_id_idx" ON "public"."room_default_equipment"("equipment_id");
 
--- ============================================================================
--- 4. Drop unused indexes on reservations (NOT the EXCLUSION CONSTRAINT)
--- ============================================================================
-DROP INDEX IF EXISTS "reservations_activation_lookup_idx";
-DROP INDEX IF EXISTS "reservations_user_date_status_idx";
-DROP INDEX IF EXISTS "reservations_pending_no_show_idx";
-DROP INDEX IF EXISTS "reservations_pending_date_idx";
-
--- NOTE: reservations_no_active_overlap is an EXCLUSION CONSTRAINT (not an index)
--- that prevents overlapping reservations. It is used and must NOT be dropped.
+-- Reservations indexes are intentionally retained for activation lookup,
+-- user listing, pending no-show, and pending date query paths.

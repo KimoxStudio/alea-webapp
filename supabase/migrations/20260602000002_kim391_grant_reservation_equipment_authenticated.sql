@@ -6,7 +6,7 @@
 -- replacing the previous service-role-only access model.
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "public"."reservation_equipment" TO "authenticated";
 
--- Restore performance indexes dropped in 20260528000006 (user decision: keep for performance)
+-- Ensure performance indexes remain present (user decision: keep for performance)
 CREATE INDEX IF NOT EXISTS "reservations_activation_lookup_idx" ON "public"."reservations" USING "btree" ("table_id", "date", "user_id", "status");
 CREATE INDEX IF NOT EXISTS "reservations_user_date_status_idx" ON "public"."reservations" USING "btree" ("user_id", "date", "status") WHERE ("status" = ANY (ARRAY['pending'::"public"."reservation_status", 'active'::"public"."reservation_status"]));
 CREATE INDEX IF NOT EXISTS "reservations_pending_no_show_idx" ON "public"."reservations" USING "btree" ("date", "end_time") WHERE (("status" = 'pending'::"public"."reservation_status") AND ("activated_at" IS NULL));
