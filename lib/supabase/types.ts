@@ -439,6 +439,15 @@ export type Database = {
         }
         Returns: Json
       }
+      create_event_with_blocks: {
+        Args: {
+          p_title: string
+          p_description: string | null
+          p_blocks: Json
+          p_created_by: string | null
+        }
+        Returns: Json
+      }
       get_database_time: { Args: never; Returns: string }
       is_active_member: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
@@ -456,6 +465,15 @@ export type Database = {
           p_room_id: string | null
           p_start_time: string
           p_title: string
+        }
+        Returns: Json
+      }
+      update_event_with_blocks: {
+        Args: {
+          p_id: string
+          p_title: string
+          p_description: string | null
+          p_blocks: Json
         }
         Returns: Json
       }
