@@ -31,6 +31,19 @@ type RoomRow = {
   name: string
 }
 
+type EventRoomRow = {
+  event_id: string
+  room_id: string
+}
+
+type EventScheduleRow = {
+  id: string
+  event_id: string
+  date: string
+  start_time: string
+  end_time: string
+}
+
 const adminSession: SessionUser = {
   id: '1',
   role: 'admin',
@@ -42,6 +55,8 @@ const memberSession: SessionUser = {
 }
 
 const reservationsState: ReservationRow[] = []
+const eventRoomsState: EventRoomRow[] = []
+const eventSchedulesState: EventScheduleRow[] = []
 const tablesState = new Map<string, TableRow>()
 const profilesMap = new Map<string, { member_number: string }>()
 const roomsMap = new Map<string, RoomRow>()
@@ -93,6 +108,8 @@ function seedState() {
   })
 
   reservationsState.length = 0
+  eventRoomsState.length = 0
+  eventSchedulesState.length = 0
 
   const r1base = makeReservation()
   const t1 = tablesState.get(r1base.table_id)!
@@ -127,6 +144,10 @@ function buildSelectChain<T>(rows: T[]) {
     },
     neq(column: string, value: string) {
       current = current.filter((row) => String((row as Record<string, unknown>)[column]) !== value)
+      return this
+    },
+    in(column: string, values: string[]) {
+      current = current.filter((row) => values.includes(String((row as Record<string, unknown>)[column])))
       return this
     },
     order(column: string, { ascending }: { ascending: boolean }) {
@@ -214,13 +235,25 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
   createSupabaseServerAdminClient: vi.fn(() => ({
     from: vi.fn((table: string) => {
-      if (table !== 'reservations') {
-        throw new Error(`Unexpected admin table ${table}`)
+      if (table === 'reservations') {
+        return {
+          select: vi.fn(() => buildSelectChain(reservationsState)),
+        }
       }
 
-      return {
-        select: vi.fn(() => buildSelectChain(reservationsState)),
+      if (table === 'event_rooms') {
+        return {
+          select: vi.fn(() => buildSelectChain(eventRoomsState)),
+        }
       }
+
+      if (table === 'event_schedules') {
+        return {
+          select: vi.fn(() => buildSelectChain(eventSchedulesState)),
+        }
+      }
+
+      throw new Error(`Unexpected admin table ${table}`)
     }),
   })),
 }))
@@ -373,6 +406,28 @@ describe('reservations service', () => {
         date: '2026-04-04',
         startTime: '17:00',
         endTime: '18:30',
+      })).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 409,
+      })
+    })
+
+    it('maps overlapping event blocks to a 409 service error', async () => {
+      eventRoomsState.push({ event_id: 'event-1', room_id: 'room-1' })
+      eventSchedulesState.push({
+        id: 'event-schedule-1',
+        event_id: 'event-1',
+        date: '2026-04-05',
+        start_time: '12:00:00',
+        end_time: '14:00:00',
+      })
+      const { createReservationForSession } = await loadReservationModules()
+
+      await expect(createReservationForSession(memberSession, {
+        tableId: 't1',
+        date: '2026-04-05',
+        startTime: '13:00',
+        endTime: '14:00',
       })).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 409,

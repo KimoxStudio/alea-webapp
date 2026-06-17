@@ -86,10 +86,10 @@
   },
   "admin": {
     "dashboard": "Admin Dashboard", "users": "Users", "rooms": "Rooms",
-    "tables": "Tables", "reservations": "Reservations", "totalUsers": "Total users",
+    "tables": "Tables", "reservations": "Reservations", "events": "Events", "totalUsers": "Total users",
     "todayReservations": "Today's reservations", "occupancyRate": "Occupancy rate",
     "activeRooms": "Active rooms", "userManagement": "User management",
-    "roomManagement": "Room management", "reservationManagement": "Reservation management",
+    "roomManagement": "Room management", "reservationManagement": "Reservation management", "eventManagement": "Event management",
     "createRoom": "Create room", "createTable": "Create table",
     "editUser": "Edit user", "deleteUser": "Delete user",
     "deleteUserConfirm": "Are you sure you want to delete this user? This action cannot be undone.",
@@ -105,8 +105,12 @@
     "tableCount": "Table count", "tableName": "Table name", "tableType": "Table type",
     "cancelReservation": "Cancel reservation",
     "cancelReservationConfirm": "Are you sure you want to cancel this reservation?",
-    "noReservations": "No reservations found",
-    "table": "Table", "user": "User"
+    "noReservations": "No reservations found", "noEvents": "No events found",
+    "table": "Table", "user": "User",
+    "createEvent": "Create event", "editEvent": "Edit event", "deleteEvent": "Delete event",
+    "eventTitle": "Title", "eventDescription": "Description",
+    "blockedRooms": "Blocked rooms", "eventSchedules": "Schedules",
+    "addSchedule": "Add schedule", "deleteSchedule": "Delete schedule"
   },
   "home": {
     "heroTitle": "Your Adventure Starts Here",

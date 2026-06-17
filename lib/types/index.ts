@@ -44,6 +44,35 @@ export interface Reservation {
   tableName?: string | null;
 }
 
+export interface EventSchedule {
+  id: string;
+  eventId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface AdminEvent {
+  id: string;
+  title: string;
+  description?: string | null;
+  roomIds: string[];
+  schedules: EventSchedule[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateEventRequest {
+  title: string;
+  description?: string;
+  roomIds: string[];
+  schedules: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+  }>;
+}
+
 export interface RemovableTopTableStatus {
   topAvailable: boolean;
   bottomAvailable: boolean;

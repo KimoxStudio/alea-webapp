@@ -5,6 +5,8 @@ const maybeSingleMock = vi.fn()
 const listRoomsMock = vi.fn()
 const listTablesMock = vi.fn()
 const listReservationsMock = vi.fn()
+const listEventRoomsMock = vi.fn()
+const listEventSchedulesMock = vi.fn()
 const updateMock = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -30,6 +32,24 @@ vi.mock('@/lib/supabase/server', () => ({
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
               order: listTablesMock,
+            })),
+          })),
+        }
+      }
+
+      if (table === 'event_rooms') {
+        return {
+          select: vi.fn(() => ({
+            in: listEventRoomsMock,
+          })),
+        }
+      }
+
+      if (table === 'event_schedules') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              in: listEventSchedulesMock,
             })),
           })),
         }
@@ -73,6 +93,24 @@ vi.mock('@/lib/supabase/server', () => ({
           insert: vi.fn(() => ({
             select: vi.fn(() => ({
               maybeSingle: maybeSingleMock,
+            })),
+          })),
+        }
+      }
+
+      if (table === 'event_rooms') {
+        return {
+          select: vi.fn(() => ({
+            in: listEventRoomsMock,
+          })),
+        }
+      }
+
+      if (table === 'event_schedules') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              in: listEventSchedulesMock,
             })),
           })),
         }
@@ -255,6 +293,8 @@ describe('createTableEntry', () => {
       data: { id: 't1', room_id: '1', name: 'Mesa 1', type: 'small', qr_code: null, pos_x: null, pos_y: null },
       error: null,
     })
+    listEventRoomsMock.mockResolvedValue({ data: [], error: null })
+    listEventSchedulesMock.mockResolvedValue({ data: [], error: null })
   })
 
   it('maps a foreign-key violation (23503) to a 400 ServiceError', async () => {

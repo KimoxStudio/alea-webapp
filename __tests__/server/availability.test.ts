@@ -158,6 +158,14 @@ describe('buildAvailability', () => {
     expect(blockedSlot?.available).toBe(false)
   })
 
+  it('marks the slot blocked by an event as unavailable', () => {
+    const table = makeGameTable()
+    const result = buildAvailability(table, '2025-06-15', [], [{ start: '14:00', end: '16:00' }])
+
+    expect(result.slots.find((s) => s.startTime === '14:00')?.available).toBe(false)
+    expect(result.slots.find((s) => s.startTime === '13:00')?.available).toBe(true)
+  })
+
   it('leaves slots outside a reservation range as available', () => {
     const table = makeGameTable()
     const reservation = makeReservationRow({ start_time: '10:00:00', end_time: '11:00:00' })

@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { User, Room, GameTable, Reservation, PaginatedResponse } from '@/lib/types'
+import type { User, Room, GameTable, Reservation, PaginatedResponse, AdminEvent, CreateEventRequest } from '@/lib/types'
 import { apiClient } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
 
@@ -114,6 +114,50 @@ export function useAdminCreateTable() {
     onSuccess: (_created, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', variables.roomId, 'tables'] })
       queryClient.invalidateQueries({ queryKey: ['rooms', variables.roomId, 'tables'] })
+    },
+  })
+}
+
+// ----- Events -----
+
+export function useAdminEvents() {
+  return useQuery<AdminEvent[]>({
+    queryKey: ['admin', 'events'],
+    queryFn: () => apiClient.get<AdminEvent[]>(endpoints.events.list),
+    staleTime: 30_000,
+  })
+}
+
+export function useAdminCreateEvent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: CreateEventRequest) => apiClient.post<AdminEvent>(endpoints.events.list, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] })
+      queryClient.invalidateQueries({ queryKey: ['availability'] })
+    },
+  })
+}
+
+export function useAdminUpdateEvent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CreateEventRequest }) =>
+      apiClient.put<AdminEvent>(endpoints.events.byId(id), data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] })
+      queryClient.invalidateQueries({ queryKey: ['availability'] })
+    },
+  })
+}
+
+export function useAdminDeleteEvent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete<void>(endpoints.events.byId(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] })
+      queryClient.invalidateQueries({ queryKey: ['availability'] })
     },
   })
 }

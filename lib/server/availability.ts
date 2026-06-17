@@ -3,6 +3,7 @@ import type { Tables } from '@/lib/supabase/types'
 import { serviceError } from '@/lib/server/service-error'
 
 type ReservationRow = Tables<'reservations'>
+type EventBlock = { start: string; end: string }
 
 export function resolveDate(date?: string | null): string {
   const today = new Date().toISOString().split('T')[0]
@@ -32,25 +33,34 @@ export function generateDaySlots(reservedSlots: Array<{ start: string; end: stri
   })
 }
 
-export function buildAvailability(table: GameTable, date: string, reservations: ReservationRow[]): TableAvailability {
+export function buildAvailability(
+  table: GameTable,
+  date: string,
+  reservations: ReservationRow[],
+  eventBlocks: EventBlock[] = [],
+): TableAvailability {
   const reserved = reservations.map((reservation) => ({
     start: normalizeTime(reservation.start_time),
     end: normalizeTime(reservation.end_time),
     surface: reservation.surface ?? undefined,
   }))
+  const blocked = [
+    ...reserved,
+    ...eventBlocks.map((block) => ({ ...block, surface: undefined })),
+  ]
 
   const availability: TableAvailability = {
     tableId: table.id,
     date,
-    slots: generateDaySlots(reserved),
+    slots: generateDaySlots(blocked),
   }
 
   if (table.type === 'removable_top') {
-    const topReserved = reserved.filter((reservation) => reservation.surface == null || reservation.surface === 'top')
-    const bottomReserved = reserved.filter((reservation) => reservation.surface == null || reservation.surface === 'bottom')
+    const topReserved = blocked.filter((reservation) => reservation.surface == null || reservation.surface === 'top')
+    const bottomReserved = blocked.filter((reservation) => reservation.surface == null || reservation.surface === 'bottom')
     availability.top = generateDaySlots(topReserved)
     availability.bottom = generateDaySlots(bottomReserved)
-    availability.conflicts = generateDaySlots(reserved)
+    availability.conflicts = generateDaySlots(blocked)
   }
 
   return availability

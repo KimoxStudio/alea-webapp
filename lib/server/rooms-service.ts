@@ -2,6 +2,7 @@ import type { GameTable, Room, TableAvailability } from '@/lib/types'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
 import { resolveDate, buildAvailability } from '@/lib/server/availability'
+import { listEventBlocksForRooms } from '@/lib/server/events-service'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
 
 type RoomRow = Tables<'rooms'>
@@ -202,8 +203,18 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
     reservationsByTable.set(reservation.table_id, items)
   }
 
+  const eventBlocksByRoom = await listEventBlocksForRooms({
+    roomIds: [...new Set(tables.map((table) => table.roomId))],
+    date: effectiveDate,
+  })
+
   return tables.reduce<Record<string, TableAvailability>>((acc, table) => {
-    acc[table.id] = buildAvailability(table, effectiveDate, reservationsByTable.get(table.id) ?? [])
+    acc[table.id] = buildAvailability(
+      table,
+      effectiveDate,
+      reservationsByTable.get(table.id) ?? [],
+      eventBlocksByRoom.get(table.roomId) ?? [],
+    )
     return acc
   }, {})
 }

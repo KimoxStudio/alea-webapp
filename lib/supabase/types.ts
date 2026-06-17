@@ -34,6 +34,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      event_rooms: {
+        Row: {
+          event_id: string
+          room_id: string
+        }
+        Insert: {
+          event_id: string
+          room_id: string
+        }
+        Update: {
+          event_id?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_rooms_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_rooms_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_schedules: {
+        Row: {
+          date: string
+          end_time: string
+          event_id: string
+          id: string
+          start_time: string
+        }
+        Insert: {
+          date: string
+          end_time: string
+          event_id: string
+          id?: string
+          start_time: string
+        }
+        Update: {
+          date?: string
+          end_time?: string
+          event_id?: string
+          id?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_schedules_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

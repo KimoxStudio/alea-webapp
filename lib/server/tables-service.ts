@@ -2,6 +2,7 @@ import type { GameTable } from '@/lib/types'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
 import { resolveDate, buildAvailability } from '@/lib/server/availability'
+import { listEventBlocksForRoom } from '@/lib/server/events-service'
 import type { Tables } from '@/lib/supabase/types'
 
 type TableRow = Tables<'tables'>
@@ -52,5 +53,6 @@ export async function getTableAvailability(tableId: string, date?: string | null
     serviceError('Internal server error', 500)
   }
 
-  return buildAvailability(toGameTable(table!), effectiveDate, reservations)
+  const eventBlocks = await listEventBlocksForRoom({ roomId: table.room_id, date: effectiveDate })
+  return buildAvailability(toGameTable(table!), effectiveDate, reservations, eventBlocks)
 }

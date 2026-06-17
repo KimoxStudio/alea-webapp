@@ -2,6 +2,7 @@ import type { Reservation, TableSurface } from '@/lib/types'
 import type { SessionUser } from '@/lib/server/auth'
 import { serviceError } from '@/lib/server/service-error'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
+import { hasEventConflict, listEventBlocksForRoom } from '@/lib/server/events-service'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
 
 type ReservationRow = Tables<'reservations'>
@@ -290,6 +291,10 @@ export async function createReservationForSession(
   if (hasReservationConflict(conflictingReservations, { startTime, endTime, surface })) {
     serviceError('Time slot is already reserved', 409)
   }
+  const eventBlocks = await listEventBlocksForRoom({ roomId: table.room_id, date })
+  if (hasEventConflict(eventBlocks, { startTime, endTime })) {
+    serviceError('Room is blocked by an event', 409)
+  }
 
   const supabase = await createSupabaseServerClient()
   const insertPayload: TablesInsert<'reservations'> = {
@@ -362,6 +367,14 @@ export async function updateReservationForSession(
     surface: nextSurface ?? undefined,
   })) {
     serviceError('Time slot is already reserved', 409)
+  }
+  const table = await getTable(existingReservation.table_id)
+  if (!table) {
+    serviceError('Table not found', 404)
+  }
+  const eventBlocks = await listEventBlocksForRoom({ roomId: table.room_id, date: nextDate })
+  if (hasEventConflict(eventBlocks, { startTime: nextStartTime, endTime: nextEndTime })) {
+    serviceError('Room is blocked by an event', 409)
   }
 
   const supabase = await createSupabaseServerClient()

@@ -26,4 +26,8 @@ export const endpoints = {
     },
     byId: (id: string) => `/reservations/${id}`,
   },
+  events: {
+    list: '/events',
+    byId: (id: string) => `/events/${id}`,
+  },
 } as const
