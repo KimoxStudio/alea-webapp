@@ -273,7 +273,13 @@ export async function createEvent(body: {
       p_blocks: blocksPayload,
     })
 
-    if (rpcError) serviceError('Internal server error', 500)
+    if (rpcError) {
+      const pgCode = (rpcError as { code?: string }).code
+      if (pgCode === '23514' || pgCode === '22P02' || pgCode === '23502') {
+        serviceError('Invalid event data', 400)
+      }
+      serviceError('Internal server error', 500)
+    }
     return jsonToAdminEvent(result as Record<string, unknown>)
   }
 
@@ -354,7 +360,13 @@ export async function updateEvent(
       p_blocks: blocksPayload,
     })
 
-    if (rpcError) serviceError('Internal server error', 500)
+    if (rpcError) {
+      const pgCode = (rpcError as { code?: string }).code
+      if (pgCode === '23514' || pgCode === '22P02' || pgCode === '23502') {
+        serviceError('Invalid event data', 400)
+      }
+      serviceError('Internal server error', 500)
+    }
     return jsonToAdminEvent(result as Record<string, unknown>)
   }
 
@@ -405,27 +417,41 @@ export async function deleteEvent(id: string): Promise<void> {
 
   const { data: eventData } = await admin
     .from('events')
-    .select('date, start_time, end_time')
+    .select('id')
     .eq('id', id)
     .maybeSingle()
 
   if (!eventData) serviceError('Event not found', 404)
-
-  const event = eventData as Pick<EventRow, 'date' | 'start_time' | 'end_time'>
 
   const { data: blocks } = await admin
     .from('event_room_blocks')
     .select('room_id, date, start_time, end_time')
     .eq('event_id', id)
 
-  // Cancel overlapping reservations for every block (multi-day aware)
-  for (const block of (blocks ?? []) as (EventRoomBlockRow & { date: string; start_time: string; end_time: string })[]) {
+  // Collect distinct room_ids and pre-fetch their table ids into a Map to avoid N+1 round trips
+  const distinctRoomIds = [...new Set(
+    ((blocks ?? []) as (EventRoomBlockRow & { date: string; start_time: string; end_time: string })[])
+      .map((b) => b.room_id)
+      .filter(Boolean),
+  )]
+
+  const roomTableMap = new Map<string, string[]>()
+  if (distinctRoomIds.length > 0) {
     const { data: tables } = await admin
       .from('tables')
-      .select('id')
-      .eq('room_id', block.room_id)
+      .select('id, room_id')
+      .in('room_id', distinctRoomIds)
 
-    const tableIds = ((tables ?? []) as { id: string }[]).map((t) => t.id)
+    for (const t of (tables ?? []) as { id: string; room_id: string }[]) {
+      const list = roomTableMap.get(t.room_id) ?? []
+      list.push(t.id)
+      roomTableMap.set(t.room_id, list)
+    }
+  }
+
+  // Cancel overlapping reservations for every block (multi-day aware)
+  for (const block of (blocks ?? []) as (EventRoomBlockRow & { date: string; start_time: string; end_time: string })[]) {
+    const tableIds = roomTableMap.get(block.room_id) ?? []
 
     if (tableIds.length > 0) {
       const { error: cancelError } = await admin
@@ -439,14 +465,6 @@ export async function deleteEvent(id: string): Promise<void> {
 
       if (cancelError) serviceError('Internal server error', 500)
     }
-  }
-
-  // Fallback: if no blocks exist, cancel by event-level date/time (legacy events)
-  if ((blocks ?? []).length === 0) {
-    const roomIds: string[] = []
-    // No blocks → nothing to cancel
-    void roomIds
-    void event
   }
 
   const { error } = await admin.from('events').delete().eq('id', id)

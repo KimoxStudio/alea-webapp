@@ -7,7 +7,9 @@
 -- The existing create_event_atomic / update_event_atomic single-room RPCs are
 -- intentionally left in place for backward compatibility.
 --
--- Uses internal.is_admin() for RLS parity with the rest of the codebase.
+-- These functions are SECURITY DEFINER, REVOKEd from PUBLIC and granted only
+-- to service_role. They do not call internal.is_admin(); admin enforcement is
+-- handled in the service layer before the RPC is invoked.
 
 -- ---------------------------------------------------------------------------
 -- create_event_with_blocks(p_title, p_description, p_blocks jsonb)
@@ -60,7 +62,8 @@ BEGIN
   INTO v_anchor_date, v_anchor_start, v_anchor_end
   FROM jsonb_array_elements(p_blocks) AS blk
   ORDER BY (blk->>'date')::date ASC,
-           (blk->>'start_time') ASC
+           (CASE WHEN (blk->>'all_day')::boolean THEN '00:00'::time
+                 ELSE (blk->>'start_time')::time END) ASC
   LIMIT 1;
 
   INSERT INTO public.events (title, description, date, start_time, end_time)
@@ -177,7 +180,8 @@ BEGIN
   INTO v_anchor_date, v_anchor_start, v_anchor_end
   FROM jsonb_array_elements(p_blocks) AS blk
   ORDER BY (blk->>'date')::date ASC,
-           (blk->>'start_time') ASC
+           (CASE WHEN (blk->>'all_day')::boolean THEN '00:00'::time
+                 ELSE (blk->>'start_time')::time END) ASC
   LIMIT 1;
 
   UPDATE public.events

@@ -461,21 +461,15 @@ function EventRow({
               </span>
             )}
 
-            {/* Room(s) */}
-            {schedules
-              .filter((s) => s.roomId)
-              .map((s, i) => {
-                const roomName = (rooms ?? []).find((r) => r.id === s.roomId)?.name ?? s.roomId
-                return (
-                  <Badge key={i} variant="partial" className="text-xs">
-                    {roomName}
-                  </Badge>
-                )
-              })
-              // Deduplicate by name
-              .filter((badge, i, arr) =>
-                arr.findIndex((b) => b.key === badge.key) === i
-              )}
+            {/* Room(s) — deduplicated at the data level before rendering */}
+            {[...new Set(schedules.filter((s) => s.roomId).map((s) => s.roomId as string))].map((roomId) => {
+              const roomName = (rooms ?? []).find((r) => r.id === roomId)?.name ?? roomId
+              return (
+                <Badge key={roomId} variant="partial" className="text-xs">
+                  {roomName}
+                </Badge>
+              )
+            })}
 
             {/* Multi-day indicator */}
             {isMultiDay && (
