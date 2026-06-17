@@ -296,7 +296,10 @@
       "addSchedule": "Add schedule",
       "removeSchedule": "Remove schedule",
       "scheduleDay": "Schedule {n}",
-      "multiDay": "{n} days"
+      "multiDay": "{n} days",
+      "cancelReservationsTitle": "Cancel member reservations?",
+      "cancelReservationsWarning": "Saving this event will cancel {n} active or pending member reservation(s) in the blocked rooms. This cannot be undone.",
+      "confirmCancelReservations": "Save and cancel"
     },
     "equipment": {
       "title": "Equipment",

@@ -213,7 +213,10 @@
       "addSchedule": "Añadir horario",
       "removeSchedule": "Eliminar horario",
       "scheduleDay": "Horario {n}",
-      "multiDay": "{n} días"
+      "multiDay": "{n} días",
+      "cancelReservationsTitle": "¿Cancelar reservas de socios?",
+      "cancelReservationsWarning": "Guardar este evento cancelará {n} reserva(s) activa(s) o pendiente(s) de socios en las salas bloqueadas. Esta acción no se puede deshacer.",
+      "confirmCancelReservations": "Guardar y cancelar"
     },
     "equipment": {
       "title": "Material",

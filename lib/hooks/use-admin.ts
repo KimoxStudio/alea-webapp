@@ -243,6 +243,32 @@ export function useAdminDeleteEvent() {
   })
 }
 
+export interface EventConflictBlock {
+  date: string
+  roomId: string
+  count: number
+}
+
+export interface EventConflictPreview {
+  total: number
+  blocks: EventConflictBlock[]
+}
+
+export function useAdminPreviewEventConflicts() {
+  return useMutation({
+    mutationFn: (payload: {
+      schedules: Array<{
+        date: string
+        startTime?: string
+        endTime?: string
+        roomId?: string | null
+        allDay?: boolean
+      }>
+    }) =>
+      apiClient.post<EventConflictPreview>(endpoints.events.preview, payload),
+  })
+}
+
 // ----- Equipment -----
 
 export function useAdminEquipment() {

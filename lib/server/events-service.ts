@@ -514,6 +514,84 @@ export async function deleteEvent(id: string): Promise<void> {
   if (error) serviceError('Internal server error', 500)
 }
 
+export interface EventConflictBlock {
+  date: string
+  roomId: string
+  count: number
+}
+
+export interface EventConflictPreview {
+  total: number
+  blocks: EventConflictBlock[]
+}
+
+export async function previewEventConflicts(body: {
+  schedules?: unknown
+}): Promise<EventConflictPreview> {
+  if (!Array.isArray(body.schedules) || body.schedules.length === 0) {
+    return { total: 0, blocks: [] }
+  }
+  if (body.schedules.length > 366) serviceError('Too many schedule blocks', 400)
+
+  // Reuse the same validation path as createEvent/updateEvent
+  const normBlocks = body.schedules.map((s, i) => validateAndNormaliseSchedule(s, i))
+
+  // Only blocks with a non-null room_id can have reservations to cancel
+  const roomedBlocks = normBlocks.filter((b): b is typeof b & { room_id: string } => b.room_id !== null)
+
+  if (roomedBlocks.length === 0) {
+    return { total: 0, blocks: [] }
+  }
+
+  const admin = createSupabaseServerAdminClient()
+
+  // Pre-fetch table ids for all distinct rooms in one round-trip (avoids N+1)
+  const distinctRoomIds = [...new Set(roomedBlocks.map((b) => b.room_id))]
+
+  const { data: tables, error: tablesError } = await admin
+    .from('tables')
+    .select('id, room_id')
+    .in('room_id', distinctRoomIds)
+
+  if (tablesError) serviceError('Internal server error', 500)
+
+  const roomTableMap = new Map<string, string[]>()
+  for (const t of (tables ?? []) as { id: string; room_id: string }[]) {
+    const list = roomTableMap.get(t.room_id) ?? []
+    list.push(t.id)
+    roomTableMap.set(t.room_id, list)
+  }
+
+  const resultBlocks: EventConflictBlock[] = []
+  let total = 0
+
+  for (const block of roomedBlocks) {
+    const tableIds = roomTableMap.get(block.room_id) ?? []
+
+    if (tableIds.length === 0) {
+      resultBlocks.push({ date: block.date, roomId: block.room_id, count: 0 })
+      continue
+    }
+
+    const { count, error: countError } = await admin
+      .from('reservations')
+      .select('id', { count: 'exact', head: true })
+      .in('table_id', tableIds)
+      .eq('date', block.date)
+      .lt('start_time', block.end_time)
+      .gt('end_time', block.start_time)
+      .in('status', ['active', 'pending'])
+
+    if (countError) serviceError('Internal server error', 500)
+
+    const blockCount = count ?? 0
+    total += blockCount
+    resultBlocks.push({ date: block.date, roomId: block.room_id, count: blockCount })
+  }
+
+  return { total, blocks: resultBlocks }
+}
+
 export async function listEventsBlockingRoom(
   roomId: string,
   date: string,

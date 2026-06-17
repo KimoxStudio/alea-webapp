@@ -22,6 +22,7 @@ import {
   useAdminUpdateEvent,
   useAdminDeleteEvent,
   useAdminRooms,
+  useAdminPreviewEventConflicts,
 } from '@/lib/hooks/use-admin'
 import type { AdminEvent, AdminEventSchedule } from '@/lib/types'
 
@@ -416,6 +417,60 @@ function DeleteEventDialog({
   )
 }
 
+// Confirm-cancel-reservations dialog (shown before create/update when conflicts exist)
+function CancelReservationsDialog({
+  open,
+  onOpenChange,
+  conflictCount,
+  onConfirm,
+  isPending,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  conflictCount: number
+  onConfirm: () => void
+  isPending: boolean
+}) {
+  const t = useTranslations('admin')
+  const tc = useTranslations('common')
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-card border-border">
+        <DialogHeader>
+          <DialogTitle className="font-cinzel text-destructive">
+            {t('events.cancelReservationsTitle')}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="py-2">
+          <p className="text-sm text-muted-foreground">
+            {t('events.cancelReservationsWarning', { n: conflictCount })}
+          </p>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="border-border">
+            {tc('cancel')}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isPending}
+            className="min-w-[120px]"
+          >
+            {isPending ? (
+              <span className="inline-flex items-center gap-2">
+                <DiceLoader size="sm" hideRole />
+                <span>{t('saving')}</span>
+              </span>
+            ) : t('events.confirmCancelReservations')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // EventRow — list item
 // ---------------------------------------------------------------------------
@@ -516,6 +571,14 @@ function EventRow({
 // ---------------------------------------------------------------------------
 // EventsSection — main export
 // ---------------------------------------------------------------------------
+
+// Pending submit state — holds the payload and action until confirmation
+interface PendingSubmit {
+  action: 'create' | 'update'
+  createPayload?: Parameters<ReturnType<typeof useAdminCreateEvent>['mutateAsync']>[0]
+  updatePayload?: Parameters<ReturnType<typeof useAdminUpdateEvent>['mutateAsync']>[0]
+}
+
 export function EventsSection() {
   const t = useTranslations('admin')
 
@@ -523,6 +586,7 @@ export function EventsSection() {
   const createEvent = useAdminCreateEvent()
   const updateEvent = useAdminUpdateEvent()
   const deleteEvent = useAdminDeleteEvent()
+  const previewConflicts = useAdminPreviewEventConflicts()
 
   const [showCreate, setShowCreate] = useState(false)
   const [createForm, setCreateForm] = useState<EventFormState>(emptyForm())
@@ -534,6 +598,10 @@ export function EventsSection() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
   const [updateError, setUpdateError] = useState<string | null>(null)
+
+  // Confirmation dialog state for reservation cancellation
+  const [pendingSubmit, setPendingSubmit] = useState<PendingSubmit | null>(null)
+  const [conflictCount, setConflictCount] = useState(0)
 
   function openEdit(event: AdminEvent) {
     setEditingEvent(event)
@@ -559,12 +627,32 @@ export function EventsSection() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setCreateError(null)
+
+    const payload = {
+      title: createForm.title.trim(),
+      description: createForm.description.trim() || null,
+      schedules: buildSchedulesPayload(createForm),
+    }
+
     try {
-      await createEvent.mutateAsync({
-        title: createForm.title.trim(),
-        description: createForm.description.trim() || null,
-        schedules: buildSchedulesPayload(createForm),
-      })
+      const preview = await previewConflicts.mutateAsync({ schedules: buildSchedulesPayload(createForm) })
+      if (preview.total > 0) {
+        setConflictCount(preview.total)
+        setPendingSubmit({ action: 'create', createPayload: payload })
+        return
+      }
+    } catch {
+      // If preview fails, surface error and stop — do not silently proceed
+      setCreateError('Failed to check for reservation conflicts. Please try again.')
+      return
+    }
+
+    await executeCreate(payload)
+  }
+
+  async function executeCreate(payload: Parameters<ReturnType<typeof useAdminCreateEvent>['mutateAsync']>[0]) {
+    try {
+      await createEvent.mutateAsync(payload)
       setCreateForm(emptyForm())
       setShowCreate(false)
     } catch (err: unknown) {
@@ -579,21 +667,50 @@ export function EventsSection() {
     e.preventDefault()
     if (!editingEvent) return
     setUpdateError(null)
+
+    const payload = {
+      id: editingEvent.id,
+      data: {
+        title: editForm.title.trim(),
+        description: editForm.description.trim() || null,
+        schedules: buildSchedulesPayload(editForm),
+      },
+    }
+
     try {
-      await updateEvent.mutateAsync({
-        id: editingEvent.id,
-        data: {
-          title: editForm.title.trim(),
-          description: editForm.description.trim() || null,
-          schedules: buildSchedulesPayload(editForm),
-        },
-      })
+      const preview = await previewConflicts.mutateAsync({ schedules: buildSchedulesPayload(editForm) })
+      if (preview.total > 0) {
+        setConflictCount(preview.total)
+        setPendingSubmit({ action: 'update', updatePayload: payload })
+        return
+      }
+    } catch {
+      setUpdateError('Failed to check for reservation conflicts. Please try again.')
+      return
+    }
+
+    await executeUpdate(payload)
+  }
+
+  async function executeUpdate(payload: Parameters<ReturnType<typeof useAdminUpdateEvent>['mutateAsync']>[0]) {
+    try {
+      await updateEvent.mutateAsync(payload)
       setEditingEvent(null)
     } catch (err: unknown) {
       const msg = err instanceof Error
         ? err.message
         : (err as { message?: string })?.message ?? String(err)
       setUpdateError(msg)
+    }
+  }
+
+  async function handleConfirmSave() {
+    if (!pendingSubmit) return
+    setPendingSubmit(null)
+    if (pendingSubmit.action === 'create' && pendingSubmit.createPayload) {
+      await executeCreate(pendingSubmit.createPayload)
+    } else if (pendingSubmit.action === 'update' && pendingSubmit.updatePayload) {
+      await executeUpdate(pendingSubmit.updatePayload)
     }
   }
 
@@ -705,6 +822,15 @@ export function EventsSection() {
         onConfirm={handleDelete}
         isPending={deleteEvent.isPending}
         deleteError={deleteError}
+      />
+
+      {/* Cancel Reservations Confirmation Dialog */}
+      <CancelReservationsDialog
+        open={!!pendingSubmit}
+        onOpenChange={(open) => { if (!open) setPendingSubmit(null) }}
+        conflictCount={conflictCount}
+        onConfirm={handleConfirmSave}
+        isPending={createEvent.isPending || updateEvent.isPending}
       />
     </section>
   )
