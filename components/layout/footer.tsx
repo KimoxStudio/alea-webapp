@@ -87,14 +87,6 @@ export function Footer({ locale }: FooterProps) {
                   {tAuth('login')}
                 </Link>
               </li>
-              <li>
-                <Link
-                  href={`/${locale}/register`}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-                >
-                  {tAuth('register')}
-                </Link>
-              </li>
             </ul>
           </div>
         </div>

@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -108,7 +109,7 @@ describe('auth API routes', () => {
     logoutWithClientMock.mockResolvedValue({ success: true })
     routeGetUserMock.mockResolvedValue({ data: { user: { id: 'user-2' } }, error: null })
     routeProfileMaybeSingleMock.mockResolvedValue({
-      data: { id: 'user-2', role: 'member' },
+      data: { id: 'user-2', role: 'member', is_active: true },
       error: null,
     })
     getCurrentUserMock.mockResolvedValue({
@@ -128,7 +129,7 @@ describe('auth API routes', () => {
     const response = await POST(
       createJsonRequest('/api/auth/login', {
         identifier: '100001',
-        password: 'Admin1234!@#',
+        password: 'Admin123',
       }),
     )
 
@@ -148,7 +149,7 @@ describe('auth API routes', () => {
         '/api/auth/login',
         {
           identifier: '100001',
-          password: 'Admin1234!@#',
+          password: 'Admin123',
         },
         { origin: 'https://attacker.example' },
       ),
@@ -165,7 +166,7 @@ describe('auth API routes', () => {
         '/api/auth/login',
         {
           identifier: '100001',
-          password: 'Admin1234!@#',
+          password: 'Admin123',
         },
         { csrfToken: null },
       ),
@@ -183,7 +184,7 @@ describe('auth API routes', () => {
         '/api/auth/login',
         {
           identifier: '100001',
-          password: 'Admin1234!@#',
+          password: 'Admin123',
         },
         { fetchSite: 'cross-site' },
       ),
@@ -218,7 +219,7 @@ describe('auth API routes', () => {
           '/api/auth/login',
           {
             identifier: '100001',
-            password: 'Admin1234!@#',
+            password: 'Admin123',
           },
           { forwardedFor: '203.0.113.10' },
         ),
@@ -232,7 +233,7 @@ describe('auth API routes', () => {
         '/api/auth/login',
         {
           identifier: '100001',
-          password: 'Admin1234!@#',
+          password: 'Admin123',
         },
         { forwardedFor: '203.0.113.10' },
       ),
@@ -242,43 +243,73 @@ describe('auth API routes', () => {
     expect(blocked.headers.get('retry-after')).toBeTruthy()
   })
 
-  it('registers a new user and returns 201 with the public user payload and session cookie', async () => {
+  it('returns 410 when self-registration is disabled', async () => {
     const { POST } = await import('@/app/api/auth/register/route')
 
     const response = await POST(
       createJsonRequest('/api/auth/register', {
         memberNumber: '100099',
-        password: 'Password1234!@#',
+        password: 'Password123',
       }),
     )
 
-    expect(response.status).toBe(201)
+    expect(response.status).toBe(410)
     await expect(response.json()).resolves.toMatchObject({
-      id: 'new-user-id',
-      memberNumber: '100099',
-      role: 'member',
+      message: 'Self-registration is disabled. Ask an administrator for an activation link.',
+      statusCode: 410,
     })
-    expect(response.cookies.get('sb-access-token')?.value).toBe('test-session')
-    // The route must pass the session-scoped supabase client as the second argument
-    // so register() can call signInWithPassword and establish a session.
-    const [, sessionClientArg] = registerMock.mock.calls[0]
-    expect(typeof sessionClientArg?.auth?.signInWithPassword).toBe('function')
+    expect(registerMock).not.toHaveBeenCalled()
   })
 
-  it('returns 409 when the member number is already registered', async () => {
+  it('still returns 410 even if a member number is supplied', async () => {
     const { POST } = await import('@/app/api/auth/register/route')
-    const { ServiceError } = await import('@/lib/server/service-error')
-    registerMock.mockRejectedValueOnce(new ServiceError('This member number is already registered', 409))
 
     const response = await POST(
       createJsonRequest('/api/auth/register', {
         memberNumber: '100001',
-        password: 'Password1234!@#',
+        password: 'Password123',
       }),
     )
 
-    expect(response.status).toBe(409)
-    await expect(response.json()).resolves.toMatchObject({ statusCode: 409 })
+    expect(response.status).toBe(410)
+    await expect(response.json()).resolves.toMatchObject({ statusCode: 410 })
+    expect(registerMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects register requests from a different origin before returning 410', async () => {
+    const { POST } = await import('@/app/api/auth/register/route')
+
+    const response = await POST(
+      createJsonRequest('/api/auth/register', {
+        memberNumber: '100099',
+        password: 'Password123',
+      }, {
+        origin: 'https://attacker.example',
+      }),
+    )
+
+    expect(response.status).toBe(403)
+  })
+
+  it('rate limits repeated register attempts from the same client', async () => {
+    const { POST } = await import('@/app/api/auth/register/route')
+    const statuses: number[] = []
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const response = await POST(
+        createJsonRequest('/api/auth/register', {
+          memberNumber: '100099',
+          password: 'Password123',
+        }, {
+          forwardedFor: '203.0.113.99',
+        }),
+      )
+
+      statuses.push(response.status)
+    }
+
+    expect(statuses).toContain(410)
+    expect(statuses.at(-1)).toBe(429)
   })
 
   it('reads the session from /me after login and signs out through the auth routes', async () => {
@@ -290,7 +321,7 @@ describe('auth API routes', () => {
       error: null,
     })
     routeProfileMaybeSingleMock.mockResolvedValueOnce({
-      data: { id: 'user-1', role: 'admin' },
+      data: { id: 'user-1', role: 'admin', is_active: true },
       error: null,
     })
     getCurrentUserMock.mockResolvedValueOnce({
@@ -304,7 +335,7 @@ describe('auth API routes', () => {
     const loginResponse = await loginRoute.POST(
       createJsonRequest('/api/auth/login', {
         identifier: '100001',
-        password: 'Admin1234!@#',
+        password: 'Admin123',
       }),
     )
 
@@ -332,6 +363,17 @@ describe('auth API routes', () => {
 
     expect(response.status).toBe(401)
     await expect(response.json()).resolves.toMatchObject({ statusCode: 401 })
+  })
+
+  it('returns 401 from /me when there is no authenticated session', async () => {
+    const { GET } = await import('@/app/api/auth/me/route')
+    routeGetUserMock.mockResolvedValueOnce({ data: { user: null }, error: null })
+
+    const response = await GET(new NextRequest('http://localhost:3000/api/auth/me'))
+
+    expect(response.status).toBe(401)
+    await expect(response.json()).resolves.toMatchObject({ statusCode: 401 })
+    expect(getCurrentUserMock).not.toHaveBeenCalled()
   })
 
   it('rejects logout requests from a different origin', async () => {

@@ -6,11 +6,11 @@ Web application for a cultural gaming association (board games and tabletop RPGs
 
 Alea is a cultural association management platform that allows members to:
 
-- Log in with their member number or email + password
+- Log in with their member number + password
 - Browse and reserve tables across 6 themed rooms
 - View QR codes per table reservation
 
-Admins can manage users, rooms, tables, and reservations through a dedicated dashboard.
+Admins can manage users, member imports, rooms, tables, events, and reservations through a dedicated dashboard.
 
 ## Stack
 
@@ -46,10 +46,11 @@ alea-webapp/
 
 - **Node.js** 20+ (see `.nvmrc` or `engines` in `package.json`)
 - **pnpm** 9+ (`npm install -g pnpm`)
-- **Docker Desktop / Docker Engine** (required to run `supabase start` locally)
-- **Supabase CLI** (`brew install supabase/tap/supabase` or see [docs](https://supabase.com/docs/guides/cli))
+- **Docker Desktop** + **Supabase CLI** *(optional — only required to run `pnpm test:integration` for local schema/migration checks)*
 
-## Setup
+## Quick Start
+
+### Option A — Fastest path (existing Supabase Cloud project)
 
 1. **Clone the repository**
 
@@ -70,25 +71,83 @@ alea-webapp/
    cp .env.example .env.local
    ```
 
-   Open `.env.local` and fill in your Supabase credentials. The example contains hosted-project placeholders that must be replaced. For local development, use `http://127.0.0.1:54321` for `NEXT_PUBLIC_SUPABASE_URL` and run `supabase status` to get the publishable and secret keys.
+   The project uses **Supabase Cloud** by default. Open `.env.local` and fill in the following credentials from your Supabase project dashboard:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY`
+   - `SUPABASE_SECRET_DEFAULT_KEY`
+   - `NEXT_PUBLIC_APP_URL` (`http://localhost:3000` locally)
+   - `CRON_SECRET` (any long random string for local work)
 
    If the app runs behind a reverse proxy or CDN in deployment, set `TRUST_PROXY_HEADERS=true` and configure `TRUSTED_PROXY_CIDRS` with the proxy source-IP ranges that are allowed to provide `x-forwarded-for`; otherwise rate limiting falls back to `x-real-ip`. Your ingress must also strip and overwrite inbound `x-real-ip` and `x-forwarded-for` headers before the request reaches the app.
 
-4. **Start the local Supabase instance**
-
-   ```bash
-   supabase start
-   ```
-
-   This starts PostgreSQL, Auth, Storage, and the Supabase Studio UI locally via Docker.
-
-5. **Start the development server**
+4. **Start the development server**
 
    ```bash
    pnpm dev
    ```
 
    The app is available at [http://localhost:3000](http://localhost:3000).
+
+### Option B — Full local Supabase stack
+
+Use this when you want local DB/auth/state and deterministic QA fixtures.
+
+1. Install Docker Desktop and Supabase CLI.
+
+2. Start Supabase from the repo root:
+
+   ```bash
+   supabase start
+   ```
+
+3. Read local credentials:
+
+   ```bash
+   supabase status
+   ```
+
+4. Copy `.env.example` to `.env.local`, then set:
+
+   - `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=<anon/publishable key from supabase status>`
+   - `SUPABASE_SECRET_DEFAULT_KEY=<service_role/secret key from supabase status>`
+   - `NEXT_PUBLIC_APP_URL=http://localhost:3000`
+   - `CRON_SECRET=<any long random string>`
+
+5. Start the app:
+
+   ```bash
+   pnpm dev
+   ```
+
+Local Supabase ports from `supabase/config.toml`:
+
+| Service | URL |
+|---|---|
+| App | `http://localhost:3000` |
+| Supabase API | `http://127.0.0.1:54321` |
+| Postgres | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` |
+| Supabase Studio | `http://127.0.0.1:54323` |
+
+### Local seed data
+
+The local Supabase seed is for QA only and is applied by `supabase db reset` / `supabase start`.
+
+- Shared local test password for seeded users: `TestPass123!`
+- Seeded admin email: `admin@alea.test`
+- Seeded profiles/member numbers are defined in `supabase/seed.sql`
+
+Reset local DB + re-apply migrations + seed:
+
+```bash
+supabase db reset
+```
+
+Stop local Supabase:
+
+```bash
+supabase stop
+```
 
 ## Local CI Hook
 
@@ -126,17 +185,48 @@ It does not replace the checks that used to run only in GitHub Actions, such as 
 | `pnpm dev` | Start Next.js dev server |
 | `pnpm build` | Production build |
 | `pnpm test` | Run the full test suite (Vitest) |
+| `pnpm test:watch` | Run Vitest in watch mode |
+| `pnpm test:integration` | Validate migrations/types against a temporary local Supabase stack |
 | `pnpm lint` | ESLint via Next.js |
 | `pnpm typecheck` | TypeScript type-check (no emit) |
+| `pnpm security:deps` | Audit production dependencies |
 | `pnpm hooks:install` | Install the local `pre-push` hook |
+
+## Developer Checklist
+
+For a fresh machine:
+
+1. `pnpm install`
+2. `cp .env.example .env.local`
+3. Fill env values for Cloud or local Supabase
+4. `pnpm dev`
+5. Optional local guardrail: `pnpm hooks:install`
+
+Before pushing:
+
+1. `pnpm typecheck`
+2. `pnpm lint`
+3. `pnpm test`
+4. `pnpm build`
+
+Session hygiene:
+
+1. Read `docs/HANDOFF.md` before starting work.
+2. Update `docs/HANDOFF.md` before ending the session.
+3. Keep handoff notes only in `docs/HANDOFF.md`; do not use GitHub PR comments or `CLAUDE.md` for repository handoff state.
+
+If you touched SQL schema or generated DB types:
+
+1. `pnpm test:integration`
+2. confirm `lib/supabase/types.ts` matches generated output
 
 ## Key Business Rules
 
 - **6 rooms**: Mirkwood, Gondolin, Khazad-dum, Rivendell, Lothlorien, Edoras — each with a fixed number of tables.
 - **Table types**: `small`, `large`, `removable_top`.
 - **removable_top rule**: A table with a removable top has two bookable surfaces (`top` and `bottom`). Reserving one surface blocks the other surface in the same time slot.
-- **Authentication**: Members log in with their member number or email + password. Passwords require: minimum 12 characters, at least one letter, at least one number, and at least one special character.
-- **Admin**: Admins access the dashboard at `/{locale}/admin` (guarded route). The dashboard features: user management (10/page, paginated list with search, status badge, edit role/status/member number, delete), room and table management (list/edit rooms, create tables), and reservation management (list all, cancel with confirmation). Passwords are never shown or editable. Admin write operations use Supabase admin client (bypasses RLS). Suspended users cannot log in.
+- **Authentication**: Members currently log in with their member number + password. Passwords require: minimum 12 characters, at least one letter, at least one number, and at least one special character.
+- **Admin**: Admins access the dashboard at `/{locale}/admin` (guarded route). The dashboard features: user management (10/page, paginated list with search, status badge, edit role/status/member number/contact fields, member import from `csv`/`xlsx`/`odt`, delete), room and table management (list/edit rooms, create tables), event management, and reservation management (list all, cancel with confirmation). The member importer accepts source columns such as `USUARIOS` -> `full_name` and `ID` -> `member_number`, normalizes them into the canonical dataset before persistence, returns invalid/skipped rows, and shows a normalized preview for audit. Passwords are never shown or editable. Admin write operations use Supabase admin client (bypasses RLS). Inactive/suspended users cannot log in.
 - **QR codes**: Each table has a QR code for quick reservation lookup.
 
 ## Accessibility
@@ -155,4 +245,4 @@ The app is available in **Spanish** (default) and **English**. Language is deter
 
 ## Architecture
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for a full description of the system architecture, data flow, and design decisions.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for a full description of system architecture, local setup, and runtime data flow.

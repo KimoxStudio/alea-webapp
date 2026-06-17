@@ -1,12 +1,18 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TableCard } from '@/components/rooms/table-card'
-import type { GameTable, TableAvailability } from '@/lib/types'
+import type { GameTable, TableAvailability, User } from '@/lib/types'
 
 // Mock next-intl
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
+}))
+
+// Mock useAuth
+const mockUseAuth = vi.fn()
+vi.mock('@/lib/auth/auth-context', () => ({
+  useAuth: () => mockUseAuth(),
 }))
 
 const mockTable: GameTable = {
@@ -36,7 +42,60 @@ const reservedAvailability: TableAvailability = {
   ],
 }
 
+// Reusable mock auth objects
+const defaultUnauthenticatedAuth = {
+  user: null,
+  isLoading: false,
+  isAuthenticated: false,
+  login: vi.fn(),
+  logout: vi.fn(),
+  register: vi.fn(),
+}
+
+const defaultAdminAuth = {
+  user: {
+    id: 'user-123',
+    memberNumber: 'M001',
+    email: 'admin@example.com',
+    role: 'admin' as const,
+    isActive: true,
+    noShowCount: 0,
+    blockedUntil: null,
+    createdAt: '2025-01-01',
+    updatedAt: '2025-01-01',
+  },
+  isLoading: false,
+  isAuthenticated: true,
+  login: vi.fn(),
+  logout: vi.fn(),
+  register: vi.fn(),
+}
+
+const defaultMemberAuth = {
+  user: {
+    id: 'user-456',
+    memberNumber: 'M002',
+    email: 'member@example.com',
+    role: 'member' as const,
+    isActive: true,
+    noShowCount: 0,
+    blockedUntil: null,
+    createdAt: '2025-01-01',
+    updatedAt: '2025-01-01',
+  },
+  isLoading: false,
+  isAuthenticated: true,
+  login: vi.fn(),
+  logout: vi.fn(),
+  register: vi.fn(),
+}
+
 describe('TableCard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseAuth.mockReturnValue(defaultUnauthenticatedAuth)
+  })
+
   it('renders table name', () => {
     const onReserve = vi.fn()
     render(<TableCard table={mockTable} availability={availableAvailability} onReserve={onReserve} currentDate="2025-01-01" />)
@@ -63,5 +122,31 @@ describe('TableCard', () => {
     render(<TableCard table={mockTable} availability={availableAvailability} onReserve={onReserve} currentDate="2025-01-01" />)
     const button = screen.getByRole('button')
     expect(button).toHaveAttribute('aria-label', expect.stringContaining('Mesa 1'))
+  })
+
+  describe('QR icon visibility', () => {
+    it('renders QR icon when user is admin', () => {
+      mockUseAuth.mockReturnValue(defaultAdminAuth)
+      const onReserve = vi.fn()
+      render(<TableCard table={mockTable} availability={availableAvailability} onReserve={onReserve} currentDate="2025-01-01" />)
+      const qrIcon = screen.getByTestId('qr-icon')
+      expect(qrIcon).toBeInTheDocument()
+    })
+
+    it('does not render QR icon when user is regular member', () => {
+      mockUseAuth.mockReturnValue(defaultMemberAuth)
+      const onReserve = vi.fn()
+      render(<TableCard table={mockTable} availability={availableAvailability} onReserve={onReserve} currentDate="2025-01-01" />)
+      const qrIcon = screen.queryByTestId('qr-icon')
+      expect(qrIcon).not.toBeInTheDocument()
+    })
+
+    it('does not render QR icon when user is not authenticated', () => {
+      mockUseAuth.mockReturnValue(defaultUnauthenticatedAuth)
+      const onReserve = vi.fn()
+      render(<TableCard table={mockTable} availability={availableAvailability} onReserve={onReserve} currentDate="2025-01-01" />)
+      const qrIcon = screen.queryByTestId('qr-icon')
+      expect(qrIcon).not.toBeInTheDocument()
+    })
   })
 })

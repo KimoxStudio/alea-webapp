@@ -1,23 +1,89 @@
+import qrcode from 'qrcode'
 import type { GameTable } from '@/lib/types'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
 import { resolveDate, buildAvailability } from '@/lib/server/availability'
 import type { Tables } from '@/lib/supabase/types'
+import { toGameTable } from '@/lib/server/table-mappers'
+import { getDatabaseNow } from '@/lib/server/database-time'
+
+// A pending reservation that has not been activated within PENDING_EXPIRY_MINUTES
+// of creation is treated as expired for availability purposes (lazy-expiry, no cron).
+// Must stay in sync with GRACE_PERIOD_MINUTES in reservations-service.ts.
+const PENDING_EXPIRY_MINUTES = 60
 
 type TableRow = Tables<'tables'>
 type ReservationRow = Tables<'reservations'>
+type EventBlockRow = Tables<'event_room_blocks'>
 
-const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, pos_x, pos_y'
+const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, qr_code_inf, pos_x, pos_y'
 
-function toGameTable(row: TableRow): GameTable {
-  return {
-    id: row.id,
-    roomId: row.room_id,
-    name: row.name,
-    type: row.type,
-    qrCode: row.qr_code ?? '',
-    position: row.pos_x == null || row.pos_y == null ? undefined : { x: row.pos_x, y: row.pos_y },
+async function uploadQrCodeToStorage(
+  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  url: string,
+  storagePath: string,
+): Promise<string> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!supabaseUrl) serviceError('NEXT_PUBLIC_SUPABASE_URL is not set — cannot build QR code storage URL', 500)
+
+  const buffer = await qrcode.toBuffer(url, { errorCorrectionLevel: 'M', width: 400, type: 'png' })
+
+  const { error: uploadError } = await admin.storage
+    .from('table-qr-codes')
+    .upload(storagePath, buffer, { contentType: 'image/png', upsert: true })
+
+  if (uploadError) {
+    serviceError('Failed to upload QR code to storage', 500)
   }
+
+  return `${supabaseUrl}/storage/v1/object/public/table-qr-codes/${storagePath}`
+}
+
+export async function generateTableQrCode(tableId: string): Promise<string> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tableId)) {
+    serviceError('Invalid table ID', 400)
+  }
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
+  if (!appUrl) serviceError('NEXT_PUBLIC_APP_URL is not set — cannot generate QR code URL', 500)
+  const url = `${appUrl}/check-in/${tableId}`
+  const admin = createSupabaseServerAdminClient()
+  return uploadQrCodeToStorage(admin, url, `${tableId}.png`)
+}
+
+export async function regenerateQrCodes(tableId: string): Promise<{ qr_code: string; qr_code_inf: string | null }> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tableId)) {
+    serviceError('Invalid table ID', 400)
+  }
+  const admin = createSupabaseServerAdminClient()
+
+  const { data: table, error: fetchError } = await admin
+    .from('tables')
+    .select('id, type')
+    .eq('id', tableId)
+    .maybeSingle()
+
+  if (fetchError) {
+    serviceError('Internal server error', 500)
+  }
+  if (!table) {
+    serviceError('Table not found', 404)
+  }
+
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
+  if (!appUrl) serviceError('NEXT_PUBLIC_APP_URL is not set — cannot generate QR code URL', 500)
+
+  const qr_code = await uploadQrCodeToStorage(admin, `${appUrl}/check-in/${tableId}`, `${tableId}.png`)
+
+  const { error: updateError } = await admin
+    .from('tables')
+    .update({ qr_code, qr_code_inf: null })
+    .eq('id', tableId)
+
+  if (updateError) {
+    serviceError('Internal server error', 500)
+  }
+
+  return { qr_code, qr_code_inf: null }
 }
 
 export async function getTableAvailability(tableId: string, date?: string | null) {
@@ -39,18 +105,72 @@ export async function getTableAvailability(tableId: string, date?: string | null
 
   const effectiveDate = resolveDate(date)
   const admin = createSupabaseServerAdminClient()
-  const reservationsResult = await admin
-    .from('reservations')
-    .select('id, table_id, date, start_time, end_time, status, surface, user_id, created_at')
-    .eq('table_id', tableId)
-    .eq('date', effectiveDate)
-    .eq('status', 'active')
-  const reservations = (reservationsResult.data ?? []) as ReservationRow[]
+
+  const [reservationsResult, eventBlocksResult, nowUtc] = await Promise.all([
+    admin
+      .from('reservations')
+      .select('id, table_id, date, start_time, end_time, status, surface, user_id, activated_at, created_at')
+      .eq('table_id', tableId)
+      .eq('date', effectiveDate)
+      .in('status', ['active', 'pending']),
+    admin
+      .from('event_room_blocks')
+      .select('id, event_id, room_id, date, start_time, end_time, all_day')
+      .eq('room_id', table.room_id)
+      .eq('date', effectiveDate),
+    getDatabaseNow(admin),
+  ])
+
+  const allReservations = (reservationsResult.data ?? []) as ReservationRow[]
   const reservationsError = reservationsResult.error
 
   if (reservationsError) {
     serviceError('Internal server error', 500)
   }
 
-  return buildAvailability(toGameTable(table!), effectiveDate, reservations)
+  // Lazy-expiry: exclude pending reservations that were never activated and whose
+  // grace window (created_at + PENDING_EXPIRY_MINUTES) has already passed.
+  // These rows will never be activated and must not block availability.
+  const reservations = allReservations.filter((row) => {
+    if (row.status === 'pending' && row.activated_at === null) {
+      const createdAt = new Date(row.created_at)
+      const expiresAt = new Date(createdAt.getTime() + PENDING_EXPIRY_MINUTES * 60 * 1000)
+      return nowUtc.getTime() <= expiresAt.getTime()
+    }
+    return true
+  })
+
+  const eventBlocks = (eventBlocksResult.data ?? []) as EventBlockRow[]
+
+  if (eventBlocksResult.error) {
+    serviceError('Internal server error', 500)
+  }
+
+  let eventTitleById = new Map<string, string>()
+  const eventIds = [...new Set(eventBlocks.map((block) => block.event_id))]
+  if (eventIds.length > 0) {
+    const eventsResult = await admin
+      .from('events')
+      .select('id, title')
+      .in('id', eventIds)
+
+    if (eventsResult.error) {
+      serviceError('Internal server error', 500)
+    }
+
+    eventTitleById = new Map(
+      ((eventsResult.data ?? []) as Array<{ id: string; title: string }>).map((event) => [event.id, event.title]),
+    )
+  }
+
+  return buildAvailability(
+    toGameTable(table),
+    effectiveDate,
+    reservations,
+    eventBlocks.map((block) => ({
+      start: block.start_time.slice(0, 5),
+      end: block.end_time.slice(0, 5),
+      label: eventTitleById.get(block.event_id) ?? null,
+    })),
+  )
 }

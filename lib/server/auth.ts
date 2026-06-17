@@ -1,3 +1,4 @@
+import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseRouteHandlerClient, createSupabaseServerClient } from '@/lib/supabase/server'
 export { enforceSameOriginForMutation } from '@/lib/server/security'
@@ -14,7 +15,7 @@ type SessionClient = {
   from: (...args: unknown[]) => {
     select: (...args: unknown[]) => {
       eq: (...args: unknown[]) => {
-        maybeSingle: () => Promise<{ data: { id: string; role: 'member' | 'admin' } | null, error: unknown }>
+        maybeSingle: () => Promise<{ data: { id: string; role: 'member' | 'admin'; is_active: boolean } | null, error: unknown }>
       }
     }
   }
@@ -39,11 +40,11 @@ async function getSessionUser(client: SessionClient) {
 
   const { data: profile, error: profileError } = await client
     .from('profiles')
-    .select('id, role')
+    .select('id, role, is_active')
     .eq('id', authData.user.id)
     .maybeSingle()
 
-  if (profileError || !profile) {
+  if (profileError || !profile || !profile.is_active) {
     return null
   }
 

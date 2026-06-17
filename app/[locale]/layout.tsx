@@ -34,7 +34,15 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
 
   const messages = await getMessages()
   const session = await getSessionFromServerCookies()
-  const initialUser = session ? await getCurrentUser(session) : null
+  let initialUser = null
+
+  if (session) {
+    try {
+      initialUser = await getCurrentUser(session)
+    } catch {
+      initialUser = null
+    }
+  }
 
   return (
     <html lang={locale} className="dark">

@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import type { User } from '@/lib/types'
 import { apiClient } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
@@ -21,6 +21,9 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
   const [user, setUser] = useState<User | null>(initialUser ?? null)
   const [isLoading, setIsLoading] = useState(initialUser === undefined)
   const router = useRouter()
+  const pathname = usePathname()
+
+  const locale = pathname.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] ?? 'es'
 
   const checkAuth = useCallback(async () => {
     try {
@@ -42,7 +45,7 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
   const logout = async () => {
     await apiClient.post(endpoints.auth.logout)
     setUser(null)
-    router.push('/')
+    router.push(`/${locale}/login`)
   }
   const register = async (memberNumber: string, password: string) => {
     const data = await apiClient.post<User>(endpoints.auth.register, { memberNumber, password })
@@ -56,8 +59,19 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
   )
 }
 
+// AUTH_FALLBACK is used when useAuth() is called outside AuthProvider.
+// Promise.reject is used explicitly (rather than async + throw) so the rejection
+// is always async regardless of whether the caller awaits the return value.
+const AUTH_FALLBACK: AuthContextValue = {
+  user: null,
+  isLoading: false,
+  isAuthenticated: false,
+  login: () => Promise.reject(new Error('useAuth must be used within AuthProvider')),
+  logout: () => Promise.reject(new Error('useAuth must be used within AuthProvider')),
+  register: () => Promise.reject(new Error('useAuth must be used within AuthProvider')),
+}
+
 export function useAuth() {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
+  return ctx ?? AUTH_FALLBACK
 }

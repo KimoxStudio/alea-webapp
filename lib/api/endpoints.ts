@@ -1,5 +1,7 @@
 export const endpoints = {
   auth: {
+    activate: '/auth/activate',
+    recover: '/auth/recover',
     login: '/auth/login',
     register: '/auth/register',
     logout: '/auth/logout',
@@ -8,12 +10,17 @@ export const endpoints = {
   users: {
     list: '/users',
     byId: (id: string) => `/users/${id}`,
+    activationLink: (id: string) => `/users/${id}/activation-link`,
+    recoveryLink: (id: string) => `/users/${id}/recovery-link`,
+    import: '/users/import',
   },
   rooms: {
     list: '/rooms',
     byId: (id: string) => `/rooms/${id}`,
     tables: (roomId: string) => `/rooms/${roomId}/tables`,
     tablesAvailability: (roomId: string, date: string) => `/rooms/${roomId}/tables/availability?date=${date}`,
+    availableEquipment: (roomId: string, date: string, startTime: string, endTime: string) =>
+      `/rooms/${roomId}/available-equipment?date=${date}&startTime=${startTime}&endTime=${endTime}`,
   },
   tables: {
     byId: (id: string) => `/tables/${id}`,
@@ -25,5 +32,14 @@ export const endpoints = {
       return `/reservations${query}`
     },
     byId: (id: string) => `/reservations/${id}`,
+  },
+  events: {
+    list: '/events',
+    byId: (id: string) => `/events/${id}`,
+  },
+  equipment: {
+    list: '/equipment',
+    byId: (id: string) => `/equipment/${id}`,
+    roomDefaults: (roomId: string) => `/rooms/${roomId}/default-equipment`,
   },
 } as const

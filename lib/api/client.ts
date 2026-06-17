@@ -21,13 +21,14 @@ class ApiClient {
   private async request<T>(path: string, options?: RequestInit): Promise<T> {
     const method = (options?.method ?? 'GET').toUpperCase()
     const csrfToken = UNSAFE_METHODS.has(method) ? getCookieValue(CSRF_COOKIE_NAME) : null
+    const isFormData = typeof FormData !== 'undefined' && options?.body instanceof FormData
 
     const response = await fetch(`${this.baseUrl}${path}`, {
       credentials: 'include',
       ...options,
       headers: {
-        'Content-Type': 'application/json',
         ...(csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {}),
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...options?.headers,
       },
     })
@@ -41,10 +42,15 @@ class ApiClient {
 
   get<T>(path: string, options?: RequestInit) { return this.request<T>(path, { method: 'GET', ...options }) }
   post<T>(path: string, body?: unknown, options?: RequestInit) {
-    return this.request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined, ...options })
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
+    const requestBody = isFormData ? body : body ? JSON.stringify(body) : undefined
+    return this.request<T>(path, { method: 'POST', body: requestBody, ...options })
   }
   put<T>(path: string, body?: unknown, options?: RequestInit) {
     return this.request<T>(path, { method: 'PUT', body: body ? JSON.stringify(body) : undefined, ...options })
+  }
+  patch<T>(path: string, body?: unknown, options?: RequestInit) {
+    return this.request<T>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined, ...options })
   }
   delete<T>(path: string, options?: RequestInit) { return this.request<T>(path, { method: 'DELETE', ...options }) }
 }

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
-import { CalendarDays, Clock, MapPin, Layers, AlertCircle } from 'lucide-react'
+import { CalendarDays, Clock, MapPin, Layers, AlertCircle, Package } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
 import { useAuth } from '@/lib/auth/auth-context'
+import { zonedDateTimeToUtc } from '@/lib/club-time'
 import { useMyReservations, useCancelReservation } from '@/lib/hooks/use-reservations'
 import { formatDate, formatTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -15,77 +16,140 @@ import {
 } from '@/components/ui/dialog'
 import type { Reservation } from '@/lib/types'
 
+const CANCELLATION_CUTOFF_MS = 60 * 60 * 1000 // 60 minutes
+
+function isCutoffPassed(reservation: Reservation): boolean {
+  try {
+    const startMs = zonedDateTimeToUtc(reservation.date, reservation.startTime).getTime()
+    return Date.now() >= startMs - CANCELLATION_CUTOFF_MS
+  } catch {
+    return true
+  }
+}
+
+const statusBadgeVariant: Record<Reservation['status'], 'available' | 'reserved' | 'outline'> = {
+  active: 'available',
+  cancelled: 'reserved',
+  completed: 'outline',
+  pending: 'outline',
+  no_show: 'reserved',
+}
+
+interface ReservationCardProps {
+  reservation: Reservation
+  onCancel: (id: string) => void
+  cutoffPassed?: boolean
+}
+
+function ReservationCard({ reservation, onCancel, cutoffPassed }: ReservationCardProps) {
+  const t = useTranslations('reservations')
+  const tt = useTranslations('tables')
+  return (
+    <div className="rpg-card p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 text-sm font-medium">
+            <MapPin className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <span>
+              {reservation.roomName && reservation.tableName
+                ? `${reservation.roomName} · ${reservation.tableName}`
+                : reservation.tableName ?? reservation.tableId}
+            </span>
+            {reservation.surface && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Layers className="h-3 w-3" aria-hidden="true" />
+                {reservation.surface === 'top' ? tt('surfaceTop') : tt('surfaceBottom')}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+              {formatDate(reservation.date)}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+              {formatTime(reservation.startTime)} — {formatTime(reservation.endTime)}
+            </span>
+          </div>
+          {reservation.equipment && reservation.equipment.length > 0 && (
+            <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <Package className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>{reservation.equipment.map((item) => item.name).join(', ')}</span>
+            </div>
+          )}
+        </div>
+        <Badge variant={statusBadgeVariant[reservation.status]}>
+          {t(reservation.status)}
+        </Badge>
+      </div>
+
+      {(reservation.status === 'active' || reservation.status === 'pending') && (
+        <div className="space-y-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={cutoffPassed ? undefined : () => onCancel(reservation.id)}
+            disabled={cutoffPassed}
+            className="w-full border-destructive/40 text-destructive hover:bg-destructive/15 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-disabled={cutoffPassed}
+          >
+            {t('cancel')}
+          </Button>
+          {cutoffPassed && (
+            <p className="text-xs text-muted-foreground text-center" role="note">
+              {t('errors.cancellationCutoff')}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
 export function MyReservationsView() {
   const t = useTranslations('reservations')
+  const tc = useTranslations('common')
   const { user } = useAuth()
   const { data: reservations, isLoading } = useMyReservations(user?.id ?? null)
   const cancelReservation = useCancelReservation()
   const [cancelingId, setCancelingId] = useState<string | null>(null)
+  const [cancelError, setCancelError] = useState<string | null>(null)
+  const dialogOpenRef = useRef(false)
 
-  const activeReservations = reservations?.filter(r => r.status === 'active') ?? []
-  const pastReservations = reservations?.filter(r => r.status !== 'active') ?? []
+  const closeDialog = () => {
+    dialogOpenRef.current = false
+    setCancelingId(null)
+    setCancelError(null)
+  }
+
+  const openCancelDialog = (id: string) => {
+    dialogOpenRef.current = true
+    setCancelingId(id)
+  }
+
+  const activeReservations = reservations?.filter(r => r.status === 'active' || r.status === 'pending') ?? []
+  const pastReservations = reservations?.filter(r => r.status !== 'active' && r.status !== 'pending') ?? []
 
   async function handleCancel(id: string) {
+    setCancelError(null)
     try {
       await cancelReservation.mutateAsync(id)
-    } finally {
-      setCancelingId(null)
+      closeDialog()
+    } catch (error: unknown) {
+      if (!dialogOpenRef.current) return
+      const msg = error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? (error as { message: string }).message
+          : ''
+      if (msg === 'CANCELLATION_CUTOFF') {
+        setCancelError(t('errors.cancellationCutoff'))
+      } else {
+        setCancelError(t('errors.generic'))
+      }
     }
-  }
-
-  const statusBadgeVariant: Record<Reservation['status'], 'available' | 'reserved' | 'outline'> = {
-    active: 'available',
-    cancelled: 'reserved',
-    completed: 'outline',
-  }
-
-  function ReservationCard({ reservation }: { reservation: Reservation }) {
-    return (
-      <div className="rpg-card p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-sm font-medium">
-              <MapPin className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-              <span>
-                {reservation.roomName && reservation.tableName
-                  ? `${reservation.roomName} · ${reservation.tableName}`
-                  : reservation.tableName ?? reservation.tableId}
-              </span>
-              {reservation.surface && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Layers className="h-3 w-3" aria-hidden="true" />
-                  {reservation.surface === 'top' ? 'Superior' : 'Inferior'}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-                {formatDate(reservation.date)}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-                {formatTime(reservation.startTime)} — {formatTime(reservation.endTime)}
-              </span>
-            </div>
-          </div>
-          <Badge variant={statusBadgeVariant[reservation.status]}>
-            {t(reservation.status)}
-          </Badge>
-        </div>
-
-        {reservation.status === 'active' && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCancelingId(reservation.id)}
-            className="w-full border-destructive/40 text-destructive hover:bg-destructive/15"
-          >
-            {t('cancel')}
-          </Button>
-        )}
-      </div>
-    )
   }
 
   return (
@@ -118,7 +182,7 @@ export function MyReservationsView() {
               </div>
             ) : (
               <div className="space-y-3">
-                {activeReservations.map(r => <ReservationCard key={r.id} reservation={r} />)}
+                {activeReservations.map(r => <ReservationCard key={r.id} reservation={r} onCancel={openCancelDialog} cutoffPassed={isCutoffPassed(r)} />)}
               </div>
             )}
           </section>
@@ -130,7 +194,7 @@ export function MyReservationsView() {
                 {t('completed')} / {t('cancelled')} ({pastReservations.length})
               </h2>
               <div className="space-y-3 opacity-70">
-                {pastReservations.map(r => <ReservationCard key={r.id} reservation={r} />)}
+                {pastReservations.map(r => <ReservationCard key={r.id} reservation={r} onCancel={openCancelDialog} />)}
               </div>
             </section>
           )}
@@ -138,15 +202,21 @@ export function MyReservationsView() {
       )}
 
       {/* Cancel confirmation dialog */}
-      <Dialog open={!!cancelingId} onOpenChange={() => setCancelingId(null)}>
+      <Dialog open={!!cancelingId} onOpenChange={closeDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-cinzel">{t('cancel')}</DialogTitle>
             <DialogDescription>{t('cancelConfirm')}</DialogDescription>
           </DialogHeader>
+          {cancelError && (
+            <p className="text-sm text-destructive flex items-center gap-1.5">
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {cancelError}
+            </p>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelingId(null)}>
-              No
+            <Button variant="outline" onClick={closeDialog}>
+              {tc('no')}
             </Button>
             <Button
               variant="destructive"

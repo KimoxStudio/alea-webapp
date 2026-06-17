@@ -6,6 +6,7 @@ const routerPushMock = vi.fn()
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: routerPushMock }),
+  usePathname: () => '/es/rooms',
 }))
 
 const apiClientMock = vi.hoisted(() => ({
@@ -102,13 +103,13 @@ describe('AuthProvider', () => {
     const { result } = renderHook(() => useAuth(), { wrapper })
 
     await act(async () => {
-      await result.current.login('admin@alea.club', 'Admin1234!@#')
+      await result.current.login('admin@alea.club', 'Admin123')
     })
 
     expect(result.current.user).toEqual(loggedInUser)
 
     await act(async () => {
-      await result.current.register('100099', 'nuevo@alea.club', 'Password1234!@#')
+      await result.current.register('100099', 'Password123')
     })
 
     expect(result.current.user).toEqual(registeredUser)
@@ -119,6 +120,6 @@ describe('AuthProvider', () => {
 
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
-    expect(routerPushMock).toHaveBeenCalledWith('/')
+    expect(routerPushMock).toHaveBeenCalledWith('/es/login')
   })
 })

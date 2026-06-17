@@ -3,11 +3,48 @@ export type Role = 'member' | 'admin';
 export interface User {
   id: string;
   memberNumber: string;
+  fullName?: string | null;
   email?: string | null;
+  phone?: string | null;
   role: Role;
   isActive: boolean;
+  noShowCount: number;
+  blockedUntil: string | null;
+  activeFrom?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MemberImportRow {
+  rowNumber: number;
+  memberNumber: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+}
+
+export type MemberImportIssueCode =
+  | 'invalid_member_number'
+  | 'missing_full_name'
+  | 'duplicate_member_number'
+  | 'read_existing_failed'
+  | 'update_existing_failed'
+  | 'create_auth_failed'
+  | 'persist_import_failed';
+
+export interface MemberImportIssue {
+  rowNumber: number;
+  memberNumber?: string | null;
+  code: MemberImportIssueCode;
+}
+
+export interface MemberImportResult {
+  totalRows: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  normalizedRows: MemberImportRow[];
+  issues: MemberImportIssue[];
 }
 
 export interface Room {
@@ -26,6 +63,7 @@ export interface GameTable {
   name: string;
   type: TableType;
   qrCode: string;
+  qrCodeInf?: string | null;
   position?: { x: number; y: number };
 }
 
@@ -36,12 +74,14 @@ export interface Reservation {
   date: string;
   startTime: string;
   endTime: string;
-  status: 'active' | 'cancelled' | 'completed';
+  status: 'active' | 'cancelled' | 'completed' | 'pending' | 'no_show';
   surface?: TableSurface | null;
+  activatedAt?: string | null;
   createdAt: string;
   memberNumber?: string | null;
   roomName?: string | null;
   tableName?: string | null;
+  equipment?: Equipment[];
 }
 
 export interface RemovableTopTableStatus {
@@ -53,6 +93,8 @@ export interface TimeSlot {
   startTime: string; // HH:mm
   endTime: string;   // HH:mm
   available: boolean;
+  source?: 'reservation' | 'event';
+  label?: string | null;
 }
 
 export interface TableAvailability {
@@ -70,6 +112,40 @@ export interface PaginatedResponse<T> {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+export interface AdminEventRoomBlock {
+  id: string
+  roomId: string
+  date: string
+  startTime: string
+  endTime: string
+  allDay: boolean
+}
+
+export interface AdminEvent {
+  id: string
+  title: string
+  description: string | null
+  date: string
+  startTime: string
+  endTime: string
+  createdBy: string | null
+  createdAt: string
+  allDay: boolean
+  roomBlocks: AdminEventRoomBlock[]
+}
+
+export interface Equipment {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface AvailableEquipment extends Equipment {
+  available: boolean;
+  conflictReason?: string | null;
 }
 
 export interface ApiError {
@@ -95,4 +171,5 @@ export interface CreateReservationRequest {
   startTime: string;
   endTime: string;
   surface?: TableSurface;
+  equipmentIds?: string[];
 }

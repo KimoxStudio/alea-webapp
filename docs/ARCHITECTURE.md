@@ -239,7 +239,7 @@ The client-side architecture is organized under `lib/`:
 
 - Node.js 20+
 - pnpm 9+
-- Supabase CLI + Docker Desktop
+- Supabase Cloud project for shared development, or Docker Desktop + Supabase CLI for a full local stack
 
 ### Steps
 
@@ -249,24 +249,48 @@ pnpm install
 
 # 2. Copy environment template
 cp .env.example .env.local
-# Edit .env.local — the example contains hosted-project placeholders; replace with your values.
-# For local development with supabase start, use http://127.0.0.1:54321 for NEXT_PUBLIC_SUPABASE_URL
-# and run `supabase status` to get the publishable and secret keys.
+# Edit .env.local with your Supabase credentials:
+# - NEXT_PUBLIC_SUPABASE_URL
+# - NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY
+# - SUPABASE_SECRET_DEFAULT_KEY
+# - NEXT_PUBLIC_APP_URL
+# - CRON_SECRET
 
-# 3. Start local Supabase (runs migrations automatically)
-supabase start
-
-# 4. Start dev server
+# 3. Start dev server
 pnpm dev
 ```
+
+### Local Supabase option
+
+If you want a fully local DB/auth stack instead of a shared Supabase Cloud project:
+
+```bash
+supabase start
+supabase status
+```
+
+Then point `.env.local` to:
+
+- `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=<publishable key from supabase status>`
+- `SUPABASE_SECRET_DEFAULT_KEY=<secret/service-role key from supabase status>`
+- `NEXT_PUBLIC_APP_URL=http://localhost:3000`
+
+Useful local reset command:
+
+```bash
+supabase db reset
+```
+
+This reapplies all migrations and the local QA seed in `supabase/seed.sql`.
 
 ### Useful local URLs
 
 | Service | URL |
 |---|---|
 | App | http://localhost:3000 |
-| Supabase Studio | http://localhost:54323 |
-| Supabase API | http://localhost:54321 |
+| Supabase API (local) | http://127.0.0.1:54321 |
+| Supabase Studio (local) | http://127.0.0.1:54323 |
 
 ---
 
@@ -279,6 +303,8 @@ pnpm test          # run all tests once
 pnpm test:watch    # watch mode
 pnpm typecheck     # TypeScript type-check
 pnpm lint          # ESLint
+pnpm build         # production build check
+pnpm test:integration  # local Supabase migration/type validation
 ```
 
 ---

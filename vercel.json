@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/api/cron/cancel-pending/route.ts": {
+      "maxDuration": 10
+    }
+  }
+}

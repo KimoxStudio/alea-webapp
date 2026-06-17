@@ -1,3 +1,5 @@
+import 'server-only'
+import { timingSafeEqual, createHash } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import type { CookieOptionsWithName } from '@supabase/ssr'
 
@@ -280,15 +282,13 @@ function getClientAddress(request: NextRequest) {
   return realIp || 'local'
 }
 
-function tokensMatch(left: string, right: string) {
-  if (left.length !== right.length) return false
-
-  let mismatch = 0
-  for (let index = 0; index < left.length; index += 1) {
-    mismatch |= left.charCodeAt(index) ^ right.charCodeAt(index)
-  }
-
-  return mismatch === 0
+export function tokensMatch(a: string, b: string): boolean {
+  // Hash both strings to a fixed 32-byte length so timingSafeEqual can always
+  // run, eliminating the length side-channel entirely while keeping constant-time
+  // guarantees.
+  const hashA = createHash('sha256').update(a).digest()
+  const hashB = createHash('sha256').update(b).digest()
+  return timingSafeEqual(hashA, hashB)
 }
 
 export function createCsrfToken() {
@@ -410,6 +410,7 @@ export function enforceRateLimit(
 
 export const RATE_LIMIT_POLICIES = {
   authLogin: { bucket: 'auth-login', limit: 5, windowMs: 60_000 },
+  authActivate: { bucket: 'auth-activate', limit: 5, windowMs: 60_000 },
   authRegister: { bucket: 'auth-register', limit: 3, windowMs: 60_000 },
   authLogout: { bucket: 'auth-logout', limit: 10, windowMs: 60_000 },
   adminMutation: { bucket: 'admin-mutation', limit: 30, windowMs: 60_000 },

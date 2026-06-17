@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseRouteHandlerClient } from '@/lib/supabase/server'
 import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
-import { register } from '@/lib/server/auth-service'
-import { toServiceErrorResponse } from '@/lib/server/http-error'
 
 export async function POST(request: NextRequest) {
   const securityError = enforceMutationSecurity(request)
@@ -11,12 +8,8 @@ export async function POST(request: NextRequest) {
   const rateLimitError = enforceRateLimit(request, RATE_LIMIT_POLICIES.authRegister)
   if (rateLimitError) return rateLimitError
 
-  try {
-    const { supabase, applyCookies } = createSupabaseRouteHandlerClient(request)
-    const body = await request.json()
-    const user = await register(body, supabase)
-    return applyCookies(NextResponse.json(user, { status: 201 }))
-  } catch (error) {
-    return toServiceErrorResponse(error)
-  }
+  return NextResponse.json(
+    { message: 'Self-registration is disabled. Ask an administrator for an activation link.', statusCode: 410 },
+    { status: 410 },
+  )
 }

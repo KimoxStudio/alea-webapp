@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { MapPin } from 'lucide-react'
+import { getCurrentClubDate } from '@/lib/club-time'
 import { useRooms } from '@/lib/hooks/use-rooms'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { RoomView } from './room-view'
@@ -16,7 +17,7 @@ export function RoomsView() {
   const router = useRouter()
   const pathname = usePathname()
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getCurrentClubDate()
   const [currentDate] = useState(today)
 
   const activeTab = searchParams.get('sala') ?? (rooms?.[0]?.id ?? '')

@@ -1,19 +1,58 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Sword, Menu, Globe, LogOut, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth/auth-context'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 
 interface HeaderProps { locale: string }
+
+/**
+ * Isolated sub-component that calls useSearchParams().
+ * Must be wrapped in its own Suspense boundary so that suspension caused by
+ * useSearchParams during streaming SSR does not hide the entire Header.
+ */
+function LocaleSwitcherLink({ locale }: { locale: string }) {
+  const otherLocale = locale === 'es' ? 'en' : 'es'
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const t = useTranslations()
+  const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '')
+  const qs = searchParams.toString()
+  const switchHref = `/${otherLocale}${pathWithoutLocale}${qs ? `?${qs}` : ''}`
+
+  return (
+    <Link
+      href={switchHref}
+      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      aria-label={t('nav.switchLocale', { locale: otherLocale })}
+    >
+      <Globe className="h-3.5 w-3.5" aria-hidden="true" />
+      <span className="uppercase font-medium">{otherLocale}</span>
+    </Link>
+  )
+}
+
+/** Fallback shown while LocaleSwitcherLink is suspending (no layout shift). */
+function LocaleSwitcherFallback({ locale }: { locale: string }) {
+  const otherLocale = locale === 'es' ? 'en' : 'es'
+  return (
+    <span className="flex items-center gap-1 text-xs text-muted-foreground px-2 py-1 rounded" aria-hidden="true">
+      <Globe className="h-3.5 w-3.5" aria-hidden="true" />
+      <span className="uppercase font-medium">{otherLocale}</span>
+    </span>
+  )
+}
 
 export function Header({ locale }: HeaderProps) {
   const t = useTranslations()
   const { user, logout, isAuthenticated } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const otherLocale = locale === 'es' ? 'en' : 'es'
+
+  if (!isAuthenticated) return null
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -27,48 +66,37 @@ export function Header({ locale }: HeaderProps) {
         </Link>
 
         <nav className="hidden md:flex items-center gap-6" aria-label={t('nav.mainNavAriaLabel')}>
-          {isAuthenticated && (
-            <>
-              <Link href={`/${locale}/rooms`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
-                {t('nav.rooms')}
-              </Link>
-              <Link href={`/${locale}/reservations`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
-                {t('nav.reservations')}
-              </Link>
-              {user?.role === 'admin' && (
-                <Link href={`/${locale}/admin`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
-                  {t('nav.admin')}
-                </Link>
-              )}
-            </>
+          <Link href={`/${locale}/rooms`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
+            {t('nav.rooms')}
+          </Link>
+          <Link href={`/${locale}/reservations`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
+            {t('nav.reservations')}
+          </Link>
+          {user?.role === 'admin' && (
+            <Link href={`/${locale}/admin`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
+              {t('nav.admin')}
+            </Link>
           )}
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link href={`/${otherLocale}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Switch to ${otherLocale}`}>
-            <Globe className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="uppercase font-medium">{otherLocale}</span>
-          </Link>
+          <Suspense fallback={<LocaleSwitcherFallback locale={locale} />}>
+            <LocaleSwitcherLink locale={locale} />
+          </Suspense>
 
-          {isAuthenticated ? (
-            <div className="flex items-center gap-2">
-              <span className="hidden md:block text-sm text-muted-foreground">#{user?.memberNumber}</span>
-              {user?.role === 'admin' && (
-                <Link href={`/${locale}/admin`}>
-                  <Button variant="ghost" size="icon" aria-label={t('nav.admin')}>
-                    <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </Link>
-              )}
-              <Button variant="ghost" size="icon" onClick={logout} aria-label={t('nav.logout')}>
-                <LogOut className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            </div>
-          ) : (
-            <Link href={`/${locale}/login`}>
-              <Button size="sm">{t('auth.login')}</Button>
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            <span className="hidden md:block text-sm text-muted-foreground">#{user?.memberNumber}</span>
+            {user?.role === 'admin' && (
+              <Link href={`/${locale}/admin`}>
+                <Button variant="ghost" size="icon" aria-label={t('nav.admin')}>
+                  <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </Link>
+            )}
+            <Button variant="ghost" size="icon" onClick={logout} aria-label={t('nav.logout')}>
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
 
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-expanded={mobileMenuOpen} aria-controls="mobile-menu" aria-label={t('nav.menuAriaLabel')}>
             <Menu className="h-5 w-5" aria-hidden="true" />
@@ -76,7 +104,7 @@ export function Header({ locale }: HeaderProps) {
         </div>
       </div>
 
-      {mobileMenuOpen && isAuthenticated && (
+      {mobileMenuOpen && (
         <nav id="mobile-menu" className="md:hidden border-t border-border bg-background/95 px-4 py-3 space-y-2" aria-label={t('nav.mobileNavAriaLabel')}>
           <Link href={`/${locale}/rooms`} className="block py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>{t('nav.rooms')}</Link>
           <Link href={`/${locale}/reservations`} className="block py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>{t('nav.reservations')}</Link>

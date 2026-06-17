@@ -34,31 +34,259 @@ export type Database = {
   }
   public: {
     Tables: {
-      profiles: {
+      equipment: {
         Row: {
           created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      room_default_equipment: {
+        Row: {
+          equipment_id: string
+          room_id: string
+        }
+        Insert: {
+          equipment_id: string
+          room_id: string
+        }
+        Update: {
+          equipment_id?: string
+          room_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_default_equipment_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_default_equipment_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservation_equipment: {
+        Row: {
+          equipment_id: string
+          reservation_id: string
+        }
+        Insert: {
+          equipment_id: string
+          reservation_id: string
+        }
+        Update: {
+          equipment_id?: string
+          reservation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservation_equipment_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservation_equipment_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activation_tokens: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          profile_id: string
+          token_hash: string
+          updated_at: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          profile_id: string
+          token_hash: string
+          updated_at?: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          profile_id?: string
+          token_hash?: string
+          updated_at?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activation_tokens_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activation_tokens_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_room_blocks: {
+        Row: {
+          all_day: boolean
+          date: string
+          end_time: string
+          event_id: string
+          id: string
+          room_id: string
+          start_time: string
+        }
+        Insert: {
+          all_day?: boolean
+          date: string
+          end_time: string
+          event_id: string
+          id?: string
+          room_id: string
+          start_time: string
+        }
+        Update: {
+          all_day?: boolean
+          date?: string
+          end_time?: string
+          event_id?: string
+          id?: string
+          room_id?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_room_blocks_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_room_blocks_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string | null
+          end_time: string
+          id: string
+          start_time: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date: string
+          description?: string | null
+          end_time: string
+          id?: string
+          start_time: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          end_time?: string
+          id?: string
+          start_time?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          active_from: string | null
+          auth_email: string
+          blocked_until: string | null
+          created_at: string
           email: string | null
+          full_name: string | null
           id: string
           is_active: boolean
           member_number: string
+          no_show_count: number
+          phone: string | null
+          psw_changed: string | null
           role: Database["public"]["Enums"]["role"]
           updated_at: string
         }
         Insert: {
+          active_from?: string | null
+          auth_email: string
+          blocked_until?: string | null
           created_at?: string
           email?: string | null
+          full_name?: string | null
           id: string
           is_active?: boolean
           member_number: string
+          no_show_count?: number
+          phone?: string | null
+          psw_changed?: string | null
           role?: Database["public"]["Enums"]["role"]
           updated_at?: string
         }
         Update: {
+          active_from?: string | null
+          auth_email?: string
+          blocked_until?: string | null
           created_at?: string
           email?: string | null
+          full_name?: string | null
           id?: string
           is_active?: boolean
           member_number?: string
+          no_show_count?: number
+          phone?: string | null
+          psw_changed?: string | null
           role?: Database["public"]["Enums"]["role"]
           updated_at?: string
         }
@@ -66,6 +294,7 @@ export type Database = {
       }
       reservations: {
         Row: {
+          activated_at: string | null
           created_at: string
           date: string
           end_time: string
@@ -77,6 +306,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activated_at?: string | null
           created_at?: string
           date: string
           end_time: string
@@ -88,6 +318,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activated_at?: string | null
           created_at?: string
           date?: string
           end_time?: string
@@ -104,6 +335,13 @@ export type Database = {
             columns: ["table_id"]
             isOneToOne: false
             referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_user_id_fkey_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -140,6 +378,7 @@ export type Database = {
           pos_x: number | null
           pos_y: number | null
           qr_code: string | null
+          qr_code_inf: string | null
           room_id: string
           type: Database["public"]["Enums"]["table_type"]
         }
@@ -150,6 +389,7 @@ export type Database = {
           pos_x?: number | null
           pos_y?: number | null
           qr_code?: string | null
+          qr_code_inf?: string | null
           room_id: string
           type?: Database["public"]["Enums"]["table_type"]
         }
@@ -160,6 +400,7 @@ export type Database = {
           pos_x?: number | null
           pos_y?: number | null
           qr_code?: string | null
+          qr_code_inf?: string | null
           room_id?: string
           type?: Database["public"]["Enums"]["table_type"]
         }
@@ -178,10 +419,54 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_expired_pending_reservations: {
+        Args: {
+          club_timezone?: string
+          grace_minutes?: number
+          reference_time?: string
+        }
+        Returns: number
+      }
+      create_event_atomic: {
+        Args: {
+          p_all_day?: boolean
+          p_date: string
+          p_description: string | null
+          p_end_time: string
+          p_room_id: string | null
+          p_start_time: string
+          p_title: string
+        }
+        Returns: Json
+      }
+      get_database_time: { Args: never; Returns: string }
+      is_active_member: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      mark_no_show_reservations: {
+        Args: { club_timezone?: string; reference_time?: string }
+        Returns: number
+      }
+      update_event_atomic: {
+        Args: {
+          p_all_day?: boolean
+          p_date: string
+          p_description: string | null
+          p_end_time: string
+          p_id: string
+          p_room_id: string | null
+          p_start_time: string
+          p_title: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
-      reservation_status: "active" | "cancelled" | "completed"
+      reservation_status:
+        | "active"
+        | "cancelled"
+        | "completed"
+        | "pending"
+        | "no_show"
       role: "member" | "admin"
       table_surface: "top" | "bottom"
       table_type: "small" | "large" | "removable_top"
@@ -315,7 +600,13 @@ export const Constants = {
   },
   public: {
     Enums: {
-      reservation_status: ["active", "cancelled", "completed"],
+      reservation_status: [
+        "active",
+        "cancelled",
+        "completed",
+        "pending",
+        "no_show",
+      ],
       role: ["member", "admin"],
       table_surface: ["top", "bottom"],
       table_type: ["small", "large", "removable_top"],

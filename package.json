@@ -11,9 +11,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "vitest run",
+    "test": "NODE_OPTIONS=--max-old-space-size=6144 vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "NODE_OPTIONS=--max-old-space-size=4096 vitest run --coverage",
     "test:integration": "node -e \"if (process.platform === 'win32') { console.log('Skipping integration shell check on Windows.'); process.exit(0); } require('node:child_process').execFileSync('bash', ['./scripts/supabase-integration-check.sh'], { stdio: 'inherit' });\"",
     "lint": "next lint --no-cache",
     "typecheck": "next typegen && node -e \"require('node:fs').rmSync('.next/cache/.tsbuildinfo', { force: true })\" && tsc --noEmit",
@@ -43,6 +43,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "fflate": "^0.8.2",
     "lucide-react": "^0.469.0",
     "next": "15.5.14",
     "next-intl": "^3.26.5",
@@ -54,6 +55,7 @@
     "server-only": "^0.0.1",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.1",
+    "xlsx": "^0.18.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {

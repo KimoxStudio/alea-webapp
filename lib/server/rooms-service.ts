@@ -3,10 +3,13 @@ import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/l
 import { serviceError } from '@/lib/server/service-error'
 import { resolveDate, buildAvailability } from '@/lib/server/availability'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
+import { regenerateQrCodes } from '@/lib/server/tables-service'
+import { toGameTable } from '@/lib/server/table-mappers'
 
 type RoomRow = Tables<'rooms'>
 type TableRow = Tables<'tables'>
 type ReservationRow = Tables<'reservations'>
+type EventBlockRow = Tables<'event_room_blocks'>
 type RoomsTableClient = {
   select: (columns: string) => {
     order: (column: string, options: { ascending: boolean }) => Promise<{ data: RoomRow[] | null; error: unknown }>
@@ -41,7 +44,7 @@ type TablesInsertClient = {
 type ReservationsByTableClient = {
   select: (columns: string) => {
     eq: (column: 'date', value: string) => {
-      eq: (column: 'status', value: 'active') => {
+      in: (column: 'status', values: string[]) => {
         in: (column: 'table_id', values: string[]) => Promise<{ data: ReservationRow[] | null; error: unknown }>
       }
     }
@@ -49,7 +52,7 @@ type ReservationsByTableClient = {
 }
 
 const ROOM_COLUMNS = 'id, name, table_count, description'
-const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, pos_x, pos_y'
+const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, qr_code_inf, pos_x, pos_y'
 
 function toRoom(row: RoomRow): Room {
   return {
@@ -57,17 +60,6 @@ function toRoom(row: RoomRow): Room {
     name: row.name,
     tableCount: row.table_count,
     description: row.description ?? undefined,
-  }
-}
-
-function toGameTable(row: TableRow): GameTable {
-  return {
-    id: row.id,
-    roomId: row.room_id,
-    name: row.name,
-    type: row.type,
-    qrCode: row.qr_code ?? '',
-    position: row.pos_x == null || row.pos_y == null ? undefined : { x: row.pos_x, y: row.pos_y },
   }
 }
 
@@ -185,14 +177,47 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
 
   const admin = createSupabaseServerAdminClient()
   const reservations = admin.from('reservations') as unknown as ReservationsByTableClient
-  const { data, error } = await reservations
-    .select('id, table_id, date, start_time, end_time, status, surface, user_id, created_at')
-    .eq('date', effectiveDate)
-    .eq('status', 'active')
-    .in('table_id', tables.map((table) => table.id))
+
+  const [reservationsResult, eventBlocksResult] = await Promise.all([
+    reservations
+      .select('id, table_id, date, start_time, end_time, status, surface, user_id, created_at')
+      .eq('date', effectiveDate)
+      .in('status', ['active', 'pending'])
+      .in('table_id', tables.map((table) => table.id)),
+    admin
+      .from('event_room_blocks')
+      .select('id, event_id, room_id, date, start_time, end_time, all_day')
+      .eq('room_id', roomId)
+      .eq('date', effectiveDate),
+  ])
+
+  const { data, error } = reservationsResult
 
   if (error) {
     serviceError('Internal server error', 500)
+  }
+
+  const eventBlocks = (eventBlocksResult.data ?? []) as EventBlockRow[]
+
+  if (eventBlocksResult.error) {
+    serviceError('Internal server error', 500)
+  }
+
+  let eventTitleById = new Map<string, string>()
+  const eventIds = [...new Set(eventBlocks.map((block) => block.event_id))]
+  if (eventIds.length > 0) {
+    const eventsResult = await admin
+      .from('events')
+      .select('id, title')
+      .in('id', eventIds)
+
+    if (eventsResult.error) {
+      serviceError('Internal server error', 500)
+    }
+
+    eventTitleById = new Map(
+      ((eventsResult.data ?? []) as Array<{ id: string; title: string }>).map((event) => [event.id, event.title]),
+    )
   }
 
   const reservationsByTable = new Map<string, ReservationRow[]>()
@@ -202,8 +227,19 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
     reservationsByTable.set(reservation.table_id, items)
   }
 
+  const eventSlots = eventBlocks.map((block) => ({
+    start: block.start_time.slice(0, 5),
+    end: block.end_time.slice(0, 5),
+    label: eventTitleById.get(block.event_id) ?? null,
+  }))
+
   return tables.reduce<Record<string, TableAvailability>>((acc, table) => {
-    acc[table.id] = buildAvailability(table, effectiveDate, reservationsByTable.get(table.id) ?? [])
+    acc[table.id] = buildAvailability(
+      table,
+      effectiveDate,
+      reservationsByTable.get(table.id) ?? [],
+      eventSlots,
+    )
     return acc
   }, {})
 }
@@ -249,5 +285,16 @@ export async function createTableEntry(
     serviceError('Internal server error', 500)
   }
 
-  return toGameTable(data as TableRow)
+  const tableRow = data as TableRow
+
+  // Fire-and-forget: generate QR codes without blocking the POST response.
+  // If QR generation fails the admin can regenerate later via the dashboard.
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
+  if (appUrl) {
+    regenerateQrCodes(tableRow.id).catch((qrErr: unknown) => {
+      console.error('[createTableEntry] QR generation failed in background:', qrErr)
+    })
+  }
+
+  return toGameTable(tableRow)
 }

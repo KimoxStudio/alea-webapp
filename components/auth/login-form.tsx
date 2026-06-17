@@ -17,8 +17,19 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
+  useFormField,
 } from '@/components/ui/form'
+
+function TranslatedFormMessage({ message }: { message: string | undefined }) {
+  const { formMessageId } = useFormField()
+  const tField = useTranslations('auth')
+  if (!message) return null
+  return (
+    <p id={formMessageId} role="alert" className="text-xs text-destructive mt-1">
+      {tField(message as Parameters<typeof tField>[0])}
+    </p>
+  )
+}
 
 interface LoginFormProps { locale: string }
 
@@ -27,6 +38,7 @@ export function LoginForm({ locale }: LoginFormProps) {
   const { login } = useAuth()
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [recoveryHelpVisible, setRecoveryHelpVisible] = useState(false)
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -40,6 +52,7 @@ export function LoginForm({ locale }: LoginFormProps) {
 
   const onSubmit = async (data: LoginFormData) => {
     setServerError(null)
+    setRecoveryHelpVisible(false)
     try {
       await login(data.identifier, data.password)
       router.push(`/${locale}/rooms`)
@@ -50,9 +63,17 @@ export function LoginForm({ locale }: LoginFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-5">
+      <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-6">
         {serverError && (
-          <div role="alert" className="rounded-md bg-destructive/15 border border-destructive/30 px-4 py-3 text-sm text-destructive">
+          <div
+            role="alert"
+            className="pl-4 py-3 pr-3 text-sm rounded-r-md"
+            style={{
+              borderLeft: '2px solid color-mix(in srgb, var(--destructive) 80%, transparent)',
+              background: 'color-mix(in srgb, var(--destructive) 8%, transparent)',
+              color: 'color-mix(in srgb, var(--destructive) 85%, var(--card-foreground))',
+            }}
+          >
             {serverError}
           </div>
         )}
@@ -61,17 +82,23 @@ export function LoginForm({ locale }: LoginFormProps) {
           control={form.control}
           name="identifier"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('memberNumber')}</FormLabel>
+            <FormItem className="space-y-1.5">
+              <FormLabel
+                className="text-xs tracking-wide uppercase font-medium"
+                style={{ color: 'color-mix(in srgb, var(--primary) 60%, var(--muted-foreground))' }}
+              >
+                {t('memberNumber')}
+              </FormLabel>
               <FormControl>
                 <Input
                   type="text"
                   autoComplete="username"
                   placeholder={t('identifierPlaceholder')}
+                  className="h-11"
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <TranslatedFormMessage message={form.formState.errors.identifier?.message} />
             </FormItem>
           )}
         />
@@ -80,29 +107,57 @@ export function LoginForm({ locale }: LoginFormProps) {
           control={form.control}
           name="password"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('password')}</FormLabel>
+            <FormItem className="space-y-1.5">
+              <FormLabel
+                className="text-xs tracking-wide uppercase font-medium"
+                style={{ color: 'color-mix(in srgb, var(--primary) 60%, var(--muted-foreground))' }}
+              >
+                {t('password')}
+              </FormLabel>
               <FormControl>
                 <PasswordInput
                   autoComplete="current-password"
+                  className="h-11"
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <TranslatedFormMessage message={form.formState.errors.password?.message} />
             </FormItem>
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting
-            ? (
-              <span className="inline-flex items-center gap-2">
-                <DiceLoader size="sm" />
-                <span>{t('login')}...</span>
-              </span>
-            )
-            : t('login')}
+        <Button
+          type="submit"
+          className="w-full h-11 font-cinzel tracking-widest text-xs mt-2"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <span className="inline-flex items-center gap-2.5">
+              <DiceLoader size="sm" />
+              <span>{t('login')}</span>
+            </span>
+          ) : (
+            t('login')
+          )}
         </Button>
+
+        <div className="pt-1 flex flex-col items-center gap-2">
+          <button
+            type="button"
+            className="text-xs text-muted-foreground/55 transition-colors duration-200 hover:text-primary/65 underline-offset-4 hover:underline"
+            onClick={() => setRecoveryHelpVisible((v) => !v)}
+          >
+            {t('forgotPassword')}
+          </button>
+          {recoveryHelpVisible && (
+            <p
+              className="text-xs text-muted-foreground/70 pl-3"
+              style={{ borderLeft: '1px solid color-mix(in srgb, var(--primary) 25%, transparent)' }}
+            >
+              {t('forgotPasswordContactAdmin')}
+            </p>
+          )}
+        </div>
       </form>
     </Form>
   )

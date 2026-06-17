@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import type { GameTable } from '@/lib/types'
 import type { Tables } from '@/lib/supabase/types'
@@ -95,15 +96,15 @@ describe('normalizeTime', () => {
 })
 
 describe('generateDaySlots', () => {
-  it('generates 13 slots for an empty reserved list', () => {
+  it('generates 48 half-hour slots for an empty reserved list', () => {
     const slots = generateDaySlots([])
-    expect(slots).toHaveLength(13)
+    expect(slots).toHaveLength(48)
   })
 
-  it('first slot starts at 09:00 and last slot ends at 22:00', () => {
+  it('first slot starts at 00:00 and last half-hour slot ends at 24:00', () => {
     const slots = generateDaySlots([])
-    expect(slots[0]).toEqual({ startTime: '09:00', endTime: '10:00', available: true })
-    expect(slots[12]).toEqual({ startTime: '21:00', endTime: '22:00', available: true })
+    expect(slots[0]).toMatchObject({ startTime: '00:00', endTime: '00:30', available: true })
+    expect(slots[47]).toMatchObject({ startTime: '23:30', endTime: '24:00', available: true })
   })
 
   it('each slot has startTime, endTime and available fields', () => {
@@ -119,6 +120,7 @@ describe('generateDaySlots', () => {
     const slots = generateDaySlots([{ start: '10:00', end: '11:00' }])
     const slot = slots.find((s) => s.startTime === '10:00')
     expect(slot?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '10:30')?.available).toBe(false)
   })
 
   it('leaves slots outside the reserved range as available', () => {
@@ -133,8 +135,26 @@ describe('generateDaySlots', () => {
       { start: '14:00', end: '15:00' },
     ])
     expect(slots.find((s) => s.startTime === '09:00')?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '09:30')?.available).toBe(false)
     expect(slots.find((s) => s.startTime === '14:00')?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '14:30')?.available).toBe(false)
     expect(slots.find((s) => s.startTime === '10:00')?.available).toBe(true)
+  })
+
+  it('treats slot end as exclusive so adjacent bookings stay available', () => {
+    const slots = generateDaySlots([{ start: '17:00', end: '18:00' }])
+    expect(slots.find((s) => s.startTime === '17:00')?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '18:00')?.available).toBe(true)
+  })
+
+  it('marks partial overlaps on both touched slots', () => {
+    const slots = generateDaySlots([{ start: '10:30', end: '12:30' }])
+    expect(slots.find((s) => s.startTime === '10:00')?.available).toBe(true)
+    expect(slots.find((s) => s.startTime === '10:30')?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '11:00')?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '11:30')?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '12:00')?.available).toBe(false)
+    expect(slots.find((s) => s.startTime === '12:30')?.available).toBe(true)
   })
 })
 
@@ -145,7 +165,7 @@ describe('buildAvailability', () => {
 
     expect(result.tableId).toBe('t1')
     expect(result.date).toBe('2025-06-15')
-    expect(result.slots).toHaveLength(13)
+    expect(result.slots).toHaveLength(48)
     expect(result.slots.every((s) => s.available)).toBe(true)
   })
 
@@ -183,8 +203,8 @@ describe('buildAvailability', () => {
     expect(result.top).toBeDefined()
     expect(result.bottom).toBeDefined()
     expect(result.conflicts).toBeDefined()
-    expect(result.top).toHaveLength(13)
-    expect(result.bottom).toHaveLength(13)
+    expect(result.top).toHaveLength(48)
+    expect(result.bottom).toHaveLength(48)
   })
 
   it('separates top and bottom surface reservations for removable_top tables', () => {

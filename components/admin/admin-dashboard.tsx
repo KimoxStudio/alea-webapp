@@ -1,11 +1,13 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { LayoutDashboard, Users, CalendarDays, DoorOpen } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, DoorOpen, CalendarRange, Package } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UsersSection } from './users-section'
 import { ReservationsSection } from './reservations-section'
 import { RoomsSection } from './rooms-section'
+import { EventsSection } from './events-section'
+import { EquipmentSection } from './equipment-section'
 
 export function AdminDashboard() {
   const t = useTranslations('admin')
@@ -34,7 +36,7 @@ export function AdminDashboard() {
       </div>
 
       <Tabs defaultValue="users">
-        <TabsList className="mb-6 gap-1 border border-border bg-background-secondary/80">
+        <TabsList className="mb-6 h-auto w-full flex-wrap justify-center gap-1 border border-border bg-background-secondary/80 p-1">
           <TabsTrigger value="users" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30 data-[state=active]:glow-gold">
             <Users className="h-4 w-4" aria-hidden="true" />
             {t('users')}
@@ -46,6 +48,14 @@ export function AdminDashboard() {
           <TabsTrigger value="rooms" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
             <DoorOpen className="h-4 w-4" aria-hidden="true" />
             {t('rooms')}
+          </TabsTrigger>
+          <TabsTrigger value="events" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
+            <CalendarRange className="h-4 w-4" aria-hidden="true" />
+            {t('events.title')}
+          </TabsTrigger>
+          <TabsTrigger value="equipment" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
+            <Package className="h-4 w-4" aria-hidden="true" />
+            {t('equipment.title')}
           </TabsTrigger>
         </TabsList>
 
@@ -59,6 +69,14 @@ export function AdminDashboard() {
 
         <TabsContent value="rooms">
           <RoomsSection />
+        </TabsContent>
+
+        <TabsContent value="events">
+          <EventsSection />
+        </TabsContent>
+
+        <TabsContent value="equipment">
+          <EquipmentSection />
         </TabsContent>
       </Tabs>
     </div>

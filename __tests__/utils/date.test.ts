@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect } from 'vitest'
 import { formatDate, formatTime, generateTimeSlots } from '@/lib/utils'
 
@@ -7,6 +8,10 @@ describe('formatDate', () => {
     expect(result).toContain('15')
     expect(result).toContain('01')
     expect(result).toContain('2025')
+  })
+
+  it('keeps YYYY-MM-DD strings on the same calendar day', () => {
+    expect(formatDate('2025-12-31', 'es-ES')).toBe('31/12/2025')
   })
 })
 

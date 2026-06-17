@@ -1,7 +1,9 @@
 node_modules
 .next
+out/
 dist
 coverage
+.nyc_output/
 .env
 .env.*
 !.env.example
@@ -11,10 +13,12 @@ coverage
 
 # Agent coordination cache
 .agent-cache/
+.claude/worktrees/
 
 # Test output
 test-results/
 playwright-report/
+.playwright-mcp/
 
 # Supabase local runtime artifacts (not migrations)
 supabase/.branches/
@@ -27,12 +31,19 @@ supabase/.temp/
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 package-lock.json
 yarn.lock
+pnpm-debug.log
+.pnpm-store/
 *.log
 *.tsbuildinfo
 **/next-env.d.ts
-*.png
-*.pdf
-*.webm
+*.bak
+
+.aia/
+AGENTS.md
+
+# Claude tooling lockfiles (ephemeral, not for commit)
+.claude/*.lock

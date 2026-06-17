@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { useTranslations } from 'next-intl'
-import { Pencil, Plus, ChevronDown, ChevronRight, DoorOpen, Table2 } from 'lucide-react'
+import { Pencil, Plus, ChevronDown, ChevronRight, DoorOpen, Table2, QrCode, Download, RefreshCw } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +22,10 @@ import {
   useAdminCreateRoom,
   useAdminRoomTables,
   useAdminCreateTable,
+  useAdminRegenerateTableQr,
+  useAdminEquipment,
+  useAdminRoomDefaultEquipment,
+  useAdminSetRoomDefaultEquipment,
 } from '@/lib/hooks/use-admin'
 import type { Room, GameTable } from '@/lib/types'
 
@@ -29,6 +34,107 @@ const tableTypeBadge: Record<string, 'outline' | 'partial' | 'available'> = {
   small: 'outline',
   large: 'partial',
   removable_top: 'available',
+}
+
+// Sub-component: QR code display and management for a single table
+function TableQrPanel({ table, roomId }: { table: GameTable; roomId: string }) {
+  const t = useTranslations('admin')
+  const tt = useTranslations('tables')
+  const tc = useTranslations('common')
+  const regenerateQr = useAdminRegenerateTableQr()
+  const [qrCode, setQrCode] = useState<string>(table.qrCode)
+
+  async function handleRegenerate() {
+    const result = await regenerateQr.mutateAsync({ tableId: table.id, roomId })
+    setQrCode(result.qr_code)
+  }
+
+  return (
+    <div className="mt-2 ml-6 pl-4 border-l-2 border-primary/10 space-y-3 py-2">
+      <div className="flex flex-wrap gap-4">
+        {/* Main QR code */}
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground">
+            {tt('qrCode')}
+          </p>
+          {qrCode ? (
+            <div className="flex flex-col gap-2">
+              <Image
+                src={qrCode}
+                alt={`QR ${table.name}`}
+                width={128}
+                height={128}
+                className="w-32 h-32 rounded-md border border-border/50 bg-white object-cover"
+                unoptimized
+              />
+              <a
+                href={qrCode}
+                download={`QR-${table.name}.png`}
+                className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                <Download className="h-3 w-3" aria-hidden="true" />
+                {tc('save')}
+              </a>
+            </div>
+          ) : (
+            <div className="w-32 h-32 rounded-md border border-border/50 bg-background-secondary/40 flex items-center justify-center">
+              <QrCode className="h-8 w-8 text-muted-foreground/40" aria-hidden="true" />
+            </div>
+          )}
+        </div>
+
+      </div>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleRegenerate}
+        disabled={regenerateQr.isPending}
+        className="gap-1.5 h-8 border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+      >
+        {regenerateQr.isPending ? (
+          <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{tc('loading')}</span></span>
+        ) : (
+          <>
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+            {t('regenerateQr')}
+          </>
+        )}
+      </Button>
+    </div>
+  )
+}
+
+// Sub-component: single table row with QR toggle
+function TableRow({ table, roomId }: { table: GameTable; roomId: string }) {
+  const tt = useTranslations('tables')
+  const [showQr, setShowQr] = useState(false)
+
+  return (
+    <div className="rounded-md bg-background-secondary/40 border border-border/30">
+      <div className="flex items-center justify-between gap-2 py-2 px-3 hover:bg-background-secondary/70 transition-colors">
+        <div className="flex items-center gap-2">
+          <Table2 className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" aria-hidden="true" />
+          <span className="text-sm font-medium text-foreground">{table.name}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={tableTypeBadge[table.type] ?? 'outline'} className="text-xs">
+            {tt(table.type)}
+          </Badge>
+          <button
+            type="button"
+            onClick={() => setShowQr((v) => !v)}
+            aria-expanded={showQr}
+            aria-label={tt('qrCode')}
+            className="flex items-center justify-center w-6 h-6 rounded text-muted-foreground hover:text-primary transition-colors"
+          >
+            <QrCode className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+      {showQr && <TableQrPanel table={table} roomId={roomId} />}
+    </div>
+  )
 }
 
 // Sub-component: expanded room tables list + create table form
@@ -69,18 +175,7 @@ function RoomTablesPanel({ room }: { room: Room }) {
       ) : (
         <div className="space-y-1">
           {(tables as GameTable[]).map((table) => (
-            <div
-              key={table.id}
-              className="flex items-center justify-between gap-2 py-2 px-3 rounded-md bg-background-secondary/40 hover:bg-background-secondary/70 transition-colors border border-border/30"
-            >
-              <div className="flex items-center gap-2">
-                <Table2 className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" aria-hidden="true" />
-                <span className="text-sm font-medium text-foreground">{table.name}</span>
-              </div>
-              <Badge variant={tableTypeBadge[table.type] ?? 'outline'} className="text-xs">
-                {tt(table.type)}
-              </Badge>
-            </div>
+            <TableRow key={table.id} table={table} roomId={room.id} />
           ))}
         </div>
       )}
@@ -161,16 +256,47 @@ function RoomRow({ room }: { room: Room }) {
   const [editName, setEditName] = useState(room.name)
   const [editDesc, setEditDesc] = useState(room.description ?? '')
   const [editTableCount, setEditTableCount] = useState(String(room.tableCount))
+  const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<string[]>([])
 
   const updateRoom = useAdminUpdateRoom()
+  const setRoomDefaultEquipment = useAdminSetRoomDefaultEquipment()
+  const { data: allEquipment } = useAdminEquipment()
+  const { data: roomEquipment } = useAdminRoomDefaultEquipment(editing ? room.id : null)
+
+  // Sync room equipment when dialog opens
+  function handleOpenEdit() {
+    setEditName(room.name)
+    setEditDesc(room.description ?? '')
+    setEditTableCount(String(room.tableCount))
+    setEditing(true)
+  }
+
+  function toggleEquipment(id: string) {
+    setSelectedEquipmentIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
+  // Initialize selectedEquipmentIds from loaded room equipment
+  useEffect(() => {
+    if (editing && roomEquipment !== undefined) {
+      setSelectedEquipmentIds(roomEquipment.map((e) => e.id))
+    }
+    if (!editing) {
+      setSelectedEquipmentIds([])
+    }
+  }, [editing, roomEquipment])
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     const tableCount = Math.max(0, parseInt(editTableCount, 10) || 0)
-    await updateRoom.mutateAsync({
-      id: room.id,
-      data: { name: editName.trim() || room.name, description: editDesc.trim() || undefined, tableCount },
-    })
+    await Promise.all([
+      updateRoom.mutateAsync({
+        id: room.id,
+        data: { name: editName.trim() || room.name, description: editDesc.trim() || undefined, tableCount },
+      }),
+      setRoomDefaultEquipment.mutateAsync({ roomId: room.id, equipmentIds: selectedEquipmentIds }),
+    ])
     setEditing(false)
   }
 
@@ -213,12 +339,7 @@ function RoomRow({ room }: { room: Room }) {
             variant="ghost"
             size="icon"
             aria-label={t('editRoom')}
-            onClick={() => {
-              setEditing(true)
-              setEditName(room.name)
-              setEditDesc(room.description ?? '')
-              setEditTableCount(String(room.tableCount))
-            }}
+            onClick={handleOpenEdit}
             className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
           >
             <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
@@ -238,7 +359,7 @@ function RoomRow({ room }: { room: Room }) {
 
       {/* Edit dialog */}
       <Dialog open={editing} onOpenChange={setEditing}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-cinzel text-gradient-gold">{t('editRoom')}</DialogTitle>
           </DialogHeader>
@@ -279,12 +400,34 @@ function RoomRow({ room }: { room: Room }) {
                 className="bg-background-secondary border-border focus:border-primary/50"
               />
             </div>
+            {(allEquipment ?? []).length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground font-medium">
+                  {t('equipment.defaultEquipment')}
+                </Label>
+                <div className="rounded-md border border-border/50 bg-background-secondary/40 p-3 space-y-2 max-h-40 overflow-y-auto">
+                  {(allEquipment ?? []).map((equip) => (
+                    <label key={equip.id} className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={selectedEquipmentIds.includes(equip.id)}
+                        onChange={() => toggleEquipment(equip.id)}
+                        className="w-4 h-4 rounded border-border accent-primary"
+                      />
+                      <span className="text-sm text-foreground group-hover:text-primary transition-colors">
+                        {equip.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditing(false)} className="border-border">
                 {tc('cancel')}
               </Button>
-              <Button type="submit" disabled={updateRoom.isPending} className="min-w-[80px]">
-                {updateRoom.isPending ? (
+              <Button type="submit" disabled={updateRoom.isPending || setRoomDefaultEquipment.isPending} className="min-w-[80px]">
+                {(updateRoom.isPending || setRoomDefaultEquipment.isPending) ? (
                   <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('saving')}</span></span>
                 ) : tc('save')}
               </Button>
@@ -301,21 +444,34 @@ export function RoomsSection() {
   const tc = useTranslations('common')
 
   const { data: rooms, isLoading } = useAdminRooms()
+  const { data: allEquipment } = useAdminEquipment()
   const createRoom = useAdminCreateRoom()
+  const setRoomDefaultEquipment = useAdminSetRoomDefaultEquipment()
 
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
   const [newTableCount, setNewTableCount] = useState('0')
+  const [newEquipmentIds, setNewEquipmentIds] = useState<string[]>([])
+
+  function toggleNewEquipment(id: string) {
+    setNewEquipmentIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
 
   async function handleCreateRoom(e: React.FormEvent) {
     e.preventDefault()
     const parsed = Number(newTableCount)
     const tableCount = Number.isInteger(parsed) && parsed >= 0 ? parsed : 0
-    await createRoom.mutateAsync({ name: newName.trim(), description: newDesc.trim() || undefined, tableCount })
+    const created = await createRoom.mutateAsync({ name: newName.trim(), description: newDesc.trim() || undefined, tableCount })
+    if (newEquipmentIds.length > 0) {
+      await setRoomDefaultEquipment.mutateAsync({ roomId: created.id, equipmentIds: newEquipmentIds })
+    }
     setNewName('')
     setNewDesc('')
     setNewTableCount('0')
+    setNewEquipmentIds([])
     setShowCreate(false)
   }
 
@@ -384,7 +540,7 @@ export function RoomsSection() {
 
       {/* Create Room Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 border border-primary/20">
@@ -432,12 +588,34 @@ export function RoomsSection() {
                 className="bg-background-secondary border-border focus:border-primary/50"
               />
             </div>
+            {(allEquipment ?? []).length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground font-medium">
+                  {t('equipment.defaultEquipment')}
+                </Label>
+                <div className="rounded-md border border-border/50 bg-background-secondary/40 p-3 space-y-2 max-h-40 overflow-y-auto">
+                  {(allEquipment ?? []).map((equip) => (
+                    <label key={equip.id} className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={newEquipmentIds.includes(equip.id)}
+                        onChange={() => toggleNewEquipment(equip.id)}
+                        className="w-4 h-4 rounded border-border accent-primary"
+                      />
+                      <span className="text-sm text-foreground group-hover:text-primary transition-colors">
+                        {equip.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowCreate(false)} className="border-border">
                 {tc('cancel')}
               </Button>
-              <Button type="submit" disabled={createRoom.isPending} className="min-w-[80px]">
-                {createRoom.isPending ? (
+              <Button type="submit" disabled={createRoom.isPending || setRoomDefaultEquipment.isPending} className="min-w-[80px]">
+                {(createRoom.isPending || setRoomDefaultEquipment.isPending) ? (
                   <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('creating')}</span></span>
                 ) : tc('save')}
               </Button>
