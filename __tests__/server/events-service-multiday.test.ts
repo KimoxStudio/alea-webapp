@@ -127,6 +127,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
       expect.objectContaining({
         p_title: 'Multi-Day Event',
         p_description: null,
+        p_created_by: null,
         p_blocks: expect.arrayContaining([
           expect.objectContaining({ date: '2026-07-10', start_time: '18:00', end_time: '22:00' }),
           expect.objectContaining({ date: '2026-07-11', start_time: '10:00', end_time: '14:00' }),
@@ -186,6 +187,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
     expect(mock.rpc).toHaveBeenCalledWith(
       'create_event_with_blocks',
       expect.objectContaining({
+        p_created_by: null,
         p_blocks: expect.arrayContaining([
           expect.objectContaining({ all_day: true, start_time: '00:00', end_time: '23:59' }),
         ]),
@@ -271,7 +273,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
     expect(mock.rpc).not.toHaveBeenCalled()
   })
 
-  it('accepts schedules with null roomId (no room blocked)', async () => {
+  it('accepts schedules with null roomId (no room blocked) — returns synthetic schedule entry', async () => {
     const noRoomResult = makeRpcResult({
       room_blocks: [],
     })
@@ -293,13 +295,20 @@ describe('events-service — createEvent multi-day (schedules)', () => {
     expect(mock.rpc).toHaveBeenCalledWith(
       'create_event_with_blocks',
       expect.objectContaining({
+        p_created_by: null,
         p_blocks: expect.arrayContaining([
           expect.objectContaining({ room_id: null }),
         ]),
       })
     )
+    // No real room blocks (null-room blocks are not stored as room blocks)
     expect(result.roomBlocks).toHaveLength(0)
-    expect(result.schedules).toHaveLength(0)
+    // Service synthesises ONE schedule entry from the event anchor when no room blocks exist
+    expect(result.schedules).toHaveLength(1)
+    expect(result.schedules[0].roomId).toBeNull()
+    expect(result.schedules[0].date).toBe('2026-07-10')
+    expect(result.schedules[0].startTime).toBe('18:00')
+    expect(result.schedules[0].endTime).toBe('22:00')
   })
 
   it('throws 500 when create_event_with_blocks RPC fails', async () => {
@@ -324,6 +333,174 @@ describe('events-service — createEvent multi-day (schedules)', () => {
     }
 
     expect(caught?.statusCode).toBe(500)
+  })
+
+  it('rejects empty schedules array with 400', async () => {
+    const mock = buildMockAdmin()
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { createEvent } = await import('@/lib/server/events-service')
+
+    let caught: ServiceError | undefined
+    try {
+      await createEvent({ title: 'Empty Schedules', schedules: [] })
+    } catch (err) {
+      caught = err as ServiceError
+    }
+
+    expect(caught).toBeDefined()
+    expect(caught?.statusCode).toBe(400)
+    expect(caught?.message).toMatch(/At least one schedule is required/)
+    expect(mock.rpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects schedules array with more than 366 entries with 400', async () => {
+    const mock = buildMockAdmin()
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { createEvent } = await import('@/lib/server/events-service')
+
+    // Build 367 schedule entries
+    const schedules = Array.from({ length: 367 }, (_, i) => {
+      const dateStr = new Date(2026, 0, 1 + (i % 365)).toISOString().slice(0, 10)
+      return { date: dateStr, startTime: '10:00', endTime: '12:00', roomId: 'room-1', allDay: false }
+    })
+
+    let caught: ServiceError | undefined
+    try {
+      await createEvent({ title: 'Too Many Blocks', schedules })
+    } catch (err) {
+      caught = err as ServiceError
+    }
+
+    expect(caught).toBeDefined()
+    expect(caught?.statusCode).toBe(400)
+    expect(caught?.message).toMatch(/Too many schedule blocks/)
+    expect(mock.rpc).not.toHaveBeenCalled()
+  })
+
+  it('passes p_created_by when createdBy is provided in body', async () => {
+    const mock = buildMockAdmin()
+    mock.rpc.mockResolvedValueOnce({
+      data: makeRpcResult({ created_by: 'user-abc' }),
+      error: null,
+    })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { createEvent } = await import('@/lib/server/events-service')
+
+    await createEvent({
+      title: 'Creator Event',
+      createdBy: 'user-abc',
+      schedules: [
+        { date: '2026-09-01', startTime: '10:00', endTime: '12:00', roomId: 'room-1', allDay: false },
+      ],
+    })
+
+    expect(mock.rpc).toHaveBeenCalledWith(
+      'create_event_with_blocks',
+      expect.objectContaining({ p_created_by: 'user-abc' })
+    )
+  })
+
+  it('derives anchor date as earliest block and sorts schedules ascending when blocks are submitted out of order', async () => {
+    // Blocks returned by RPC in non-chronological order: day 3, day 1, day 2
+    const rpcResult = makeRpcResult({
+      date: '2026-08-01',
+      start_time: '09:00',
+      end_time: '11:00',
+      room_blocks: [
+        makeBlock({ id: 'b3', date: '2026-08-03', start_time: '14:00', end_time: '16:00' }),
+        makeBlock({ id: 'b1', date: '2026-08-01', start_time: '09:00', end_time: '11:00' }),
+        makeBlock({ id: 'b2', date: '2026-08-02', start_time: '10:00', end_time: '12:00' }),
+      ],
+    })
+    const mock = buildMockAdmin()
+    mock.rpc.mockResolvedValueOnce({ data: rpcResult, error: null })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { createEvent } = await import('@/lib/server/events-service')
+
+    const result = await createEvent({
+      title: 'Out Of Order',
+      schedules: [
+        { date: '2026-08-03', startTime: '14:00', endTime: '16:00', roomId: 'room-1', allDay: false },
+        { date: '2026-08-01', startTime: '09:00', endTime: '11:00', roomId: 'room-1', allDay: false },
+        { date: '2026-08-02', startTime: '10:00', endTime: '12:00', roomId: 'room-1', allDay: false },
+      ],
+    })
+
+    // Anchor date is the earliest block
+    expect(result.date).toBe('2026-08-01')
+    // schedules sorted ascending by date
+    expect(result.schedules).toHaveLength(3)
+    expect(result.schedules[0].date).toBe('2026-08-01')
+    expect(result.schedules[1].date).toBe('2026-08-02')
+    expect(result.schedules[2].date).toBe('2026-08-03')
+  })
+
+  it('handles multi-room single-day event (two rooms, same day)', async () => {
+    const rpcResult = makeRpcResult({
+      date: '2026-10-01',
+      start_time: '10:00',
+      end_time: '14:00',
+      room_blocks: [
+        makeBlock({ id: 'b1', room_id: 'room-A', date: '2026-10-01', start_time: '10:00', end_time: '14:00' }),
+        makeBlock({ id: 'b2', room_id: 'room-B', date: '2026-10-01', start_time: '10:00', end_time: '14:00' }),
+      ],
+    })
+    const mock = buildMockAdmin()
+    mock.rpc.mockResolvedValueOnce({ data: rpcResult, error: null })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { createEvent } = await import('@/lib/server/events-service')
+
+    const result = await createEvent({
+      title: 'Multi-Room Single Day',
+      schedules: [
+        { date: '2026-10-01', startTime: '10:00', endTime: '14:00', roomId: 'room-A', allDay: false },
+        { date: '2026-10-01', startTime: '10:00', endTime: '14:00', roomId: 'room-B', allDay: false },
+      ],
+    })
+
+    expect(result.roomBlocks).toHaveLength(2)
+    expect(result.schedules).toHaveLength(2)
+    expect(result.date).toBe('2026-10-01')
+    const roomIds = result.roomBlocks.map((b) => b.roomId)
+    expect(roomIds).toContain('room-A')
+    expect(roomIds).toContain('room-B')
+  })
+
+  it('maps PG check-constraint error 23514 to 400', async () => {
+    const mock = buildMockAdmin()
+    mock.rpc.mockResolvedValueOnce({ data: null, error: { code: '23514', message: 'check constraint' } })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { createEvent } = await import('@/lib/server/events-service')
+
+    let caught: ServiceError | undefined
+    try {
+      await createEvent({
+        title: 'Constraint Fail',
+        schedules: [
+          { date: '2026-07-10', startTime: '10:00', endTime: '12:00', roomId: 'room-1', allDay: false },
+        ],
+      })
+    } catch (err) {
+      caught = err as ServiceError
+    }
+
+    expect(caught?.statusCode).toBe(400)
   })
 })
 
@@ -540,6 +717,313 @@ describe('events-service — updateEvent multi-day (schedules)', () => {
 
     expect(caught?.statusCode).toBe(500)
   })
+
+  it('rejects empty schedules array with 400 on update', async () => {
+    const mock = buildMockAdmin()
+
+    mock.from.mockImplementation((table: string) => {
+      if (table === 'events') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              title: 'Existing',
+              description: null,
+              date: '2026-07-10',
+              start_time: '10:00',
+              end_time: '12:00',
+            },
+            error: null,
+          }),
+        }
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }
+    })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { updateEvent } = await import('@/lib/server/events-service')
+
+    let caught: ServiceError | undefined
+    try {
+      await updateEvent('evt-1', { schedules: [] })
+    } catch (err) {
+      caught = err as ServiceError
+    }
+
+    expect(caught).toBeDefined()
+    expect(caught?.statusCode).toBe(400)
+    expect(caught?.message).toMatch(/At least one schedule is required/)
+    expect(mock.rpc).not.toHaveBeenCalled()
+  })
+
+  it('rejects schedules array > 366 entries with 400 on update', async () => {
+    const mock = buildMockAdmin()
+
+    mock.from.mockImplementation((table: string) => {
+      if (table === 'events') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              title: 'Existing',
+              description: null,
+              date: '2026-07-10',
+              start_time: '10:00',
+              end_time: '12:00',
+            },
+            error: null,
+          }),
+        }
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }
+    })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { updateEvent } = await import('@/lib/server/events-service')
+
+    const schedules = Array.from({ length: 367 }, (_, i) => {
+      const dateStr = new Date(2026, 0, 1 + (i % 365)).toISOString().slice(0, 10)
+      return { date: dateStr, startTime: '10:00', endTime: '12:00', roomId: 'room-1', allDay: false }
+    })
+
+    let caught: ServiceError | undefined
+    try {
+      await updateEvent('evt-1', { schedules })
+    } catch (err) {
+      caught = err as ServiceError
+    }
+
+    expect(caught).toBeDefined()
+    expect(caught?.statusCode).toBe(400)
+    expect(caught?.message).toMatch(/Too many schedule blocks/)
+    expect(mock.rpc).not.toHaveBeenCalled()
+  })
+
+  it('shrinks block count from 2 to 1 and returns correct schedules', async () => {
+    const shrunkResult = makeRpcResult({
+      date: '2026-08-01',
+      start_time: '09:00',
+      end_time: '13:00',
+      room_blocks: [
+        makeBlock({ id: 'b1', date: '2026-08-01', start_time: '09:00', end_time: '13:00' }),
+      ],
+    })
+    const mock = buildMockAdmin()
+
+    mock.from.mockImplementation((table: string) => {
+      if (table === 'events') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              title: 'Event',
+              description: null,
+              date: '2026-07-10',
+              start_time: '18:00',
+              end_time: '22:00',
+            },
+            error: null,
+          }),
+        }
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }
+    })
+
+    mock.rpc.mockResolvedValueOnce({ data: shrunkResult, error: null })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { updateEvent } = await import('@/lib/server/events-service')
+
+    const result = await updateEvent('evt-1', {
+      schedules: [
+        { date: '2026-08-01', startTime: '09:00', endTime: '13:00', roomId: 'room-1', allDay: false },
+      ],
+    })
+
+    expect(result.schedules).toHaveLength(1)
+    expect(result.schedules[0].date).toBe('2026-08-01')
+    expect(mock.rpc).toHaveBeenCalledWith(
+      'update_event_with_blocks',
+      expect.objectContaining({
+        p_blocks: expect.arrayContaining([expect.objectContaining({ date: '2026-08-01' })]),
+      })
+    )
+  })
+
+  it('grows block count from 1 to 3 and returns correct schedules', async () => {
+    const grownResult = makeRpcResult({
+      date: '2026-09-01',
+      start_time: '10:00',
+      end_time: '14:00',
+      room_blocks: [
+        makeBlock({ id: 'b1', date: '2026-09-01', start_time: '10:00', end_time: '14:00' }),
+        makeBlock({ id: 'b2', date: '2026-09-02', start_time: '10:00', end_time: '14:00' }),
+        makeBlock({ id: 'b3', date: '2026-09-03', start_time: '10:00', end_time: '14:00' }),
+      ],
+    })
+    const mock = buildMockAdmin()
+
+    mock.from.mockImplementation((table: string) => {
+      if (table === 'events') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              title: 'Growing Event',
+              description: null,
+              date: '2026-09-01',
+              start_time: '10:00',
+              end_time: '14:00',
+            },
+            error: null,
+          }),
+        }
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }
+    })
+
+    mock.rpc.mockResolvedValueOnce({ data: grownResult, error: null })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { updateEvent } = await import('@/lib/server/events-service')
+
+    const result = await updateEvent('evt-1', {
+      schedules: [
+        { date: '2026-09-01', startTime: '10:00', endTime: '14:00', roomId: 'room-1', allDay: false },
+        { date: '2026-09-02', startTime: '10:00', endTime: '14:00', roomId: 'room-1', allDay: false },
+        { date: '2026-09-03', startTime: '10:00', endTime: '14:00', roomId: 'room-1', allDay: false },
+      ],
+    })
+
+    expect(result.schedules).toHaveLength(3)
+    expect(result.schedules[0].date).toBe('2026-09-01')
+    expect(result.schedules[1].date).toBe('2026-09-02')
+    expect(result.schedules[2].date).toBe('2026-09-03')
+  })
+
+  it('maps PG P0001 error to 404 on update', async () => {
+    const mock = buildMockAdmin()
+
+    mock.from.mockImplementation((table: string) => {
+      if (table === 'events') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              title: 'Title',
+              description: null,
+              date: '2026-07-10',
+              start_time: '10:00',
+              end_time: '12:00',
+            },
+            error: null,
+          }),
+        }
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }
+    })
+
+    mock.rpc.mockResolvedValueOnce({ data: null, error: { code: 'P0001', message: 'event not found' } })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { updateEvent } = await import('@/lib/server/events-service')
+
+    let caught: ServiceError | undefined
+    try {
+      await updateEvent('evt-1', {
+        schedules: [
+          { date: '2026-07-10', startTime: '10:00', endTime: '12:00', roomId: 'room-1', allDay: false },
+        ],
+      })
+    } catch (err) {
+      caught = err as ServiceError
+    }
+
+    expect(caught?.statusCode).toBe(404)
+  })
+
+  it('maps PG check-constraint 23514 to 400 on update', async () => {
+    const mock = buildMockAdmin()
+
+    mock.from.mockImplementation((table: string) => {
+      if (table === 'events') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: {
+              title: 'Title',
+              description: null,
+              date: '2026-07-10',
+              start_time: '10:00',
+              end_time: '12:00',
+            },
+            error: null,
+          }),
+        }
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }
+    })
+
+    mock.rpc.mockResolvedValueOnce({ data: null, error: { code: '23514', message: 'check constraint violated' } })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { updateEvent } = await import('@/lib/server/events-service')
+
+    let caught: ServiceError | undefined
+    try {
+      await updateEvent('evt-1', {
+        schedules: [
+          { date: '2026-07-10', startTime: '10:00', endTime: '12:00', roomId: 'room-1', allDay: false },
+        ],
+      })
+    } catch (err) {
+      caught = err as ServiceError
+    }
+
+    expect(caught?.statusCode).toBe(400)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -599,8 +1083,11 @@ describe('events-service — listEventsBlockingRoom (multi-day awareness)', () =
 
     expect(results).toHaveLength(1)
     expect(results[0].title).toBe('Multi-Day Blocker')
-    // schedules is empty here because listEventsBlockingRoom does not join blocks
-    expect(results[0].schedules).toHaveLength(0)
+    // listEventsBlockingRoom calls toAdminEvent(row, []) — no room blocks joined.
+    // The service synthesises ONE schedule entry from the event anchor in that case.
+    expect(results[0].schedules).toHaveLength(1)
+    expect(results[0].schedules[0].roomId).toBeNull()
+    expect(results[0].schedules[0].date).toBe('2026-08-01')
   })
 
   it('returns empty array when no blocks overlap the query window', async () => {
@@ -629,5 +1116,229 @@ describe('events-service — listEventsBlockingRoom (multi-day awareness)', () =
     const results = await listEventsBlockingRoom('room-1', '2026-09-15', '08:00', '10:00')
 
     expect(results).toHaveLength(0)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// deleteEvent — multi-day cancellation
+// ---------------------------------------------------------------------------
+
+describe('events-service — deleteEvent multi-day cancellation', () => {
+  afterEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+  })
+
+  /** Build a chainable mock for a table that resolves at the end of the chain. */
+  function buildChainableMock(resolveWith: unknown = { data: null, error: null }) {
+    const chain: Record<string, unknown> = {}
+    const methods = ['select', 'eq', 'in', 'lt', 'gt', 'update', 'delete', 'limit']
+    for (const m of methods) {
+      chain[m] = vi.fn(() => chain)
+    }
+    ;(chain as any).maybeSingle = vi.fn().mockResolvedValue(resolveWith)
+    return chain
+  }
+
+  it('cancels reservations for every block date (multi-day event)', async () => {
+    const mock = buildMockAdmin()
+
+    // Track calls to reservations.update
+    const inStatusMock = vi.fn().mockResolvedValue({ data: null, error: null })
+    const gtEndTimeMock = vi.fn(() => ({ in: inStatusMock }))
+    const ltStartTimeMock = vi.fn(() => ({ gt: gtEndTimeMock }))
+    const eqDateMock = vi.fn(() => ({ lt: ltStartTimeMock }))
+    const inTablesMock = vi.fn(() => ({ eq: eqDateMock }))
+    const updateReturnMock = vi.fn(() => ({ in: inTablesMock }))
+
+    let eventsDeleteCalled = false
+
+    mock.from.mockImplementation((table: string) => {
+      if (table === 'events') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          delete: vi.fn(() => {
+            eventsDeleteCalled = true
+            return { eq: vi.fn().mockResolvedValue({ data: null, error: null }) }
+          }),
+          maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'evt-multi' }, error: null }),
+        }
+      }
+      if (table === 'event_room_blocks') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({
+            data: [
+              { room_id: 'room-1', date: '2026-08-01', start_time: '10:00', end_time: '14:00' },
+              { room_id: 'room-1', date: '2026-08-02', start_time: '10:00', end_time: '14:00' },
+              { room_id: 'room-1', date: '2026-08-03', start_time: '10:00', end_time: '14:00' },
+            ],
+            error: null,
+          }),
+        }
+      }
+      if (table === 'tables') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({
+            data: [{ id: 'table-1', room_id: 'room-1' }],
+            error: null,
+          }),
+        }
+      }
+      if (table === 'reservations') {
+        return { update: updateReturnMock }
+      }
+      return buildChainableMock()
+    })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { deleteEvent } = await import('@/lib/server/events-service')
+
+    await deleteEvent('evt-multi')
+
+    // update called once per block (3 blocks, each with a real room)
+    expect(updateReturnMock).toHaveBeenCalledTimes(3)
+    expect(updateReturnMock).toHaveBeenCalledWith({ status: 'cancelled' })
+  })
+
+  it('skips reservation cancellation for null-room blocks', async () => {
+    const mock = buildMockAdmin()
+
+    const updateReturnMock = vi.fn().mockReturnThis()
+
+    mock.from.mockImplementation((table: string) => {
+      if (table === 'events') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          delete: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'evt-null' }, error: null }),
+        }
+      }
+      if (table === 'event_room_blocks') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({
+            data: [
+              // All blocks have null room_id
+              { room_id: null, date: '2026-09-01', start_time: '10:00', end_time: '12:00' },
+            ],
+            error: null,
+          }),
+        }
+      }
+      if (table === 'tables') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }
+      }
+      if (table === 'reservations') {
+        return { update: updateReturnMock }
+      }
+      return buildChainableMock()
+    })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { deleteEvent } = await import('@/lib/server/events-service')
+
+    await deleteEvent('evt-null')
+
+    // No reservations should be cancelled — null-room blocks have no tableIds
+    expect(updateReturnMock).not.toHaveBeenCalled()
+  })
+
+  it('handles mixed null-room and real-room blocks — cancels only for real-room blocks', async () => {
+    const mock = buildMockAdmin()
+
+    const inStatusFn = vi.fn().mockResolvedValue({ data: null, error: null })
+    const gtFn = vi.fn(() => ({ in: inStatusFn }))
+    const ltFn = vi.fn(() => ({ gt: gtFn }))
+    const eqFn = vi.fn(() => ({ lt: ltFn }))
+    const inTablesFn = vi.fn(() => ({ eq: eqFn }))
+    const updateFn = vi.fn(() => ({ in: inTablesFn }))
+
+    mock.from.mockImplementation((table: string) => {
+      if (table === 'events') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          delete: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'evt-mixed' }, error: null }),
+        }
+      }
+      if (table === 'event_room_blocks') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockResolvedValue({
+            data: [
+              { room_id: null,     date: '2026-10-01', start_time: '10:00', end_time: '12:00' },
+              { room_id: 'room-1', date: '2026-10-02', start_time: '10:00', end_time: '12:00' },
+              { room_id: null,     date: '2026-10-03', start_time: '10:00', end_time: '12:00' },
+            ],
+            error: null,
+          }),
+        }
+      }
+      if (table === 'tables') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({
+            data: [{ id: 'table-1', room_id: 'room-1' }],
+            error: null,
+          }),
+        }
+      }
+      if (table === 'reservations') {
+        return { update: updateFn }
+      }
+      return buildChainableMock()
+    })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { deleteEvent } = await import('@/lib/server/events-service')
+
+    await deleteEvent('evt-mixed')
+
+    // Only the one real-room block (2026-10-02) triggers a reservation update
+    expect(updateFn).toHaveBeenCalledTimes(1)
+    expect(updateFn).toHaveBeenCalledWith({ status: 'cancelled' })
+  })
+
+  it('throws 404 when deleting a non-existent event', async () => {
+    const mock = buildMockAdmin()
+
+    mock.from.mockImplementation((table: string) => {
+      if (table === 'events') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        }
+      }
+      return buildChainableMock()
+    })
+
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+    const { deleteEvent } = await import('@/lib/server/events-service')
+
+    let caught: ServiceError | undefined
+    try {
+      await deleteEvent('nonexistent')
+    } catch (err) {
+      caught = err as ServiceError
+    }
+
+    expect(caught?.statusCode).toBe(404)
   })
 })
