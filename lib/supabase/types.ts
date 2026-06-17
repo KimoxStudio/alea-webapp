@@ -444,6 +444,7 @@ export type Database = {
           p_title: string
           p_description: string | null
           p_blocks: Json
+          p_created_by: string | null
         }
         Returns: Json
       }

@@ -199,7 +199,10 @@ export function useAdminCreateEvent() {
       allDay?: boolean
     }) =>
       apiClient.post<AdminEvent>(endpoints.events.list, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
+      queryClient.invalidateQueries({ queryKey: ['availability'] }),
+    ]),
   })
 }
 
@@ -222,7 +225,10 @@ export function useAdminUpdateEvent() {
       }
     }) =>
       apiClient.put<AdminEvent>(endpoints.events.byId(id), data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
+      queryClient.invalidateQueries({ queryKey: ['availability'] }),
+    ]),
   })
 }
 
@@ -230,7 +236,10 @@ export function useAdminDeleteEvent() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => apiClient.delete<void>(endpoints.events.byId(id)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
+      queryClient.invalidateQueries({ queryKey: ['availability'] }),
+    ]),
   })
 }
 

@@ -31,6 +31,7 @@ const NONE_ROOM = '__none__'
 // Per-schedule entry form state
 // ---------------------------------------------------------------------------
 interface ScheduleEntry {
+  id: string
   date: string
   startTime: string
   endTime: string
@@ -39,11 +40,12 @@ interface ScheduleEntry {
 }
 
 function emptySchedule(): ScheduleEntry {
-  return { date: '', startTime: '', endTime: '', roomId: NONE_ROOM, allDay: false }
+  return { id: crypto.randomUUID(), date: '', startTime: '', endTime: '', roomId: NONE_ROOM, allDay: false }
 }
 
 function scheduleFromBlock(b: AdminEventSchedule): ScheduleEntry {
   return {
+    id: b.id ?? crypto.randomUUID(),
     date: b.date,
     startTime: b.startTime,
     endTime: b.endTime,
@@ -314,7 +316,7 @@ function EventFormDialog({
             <div className="space-y-3">
               {form.schedules.map((entry, i) => (
                 <ScheduleRow
-                  key={i}
+                  key={entry.id}
                   index={i}
                   entry={entry}
                   canRemove={form.schedules.length > 1}

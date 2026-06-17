@@ -12,7 +12,7 @@
 -- handled in the service layer before the RPC is invoked.
 
 -- ---------------------------------------------------------------------------
--- create_event_with_blocks(p_title, p_description, p_blocks jsonb)
+-- create_event_with_blocks(p_title, p_description, p_blocks jsonb, p_created_by uuid)
 --
 -- p_blocks is a JSON array of objects:
 --   [{ "room_id": "<uuid>|null", "date": "YYYY-MM-DD",
@@ -24,7 +24,8 @@
 CREATE OR REPLACE FUNCTION "public"."create_event_with_blocks"(
   "p_title"       text,
   "p_description" text,
-  "p_blocks"      jsonb
+  "p_blocks"      jsonb,
+  "p_created_by"  uuid
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -66,8 +67,8 @@ BEGIN
                  ELSE (blk->>'start_time')::time END) ASC
   LIMIT 1;
 
-  INSERT INTO public.events (title, description, date, start_time, end_time)
-  VALUES (p_title, p_description, v_anchor_date, v_anchor_start, v_anchor_end)
+  INSERT INTO public.events (title, description, date, start_time, end_time, created_by)
+  VALUES (p_title, p_description, v_anchor_date, v_anchor_start, v_anchor_end, p_created_by)
   RETURNING * INTO v_event;
 
   -- Insert each block and cancel overlapping reservations
@@ -127,11 +128,13 @@ BEGIN
 END;
 $$;
 
-ALTER FUNCTION "public"."create_event_with_blocks"(text, text, jsonb) OWNER TO "postgres";
+ALTER FUNCTION "public"."create_event_with_blocks"(text, text, jsonb, uuid) OWNER TO "postgres";
 
 -- Grant same as existing event atomic functions
-REVOKE ALL ON FUNCTION "public"."create_event_with_blocks"(text, text, jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."create_event_with_blocks"(text, text, jsonb) TO "service_role";
+REVOKE ALL ON FUNCTION "public"."create_event_with_blocks"(text, text, jsonb, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION "public"."create_event_with_blocks"(text, text, jsonb, uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION "public"."create_event_with_blocks"(text, text, jsonb, uuid) FROM authenticated;
+GRANT EXECUTE ON FUNCTION "public"."create_event_with_blocks"(text, text, jsonb, uuid) TO "service_role";
 -- authenticated users must NOT call this directly (admin-only via service layer)
 
 
@@ -260,4 +263,18 @@ $$;
 ALTER FUNCTION "public"."update_event_with_blocks"(uuid, text, text, jsonb) OWNER TO "postgres";
 
 REVOKE ALL ON FUNCTION "public"."update_event_with_blocks"(uuid, text, text, jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."update_event_with_blocks"(uuid, text, text, jsonb) TO "service_role";
+REVOKE EXECUTE ON FUNCTION "public"."update_event_with_blocks"(uuid, text, text, jsonb) FROM anon;
+REVOKE EXECUTE ON FUNCTION "public"."update_event_with_blocks"(uuid, text, text, jsonb) FROM authenticated;
+GRANT EXECUTE ON FUNCTION "public"."update_event_with_blocks"(uuid, text, text, jsonb) TO "service_role";
+
+-- ---------------------------------------------------------------------------
+-- Table-level defense-in-depth: deny anon direct access
+-- ---------------------------------------------------------------------------
+REVOKE ALL ON TABLE public.events FROM anon;
+REVOKE ALL ON TABLE public.event_room_blocks FROM anon;
+
+-- ---------------------------------------------------------------------------
+-- Uniqueness guard: prevent duplicate blocks for same event/room/date/time
+-- ---------------------------------------------------------------------------
+CREATE UNIQUE INDEX IF NOT EXISTS event_room_blocks_unique_block
+  ON public.event_room_blocks(event_id, room_id, date, start_time, end_time);

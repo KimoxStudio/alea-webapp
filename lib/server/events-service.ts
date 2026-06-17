@@ -68,7 +68,7 @@ function toAdminEvent(row: EventRow, blocks: EventRoomBlockRow[]): AdminEvent {
     allDay: b.all_day,
   }))
 
-  const schedules: AdminEventSchedule[] = blocks.map((b) => ({
+  const rawSchedules: AdminEventSchedule[] = blocks.map((b) => ({
     id: b.id,
     roomId: b.room_id,
     date: b.date,
@@ -76,6 +76,24 @@ function toAdminEvent(row: EventRow, blocks: EventRoomBlockRow[]): AdminEvent {
     endTime: b.end_time.slice(0, 5),
     allDay: b.all_day,
   }))
+
+  // Sort schedules chronologically ascending (date, then startTime)
+  const schedules = [...rawSchedules].sort((a, b) => {
+    const d = a.date.localeCompare(b.date)
+    return d !== 0 ? d : a.startTime.localeCompare(b.startTime)
+  })
+
+  // If no blocks exist, synthesize one entry from the event anchor so edit pre-fill works
+  if (schedules.length === 0) {
+    schedules.push({
+      id: undefined,
+      roomId: null,
+      date: anchor.date,
+      startTime: anchor.startTime,
+      endTime: anchor.endTime,
+      allDay: inferredAllDay,
+    })
+  }
 
   return {
     id: row.id,
@@ -105,7 +123,7 @@ function jsonBlockToSchedule(b: Record<string, unknown>): AdminEventSchedule {
 
 function jsonToAdminEvent(obj: Record<string, unknown>): AdminEvent {
   const rawBlocks = Array.isArray(obj.room_blocks) ? obj.room_blocks : []
-  const schedules: AdminEventSchedule[] = rawBlocks.map((b: unknown) =>
+  const rawSchedules: AdminEventSchedule[] = rawBlocks.map((b: unknown) =>
     jsonBlockToSchedule(b as Record<string, unknown>)
   )
   const roomBlocks: AdminEventRoomBlock[] = rawBlocks
@@ -126,17 +144,32 @@ function jsonToAdminEvent(obj: Record<string, unknown>): AdminEvent {
   let anchorDate = String(obj.date)
   let anchorStart = String(obj.start_time).slice(0, 5)
   let anchorEnd = String(obj.end_time).slice(0, 5)
+
+  // Sort schedules chronologically ascending (date, then startTime)
+  const schedules = [...rawSchedules].sort((a, b) => {
+    const d = a.date.localeCompare(b.date)
+    return d !== 0 ? d : a.startTime.localeCompare(b.startTime)
+  })
+
   if (schedules.length > 0) {
-    const sorted = [...schedules].sort((a, b) => {
-      const d = a.date.localeCompare(b.date)
-      return d !== 0 ? d : a.startTime.localeCompare(b.startTime)
-    })
-    anchorDate = sorted[0].date
-    anchorStart = sorted[0].startTime
-    anchorEnd = sorted[0].endTime
+    anchorDate = schedules[0].date
+    anchorStart = schedules[0].startTime
+    anchorEnd = schedules[0].endTime
   }
 
   const inferredAllDay = anchorStart === '00:00' && anchorEnd === '23:59'
+
+  // If no blocks exist, synthesize one entry from the event anchor so edit pre-fill works
+  if (schedules.length === 0) {
+    schedules.push({
+      id: undefined,
+      roomId: null,
+      date: anchorDate,
+      startTime: anchorStart,
+      endTime: anchorEnd,
+      allDay: inferredAllDay,
+    })
+  }
 
   return {
     id: String(obj.id),
@@ -255,7 +288,10 @@ export async function createEvent(body: {
   const description = body.description ? String(body.description).trim() : null
 
   // --- Multi-block path (new) ---
-  if (Array.isArray(body.schedules) && body.schedules.length > 0) {
+  if (Array.isArray(body.schedules)) {
+    if (body.schedules.length === 0) serviceError('At least one schedule is required', 400)
+    if (body.schedules.length > 366) serviceError('Too many schedule blocks', 400)
+
     const normBlocks = body.schedules.map((s, i) => validateAndNormaliseSchedule(s, i))
 
     const blocksPayload = normBlocks.map((b) => ({
@@ -271,6 +307,7 @@ export async function createEvent(body: {
       p_title: title,
       p_description: description,
       p_blocks: blocksPayload,
+      p_created_by: body.createdBy ? String(body.createdBy) : null,
     })
 
     if (rpcError) {
@@ -342,7 +379,10 @@ export async function updateEvent(
       : currentRow.description
 
   // --- Multi-block path (new) ---
-  if (Array.isArray(body.schedules) && body.schedules.length > 0) {
+  if (Array.isArray(body.schedules)) {
+    if (body.schedules.length === 0) serviceError('At least one schedule is required', 400)
+    if (body.schedules.length > 366) serviceError('Too many schedule blocks', 400)
+
     const normBlocks = body.schedules.map((s, i) => validateAndNormaliseSchedule(s, i))
 
     const blocksPayload = normBlocks.map((b) => ({
@@ -362,6 +402,9 @@ export async function updateEvent(
 
     if (rpcError) {
       const pgCode = (rpcError as { code?: string }).code
+      if (pgCode === 'P0001') {
+        serviceError('Event not found', 404)
+      }
       if (pgCode === '23514' || pgCode === '22P02' || pgCode === '23502') {
         serviceError('Invalid event data', 400)
       }
