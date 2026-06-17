@@ -9,12 +9,12 @@ CREATE SCHEMA IF NOT EXISTS "internal";
 -- Recreate is_active_member in internal schema
 CREATE OR REPLACE FUNCTION "internal"."is_active_member"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
-    SET "search_path" TO 'internal', 'public', 'pg_catalog'
+    SET "search_path" TO ''
     AS $$
   SELECT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid()
-      AND is_active = true
+    SELECT 1 FROM "public"."profiles"
+    WHERE "id" = "auth"."uid"()
+      AND "is_active" = true
   )
 $$;
 
@@ -23,11 +23,11 @@ ALTER FUNCTION "internal"."is_active_member"() OWNER TO "postgres";
 -- Recreate is_admin in internal schema
 CREATE OR REPLACE FUNCTION "internal"."is_admin"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
-    SET "search_path" TO 'internal', 'public', 'pg_catalog'
+    SET "search_path" TO ''
     AS $$
   SELECT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
+    SELECT 1 FROM "public"."profiles"
+    WHERE "id" = "auth"."uid"() AND "role" = 'admin'::"public"."role"
   );
 $$;
 

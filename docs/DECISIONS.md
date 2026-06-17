@@ -37,3 +37,5 @@
   - PR replies: 16 individual threaded replies posted to all open comment threads on PR #121.
 - Validation: build pass, typecheck pass, 548/548 tests pass.
 - Result: SUCCESS — 3 migrations (20260602000006-08), commits d695215/46052de/e214a6c, 16 PR replies posted.
+- [2026-06-17 10:03] QA: validation passed.
+- [2026-06-17 11:18] Security audit: changed migrations reviewed; no new findings in patch scope. Dependency audit still reports pre-existing high advisories in `next`, `xlsx`, and transitive `ws`.

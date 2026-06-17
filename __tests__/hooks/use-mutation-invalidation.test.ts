@@ -53,7 +53,7 @@ vi.mock('@/lib/api/endpoints', () => ({
   },
 }))
 
-import { useAdminUpdateUser } from '@/lib/hooks/use-admin'
+import { useAdminCancelReservation, useAdminCreateRoom, useAdminUpdateUser } from '@/lib/hooks/use-admin'
 import { useCreateReservation } from '@/lib/hooks/use-reservations'
 
 describe('mutation invalidation loading state', () => {
@@ -87,5 +87,29 @@ describe('mutation invalidation loading state', () => {
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['reservations', 'table', 'table-1', '2026-06-17'] })
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['availability', 'table-1', '2026-06-17'] })
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['availability', 'room'] })
+  })
+
+  it('keeps admin cancellation pending until admin and member reservations invalidate', async () => {
+    const { result } = renderHook(() => useAdminCancelReservation())
+
+    const onSuccessResult = (result.current as any).onSuccess()
+
+    expect(onSuccessResult).toBeInstanceOf(Promise)
+    await onSuccessResult
+    expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2)
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['admin', 'reservations'] })
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['reservations'] })
+  })
+
+  it('keeps room creation pending until admin and member room lists invalidate', async () => {
+    const { result } = renderHook(() => useAdminCreateRoom())
+
+    const onSuccessResult = (result.current as any).onSuccess()
+
+    expect(onSuccessResult).toBeInstanceOf(Promise)
+    await onSuccessResult
+    expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2)
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['admin', 'rooms'] })
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['rooms'] })
   })
 })

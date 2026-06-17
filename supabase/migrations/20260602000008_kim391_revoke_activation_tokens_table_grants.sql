@@ -3,5 +3,6 @@
 -- With RLS policies being dropped/restricted, revoke table-level access entirely.
 -- Only admin/service_role should access this table.
 
+DROP POLICY IF EXISTS "activation_tokens_authenticated_select_own" ON "public"."activation_tokens";
 REVOKE ALL ON TABLE "public"."activation_tokens" FROM "anon";
-REVOKE INSERT, UPDATE, DELETE ON TABLE "public"."activation_tokens" FROM "authenticated";
+REVOKE ALL ON TABLE "public"."activation_tokens" FROM "authenticated";
