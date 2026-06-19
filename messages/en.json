@@ -33,6 +33,7 @@
     "admin": "Administration",
     "logout": "Sign Out",
     "profile": "My Profile",
+    "faq": "FAQ",
     "mainNavAriaLabel": "Main navigation",
     "mobileNavAriaLabel": "Mobile navigation",
     "skipToContent": "Skip to main content",
@@ -355,12 +356,99 @@
     "tryAgain": "Try again",
     "backToReservations": "Back to my reservations"
   },
+  "faq": {
+    "eyebrow": "Help center",
+    "title": "Frequently asked questions",
+    "subtitle": "Quick answers about account access, reservations, equipment, and check-in.",
+    "currentRules": "This guide covers current reservation rules. Planned features are clearly marked.",
+    "sections": {
+      "access": {
+        "title": "Account access",
+        "items": {
+          "activation": {
+            "question": "How do I activate my account?",
+            "answer": "Ask an administrator for an activation link. The link can be used once and expires after 24 hours."
+          },
+          "recovery": {
+            "question": "How do I recover access to my account?",
+            "answer": "Ask an administrator for a recovery link. Recovery is available only for active accounts; the link can be used once and expires after 24 hours."
+          },
+          "password": {
+            "question": "What are the password requirements?",
+            "answer": "Use at least 8 characters, including an uppercase letter, a lowercase letter, and a number. Only letters and numbers are allowed."
+          }
+        }
+      },
+      "booking": {
+        "title": "Reservations",
+        "items": {
+          "create": {
+            "question": "When can I book a table?",
+            "answer": "You can book from today through 7 days ahead. The calendar uses 30-minute slots throughout the day. You cannot hold overlapping reservations, and an event may block an entire room."
+          },
+          "surfaces": {
+            "question": "How do removable-top tables work?",
+            "answer": "Their upper and lower surfaces can be booked independently, including at the same time. Choose the surface you need when booking."
+          },
+          "cancel": {
+            "question": "When can I cancel a reservation?",
+            "answer": "You can cancel more than 60 minutes before its start time. After that cutoff, contact an administrator."
+          },
+          "conflict": {
+            "question": "Why did an available slot become unavailable?",
+            "answer": "Another member may have booked it at the same time. You will see a conflict message and availability will refresh so you can choose another slot."
+          }
+        }
+      },
+      "equipment": {
+        "title": "Optional equipment",
+        "items": {
+          "optional": {
+            "question": "Can I add equipment to my reservation?",
+            "answer": "Yes, when the room has optional equipment available for the whole reservation. Equipment already booked for that time, or assigned to another room, cannot be selected."
+          }
+        }
+      },
+      "checkin": {
+        "title": "QR check-in",
+        "items": {
+          "qr": {
+            "question": "How do I check in?",
+            "answer": "Sign in with the member account that made the reservation, then scan the table's QR code. Check-in opens 5 minutes before the start and closes at the earlier of 60 minutes after the start or the reservation end."
+          },
+          "noShow": {
+            "question": "What happens if I do not check in?",
+            "answer": "If you miss the check-in window, the reservation remains unactivated and may later be marked as a no-show. Opening Rooms refreshes the current reservation state."
+          }
+        }
+      },
+      "savedGame": {
+        "title": "Saved Game",
+        "badge": "Coming soon",
+        "items": {
+          "overview": {
+            "question": "What will Saved Game reservations be?",
+            "answer": "This feature is not available yet. It is intended to reserve the lower surface of a removable-top table for full days, for up to 3 months."
+          },
+          "use": {
+            "question": "How will I use a saved table?",
+            "answer": "The same member will book the upper surface on each day they use it and scan the QR code. Each scan will record attendance and add to the reservation's attendance count."
+          },
+          "renewal": {
+            "question": "Will I be able to extend a Saved Game reservation?",
+            "answer": "The intended design lets the same member renew from the Saved Game card during the final 15 days. Exact behavior may change before the feature is released."
+          }
+        }
+      }
+    }
+  },
   "footer": {
     "tagline": "The community's gaming space",
     "links": "Navigation",
     "home": "Home",
     "rooms": "Rooms",
     "reservations": "My Reservations",
+    "faq": "FAQ",
     "association": "Association Website",
     "contact": "Contact",
     "rights": "All rights reserved.",

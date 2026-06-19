@@ -65,12 +65,15 @@ export function Header({ locale }: HeaderProps) {
           <span className="font-cinzel text-xl font-bold text-gradient-gold">ALEA</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6" aria-label={t('nav.mainNavAriaLabel')}>
+        <nav className="hidden lg:flex items-center gap-6" aria-label={t('nav.mainNavAriaLabel')}>
           <Link href={`/${locale}/rooms`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
             {t('nav.rooms')}
           </Link>
           <Link href={`/${locale}/reservations`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
             {t('nav.reservations')}
+          </Link>
+          <Link href={`/${locale}/faq`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
+            {t('nav.faq')}
           </Link>
           {user?.role === 'admin' && (
             <Link href={`/${locale}/admin`} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1">
@@ -85,7 +88,7 @@ export function Header({ locale }: HeaderProps) {
           </Suspense>
 
           <div className="flex items-center gap-2">
-            <span className="hidden md:block text-sm text-muted-foreground">#{user?.memberNumber}</span>
+            <span className="hidden lg:block text-sm text-muted-foreground">#{user?.memberNumber}</span>
             {user?.role === 'admin' && (
               <Link href={`/${locale}/admin`}>
                 <Button variant="ghost" size="icon" aria-label={t('nav.admin')}>
@@ -98,16 +101,17 @@ export function Header({ locale }: HeaderProps) {
             </Button>
           </div>
 
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-expanded={mobileMenuOpen} aria-controls="mobile-menu" aria-label={t('nav.menuAriaLabel')}>
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-expanded={mobileMenuOpen} aria-controls="mobile-menu" aria-label={t('nav.menuAriaLabel')}>
             <Menu className="h-5 w-5" aria-hidden="true" />
           </Button>
         </div>
       </div>
 
       {mobileMenuOpen && (
-        <nav id="mobile-menu" className="md:hidden border-t border-border bg-background/95 px-4 py-3 space-y-2" aria-label={t('nav.mobileNavAriaLabel')}>
+        <nav id="mobile-menu" className="lg:hidden border-t border-border bg-background/95 px-4 py-3 space-y-2" aria-label={t('nav.mobileNavAriaLabel')}>
           <Link href={`/${locale}/rooms`} className="block py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>{t('nav.rooms')}</Link>
           <Link href={`/${locale}/reservations`} className="block py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>{t('nav.reservations')}</Link>
+          <Link href={`/${locale}/faq`} className="block py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>{t('nav.faq')}</Link>
           {user?.role === 'admin' && (
             <Link href={`/${locale}/admin`} className="block py-2 text-sm font-medium" onClick={() => setMobileMenuOpen(false)}>{t('nav.admin')}</Link>
           )}

@@ -61,6 +61,14 @@ export function Footer({ locale }: FooterProps) {
                 </Link>
               </li>
               <li>
+                <Link
+                  href={`/${locale}/faq`}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+                >
+                  {t('faq')}
+                </Link>
+              </li>
+              <li>
                 <a
                   href={associationUrl ?? '#'}
                   {...(associationUrl ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
