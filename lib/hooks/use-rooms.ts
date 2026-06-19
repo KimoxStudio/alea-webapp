@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import type { Room } from '@/lib/types'
 import { apiClient } from '@/lib/api/client'
 
@@ -8,6 +8,7 @@ export function useRooms() {
     queryFn: () => apiClient.get<Room[]>('/rooms'),
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -18,5 +19,6 @@ export function useRoomTables(roomId: string | null) {
     enabled: !!roomId,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
   })
 }

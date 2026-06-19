@@ -38,8 +38,8 @@ function TableAvailabilityWrapper({
 
 export function RoomView({ roomId, currentDate }: RoomViewProps) {
   const t = useTranslations('rooms')
-  const { data: tables, isLoading, error } = useRoomTables(roomId)
-  const { data: availabilityByTable, isLoading: availabilityLoading } = useRoomAvailability(roomId, currentDate)
+  const { data: tables, isLoading, isFetching, error } = useRoomTables(roomId)
+  const { data: availabilityByTable, isLoading: availabilityLoading, isFetching: availabilityFetching } = useRoomAvailability(roomId, currentDate)
   const [selectedTable, setSelectedTable] = useState<GameTable | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
 
@@ -48,7 +48,7 @@ export function RoomView({ roomId, currentDate }: RoomViewProps) {
     setDialogOpen(true)
   }
 
-  if (isLoading || availabilityLoading) {
+  if ((!tables && (isLoading || isFetching)) || (!availabilityByTable && (availabilityLoading || availabilityFetching))) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3" aria-busy="true" aria-label="Cargando mesas...">
         {Array.from({ length: 6 }).map((_, i) => (

@@ -112,7 +112,7 @@ export function MyReservationsView() {
   const t = useTranslations('reservations')
   const tc = useTranslations('common')
   const { user } = useAuth()
-  const { data: reservations, isLoading } = useMyReservations(user?.id ?? null)
+  const { data: reservations, isLoading, isFetching } = useMyReservations(user?.id ?? null)
   const cancelReservation = useCancelReservation()
   const [cancelingId, setCancelingId] = useState<string | null>(null)
   const [cancelError, setCancelError] = useState<string | null>(null)
@@ -162,7 +162,7 @@ export function MyReservationsView() {
         <p className="text-muted-foreground">{t('subtitle')}</p>
       </div>
 
-      {isLoading ? (
+      {isLoading || (isFetching && !reservations) ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-24 rounded-lg" />
