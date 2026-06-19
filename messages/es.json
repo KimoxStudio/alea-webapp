@@ -13,6 +13,7 @@
   "nav": {
     "rooms": "Salas", "reservations": "Mis Reservas",
     "admin": "Administración", "logout": "Cerrar Sesión", "profile": "Mi Perfil",
+    "faq": "Preguntas frecuentes",
     "mainNavAriaLabel": "Navegación principal",
     "mobileNavAriaLabel": "Navegación móvil",
     "skipToContent": "Ir al contenido principal",
@@ -269,12 +270,100 @@
     "tryAgain": "Intentar de nuevo",
     "backToReservations": "Volver a mis reservas"
   },
+  "faq": {
+    "metadataTitle": "Preguntas frecuentes",
+    "eyebrow": "Centro de ayuda",
+    "title": "Preguntas frecuentes",
+    "subtitle": "Respuestas rápidas sobre el acceso, las reservas, el material y el check-in.",
+    "currentRules": "Esta guía recoge las normas actuales. Las funciones previstas están marcadas claramente.",
+    "sections": {
+      "access": {
+        "title": "Acceso a la cuenta",
+        "items": {
+          "activation": {
+            "question": "¿Cómo activo mi cuenta?",
+            "answer": "Pide un enlace de activación a un administrador. El enlace solo se puede usar una vez y caduca a las 24 horas."
+          },
+          "recovery": {
+            "question": "¿Cómo recupero el acceso a mi cuenta?",
+            "answer": "Pide un enlace de recuperación a un administrador. Solo está disponible para cuentas activas; el enlace se puede usar una vez y caduca a las 24 horas."
+          },
+          "password": {
+            "question": "¿Qué requisitos debe cumplir la contraseña?",
+            "answer": "Usa al menos 8 caracteres, con una mayúscula, una minúscula y un número. Solo se permiten letras y números."
+          }
+        }
+      },
+      "booking": {
+        "title": "Reservas",
+        "items": {
+          "create": {
+            "question": "¿Cuándo puedo reservar una mesa?",
+            "answer": "Puedes reservar desde hoy hasta 7 días después. El calendario usa franjas de 30 minutos durante todo el día. No puedes tener reservas solapadas y un evento puede bloquear una sala completa."
+          },
+          "surfaces": {
+            "question": "¿Cómo funcionan las mesas con tapa removible?",
+            "answer": "Las superficies superior e inferior se pueden reservar de forma independiente, incluso a la misma hora. Elige la que necesites al reservar."
+          },
+          "cancel": {
+            "question": "¿Cuándo puedo cancelar una reserva?",
+            "answer": "Puedes cancelarla cuando falten más de 60 minutos para su inicio. Después de ese límite, contacta con un administrador."
+          },
+          "conflict": {
+            "question": "¿Por qué una franja disponible ha dejado de estarlo?",
+            "answer": "Otro socio puede haberla reservado al mismo tiempo. Verás un mensaje de conflicto y la disponibilidad se actualizará para que elijas otra franja."
+          }
+        }
+      },
+      "equipment": {
+        "title": "Material opcional",
+        "items": {
+          "optional": {
+            "question": "¿Puedo añadir material a mi reserva?",
+            "answer": "Sí, cuando la sala tenga material opcional disponible durante toda la reserva. No podrás seleccionar material ya reservado para ese horario o asignado a otra sala."
+          }
+        }
+      },
+      "checkin": {
+        "title": "Check-in con QR",
+        "items": {
+          "qr": {
+            "question": "¿Cómo hago check-in?",
+            "answer": "Inicia sesión con la cuenta del socio que hizo la reserva y escanea el QR de la mesa. El check-in abre 5 minutos antes y cierra al cumplirse el primero de estos límites: 60 minutos desde el inicio o el final de la reserva."
+          },
+          "noShow": {
+            "question": "¿Qué ocurre si no hago check-in?",
+            "answer": "Si pierdes la ventana de check-in, la reserva seguirá sin activar y más adelante podrá marcarse como no presentada. Al abrir Salas se actualiza el estado actual de las reservas."
+          }
+        }
+      },
+      "savedGame": {
+        "title": "Partida guardada",
+        "badge": "Próximamente",
+        "items": {
+          "overview": {
+            "question": "¿Qué serán las reservas de Partida guardada?",
+            "answer": "Esta función aún no está disponible. Está prevista para reservar la superficie inferior de una mesa con tapa removible durante días completos, hasta un máximo de 3 meses."
+          },
+          "use": {
+            "question": "¿Cómo usaré una mesa con partida guardada?",
+            "answer": "El mismo socio reservará la superficie superior cada día que la use y escaneará el código QR. Cada escaneo registrará la asistencia y la sumará al contador de la reserva."
+          },
+          "renewal": {
+            "question": "¿Podré ampliar una reserva de Partida guardada?",
+            "answer": "El diseño previsto permite que el mismo socio la renueve desde la tarjeta de Partida guardada durante los últimos 15 días. El funcionamiento exacto puede cambiar antes del lanzamiento."
+          }
+        }
+      }
+    }
+  },
   "footer": {
     "tagline": "El espacio de juego de la comunidad",
     "links": "Navegación",
     "home": "Inicio",
     "rooms": "Salas",
     "reservations": "Mis Reservas",
+    "faq": "Preguntas frecuentes",
     "association": "Web de la Asociación",
     "contact": "Contacto",
     "rights": "Todos los derechos reservados.",
