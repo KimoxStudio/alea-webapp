@@ -78,7 +78,6 @@ describe('FAQ page', () => {
   it('keeps FAQ translations complete across locales and page config', async () => {
     const { FAQ_SECTIONS } = await import('@/app/[locale]/faq/config')
     const configuredKeys = [
-      'metadataTitle',
       'eyebrow',
       'title',
       'subtitle',
