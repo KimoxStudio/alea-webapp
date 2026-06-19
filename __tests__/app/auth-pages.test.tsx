@@ -84,15 +84,27 @@ describe('auth page guards', () => {
     expect(markNoShowReservationsMock).toHaveBeenCalledOnce()
   })
 
-  it('rooms page propagates expiry failures instead of treating them as stale auth', async () => {
+  it('rooms page renders even when no-show expiry fails', async () => {
     getSessionFromServerCookiesMock.mockResolvedValueOnce({ id: 'session-1', role: 'member' })
     getCurrentUserMock.mockResolvedValueOnce({ id: 'user-1' })
     markNoShowReservationsMock.mockRejectedValueOnce(new Error('RPC failed'))
 
-    const { default: RoomsPage } = await import('@/app/[locale]/rooms/page')
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    await expect(RoomsPage({ params: Promise.resolve({ locale: 'es' }) })).rejects.toThrow('RPC failed')
+    const { default: RoomsPage } = await import('@/app/[locale]/rooms/page')
+    const result = await RoomsPage({ params: Promise.resolve({ locale: 'es' }) })
+
+    // Page should resolve successfully (best-effort behavior)
+    expect(result).toBeDefined()
+    // redirect should NOT be called
     expect(redirectMock).not.toHaveBeenCalled()
+    // console.error should have been called to log the failure
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Failed to mark no-show reservations on rooms load',
+      expect.any(Error)
+    )
+
+    consoleErrorSpy.mockRestore()
   })
 
   it('root page redirects valid sessions directly to rooms', async () => {
