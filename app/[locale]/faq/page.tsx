@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: FaqPageProps): Promise<Metada
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'faq' })
 
-  return { title: `${t('metadataTitle')} — Alea` }
+  return { title: `${t('title')} — Alea` }
 }
 
 export default async function FaqPage({ params }: FaqPageProps) {
