@@ -35,7 +35,7 @@ type AdminReservationsTableClient = {
   select: (columns: string) => AdminReservationsQuery
 }
 type StalePendingReservationsUpdateQuery = {
-  eq: (column: 'status', value: 'pending') => StalePendingReservationsUpdateQuery
+  eq: (column: 'status' | 'table_id' | 'date', value: string) => StalePendingReservationsUpdateQuery
   is: (column: 'activated_at', value: null) => StalePendingReservationsUpdateQuery
   lt: (column: 'created_at', value: string) => Promise<{ error: unknown }>
 }
@@ -285,13 +285,15 @@ async function listActiveReservationsForConflict(input: {
   }) as ReservationRow[]
 }
 
-async function expireStalePendingReservations() {
+async function expireStalePendingReservations(tableId: string, date: string) {
   const admin = createSupabaseServerAdminClient()
   const nowUtc = await getDatabaseNow(admin)
   const cutoff = new Date(nowUtc.getTime() - GRACE_PERIOD_MINUTES * 60 * 1000).toISOString()
   const { error } = await (admin.from('reservations') as unknown as StalePendingReservationsTableClient)
     .update({ status: 'cancelled' })
     .eq('status', 'pending')
+    .eq('table_id', tableId)
+    .eq('date', date)
     .is('activated_at', null)
     .lt('created_at', cutoff)
 
@@ -741,7 +743,7 @@ export async function createReservationForSession(
 
   const supabase = await createSupabaseServerClient()
 
-  await expireStalePendingReservations()
+  await expireStalePendingReservations(tableId, date)
   await checkUserSlotOverlap(session.id, date, startTime, endTime, supabase)
 
   const conflictingReservations = await listActiveReservationsForConflict({ tableId, date })
@@ -864,7 +866,7 @@ export async function updateReservationForSession(
     assertReservationWithinBookingWindow(nextDate)
   }
 
-  await expireStalePendingReservations()
+  await expireStalePendingReservations(existingReservation.table_id, nextDate)
   const conflictingReservations = await listActiveReservationsForConflict({
     tableId: existingReservation.table_id,
     date: nextDate,
