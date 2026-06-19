@@ -162,6 +162,7 @@
     "cancelConfirm": "Are you sure you want to cancel this reservation?",
     "noReservations": "You have no active reservations",
     "available": "Available",
+    "availableTimesLabel": "Available times",
     "occupied": "Occupied",
     "myReservation": "My reservation",
     "calendar": "Availability calendar",
@@ -170,6 +171,8 @@
     "submitting": "Submitting...",
     "eventBlocked": "Blocked by event",
     "eventBlockLabel": "Reserved - Event",
+    "partiallyOccupied": "Partially occupied",
+    "selectEndTimePrompt": "Start: {startTime} - Select the end time",
     "errors": {
       "conflictTime": "A reservation already exists at that time",
       "pastDate": "You cannot book dates in the past",
