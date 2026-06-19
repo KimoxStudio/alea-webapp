@@ -298,7 +298,7 @@ async function expireStalePendingReservations(tableId: string, date: string) {
     .lt('created_at', cutoff)
 
   if (error) {
-    serviceError('Internal server error', 500)
+    console.error('expireStalePendingReservations failed (non-fatal):', error)
   }
 }
 
