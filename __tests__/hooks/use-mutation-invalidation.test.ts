@@ -89,6 +89,26 @@ describe('mutation invalidation loading state', () => {
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['availability', 'room'] })
   })
 
+  it('refreshes affected availability when reservation creation conflicts', async () => {
+    const { result } = renderHook(() => useCreateReservation())
+
+    const onErrorResult = (result.current as any).onError(
+      { message: 'Time slot is already reserved', statusCode: 409 },
+      {
+        tableId: 'table-1',
+        date: '2026-06-17',
+        startTime: '10:00',
+        endTime: '11:00',
+      },
+    )
+
+    expect(onErrorResult).toBeInstanceOf(Promise)
+    await onErrorResult
+    expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2)
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['availability', 'table-1', '2026-06-17'] })
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['availability', 'room'] })
+  })
+
   it('keeps admin cancellation pending until admin and member reservations invalidate', async () => {
     const { result } = renderHook(() => useAdminCancelReservation())
 
