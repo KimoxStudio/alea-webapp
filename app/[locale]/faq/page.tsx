@@ -60,7 +60,7 @@ export default async function FaqPage({ params }: FaqPageProps) {
                   </span>
                   {'hasBadge' in section && section.hasBadge ? (
                     <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                      {t('sections.savedGame.badge')}
+                      {t(`sections.${section.key}.badge`)}
                     </span>
                   ) : null}
                 </div>
