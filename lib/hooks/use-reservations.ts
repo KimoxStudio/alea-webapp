@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import type { AvailableEquipment, Reservation, CreateReservationRequest, TableAvailability } from '@/lib/types'
 import { apiClient } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
@@ -13,6 +13,7 @@ export function useMyReservations(userId: string | null) {
     queryKey: ['reservations', 'my', userId],
     queryFn: () => apiClient.get<Reservation[]>(`/reservations?userId=${userId}`),
     enabled: !!userId,
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -41,6 +42,7 @@ export function useRoomAvailability(roomId: string | null, date: string | null) 
     enabled: !!roomId && !!date,
     staleTime: 0,
     refetchInterval: 60_000,
+    placeholderData: keepPreviousData,
   })
 }
 

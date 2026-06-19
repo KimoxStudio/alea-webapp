@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export function RoomsView() {
   const t = useTranslations('rooms')
-  const { data: rooms, isLoading, error } = useRooms()
+  const { data: rooms, isLoading, isFetching, error } = useRooms()
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -28,7 +28,7 @@ export function RoomsView() {
     router.push(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
-  if (isLoading) {
+  if (isLoading || (isFetching && !rooms)) {
     return (
       <div className="container mx-auto max-w-7xl px-4 py-8">
         <div className="space-y-4">

@@ -226,3 +226,35 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [07:31] Migration 20260528000002_kim391_consolidate_profiles_select_policy.sql — drops profiles_admin_select, consolidates into profiles_member_select with OR logic
 - [07:31] Build: green, Typecheck: green, Tests: 548/548 passed
 - [07:31] ✅ Complete — 2 migration files committed to branch, all validations green
+
+---
+
+#### [KIM-385] qa-engineer — validate FAQ fixes
+- [10:26] Started — received handoff from team-lead
+- [10:26] Task: Edit faq-page.test.tsx to remove metadataTitle from configuredKeys array (key was removed in commit cb49d3c)
+- [10:26] Checked out codex/kim-385-member-faq branch
+- [10:26] Applied sed edit: removed line 81 'metadataTitle', from configuredKeys array
+- [10:27] QA cycle 1: pnpm test — 612 tests PASSED ✓ (48 test files, all green)
+- [10:27] QA cycle 2: pnpm test — 612 tests PASSED ✓ (stable, no regressions)
+- [10:27] Committed: 2d6e9fd — test(faq): drop metadataTitle from key parity assertion
+- [10:27] Pushed to origin/codex/kim-385-member-faq
+- [10:27] ✅ Complete — Test fix validated, 2 green cycles, branch pushed
+
+---
+
+#### [KIM-385] software-engineer — resolve develop merge conflicts
+
+- [12:20] Started — merging origin/develop into codex/kim-385-member-faq
+- [12:21] Conflict identified: docs/DECISIONS.md only (en.json and es.json auto-merged cleanly)
+- [12:22] DECISIONS.md resolved: kept all 6 log lines from both sides in chronological order (07:44, 07:52, 07:55, 08:01, 08:10 from develop + 08:40 from HEAD)
+- [12:23] JSON parity verified: 373 keys in en.json, 373 keys in es.json, no missing keys
+- [12:23] All expected keys present: reservations.availableTimesLabel, reservations.partiallyOccupied, reservations.selectEndTimePrompt (from develop), nav.faq, faq.*, footer.faq (from feature branch)
+- [12:24] Merge commit created: 180e116
+- [12:24] Typecheck: PASS, Build: PASS (38/38 static pages), Tests: 620/620 PASS (including faq-page.test.tsx 4/4)
+- [12:24] Pre-push hook: typecheck PASS, lint PASS
+- [12:25] ✅ Complete — pushed codex/kim-385-member-faq to origin, PR #128 is now conflict-free
+
+---
+
+#### [loading-spinner] software-engineer — fix spinner load states
+- [13:03] Started — branch fix/loading-spinner-states off develop
