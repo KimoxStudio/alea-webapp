@@ -81,6 +81,8 @@ const tablesState = new Map<string, TableRow>()
 const profilesMap = new Map<string, { member_number: string }>()
 const roomsMap = new Map<string, RoomRow>()
 const eventRoomBlocksState: EventRoomBlockRow[] = []
+let reservationInsertError: { code: string } | null = null
+let reservationUpdateError: { code: string } | null = null
 
 function createDatabaseTimeRpc() {
   return vi.fn(async (fn: string) => {
@@ -308,6 +310,9 @@ vi.mock('@/lib/supabase/server', () => ({
           insert: vi.fn((payload: Record<string, string | null>) => ({
             select: vi.fn(() => ({
               single: vi.fn(async () => {
+                if (reservationInsertError) {
+                  return { data: null, error: reservationInsertError }
+                }
                 const row = makeReservation({
                   id: `r${reservationsState.length + 1}`,
                   table_id: String(payload.table_id),
@@ -327,6 +332,9 @@ vi.mock('@/lib/supabase/server', () => ({
             eq: vi.fn((column: string, value: string) => ({
               select: vi.fn(() => ({
                 single: vi.fn(async () => {
+                  if (reservationUpdateError) {
+                    return { data: null, error: reservationUpdateError }
+                  }
                   const row = reservationsState.find((reservation) => String((reservation as Record<string, unknown>)[column]) === value)
                   if (!row) {
                     return { data: null, error: null }
@@ -399,15 +407,36 @@ vi.mock('@/lib/supabase/server', () => ({
           // The first .eq() identifies the row (by 'id'); subsequent .eq() calls act as
           // TOCTOU conditions — the row is only updated if ALL conditions match.
           const filters: Array<[string, string]> = []
+          const nullFilters: string[] = []
+          const lessThanFilters: Array<[string, string]> = []
+          const matchesFilters = (row: ReservationRow) =>
+            filters.every(([col, val]) => String((row as Record<string, unknown>)[col]) === val) &&
+            nullFilters.every((col) => (row as Record<string, unknown>)[col] === null) &&
+            lessThanFilters.every(([col, val]) => String((row as Record<string, unknown>)[col]) < val)
           const chain = {
             eq: vi.fn((column: string, value: string) => {
               filters.push([column, value])
               return chain
             }),
+            is: vi.fn((column: string, value: null) => {
+              if (value === null) {
+                nullFilters.push(column)
+              }
+              return chain
+            }),
+            lt: vi.fn(async (column: string, value: string) => {
+              lessThanFilters.push([column, value])
+              for (const row of reservationsState) {
+                if (matchesFilters(row)) {
+                  Object.assign(row, payload)
+                }
+              }
+              return { error: null }
+            }),
             select: vi.fn(() => ({
               single: vi.fn(async () => {
                 const row = reservationsState.find((r) =>
-                  filters.every(([col, val]) => String((r as Record<string, unknown>)[col]) === val)
+                  matchesFilters(r)
                 )
                 if (!row) {
                   return { data: null, error: null }
@@ -435,6 +464,8 @@ describe('reservations service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllEnvs()
+    reservationInsertError = null
+    reservationUpdateError = null
     seedState()
   })
 
@@ -801,6 +832,38 @@ describe('reservations service', () => {
       })
     })
 
+    it('maps table slot conflicts owned by another user to SLOT_TAKEN', async () => {
+      const { createReservationForSession } = await loadReservationModules()
+      reservationsState[0]!.user_id = 'other-user'
+
+      await expect(createReservationForSession(memberSession, {
+        tableId: 't1',
+        date: '2026-12-31',
+        startTime: '17:00',
+        endTime: '18:30',
+      })).rejects.toMatchObject({
+        name: 'ServiceError',
+        message: 'SLOT_TAKEN',
+        statusCode: 409,
+      })
+    })
+
+    it('maps database exclusion conflicts to SLOT_TAKEN when the insert races', async () => {
+      const { createReservationForSession } = await loadReservationModules()
+      reservationInsertError = { code: '23P01' }
+
+      await expect(createReservationForSession(memberSession, {
+        tableId: 't2',
+        date: '2026-12-31',
+        startTime: '12:00',
+        endTime: '13:00',
+      })).rejects.toMatchObject({
+        name: 'ServiceError',
+        message: 'SLOT_TAKEN',
+        statusCode: 409,
+      })
+    })
+
     it('rejects single-digit hour "9:00" with 400', async () => {
       const { createReservationForSession } = await loadReservationModules()
 
@@ -915,6 +978,58 @@ describe('reservations service', () => {
         message: 'ROOM_BLOCKED_BY_EVENT',
         statusCode: 409,
       })
+    })
+
+    it('allows overlapping opposite surfaces on removable-top tables', async () => {
+      const { createReservationForSession } = await loadReservationModules()
+
+      await expect(createReservationForSession({ id: 'other-user', role: 'member' }, {
+        tableId: 't3',
+        date: '2026-12-31',
+        startTime: '10:30',
+        endTime: '11:30',
+        surface: 'bottom',
+      })).resolves.toEqual(expect.objectContaining({
+        tableId: 't3',
+        surface: 'bottom',
+      }))
+    })
+
+    it('rejects overlapping same surfaces on removable-top tables', async () => {
+      const { createReservationForSession } = await loadReservationModules()
+
+      await expect(createReservationForSession({ id: 'other-user', role: 'member' }, {
+        tableId: 't3',
+        date: '2026-12-31',
+        startTime: '10:30',
+        endTime: '11:30',
+        surface: 'top',
+      })).rejects.toMatchObject({
+        name: 'ServiceError',
+        message: 'SLOT_TAKEN',
+        statusCode: 409,
+      })
+    })
+
+    it('cancels stale pending reservations before create so they cannot block the DB constraint', async () => {
+      const { createReservationForSession, GRACE_PERIOD_MINUTES } = await loadReservationModules()
+      const now = new Date('2026-12-31T10:00:00.000Z')
+      vi.setSystemTime(now)
+      reservationsState[0]!.status = 'pending'
+      reservationsState[0]!.user_id = 'other-user'
+      reservationsState[0]!.created_at = new Date(now.getTime() - (GRACE_PERIOD_MINUTES + 1) * 60 * 1000).toISOString()
+
+      await expect(createReservationForSession(memberSession, {
+        tableId: 't1',
+        date: '2026-12-31',
+        startTime: '17:00',
+        endTime: '18:30',
+      })).resolves.toEqual(expect.objectContaining({
+        tableId: 't1',
+        startTime: '17:00',
+        endTime: '18:30',
+      }))
+      expect(reservationsState[0]!.status).toBe('cancelled')
     })
 
     it('rejects a reservation that overlaps an existing slot for the same user', async () => {
@@ -1353,6 +1468,54 @@ describe('reservations service', () => {
       const updated = await updateReservationForSession(memberSession, 'r1', { status: 'cancelled' })
 
       expect(updated.status).toBe('cancelled')
+    })
+
+    it('maps database exclusion conflicts to SLOT_TAKEN when update races', async () => {
+      const { updateReservationForSession } = await loadReservationModules()
+      reservationUpdateError = { code: '23P01' }
+
+      await expect(updateReservationForSession(memberSession, 'r1', {
+        date: '2026-12-31',
+        startTime: '12:00',
+        endTime: '13:00',
+      })).rejects.toMatchObject({
+        name: 'ServiceError',
+        message: 'SLOT_TAKEN',
+        statusCode: 409,
+      })
+    })
+
+    it('cancels stale pending reservations before update so they cannot block the DB constraint', async () => {
+      const { updateReservationForSession, GRACE_PERIOD_MINUTES } = await loadReservationModules()
+      const now = new Date('2026-12-31T10:00:00.000Z')
+      vi.setSystemTime(now)
+      const stalePending = makeReservation({
+        id: 'r-stale-pending-update',
+        table_id: 't1',
+        user_id: 'other-user',
+        date: '2026-12-31',
+        start_time: '12:00:00',
+        end_time: '13:00:00',
+        status: 'pending',
+        created_at: new Date(now.getTime() - (GRACE_PERIOD_MINUTES + 1) * 60 * 1000).toISOString(),
+      })
+      const t1 = tablesState.get(stalePending.table_id)!
+      reservationsState.push({
+        ...stalePending,
+        profiles: profilesMap.get(stalePending.user_id) ?? null,
+        tables: { name: t1.name, rooms: roomsMap.get(t1.room_id) ?? null },
+      })
+
+      await expect(updateReservationForSession(memberSession, 'r1', {
+        date: '2026-12-31',
+        startTime: '12:00',
+        endTime: '13:00',
+      })).resolves.toEqual(expect.objectContaining({
+        id: 'r1',
+        startTime: '12:00',
+        endTime: '13:00',
+      }))
+      expect(reservationsState.find((row) => row.id === 'r-stale-pending-update')?.status).toBe('cancelled')
     })
 
     describe('cancellation cutoff (60-minute restriction)', () => {

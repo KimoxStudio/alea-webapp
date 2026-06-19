@@ -34,6 +34,14 @@ type AdminReservationsQuery = {
 type AdminReservationsTableClient = {
   select: (columns: string) => AdminReservationsQuery
 }
+type StalePendingReservationsUpdateQuery = {
+  eq: (column: 'status' | 'table_id' | 'date', value: string) => StalePendingReservationsUpdateQuery
+  is: (column: 'activated_at', value: null) => StalePendingReservationsUpdateQuery
+  lt: (column: 'created_at', value: string) => Promise<{ error: unknown }>
+}
+type StalePendingReservationsTableClient = {
+  update: (values: Pick<TablesUpdate<'reservations'>, 'status'>) => StalePendingReservationsUpdateQuery
+}
 type SessionReservationsQuery = {
   eq: (column: 'user_id' | 'table_id' | 'date', value: string) => SessionReservationsQuery
   order: (column: string, options: { ascending: boolean }) => SessionReservationsQuery
@@ -275,6 +283,23 @@ async function listActiveReservationsForConflict(input: {
     }
     return true // Keep active reservations
   }) as ReservationRow[]
+}
+
+async function expireStalePendingReservations(tableId: string, date: string) {
+  const admin = createSupabaseServerAdminClient()
+  const nowUtc = await getDatabaseNow(admin)
+  const cutoff = new Date(nowUtc.getTime() - GRACE_PERIOD_MINUTES * 60 * 1000).toISOString()
+  const { error } = await (admin.from('reservations') as unknown as StalePendingReservationsTableClient)
+    .update({ status: 'cancelled' })
+    .eq('status', 'pending')
+    .eq('table_id', tableId)
+    .eq('date', date)
+    .is('activated_at', null)
+    .lt('created_at', cutoff)
+
+  if (error) {
+    console.error('expireStalePendingReservations failed (non-fatal):', error)
+  }
 }
 
 async function listOverlappingReservationIds(input: {
@@ -557,6 +582,10 @@ function isConflictError(error: PostgrestErrorLike | null | undefined) {
   return error?.code === '23P01'
 }
 
+function throwSlotTaken(): never {
+  serviceError('SLOT_TAKEN', 409)
+}
+
 export async function listVisibleReservations(input: {
   session: SessionUser
   userId?: string | null
@@ -714,11 +743,12 @@ export async function createReservationForSession(
 
   const supabase = await createSupabaseServerClient()
 
+  await expireStalePendingReservations(tableId, date)
   await checkUserSlotOverlap(session.id, date, startTime, endTime, supabase)
 
   const conflictingReservations = await listActiveReservationsForConflict({ tableId, date })
   if (hasReservationConflict(conflictingReservations, { startTime, endTime, surface })) {
-    serviceError('Time slot is already reserved', 409)
+    throwSlotTaken()
   }
   if (await hasEventBlockConflict({ roomId: table.room_id, date, startTime, endTime })) {
     serviceError('ROOM_BLOCKED_BY_EVENT', 409)
@@ -746,7 +776,7 @@ export async function createReservationForSession(
 
   if (error || !data) {
     if (isConflictError(error)) {
-      serviceError('Time slot is already reserved', 409)
+      throwSlotTaken()
     }
     serviceError('Internal server error', 500)
   }
@@ -836,6 +866,7 @@ export async function updateReservationForSession(
     assertReservationWithinBookingWindow(nextDate)
   }
 
+  await expireStalePendingReservations(existingReservation.table_id, nextDate)
   const conflictingReservations = await listActiveReservationsForConflict({
     tableId: existingReservation.table_id,
     date: nextDate,
@@ -846,7 +877,7 @@ export async function updateReservationForSession(
     endTime: nextEndTime,
     surface: nextSurface ?? undefined,
   })) {
-    serviceError('Time slot is already reserved', 409)
+    throwSlotTaken()
   }
   if (await hasEventBlockConflict({
     roomId: table.room_id,
@@ -895,7 +926,7 @@ export async function updateReservationForSession(
 
   if (error || !data) {
     if (isConflictError(error)) {
-      serviceError('Time slot is already reserved', 409)
+      throwSlotTaken()
     }
     serviceError('Internal server error', 500)
   }
