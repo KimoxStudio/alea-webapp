@@ -191,7 +191,7 @@ describe('ReservationDialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('displays error alert when mutation throws generic error', async () => {
+  it('displays slot conflict error when mutation throws a 409 conflict', async () => {
     const user = userEvent.setup()
     mockMutateAsync.fn = vi.fn().mockRejectedValueOnce({
       message: 'Time slot is already reserved',
@@ -231,7 +231,7 @@ describe('ReservationDialog', () => {
     await waitFor(() => {
       const alert = screen.getByRole('alert')
       expect(alert).toBeInTheDocument()
-      expect(alert).toHaveTextContent('errors.generic')
+      expect(alert).toHaveTextContent('errors.conflictTime')
     })
   })
 
