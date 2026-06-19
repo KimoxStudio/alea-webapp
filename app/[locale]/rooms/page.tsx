@@ -28,7 +28,11 @@ export default async function RoomsPage({ params }: RoomsPageProps) {
     return redirect(`/${locale}/login`)
   }
 
-  await markNoShowReservations()
+  try {
+    await markNoShowReservations()
+  } catch (error) {
+    console.error('Failed to mark no-show reservations on rooms load', error)
+  }
 
   return <RoomsView />
 }
