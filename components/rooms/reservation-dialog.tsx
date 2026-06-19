@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Calendar, Clock, Layers, Package } from 'lucide-react'
+import { Bookmark, Calendar, Clock, Layers, Package } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
 import type { GameTable, TableSurface, TableAvailability } from '@/lib/types'
 import { getCurrentClubDate } from '@/lib/club-time'
-import { useAvailableRoomEquipment, useTableAvailability, useCreateReservation } from '@/lib/hooks/use-reservations'
+import { useAvailableRoomEquipment, useTableAvailability, useCreateReservation, useCreateSavedGame } from '@/lib/hooks/use-reservations'
 import { useAuth } from '@/lib/auth/auth-context'
 import { generateTimeSlots, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -25,6 +25,15 @@ function addDaysToDateOnly(date: string, days: number) {
   return next.toISOString().slice(0, 10)
 }
 
+function addMonthsClamped(date: string, months: number) {
+  const [year, month, day] = date.split('-').map(Number)
+  const targetMonth = month - 1 + months
+  const targetYear = year + Math.floor(targetMonth / 12)
+  const normalizedMonth = ((targetMonth % 12) + 12) % 12
+  const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate()
+  return new Date(Date.UTC(targetYear, normalizedMonth, Math.min(day, lastDay))).toISOString().slice(0, 10)
+}
+
 interface ReservationDialogProps {
   table: GameTable | null
   open: boolean
@@ -40,6 +49,8 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
   const now = new Date()
   const today = getCurrentClubDate(now)
   const [selectedDate, setSelectedDate] = useState(today)
+  const [reservationMode, setReservationMode] = useState<'standard' | 'saved_game'>('standard')
+  const [savedGameEndDate, setSavedGameEndDate] = useState(addDaysToDateOnly(addMonthsClamped(today, 3), -1))
   const [selectedStartTime, setSelectedStartTime] = useState<string | null>(null)
   const [selectedEndTime, setSelectedEndTime] = useState<string | null>(null)
   const [selectedSurface, setSelectedSurface] = useState<TableSurface | null>(null)
@@ -58,6 +69,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
     selectedEndTime,
   )
   const createReservation = useCreateReservation()
+  const createSavedGame = useCreateSavedGame()
 
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
   const maxDate = addDaysToDateOnly(today, 7)
@@ -117,7 +129,27 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
   }
 
   async function handleSubmit() {
-    if (!table || !user || !selectedStartTime || !selectedEndTime) return
+    if (!table || !user) return
+    if (reservationMode === 'saved_game') {
+      setError(null)
+      try {
+        await createSavedGame.mutateAsync({ tableId: table.id, startDate: selectedDate, endDate: savedGameEndDate })
+        setSuccess(true)
+        setTimeout(handleClose, 1500)
+      } catch (err) {
+        const code = (err as { message?: string })?.message
+        const key = code === 'SAVED_GAME_MAX_DURATION'
+          ? 'savedGame.errors.maxDuration'
+          : code === 'SAVED_GAME_EVENT_CONFLICT'
+            ? 'savedGame.errors.eventConflict'
+            : code === 'SAVED_GAME_CONFLICT'
+              ? 'savedGame.errors.conflict'
+              : 'errors.generic'
+        setError(t(key))
+      }
+      return
+    }
+    if (!selectedStartTime || !selectedEndTime) return
     if (table.type === 'removable_top' && !selectedSurface) {
       setError(tTables('surfaceConflict'))
       return
@@ -170,6 +202,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
     setSelectedEquipmentIds([])
     setError(null)
     setSuccess(false)
+    setReservationMode('standard')
     onClose()
   }
 
@@ -194,6 +227,33 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
         </DialogHeader>
 
         <div className="space-y-5 py-2">
+          {table.type === 'removable_top' && (
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('reservationType')}>
+              {(['standard', 'saved_game'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  role="radio"
+                  aria-checked={reservationMode === mode}
+                  onClick={() => {
+                    setReservationMode(mode)
+                    setSelectedSurface(mode === 'saved_game' ? 'bottom' : null)
+                    setSelectedStartTime(null)
+                    setSelectedEndTime(null)
+                    setSelectedEquipmentIds([])
+                  }}
+                  className={cn(
+                    'min-h-11 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    reservationMode === mode ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/40',
+                  )}
+                >
+                  {mode === 'standard' ? t('standardReservation') : t('savedGame.name')}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Date selector */}
           <div className="space-y-2">
             <Label htmlFor="reservation-date" className="flex items-center gap-1.5">
@@ -205,12 +265,15 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
               type="date"
               value={selectedDate}
               min={today}
-              max={maxDate}
+              max={reservationMode === 'standard' ? maxDate : undefined}
               onChange={(e) => {
                 setSelectedDate(e.target.value)
                 setSelectedStartTime(null)
                 setSelectedEndTime(null)
                 setSelectedEquipmentIds([])
+                if (reservationMode === 'saved_game') {
+                  setSavedGameEndDate(addDaysToDateOnly(addMonthsClamped(e.target.value, 3), -1))
+                }
               }}
               className="flex h-10 w-full rounded-md border border-input bg-background-surface px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={t('selectDate')}
@@ -218,8 +281,33 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
             <p className="text-xs text-muted-foreground">{formatDate(selectedDate)}</p>
           </div>
 
+          {reservationMode === 'saved_game' && (
+            <div className="space-y-3 rounded-lg border border-primary/25 bg-primary/5 p-4">
+              <div className="flex items-start gap-2">
+                <Bookmark className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <div>
+                  <p className="text-sm font-medium">{t('savedGame.name')}</p>
+                  <p className="text-xs text-muted-foreground">{t('savedGame.description')}</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="saved-game-end-date">{t('savedGame.endDate')}</Label>
+                <input
+                  id="saved-game-end-date"
+                  type="date"
+                  value={savedGameEndDate}
+                  min={selectedDate}
+                  max={addDaysToDateOnly(addMonthsClamped(selectedDate, 3), -1)}
+                  onChange={(event) => setSavedGameEndDate(event.target.value)}
+                  className="flex h-11 w-full rounded-md border border-input bg-background-surface px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">{t('savedGame.upperReservationRule')}</p>
+            </div>
+          )}
+
           {/* Surface selector for removable_top */}
-          {table.type === 'removable_top' && (
+          {table.type === 'removable_top' && reservationMode === 'standard' && (
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5">
                 <Layers className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
@@ -258,7 +346,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
           )}
 
           {/* Time slots */}
-          {(table.type !== 'removable_top' || selectedSurface) && (
+          {reservationMode === 'standard' && (table.type !== 'removable_top' || selectedSurface) && (
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
@@ -393,7 +481,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
             </div>
           )}
 
-          {(table.type !== 'removable_top' || selectedSurface) && (
+          {reservationMode === 'standard' && (table.type !== 'removable_top' || selectedSurface) && (
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5">
                 <Package className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
@@ -484,20 +572,22 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
           <Button
             onClick={handleSubmit}
             disabled={
-              !selectedStartTime ||
-              !selectedEndTime ||
-              (table.type === 'removable_top' && !selectedSurface) ||
-              createReservation.isPending
+              reservationMode === 'saved_game'
+                ? !savedGameEndDate || createSavedGame.isPending
+                : !selectedStartTime ||
+                  !selectedEndTime ||
+                  (table.type === 'removable_top' && !selectedSurface) ||
+                  createReservation.isPending
             }
           >
-            {createReservation.isPending
+            {createReservation.isPending || createSavedGame.isPending
               ? (
                 <span className="inline-flex items-center gap-2">
                   <DiceLoader size="sm" hideRole />
                   <span>{t('submitting')}</span>
                 </span>
               )
-              : t('makeReservation')}
+              : reservationMode === 'saved_game' ? t('savedGame.create') : t('makeReservation')}
           </Button>
         </DialogFooter>
       </DialogContent>

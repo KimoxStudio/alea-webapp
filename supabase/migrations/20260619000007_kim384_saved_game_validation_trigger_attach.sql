@@ -1,0 +1,1 @@
+CREATE TRIGGER "saved_games_validate" BEFORE INSERT OR UPDATE OF "table_id", "start_date", "end_date", "status" ON "public"."saved_games" FOR EACH ROW EXECUTE FUNCTION "public"."validate_saved_game"();

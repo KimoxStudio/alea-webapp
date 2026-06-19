@@ -59,6 +59,7 @@ export function buildAvailability(
   date: string,
   reservations: ReservationRow[],
   eventBlocks: Array<{ start: string; end: string; label?: string | null }> = [],
+  savedGameBottomBlocked = false,
 ): TableAvailability {
   const reserved = reservations.map((reservation) => ({
     start: normalizeTime(reservation.start_time),
@@ -89,6 +90,7 @@ export function buildAvailability(
     const bottomReserved = [
       ...reserved.filter((reservation) => reservation.surface == null || reservation.surface === 'bottom'),
       ...blockedByEvents,
+      ...(savedGameBottomBlocked ? [{ start: '00:00', end: '24:00', source: 'reservation' as const, label: 'Saved Game' }] : []),
     ]
     availability.top = generateDaySlots(topReserved)
     availability.bottom = generateDaySlots(bottomReserved)

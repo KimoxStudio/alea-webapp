@@ -2,11 +2,11 @@
 
 import { useState, useRef } from 'react'
 import { useTranslations } from 'next-intl'
-import { CalendarDays, Clock, MapPin, Layers, AlertCircle, Package } from 'lucide-react'
+import { Bookmark, CalendarDays, Clock, MapPin, Layers, AlertCircle, Package, RefreshCw, ScanLine } from 'lucide-react'
 import { DiceLoader } from '@/components/ui/dice-loader'
 import { useAuth } from '@/lib/auth/auth-context'
 import { zonedDateTimeToUtc } from '@/lib/club-time'
-import { useMyReservations, useCancelReservation } from '@/lib/hooks/use-reservations'
+import { useMyReservations, useCancelReservation, useMySavedGames, useRenewSavedGame } from '@/lib/hooks/use-reservations'
 import { formatDate, formatTime } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from '@/components/ui/dialog'
-import type { Reservation } from '@/lib/types'
+import type { Reservation, SavedGame } from '@/lib/types'
 
 const CANCELLATION_CUTOFF_MS = 60 * 60 * 1000 // 60 minutes
 
@@ -107,13 +107,50 @@ function ReservationCard({ reservation, onCancel, cutoffPassed }: ReservationCar
   )
 }
 
+function SavedGameCard({ savedGame, onRenew, renewing }: {
+  savedGame: SavedGame
+  onRenew: (id: string) => void
+  renewing: boolean
+}) {
+  const t = useTranslations('reservations.savedGame')
+  return (
+    <div className="rpg-card space-y-4 border-primary/30 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 font-medium">
+            <Bookmark className="h-4 w-4 text-primary" aria-hidden="true" />
+            <span>{savedGame.roomName && savedGame.tableName ? `${savedGame.roomName} · ${savedGame.tableName}` : savedGame.tableName ?? savedGame.tableId}</span>
+          </div>
+          <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+            {formatDate(savedGame.startDate)} — {formatDate(savedGame.endDate)}
+          </p>
+        </div>
+        <Badge variant={savedGame.status === 'active' ? 'available' : 'outline'}>{t(`status.${savedGame.status}`)}</Badge>
+      </div>
+      <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+        <p className="flex items-center gap-1.5"><ScanLine className="h-3.5 w-3.5" aria-hidden="true" />{t('attendances', { count: savedGame.attendanceCount })}</p>
+        <p>{savedGame.canRenew ? t('renewalOpen') : t('renewalOpens', { date: formatDate(savedGame.renewalOpensOn) })}</p>
+      </div>
+      {savedGame.status === 'active' && (
+        <Button type="button" variant="outline" className="min-h-11 w-full" disabled={!savedGame.canRenew || renewing} onClick={() => onRenew(savedGame.id)}>
+          <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+          {renewing ? t('renewing') : t('renew')}
+        </Button>
+      )}
+    </div>
+  )
+}
+
 
 export function MyReservationsView() {
   const t = useTranslations('reservations')
   const tc = useTranslations('common')
   const { user } = useAuth()
   const { data: reservations, isLoading, isFetching } = useMyReservations(user?.id ?? null)
+  const { data: savedGames, isLoading: savedGamesLoading } = useMySavedGames(user?.id ?? null)
   const cancelReservation = useCancelReservation()
+  const renewSavedGame = useRenewSavedGame()
   const [cancelingId, setCancelingId] = useState<string | null>(null)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const dialogOpenRef = useRef(false)
@@ -162,7 +199,7 @@ export function MyReservationsView() {
         <p className="text-muted-foreground">{t('subtitle')}</p>
       </div>
 
-      {isLoading || (isFetching && !reservations) ? (
+      {isLoading || savedGamesLoading || (isFetching && !reservations) ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-24 rounded-lg" />
@@ -170,6 +207,25 @@ export function MyReservationsView() {
         </div>
       ) : (
         <div className="space-y-8">
+          {savedGames && savedGames.length > 0 && (
+            <section aria-labelledby="saved-games-heading">
+              <h2 id="saved-games-heading" className="mb-4 flex items-center gap-2 font-cinzel text-lg font-semibold text-foreground">
+                <Bookmark className="h-5 w-5 text-primary" aria-hidden="true" />
+                {t('savedGame.sectionTitle')} ({savedGames.length})
+              </h2>
+              <div className="space-y-3">
+                {savedGames.map((savedGame) => (
+                  <SavedGameCard
+                    key={savedGame.id}
+                    savedGame={savedGame}
+                    onRenew={(id) => renewSavedGame.mutate(id)}
+                    renewing={renewSavedGame.isPending && renewSavedGame.variables === savedGame.id}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Active reservations */}
           <section aria-labelledby="active-reservations-heading">
             <h2 id="active-reservations-heading" className="font-cinzel text-lg font-semibold mb-4 text-foreground">

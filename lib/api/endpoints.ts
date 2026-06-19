@@ -33,6 +33,10 @@ export const endpoints = {
     },
     byId: (id: string) => `/reservations/${id}`,
   },
+  savedGames: {
+    list: '/saved-games',
+    renew: (id: string) => `/saved-games/${id}/renew`,
+  },
   events: {
     list: '/events',
     byId: (id: string) => `/events/${id}`,

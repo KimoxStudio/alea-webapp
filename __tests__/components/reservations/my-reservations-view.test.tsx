@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MyReservationsView } from '@/components/reservations/my-reservations-view'
 import { getCurrentClubDate } from '@/lib/club-time'
-import type { Reservation } from '@/lib/types'
+import type { Reservation, SavedGame } from '@/lib/types'
 
 vi.mock('@/lib/club-time', async () => {
   const actual = await vi.importActual<typeof import('@/lib/club-time')>('@/lib/club-time')
@@ -36,10 +36,14 @@ vi.mock('@/lib/auth/auth-context', () => ({
 // Mock hooks
 const mockUseMyReservations = vi.fn()
 const mockUseCancelReservation = vi.fn()
+const mockUseMySavedGames = vi.fn()
+const mockUseRenewSavedGame = vi.fn()
 
 vi.mock('@/lib/hooks/use-reservations', () => ({
   useMyReservations: () => mockUseMyReservations(),
   useCancelReservation: () => mockUseCancelReservation(),
+  useMySavedGames: () => mockUseMySavedGames(),
+  useRenewSavedGame: () => mockUseRenewSavedGame(),
 }))
 
 // Mock utility functions
@@ -97,6 +101,8 @@ describe('MyReservationsView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-04-15T16:00:00.000Z').getTime())
+    mockUseMySavedGames.mockReturnValue({ data: [], isLoading: false })
+    mockUseRenewSavedGame.mockReturnValue({ mutate: vi.fn(), isPending: false, variables: undefined })
   })
 
   afterEach(() => {
@@ -400,7 +406,7 @@ describe('MyReservationsView', () => {
       expect(cancelBtn).toHaveAttribute('aria-disabled', 'true')
     })
 
-    it('disabled state message has role="note"', () => {
+  it('disabled state message has role="note"', () => {
       const soonRes = createReservationWithTimeOffset(30, { id: 'res-soon' })
       mockUseMyReservations.mockReturnValue({ data: [soonRes], isLoading: false })
       mockUseCancelReservation.mockReturnValue({ mutateAsync: vi.fn(), isPending: false })
@@ -411,5 +417,21 @@ describe('MyReservationsView', () => {
       expect(note).toHaveTextContent('reservations.errors.cancellationCutoff')
       expect(note).toBeInTheDocument()
     })
+  })
+
+  it('shows Saved Game attendance and enables renewal inside the final fifteen days', () => {
+    const savedGame: SavedGame = {
+      id: 'sg-1', tableId: 'table-1', userId: 'user-1', startDate: '2026-01-01', endDate: '2026-04-30',
+      status: 'active', attendanceCount: 4, renewedFromId: null, createdAt: '', updatedAt: '',
+      roomName: 'Sala Principal', tableName: 'Mesa doble', canRenew: true, renewalOpensOn: '2026-04-16',
+    }
+    mockUseMyReservations.mockReturnValue({ data: [], isLoading: false, isFetching: false })
+    mockUseCancelReservation.mockReturnValue({ mutateAsync: vi.fn(), isPending: false })
+    mockUseMySavedGames.mockReturnValue({ data: [savedGame], isLoading: false })
+
+    render(<MyReservationsView />)
+
+    expect(screen.getByRole('heading', { name: /reservations.savedGame.sectionTitle/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /reservations.savedGame.renew$/ })).toBeEnabled()
   })
 })
