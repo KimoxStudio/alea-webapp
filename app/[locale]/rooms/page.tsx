@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { RoomsView } from '@/components/rooms/rooms-view'
 import { getSessionFromServerCookies } from '@/lib/server/auth'
 import { getCurrentUser } from '@/lib/server/auth-service'
+import { markNoShowReservations } from '@/lib/server/reservations-service'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('rooms')
@@ -18,13 +19,19 @@ export default async function RoomsPage({ params }: RoomsPageProps) {
   const { locale } = await params
   const session = await getSessionFromServerCookies()
   if (!session) {
-    redirect(`/${locale}/login`)
+    return redirect(`/${locale}/login`)
   }
 
   try {
     await getCurrentUser(session)
   } catch {
-    redirect(`/${locale}/login`)
+    return redirect(`/${locale}/login`)
+  }
+
+  try {
+    await markNoShowReservations()
+  } catch (error) {
+    console.error('Failed to mark no-show reservations on rooms load', error)
   }
 
   return <RoomsView />
