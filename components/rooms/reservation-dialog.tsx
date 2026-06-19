@@ -143,7 +143,8 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
         setSelectedEquipmentIds([])
       }, 1500)
     } catch (err) {
-      const errorCode = (err as { message?: string })?.message
+      const mutationError = err as { message?: string; statusCode?: number }
+      const errorCode = mutationError?.message
       if (errorCode === 'USER_ALREADY_HAS_RESERVATION_IN_SLOT') {
         setError(t('errors.userSlotConflict'))
       } else if (errorCode === 'Cannot make a reservation in the past') {
@@ -154,6 +155,8 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
         setError(t('errors.eventBlocked'))
       } else if (errorCode === 'EQUIPMENT_ALREADY_RESERVED') {
         setError(t('errors.equipmentConflict'))
+      } else if (mutationError?.statusCode === 409) {
+        setError(t('errors.conflictTime'))
       } else {
         setError(t('errors.generic'))
       }
@@ -245,7 +248,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
                       <Layers className="h-4 w-4" aria-hidden="true" />
                       <span className="font-medium">{tTables(surface === 'top' ? 'surfaceTop' : 'surfaceBottom')}</span>
                       {hasUnavailable && (
-                        <span className="text-[10px] text-muted-foreground">(parcialmente ocupada)</span>
+                        <span className="text-[10px] text-muted-foreground">{t('partiallyOccupied')}</span>
                       )}
                     </button>
                   )
@@ -271,7 +274,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
                 <div
                   className="grid grid-cols-5 gap-1.5"
                   role="group"
-                  aria-label="Horarios disponibles"
+                  aria-label={t('availableTimesLabel')}
                 >
                   {timeSlots.map((time) => {
                     const available = isSlotAvailable(time, selectedSurface ?? undefined)
@@ -379,7 +382,7 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
 
               {selectedStartTime && !selectedEndTime && (
                 <p className="text-xs text-muted-foreground">
-                  Inicio: {selectedStartTime} — Selecciona la hora de fin
+                  {t('selectEndTimePrompt', { startTime: selectedStartTime })}
                 </p>
               )}
               {selectedStartTime && selectedEndTime && (

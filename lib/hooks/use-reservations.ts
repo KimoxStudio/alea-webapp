@@ -3,6 +3,11 @@ import type { AvailableEquipment, Reservation, CreateReservationRequest, TableAv
 import { apiClient } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
 
+type ReservationMutationError = {
+  statusCode?: number
+  message?: string
+}
+
 export function useMyReservations(userId: string | null) {
   return useQuery<Reservation[]>({
     queryKey: ['reservations', 'my', userId],
@@ -66,6 +71,14 @@ export function useCreateReservation() {
       queryClient.invalidateQueries({ queryKey: ['availability', created.tableId, created.date] }),
       queryClient.invalidateQueries({ queryKey: ['availability', 'room'] }),
     ]),
+    onError: (error: ReservationMutationError, variables) => {
+      if (error.statusCode !== 409) return
+
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['availability', variables.tableId, variables.date] }),
+        queryClient.invalidateQueries({ queryKey: ['availability', 'room'] }),
+      ])
+    },
   })
 }
 
