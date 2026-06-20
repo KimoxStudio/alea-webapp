@@ -99,7 +99,7 @@
   },
   "reservations": {
     "title": "Mis Reservas", "subtitle": "Gestiona tus reservas de mesas",
-    "makeReservation": "Nueva Reserva", "selectDate": "Seleccionar fecha",
+    "makeReservation": "Nueva Reserva", "reservationType": "Tipo de reserva", "standardReservation": "Reserva por horas", "selectDate": "Seleccionar fecha",
     "success": "¡Reserva confirmada!",
     "selectTime": "Seleccionar hora", "startTime": "Hora de inicio", "endTime": "Hora de fin",
     "selectTimeForEquipment": "Selecciona un rango horario para cargar el material disponible.",
@@ -122,6 +122,25 @@
     "eventBlockLabel": "Reservado - Evento",
     "partiallyOccupied": "Parcialmente ocupada",
     "selectEndTimePrompt": "Inicio: {startTime} - Selecciona la hora de fin",
+    "savedGame": {
+      "name": "Partida guardada",
+      "description": "Mantén la superficie inferior reservada para una partida en curso durante un máximo de tres meses.",
+      "endDate": "Fecha de fin",
+      "upperReservationRule": "Para jugar un día, reserva la superficie superior en una franja horaria y escanea su QR al llegar.",
+      "create": "Crear partida guardada",
+      "sectionTitle": "Partidas guardadas",
+      "attendances": "{count, plural, =0 {Sin asistencias todavía} one {# asistencia} other {# asistencias}}",
+      "renewalOpen": "La renovación ya está disponible.",
+      "renewalOpens": "La renovación abre el {date}.",
+      "renew": "Renovar tres meses",
+      "renewing": "Renovando...",
+      "status": { "active": "Activa", "cancelled": "Cancelada", "completed": "Completada" },
+      "errors": {
+        "maxDuration": "Una partida guardada no puede durar más de tres meses.",
+        "eventConflict": "Un evento bloquea esta sala durante las fechas elegidas.",
+        "conflict": "La superficie inferior ya tiene una partida guardada durante esas fechas."
+      }
+    },
     "errors": {
       "conflictTime": "Ya existe una reserva en ese horario",
       "pastDate": "No puedes reservar en fechas pasadas",
@@ -335,25 +354,24 @@
           },
           "noShow": {
             "question": "¿Qué ocurre si no hago check-in?",
-            "answer": "Si pierdes la ventana de check-in, la reserva seguirá sin activar y más adelante podrá marcarse como no presentada. Al abrir Salas se actualiza el estado actual de las reservas."
+            "answer": "Una reserva pendiente sigue siendo válida hasta el momento que llegue antes: 60 minutos después de su inicio o su hora de fin. Si no haces check-in antes, caduca y se marca como no presentada."
           }
         }
       },
       "savedGame": {
         "title": "Partida guardada",
-        "badge": "Próximamente",
         "items": {
           "overview": {
-            "question": "¿Qué serán las reservas de Partida guardada?",
-            "answer": "Esta función aún no está disponible. Está prevista para reservar la superficie inferior de una mesa con tapa removible durante días completos, hasta un máximo de 3 meses."
+            "question": "¿Qué son las reservas de Partida guardada?",
+            "answer": "Reservan la superficie inferior de una mesa con tapa removible durante días completos, hasta un máximo de 3 meses."
           },
           "use": {
-            "question": "¿Cómo usaré una mesa con partida guardada?",
-            "answer": "El mismo socio reservará la superficie superior cada día que la use y escaneará el código QR. Cada escaneo registrará la asistencia y la sumará al contador de la reserva."
+            "question": "¿Cómo uso una mesa con partida guardada?",
+            "answer": "El mismo socio reserva la superficie superior cada día que juega y escanea su código QR. Cada escaneo registra una asistencia."
           },
           "renewal": {
-            "question": "¿Podré ampliar una reserva de Partida guardada?",
-            "answer": "El diseño previsto permite que el mismo socio la renueve desde la tarjeta de Partida guardada durante los últimos 15 días. El funcionamiento exacto puede cambiar antes del lanzamiento."
+            "question": "¿Puedo ampliar una reserva de Partida guardada?",
+            "answer": "Sí. El mismo socio puede renovarla desde la tarjeta de Partida guardada durante los últimos 15 días del periodo actual."
           }
         }
       }

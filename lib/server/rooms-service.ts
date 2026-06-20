@@ -5,6 +5,8 @@ import { resolveDate, buildAvailability } from '@/lib/server/availability'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
 import { regenerateQrCodes } from '@/lib/server/tables-service'
 import { toGameTable } from '@/lib/server/table-mappers'
+import { getDatabaseNow } from '@/lib/server/database-time'
+import { isPendingReservationExpired } from '@/lib/server/pending-reservation-expiry'
 
 type RoomRow = Tables<'rooms'>
 type TableRow = Tables<'tables'>
@@ -178,9 +180,9 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
   const admin = createSupabaseServerAdminClient()
   const reservations = admin.from('reservations') as unknown as ReservationsByTableClient
 
-  const [reservationsResult, eventBlocksResult] = await Promise.all([
+  const [reservationsResult, eventBlocksResult, savedGamesResult, nowUtc] = await Promise.all([
     reservations
-      .select('id, table_id, date, start_time, end_time, status, surface, user_id, created_at')
+      .select('id, table_id, date, start_time, end_time, status, surface, user_id, activated_at, created_at')
       .eq('date', effectiveDate)
       .in('status', ['active', 'pending'])
       .in('table_id', tables.map((table) => table.id)),
@@ -189,6 +191,14 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
       .select('id, event_id, room_id, date, start_time, end_time, all_day')
       .eq('room_id', roomId)
       .eq('date', effectiveDate),
+    admin
+      .from('saved_games')
+      .select('table_id')
+      .eq('status', 'active')
+      .lte('start_date', effectiveDate)
+      .gte('end_date', effectiveDate)
+      .in('table_id', tables.map((table) => table.id)),
+    getDatabaseNow(admin),
   ])
 
   const { data, error } = reservationsResult
@@ -197,11 +207,16 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
     serviceError('Internal server error', 500)
   }
 
+  const activeReservations = ((data ?? []) as ReservationRow[]).filter((row) =>
+    row.status !== 'pending' || row.activated_at !== null || !isPendingReservationExpired(row, nowUtc),
+  )
   const eventBlocks = (eventBlocksResult.data ?? []) as EventBlockRow[]
 
   if (eventBlocksResult.error) {
     serviceError('Internal server error', 500)
   }
+  if (savedGamesResult.error) serviceError('Internal server error', 500)
+  const savedGameTableIds = new Set((savedGamesResult.data ?? []).map((row) => row.table_id))
 
   let eventTitleById = new Map<string, string>()
   const eventIds = [...new Set(eventBlocks.map((block) => block.event_id))]
@@ -221,7 +236,7 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
   }
 
   const reservationsByTable = new Map<string, ReservationRow[]>()
-  for (const reservation of (data ?? []) as ReservationRow[]) {
+  for (const reservation of activeReservations) {
     const items = reservationsByTable.get(reservation.table_id) ?? []
     items.push(reservation)
     reservationsByTable.set(reservation.table_id, items)
@@ -239,6 +254,7 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
       effectiveDate,
       reservationsByTable.get(table.id) ?? [],
       eventSlots,
+      savedGameTableIds.has(table.id),
     )
     return acc
   }, {})

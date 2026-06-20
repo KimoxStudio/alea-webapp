@@ -2,6 +2,8 @@
 import type { SessionUser } from '@/lib/server/auth'
 import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
 
+vi.mock('@/lib/server/saved-games-service', () => ({ recordSavedGameAttendance: vi.fn() }))
+
 type ReservationRow = {
   id: string
   table_id: string

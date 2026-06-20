@@ -6,6 +6,11 @@ import { serviceError } from '@/lib/server/service-error'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
 import { normalizeTime } from '@/lib/server/availability'
+import {
+  CHECK_IN_LATE_MINUTES,
+  getPendingCheckInDeadline,
+  isPendingReservationExpired,
+} from '@/lib/server/pending-reservation-expiry'
 
 type ReservationRow = Tables<'reservations'>
 type TableRow = Tables<'tables'>
@@ -33,14 +38,6 @@ type AdminReservationsQuery = {
 }
 type AdminReservationsTableClient = {
   select: (columns: string) => AdminReservationsQuery
-}
-type StalePendingReservationsUpdateQuery = {
-  eq: (column: 'status' | 'table_id' | 'date', value: string) => StalePendingReservationsUpdateQuery
-  is: (column: 'activated_at', value: null) => StalePendingReservationsUpdateQuery
-  lt: (column: 'created_at', value: string) => Promise<{ error: unknown }>
-}
-type StalePendingReservationsTableClient = {
-  update: (values: Pick<TablesUpdate<'reservations'>, 'status'>) => StalePendingReservationsUpdateQuery
 }
 type SessionReservationsQuery = {
   eq: (column: 'user_id' | 'table_id' | 'date', value: string) => SessionReservationsQuery
@@ -89,11 +86,12 @@ type EnrichedReservationsTableClient = {
   select: (columns: string) => EnrichedReservationsQuery
 }
 
-export const GRACE_PERIOD_MINUTES = 60
+/** @deprecated Pending expiry is slot-relative; retained for compatibility. */
+export const GRACE_PERIOD_MINUTES = CHECK_IN_LATE_MINUTES
 // How many minutes before the reservation start time check-in is allowed.
 export const CHECK_IN_EARLY_MINUTES = 5
 // How many minutes after the reservation start time check-in is still allowed.
-export const CHECK_IN_LATE_MINUTES = 60
+export { CHECK_IN_LATE_MINUTES }
 export const BOOKING_WINDOW_DAYS = 7
 const CANCELLATION_CUTOFF_MS = 60 * 60 * 1000 // 60 minutes
 
@@ -237,6 +235,26 @@ async function hasEventBlockConflict(input: {
   return Boolean(data && data.length > 0)
 }
 
+async function hasSavedGameBottomConflict(input: {
+  tableId: string
+  date: string
+  surface?: TableSurface
+}) {
+  if (input.surface !== 'bottom') return false
+  const admin = createSupabaseServerAdminClient()
+  const { data, error } = await admin
+    .from('saved_games')
+    .select('id')
+    .eq('table_id', input.tableId)
+    .eq('status', 'active')
+    .lte('start_date', input.date)
+    .gte('end_date', input.date)
+    .limit(1)
+
+  if (error) serviceError('Internal server error', 500)
+  return Boolean(data?.length)
+}
+
 async function getReservationForAccess(reservationId: string) {
   const admin = createSupabaseServerAdminClient()
   const reservations = admin.from('reservations') as unknown as AdminReservationsTableClient
@@ -277,9 +295,7 @@ async function listActiveReservationsForConflict(input: {
   const nowUtc = await getDatabaseNow(admin)
   return (data ?? []).filter((row) => {
     if (row.status === 'pending' && row.activated_at === null) {
-      const createdAt = new Date(row.created_at)
-      const expiresAt = new Date(createdAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
-      return nowUtc.getTime() <= expiresAt.getTime() // Keep only non-expired pending reservations
+      return !isPendingReservationExpired(row, nowUtc)
     }
     return true // Keep active reservations
   }) as ReservationRow[]
@@ -288,17 +304,34 @@ async function listActiveReservationsForConflict(input: {
 async function expireStalePendingReservations(tableId: string, date: string) {
   const admin = createSupabaseServerAdminClient()
   const nowUtc = await getDatabaseNow(admin)
-  const cutoff = new Date(nowUtc.getTime() - GRACE_PERIOD_MINUTES * 60 * 1000).toISOString()
-  const { error } = await (admin.from('reservations') as unknown as StalePendingReservationsTableClient)
-    .update({ status: 'cancelled' })
+  const { data, error } = await admin
+    .from('reservations')
+    .select(RESERVATION_COLUMNS)
     .eq('status', 'pending')
     .eq('table_id', tableId)
     .eq('date', date)
     .is('activated_at', null)
-    .lt('created_at', cutoff)
 
   if (error) {
     console.error('expireStalePendingReservations failed (non-fatal):', error)
+    return
+  }
+
+  const expiredIds = (data ?? [])
+    .filter((row) => isPendingReservationExpired(row, nowUtc))
+    .map((row) => row.id)
+
+  for (const id of expiredIds) {
+    const { error: updateError } = await admin
+      .from('reservations')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .eq('status', 'pending')
+      .is('activated_at', null)
+
+    if (updateError) {
+      console.error('expireStalePendingReservations failed (non-fatal):', updateError)
+    }
   }
 }
 
@@ -338,9 +371,7 @@ async function listOverlappingReservationIds(input: {
     const nowUtc = await getDatabaseNow(admin)
     const filteredRows = rows.filter((row) => {
       if (row.status === 'pending' && row.activated_at === null) {
-        const createdAt = new Date(row.created_at)
-        const expiresAt = new Date(createdAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
-        return nowUtc.getTime() <= expiresAt.getTime()
+        return !isPendingReservationExpired(row, nowUtc)
       }
       return true
     })
@@ -624,9 +655,7 @@ export async function listVisibleReservations(input: {
     .filter((row) => {
       // Lazy evaluation: treat expired pending reservations as cancelled
       if (row.status === 'pending' && row.activated_at === null) {
-        const createdAt = new Date(row.created_at)
-        const expiresAt = new Date(createdAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
-        if (nowUtc.getTime() > expiresAt.getTime()) {
+        if (isPendingReservationExpired(row, nowUtc)) {
           return false // Exclude expired pending reservations
         }
       }
@@ -691,12 +720,10 @@ async function checkUserSlotOverlap(
   }
 
   // Lazy evaluation: filter out expired pending reservations
-  const nowUtc = await getDatabaseNow(supabase)
+  const nowUtc = await getDatabaseNow()
   const activeReservations = (data ?? []).filter((row) => {
     if (row.status === 'pending' && row.activated_at === null) {
-      const createdAt = new Date(row.created_at)
-      const expiresAt = new Date(createdAt.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000)
-      return nowUtc.getTime() <= expiresAt.getTime()
+      return !isPendingReservationExpired(row, nowUtc)
     }
     return true
   })
@@ -752,6 +779,9 @@ export async function createReservationForSession(
   }
   if (await hasEventBlockConflict({ roomId: table.room_id, date, startTime, endTime })) {
     serviceError('ROOM_BLOCKED_BY_EVENT', 409)
+  }
+  if (await hasSavedGameBottomConflict({ tableId, date, surface })) {
+    serviceError('SAVED_GAME_BOTTOM_RESERVED', 409)
   }
   await assertEquipmentSelectionAllowed({
     roomId: table.room_id,
@@ -886,6 +916,13 @@ export async function updateReservationForSession(
     endTime: nextEndTime,
   })) {
     serviceError('ROOM_BLOCKED_BY_EVENT', 409)
+  }
+  if (await hasSavedGameBottomConflict({
+    tableId: existingReservation.table_id,
+    date: nextDate,
+    surface: nextSurface ?? undefined,
+  })) {
+    serviceError('SAVED_GAME_BOTTOM_RESERVED', 409)
   }
 
   const supabase = await createSupabaseServerClient()
@@ -1032,8 +1069,7 @@ export async function activateReservationByTable(
   // Allow check-in starting CHECK_IN_EARLY_MINUTES before the slot begins,
   // up to CHECK_IN_LATE_MINUTES after start (capped at reservation end).
   const windowStart = new Date(reservationStart.getTime() - CHECK_IN_EARLY_MINUTES * 60 * 1000)
-  const lateDeadline = new Date(reservationStart.getTime() + CHECK_IN_LATE_MINUTES * 60 * 1000)
-  const windowEnd = lateDeadline < reservationEnd ? lateDeadline : reservationEnd
+  const windowEnd = getPendingCheckInDeadline(reservation)
 
   if (nowUtc < windowStart) {
     serviceError('CHECK_IN_TOO_EARLY', 400)

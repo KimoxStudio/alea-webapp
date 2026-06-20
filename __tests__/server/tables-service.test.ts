@@ -7,6 +7,7 @@ const adminTableMaybeSingleMock = vi.fn()
 const adminUpdateEqMock = vi.fn()
 const storageUploadMock = vi.fn()
 const rpcMock = vi.fn()
+const listSavedGamesMock = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn(async () => ({
@@ -43,6 +44,20 @@ vi.mock('@/lib/supabase/server', () => ({
           })),
           update: vi.fn(() => ({
             eq: adminUpdateEqMock,
+          })),
+        }
+      }
+
+      if (table === 'saved_games') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                lte: vi.fn(() => ({
+                  gte: vi.fn(() => ({ limit: listSavedGamesMock })),
+                })),
+              })),
+            })),
           })),
         }
       }
@@ -85,6 +100,7 @@ describe('getTableAvailability', () => {
     vi.resetModules()
     vi.clearAllMocks()
     rpcMock.mockResolvedValue({ data: '2026-05-26T12:00:00Z', error: null })
+    listSavedGamesMock.mockResolvedValue({ data: [], error: null })
     maybeSingleMock.mockResolvedValue({
       data: {
         id: 'c3d4e5f6-a7b8-9012-cdef-012345678901',
@@ -157,6 +173,17 @@ describe('getTableAvailability', () => {
     const availability = await getTableAvailability('c3d4e5f6-a7b8-9012-cdef-012345678901', '2025-01-01')
 
     expect(availability.top?.some((slot) => slot.startTime === '14:00' && !slot.available)).toBe(true)
+  })
+
+  it('blocks the lower surface for the full day when an active Saved Game covers the date', async () => {
+    listReservationsMock.mockResolvedValue({ data: [], error: null })
+    listSavedGamesMock.mockResolvedValue({ data: [{ id: 'sg-1' }], error: null })
+    const { getTableAvailability } = await loadTablesModules()
+
+    const availability = await getTableAvailability('c3d4e5f6-a7b8-9012-cdef-012345678901', '2026-05-26')
+
+    expect(availability.bottom?.every((slot) => !slot.available)).toBe(true)
+    expect(availability.top?.every((slot) => slot.available)).toBe(true)
   })
 })
 
