@@ -1,0 +1,17 @@
+{
+  "name": "e2e",
+  "version": "1.0.0",
+  "description": "Standalone Node.js/Playwright scripts that validate the reservation system end-to-end against a running dev server. They are **not** picked up by Vitest (which only scans `__tests__/**`).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check env.mjs && node --check qa-no-show-expiry.mjs && node --check qa-reservation-cancellation.mjs && node --check qa-reservation-equipment.mjs && node --check qa-reservation-lifecycle.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "dotenv": "^17.4.2",
+    "playwright": "^1.61.0"
+  }
+}
