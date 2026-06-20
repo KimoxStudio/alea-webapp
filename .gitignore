@@ -47,3 +47,8 @@ AGENTS.md
 
 # Claude tooling lockfiles (ephemeral, not for commit)
 .claude/*.lock
+
+# E2E runner artifacts (screenshots, videos)
+qa/e2e/*.png
+qa/e2e/*.webm
+qa/e2e/*.pdf

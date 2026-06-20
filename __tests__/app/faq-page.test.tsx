@@ -48,7 +48,7 @@ describe('FAQ page', () => {
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(5)
     expect(screen.getByRole('heading', { level: 2, name: 'Reservations' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'How do I activate my account?' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Will I be able to extend a Saved Game reservation?' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Can I extend a Saved Game reservation?' })).toBeInTheDocument()
     expect(getTranslationsMock).toHaveBeenCalledWith({ locale: 'en', namespace: 'faq' })
   })
 

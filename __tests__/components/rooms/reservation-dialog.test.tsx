@@ -27,12 +27,13 @@ vi.mock('@/lib/club-time', async () => {
 })
 
 // Declare mock functions using vi.hoisted() so they're available during vi.mock() hoisting
-const { mockMutateAsync } = vi.hoisted(() => {
+const { mockMutateAsync, mockSavedGameMutateAsync } = vi.hoisted(() => {
   const mockMutateAsyncFn = vi.fn()
   return {
     mockMutateAsync: {
       fn: mockMutateAsyncFn,
     },
+    mockSavedGameMutateAsync: { fn: vi.fn() },
   }
 })
 
@@ -68,6 +69,7 @@ vi.mock('@/lib/hooks/use-reservations', () => ({
     mutateAsync: mockMutateAsync.fn,
     isPending: false,
   }),
+  useCreateSavedGame: () => ({ mutateAsync: mockSavedGameMutateAsync.fn, isPending: false }),
 }))
 
 // Import after mocks are set up
@@ -86,6 +88,7 @@ describe('ReservationDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockMutateAsync.fn = vi.fn()
+    mockSavedGameMutateAsync.fn = vi.fn()
     // Freeze only the Date constructor to 2025-01-15T00:05:00Z (00:05 UTC).
     // nowMinutes = 0*60+5 = 5, so all mock slots (09:00 = 540 min onward) pass
     // the `slot > nowMinutes` filter deterministically.
@@ -581,5 +584,21 @@ describe('ReservationDialog', () => {
         })
       )
     })
+  })
+
+  it('creates a Saved Game from dates without selecting a time range', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const removableTable = { ...mockTable, type: 'removable_top' as const }
+    render(<ReservationDialog table={removableTable} open onClose={vi.fn()} />)
+
+    await user.click(screen.getByRole('radio', { name: 'savedGame.name' }))
+    await user.click(screen.getByRole('button', { name: 'savedGame.create' }))
+
+    expect(mockSavedGameMutateAsync.fn).toHaveBeenCalledWith({
+      tableId: 't1',
+      startDate: '2025-01-15',
+      endDate: '2025-04-14',
+    })
+    expect(screen.queryByText('selectTime')).not.toBeInTheDocument()
   })
 })

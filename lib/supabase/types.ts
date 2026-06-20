@@ -346,6 +346,106 @@ export type Database = {
           },
         ]
       }
+      saved_game_attendances: {
+        Row: {
+          attended_on: string
+          id: string
+          play_reservation_id: string
+          saved_game_id: string
+          scanned_at: string
+        }
+        Insert: {
+          attended_on: string
+          id?: string
+          play_reservation_id: string
+          saved_game_id: string
+          scanned_at?: string
+        }
+        Update: {
+          attended_on?: string
+          id?: string
+          play_reservation_id?: string
+          saved_game_id?: string
+          scanned_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_game_attendances_play_reservation_id_fkey"
+            columns: ["play_reservation_id"]
+            isOneToOne: true
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_game_attendances_saved_game_id_fkey"
+            columns: ["saved_game_id"]
+            isOneToOne: false
+            referencedRelation: "saved_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_games: {
+        Row: {
+          attendance_count: number
+          created_at: string
+          end_date: string
+          id: string
+          renewed_from_id: string | null
+          start_date: string
+          status: string
+          table_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attendance_count?: number
+          created_at?: string
+          end_date: string
+          id?: string
+          renewed_from_id?: string | null
+          start_date: string
+          status?: string
+          table_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attendance_count?: number
+          created_at?: string
+          end_date?: string
+          id?: string
+          renewed_from_id?: string | null
+          start_date?: string
+          status?: string
+          table_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_games_renewed_from_id_fkey"
+            columns: ["renewed_from_id"]
+            isOneToOne: true
+            referencedRelation: "saved_games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_games_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_games_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           created_at: string

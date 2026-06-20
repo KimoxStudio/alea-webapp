@@ -1,0 +1,1 @@
+CREATE FUNCTION "public"."increment_saved_game_attendance"() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$ BEGIN UPDATE public.saved_games SET attendance_count = attendance_count + 1, updated_at = now() WHERE id = NEW.saved_game_id; RETURN NEW; END; $$;

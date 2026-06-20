@@ -84,6 +84,25 @@ export interface Reservation {
   equipment?: Equipment[];
 }
 
+export type SavedGameStatus = 'active' | 'cancelled' | 'completed';
+
+export interface SavedGame {
+  id: string;
+  tableId: string;
+  userId: string;
+  startDate: string;
+  endDate: string;
+  status: SavedGameStatus;
+  attendanceCount: number;
+  renewedFromId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  roomName?: string | null;
+  tableName?: string | null;
+  canRenew: boolean;
+  renewalOpensOn: string;
+}
+
 export interface RemovableTopTableStatus {
   topAvailable: boolean;
   bottomAvailable: boolean;
@@ -198,4 +217,10 @@ export interface CreateReservationRequest {
   endTime: string;
   surface?: TableSurface;
   equipmentIds?: string[];
+}
+
+export interface CreateSavedGameRequest {
+  tableId: string;
+  startDate: string;
+  endDate: string;
 }

@@ -6,11 +6,7 @@ import { resolveDate, buildAvailability } from '@/lib/server/availability'
 import type { Tables } from '@/lib/supabase/types'
 import { toGameTable } from '@/lib/server/table-mappers'
 import { getDatabaseNow } from '@/lib/server/database-time'
-
-// A pending reservation that has not been activated within PENDING_EXPIRY_MINUTES
-// of creation is treated as expired for availability purposes (lazy-expiry, no cron).
-// Must stay in sync with GRACE_PERIOD_MINUTES in reservations-service.ts.
-const PENDING_EXPIRY_MINUTES = 60
+import { isPendingReservationExpired } from '@/lib/server/pending-reservation-expiry'
 
 type TableRow = Tables<'tables'>
 type ReservationRow = Tables<'reservations'>
@@ -106,7 +102,7 @@ export async function getTableAvailability(tableId: string, date?: string | null
   const effectiveDate = resolveDate(date)
   const admin = createSupabaseServerAdminClient()
 
-  const [reservationsResult, eventBlocksResult, nowUtc] = await Promise.all([
+  const [reservationsResult, eventBlocksResult, savedGameResult, nowUtc] = await Promise.all([
     admin
       .from('reservations')
       .select('id, table_id, date, start_time, end_time, status, surface, user_id, activated_at, created_at')
@@ -118,6 +114,14 @@ export async function getTableAvailability(tableId: string, date?: string | null
       .select('id, event_id, room_id, date, start_time, end_time, all_day')
       .eq('room_id', table.room_id)
       .eq('date', effectiveDate),
+    admin
+      .from('saved_games')
+      .select('id')
+      .eq('table_id', tableId)
+      .eq('status', 'active')
+      .lte('start_date', effectiveDate)
+      .gte('end_date', effectiveDate)
+      .limit(1),
     getDatabaseNow(admin),
   ])
 
@@ -128,14 +132,10 @@ export async function getTableAvailability(tableId: string, date?: string | null
     serviceError('Internal server error', 500)
   }
 
-  // Lazy-expiry: exclude pending reservations that were never activated and whose
-  // grace window (created_at + PENDING_EXPIRY_MINUTES) has already passed.
-  // These rows will never be activated and must not block availability.
+  // Pending rows stop blocking availability only after their check-in deadline.
   const reservations = allReservations.filter((row) => {
     if (row.status === 'pending' && row.activated_at === null) {
-      const createdAt = new Date(row.created_at)
-      const expiresAt = new Date(createdAt.getTime() + PENDING_EXPIRY_MINUTES * 60 * 1000)
-      return nowUtc.getTime() <= expiresAt.getTime()
+      return !isPendingReservationExpired(row, nowUtc)
     }
     return true
   })
@@ -145,6 +145,7 @@ export async function getTableAvailability(tableId: string, date?: string | null
   if (eventBlocksResult.error) {
     serviceError('Internal server error', 500)
   }
+  if (savedGameResult.error) serviceError('Internal server error', 500)
 
   let eventTitleById = new Map<string, string>()
   const eventIds = [...new Set(eventBlocks.map((block) => block.event_id))]
@@ -172,5 +173,6 @@ export async function getTableAvailability(tableId: string, date?: string | null
       end: block.end_time.slice(0, 5),
       label: eventTitleById.get(block.event_id) ?? null,
     })),
+    Boolean(savedGameResult.data?.length),
   )
 }

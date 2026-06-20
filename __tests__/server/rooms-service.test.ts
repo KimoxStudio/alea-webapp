@@ -61,6 +61,18 @@ vi.mock('@/lib/supabase/server', () => ({
         }
       }
 
+      if (table === 'saved_games') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              lte: vi.fn(() => ({
+                gte: vi.fn(() => ({ in: vi.fn(async () => ({ data: [], error: null })) })),
+              })),
+            })),
+          })),
+        }
+      }
+
       return {
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
@@ -73,6 +85,9 @@ vi.mock('@/lib/supabase/server', () => ({
     }),
   })),
   createSupabaseServerAdminClient: vi.fn(() => ({
+    rpc: vi.fn(async (fn: string) => fn === 'get_database_time'
+      ? { data: '2025-01-01T09:00:00.000Z', error: null }
+      : { data: null, error: null }),
     from: vi.fn((table: string) => {
       if (table === 'rooms') {
         return {
@@ -123,6 +138,18 @@ vi.mock('@/lib/supabase/server', () => ({
             in: vi.fn(async () => ({
               data: [],
               error: null,
+            })),
+          })),
+        }
+      }
+
+      if (table === 'saved_games') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              lte: vi.fn(() => ({
+                gte: vi.fn(() => ({ in: vi.fn(async () => ({ data: [], error: null })) })),
+              })),
             })),
           })),
         }

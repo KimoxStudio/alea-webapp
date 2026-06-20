@@ -83,6 +83,7 @@ const roomsMap = new Map<string, RoomRow>()
 const eventRoomBlocksState: EventRoomBlockRow[] = []
 let reservationInsertError: { code: string } | null = null
 let reservationUpdateError: { code: string } | null = null
+let sessionDatabaseTimeDenied = false
 
 function createDatabaseTimeRpc() {
   return vi.fn(async (fn: string) => {
@@ -92,6 +93,15 @@ function createDatabaseTimeRpc() {
       return { data: now.toISOString(), error: null }
     }
     return { data: null, error: null }
+  })
+}
+
+function createSessionDatabaseTimeRpc() {
+  return vi.fn(async (fn: string) => {
+    if (fn === 'get_database_time' && sessionDatabaseTimeDenied) {
+      return { data: null, error: { code: '42501', message: 'permission denied for function get_database_time' } }
+    }
+    return createDatabaseTimeRpc()(fn)
   })
 }
 
@@ -220,6 +230,10 @@ function buildSelectChain<T>(rows: T[], hydrate?: (row: T) => T) {
       current = current.filter((row) => String((row as Record<string, unknown>)[column]) !== value)
       return this
     },
+    is(column: string, value: null) {
+      current = current.filter((row) => (row as Record<string, unknown>)[column] === value)
+      return this
+    },
     in(column: string, values: string[]) {
       current = current.filter((row) => values.includes(String((row as Record<string, unknown>)[column])))
       return this
@@ -256,6 +270,14 @@ function buildSelectChain<T>(rows: T[], hydrate?: (row: T) => T) {
         }
         return cellValue > value
       })
+      return this
+    },
+    lte(column: string, value: string) {
+      current = current.filter((row) => String((row as Record<string, unknown>)[column] ?? '') <= value)
+      return this
+    },
+    gte(column: string, value: string) {
+      current = current.filter((row) => String((row as Record<string, unknown>)[column] ?? '') >= value)
       return this
     },
     limit(count: number) {
@@ -353,7 +375,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
       throw new Error(`Unexpected table ${table}`)
     }),
-    rpc: createDatabaseTimeRpc(),
+    rpc: createSessionDatabaseTimeRpc(),
   })),
   createSupabaseServerAdminClient: vi.fn(() => ({
     from: vi.fn((table: string) => {
@@ -394,6 +416,10 @@ vi.mock('@/lib/supabase/server', () => ({
             }),
           })),
         }
+      }
+
+      if (table === 'saved_games') {
+        return { select: vi.fn(() => buildSelectChain([])) }
       }
 
       if (table !== 'reservations') {
@@ -445,6 +471,15 @@ vi.mock('@/lib/supabase/server', () => ({
                 return { data: cloneReservation(row), error: null }
               }),
             })),
+            then<TResult1 = { error: null }, TResult2 = never>(
+              onfulfilled?: ((value: { error: null }) => TResult1 | PromiseLike<TResult1>) | null,
+              onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+            ) {
+              for (const row of reservationsState) {
+                if (matchesFilters(row)) Object.assign(row, payload)
+              }
+              return Promise.resolve({ error: null }).then(onfulfilled, onrejected)
+            },
           }
           return chain
         }),
@@ -466,6 +501,7 @@ describe('reservations service', () => {
     vi.unstubAllEnvs()
     reservationInsertError = null
     reservationUpdateError = null
+    sessionDatabaseTimeDenied = false
     seedState()
   })
 
@@ -574,7 +610,35 @@ describe('reservations service', () => {
 
 
     describe('lazy evaluation: expired pending reservations', () => {
-      it('excludes pending reservations that have expired (created_at + 60 min < now)', async () => {
+      it('keeps an old pending reservation visible until its slot-relative check-in deadline', async () => {
+        vi.useFakeTimers()
+        vi.setSystemTime(new Date('2026-12-31T10:00:00.000Z'))
+        const { listVisibleReservations } = await loadReservationModules()
+
+        const futurePending = makeReservation({
+          id: 'r-future-pending',
+          user_id: '2',
+          date: '2026-12-31',
+          start_time: '16:00:00',
+          end_time: '18:00:00',
+          status: 'pending',
+          activated_at: null,
+          created_at: '2026-12-20T10:00:00.000Z',
+        })
+        const t1 = tablesState.get('t1')!
+        reservationsState.push({
+          ...futurePending,
+          profiles: profilesMap.get('2') ?? null,
+          tables: { name: t1.name, rooms: roomsMap.get(t1.room_id) ?? null },
+        })
+
+        const result = await listVisibleReservations({ session: memberSession })
+
+        expect(result.some((reservation) => reservation.id === 'r-future-pending')).toBe(true)
+        vi.useRealTimers()
+      })
+
+      it('excludes pending reservations after their check-in deadline', async () => {
         vi.useFakeTimers()
         const { listVisibleReservations, GRACE_PERIOD_MINUTES } = await loadReservationModules()
 
@@ -599,8 +663,8 @@ describe('reservations service', () => {
           tables: { name: t1.name, rooms: roomsMap.get(t1.room_id) ?? null },
         })
 
-        // Now move time forward to after the grace period has expired
-        const futureTime = new Date(baseTime.getTime() + 70 * 60 * 1000)
+        // End time is the earlier deadline for this one-hour reservation.
+        const futureTime = new Date('2026-12-31T17:00:01.000Z')
         vi.setSystemTime(futureTime)
 
         const result = await listVisibleReservations({ session: memberSession })
@@ -611,7 +675,7 @@ describe('reservations service', () => {
         vi.useRealTimers()
       })
 
-      it('includes pending reservations that have not yet expired (created_at + 60 min >= now)', async () => {
+      it('includes pending reservations before their check-in deadline', async () => {
         vi.useFakeTimers()
         const { listVisibleReservations, GRACE_PERIOD_MINUTES } = await loadReservationModules()
 
@@ -648,7 +712,7 @@ describe('reservations service', () => {
         vi.useRealTimers()
       })
 
-      it('respects grace period boundary exactly at 60 minutes', async () => {
+      it('respects the slot-relative check-in deadline boundary', async () => {
         vi.useFakeTimers()
         const { listVisibleReservations, GRACE_PERIOD_MINUTES } = await loadReservationModules()
 
@@ -673,13 +737,12 @@ describe('reservations service', () => {
           tables: { name: t1.name, rooms: roomsMap.get(t1.room_id) ?? null },
         })
 
-        // Test at exactly 60 minutes (should still be included)
-        vi.setSystemTime(new Date(baseTime.getTime() + GRACE_PERIOD_MINUTES * 60 * 1000))
+        // Deadline is 21:00: min(start + 60 minutes, end).
+        vi.setSystemTime(new Date('2026-12-31T20:00:00.000Z'))
         let result = await listVisibleReservations({ session: memberSession })
         expect(result.some((r) => r.id === 'r-boundary')).toBe(true)
 
-        // Test at 60 minutes + 1 second (should be excluded)
-        vi.setSystemTime(new Date(baseTime.getTime() + (GRACE_PERIOD_MINUTES * 60 * 1000) + 1000))
+        vi.setSystemTime(new Date('2026-12-31T20:00:01.000Z'))
         result = await listVisibleReservations({ session: memberSession })
         expect(result.some((r) => r.id === 'r-boundary')).toBe(false)
 
@@ -782,6 +845,18 @@ describe('reservations service', () => {
         status: 'active',
         surface: null,
       }))
+    })
+
+    it('uses the admin client for database time when authenticated RPC access is revoked', async () => {
+      sessionDatabaseTimeDenied = true
+      const { createReservationForSession } = await loadReservationModules()
+
+      await expect(createReservationForSession(memberSession, {
+        tableId: 't1',
+        date: '2026-12-31',
+        startTime: '12:00',
+        endTime: '13:00',
+      })).resolves.toEqual(expect.objectContaining({ tableId: 't1' }))
     })
 
     it('creates a reservation with optional equipment when available', async () => {
@@ -1011,25 +1086,47 @@ describe('reservations service', () => {
       })
     })
 
-    it('cancels stale pending reservations before create so they cannot block the DB constraint', async () => {
-      const { createReservationForSession, GRACE_PERIOD_MINUTES } = await loadReservationModules()
-      const now = new Date('2026-12-31T10:00:00.000Z')
+    it('cancels slot-expired pending reservations before create so they cannot block the DB constraint', async () => {
+      const { createReservationForSession } = await loadReservationModules()
+      const now = new Date('2026-12-31T11:01:00.000Z')
       vi.setSystemTime(now)
       reservationsState[0]!.status = 'pending'
       reservationsState[0]!.user_id = 'other-user'
-      reservationsState[0]!.created_at = new Date(now.getTime() - (GRACE_PERIOD_MINUTES + 1) * 60 * 1000).toISOString()
+      reservationsState[0]!.start_time = '10:00:00'
+      reservationsState[0]!.end_time = '18:00:00'
+      reservationsState[0]!.created_at = '2026-12-20T10:00:00.000Z'
+
+      await expect(createReservationForSession(memberSession, {
+        tableId: 't1',
+        date: '2026-12-31',
+        startTime: '12:30',
+        endTime: '13:30',
+      })).resolves.toEqual(expect.objectContaining({
+        tableId: 't1',
+        startTime: '12:30',
+        endTime: '13:30',
+      }))
+      expect(reservationsState[0]!.status).toBe('cancelled')
+    })
+
+    it('does not cancel an old future pending booking during concurrent cleanup', async () => {
+      const { createReservationForSession } = await loadReservationModules()
+      vi.setSystemTime(new Date('2026-12-31T10:00:00.000Z'))
+      reservationsState[0]!.status = 'pending'
+      reservationsState[0]!.user_id = 'other-user'
+      reservationsState[0]!.created_at = '2026-12-20T10:00:00.000Z'
 
       await expect(createReservationForSession(memberSession, {
         tableId: 't1',
         date: '2026-12-31',
         startTime: '17:00',
         endTime: '18:30',
-      })).resolves.toEqual(expect.objectContaining({
-        tableId: 't1',
-        startTime: '17:00',
-        endTime: '18:30',
-      }))
-      expect(reservationsState[0]!.status).toBe('cancelled')
+      })).rejects.toMatchObject({
+        name: 'ServiceError',
+        message: 'SLOT_TAKEN',
+        statusCode: 409,
+      })
+      expect(reservationsState[0]!.status).toBe('pending')
     })
 
     it('rejects a reservation that overlaps an existing slot for the same user', async () => {
@@ -1485,9 +1582,9 @@ describe('reservations service', () => {
       })
     })
 
-    it('cancels stale pending reservations before update so they cannot block the DB constraint', async () => {
-      const { updateReservationForSession, GRACE_PERIOD_MINUTES } = await loadReservationModules()
-      const now = new Date('2026-12-31T10:00:00.000Z')
+    it('cancels slot-expired pending reservations before update so they cannot block the DB constraint', async () => {
+      const { updateReservationForSession } = await loadReservationModules()
+      const now = new Date('2026-12-31T13:01:00.000Z')
       vi.setSystemTime(now)
       const stalePending = makeReservation({
         id: 'r-stale-pending-update',
@@ -1497,7 +1594,7 @@ describe('reservations service', () => {
         start_time: '12:00:00',
         end_time: '13:00:00',
         status: 'pending',
-        created_at: new Date(now.getTime() - (GRACE_PERIOD_MINUTES + 1) * 60 * 1000).toISOString(),
+        created_at: '2026-12-20T10:00:00.000Z',
       })
       const t1 = tablesState.get(stalePending.table_id)!
       reservationsState.push({
@@ -1508,12 +1605,12 @@ describe('reservations service', () => {
 
       await expect(updateReservationForSession(memberSession, 'r1', {
         date: '2026-12-31',
-        startTime: '12:00',
-        endTime: '13:00',
+        startTime: '14:30',
+        endTime: '15:30',
       })).resolves.toEqual(expect.objectContaining({
         id: 'r1',
-        startTime: '12:00',
-        endTime: '13:00',
+        startTime: '14:30',
+        endTime: '15:30',
       }))
       expect(reservationsState.find((row) => row.id === 'r-stale-pending-update')?.status).toBe('cancelled')
     })

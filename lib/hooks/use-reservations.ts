@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { AvailableEquipment, Reservation, CreateReservationRequest, TableAvailability } from '@/lib/types'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
+import type { AvailableEquipment, Reservation, CreateReservationRequest, CreateSavedGameRequest, SavedGame, TableAvailability } from '@/lib/types'
 import { apiClient } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
 
@@ -13,6 +13,7 @@ export function useMyReservations(userId: string | null) {
     queryKey: ['reservations', 'my', userId],
     queryFn: () => apiClient.get<Reservation[]>(`/reservations?userId=${userId}`),
     enabled: !!userId,
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -41,6 +42,7 @@ export function useRoomAvailability(roomId: string | null, date: string | null) 
     enabled: !!roomId && !!date,
     staleTime: 0,
     refetchInterval: 60_000,
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -88,5 +90,36 @@ export function useCancelReservation() {
     mutationFn: (id: string) =>
       apiClient.put<Reservation>(`/reservations/${id}`, { status: 'cancelled' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reservations'] }),
+  })
+}
+
+export function useMySavedGames(userId: string | null) {
+  return useQuery<SavedGame[]>({
+    queryKey: ['saved-games', 'my', userId],
+    queryFn: () => apiClient.get<SavedGame[]>(endpoints.savedGames.list),
+    enabled: !!userId,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useCreateSavedGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: CreateSavedGameRequest) => apiClient.post<SavedGame>(endpoints.savedGames.list, data),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['saved-games'] }),
+      queryClient.invalidateQueries({ queryKey: ['availability'] }),
+    ]),
+  })
+}
+
+export function useRenewSavedGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.post<SavedGame>(endpoints.savedGames.renew(id), {}),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['saved-games'] }),
+      queryClient.invalidateQueries({ queryKey: ['availability'] }),
+    ]),
   })
 }
