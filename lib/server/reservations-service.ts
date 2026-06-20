@@ -11,7 +11,6 @@ import {
   getPendingCheckInDeadline,
   isPendingReservationExpired,
 } from '@/lib/server/pending-reservation-expiry'
-import { recordSavedGameAttendance } from '@/lib/server/saved-games-service'
 
 type ReservationRow = Tables<'reservations'>
 type TableRow = Tables<'tables'>
@@ -1099,8 +1098,6 @@ export async function activateReservationByTable(
   if (!updated) {
     serviceError('CHECK_IN_ALREADY_ACTIVE', 409)
   }
-
-  await recordSavedGameAttendance(updated as ReservationRow)
 
   return mapReservation(updated as ReservationRow)
 }

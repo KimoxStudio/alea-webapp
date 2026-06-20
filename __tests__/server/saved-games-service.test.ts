@@ -144,6 +144,16 @@ describe('saved games service', () => {
     await expect(renewSavedGameForSession(member, 'sg-1')).rejects.toMatchObject({ message: 'SAVED_GAME_RENEWAL_NOT_OPEN' })
   })
 
+  it('derives completed status for expired games without mutating during a list read', async () => {
+    state.savedGames.push({ id: 'sg-1', table_id: 'double', user_id: 'user-1', start_date: '2026-03-01', end_date: '2026-06-18', status: 'active', attendance_count: 3, renewed_from_id: null, created_at: '', updated_at: '' })
+    const { listSavedGamesForSession } = await import('@/lib/server/saved-games-service')
+
+    await expect(listSavedGamesForSession(member)).resolves.toEqual([
+      expect.objectContaining({ id: 'sg-1', status: 'completed', canRenew: false }),
+    ])
+    expect(state.savedGames[0].status).toBe('active')
+  })
+
   it('records QR attendance only for the user top reservation and remains idempotent', async () => {
     state.savedGames.push({ id: 'sg-1', table_id: 'double', user_id: 'user-1', start_date: '2026-06-01', end_date: '2026-08-31', status: 'active', attendance_count: 0, renewed_from_id: null, created_at: '', updated_at: '' })
     const { recordSavedGameAttendance } = await import('@/lib/server/saved-games-service')

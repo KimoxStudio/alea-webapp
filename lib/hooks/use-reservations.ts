@@ -117,6 +117,9 @@ export function useRenewSavedGame() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => apiClient.post<SavedGame>(endpoints.savedGames.renew(id), {}),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['saved-games'] }),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['saved-games'] }),
+      queryClient.invalidateQueries({ queryKey: ['availability'] }),
+    ]),
   })
 }

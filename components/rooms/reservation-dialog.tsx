@@ -237,6 +237,9 @@ export function ReservationDialog({ table, open, onClose }: ReservationDialogPro
                   aria-checked={reservationMode === mode}
                   onClick={() => {
                     setReservationMode(mode)
+                    if (mode === 'saved_game') {
+                      setSavedGameEndDate(addDaysToDateOnly(addMonthsClamped(selectedDate, 3), -1))
+                    }
                     setSelectedSurface(mode === 'saved_game' ? 'bottom' : null)
                     setSelectedStartTime(null)
                     setSelectedEndTime(null)

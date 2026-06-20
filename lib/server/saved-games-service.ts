@@ -39,13 +39,14 @@ function getMaxEndDate(startDate: string) {
 
 function mapSavedGame(row: SavedGameJoinedRow, today = getCurrentClubDate()): SavedGame {
   const renewalOpensOn = addDays(row.end_date, -14)
+  const status = row.status === 'active' && row.end_date < today ? 'completed' : row.status
   return {
     id: row.id,
     tableId: row.table_id,
     userId: row.user_id,
     startDate: row.start_date,
     endDate: row.end_date,
-    status: row.status as SavedGameStatus,
+    status: status as SavedGameStatus,
     attendanceCount: row.attendance_count,
     renewedFromId: row.renewed_from_id,
     createdAt: row.created_at,
@@ -53,7 +54,7 @@ function mapSavedGame(row: SavedGameJoinedRow, today = getCurrentClubDate()): Sa
     roomName: row.tables?.rooms?.name ?? null,
     tableName: row.tables?.name ?? null,
     renewalOpensOn,
-    canRenew: row.status === 'active' && today >= renewalOpensOn && today <= row.end_date,
+    canRenew: status === 'active' && today >= renewalOpensOn && today <= row.end_date,
   }
 }
 
@@ -91,13 +92,6 @@ function validateDateRange(startDate: string, endDate: string) {
 export async function listSavedGamesForSession(session: SessionUser): Promise<SavedGame[]> {
   const admin = createSupabaseServerAdminClient()
   const today = getCurrentClubDate()
-  const { error: completionError } = await admin
-    .from('saved_games')
-    .update({ status: 'completed' })
-    .eq('status', 'active')
-    .lt('end_date', today)
-  if (completionError) serviceError('Internal server error', 500)
-
   let query = admin
     .from('saved_games')
     .select(SAVED_GAME_JOINED_COLUMNS)
