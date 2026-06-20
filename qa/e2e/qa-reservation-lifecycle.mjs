@@ -8,15 +8,10 @@
  *  5. second activate rejected (CHECK_IN_ALREADY_ACTIVE)
  */
 import { chromium } from 'playwright';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+import { chromiumLaunchOptions, env, requireE2EEnv } from './env.mjs';
 
-const envPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.env.local');
-dotenv.config({ path: envPath });
-const env = process.env;
 const required = ['PLAYWRIGHT_QA_USER', 'PLAYWRIGHT_QA_PASSWORD', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SECRET_DEFAULT_KEY'];
-for (const name of required) if (!env[name]) throw new Error(`Missing env var: ${name}`);
+requireE2EEnv(required);
 
 const appUrl = process.env.E2E_BASE_URL || 'http://localhost:3001';
 const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
@@ -32,12 +27,9 @@ const check = (name, pass, evidence) => {
   if (!pass) throw new Error(`FAIL [${name}]: ${JSON.stringify(evidence)}`);
 };
 
-const created = { reservationId: null, tableId: null };
+const created = { reservationId: null, checkinReservationId: null, tableId: null };
 
-const browser = await chromium.launch({
-  headless: true,
-  executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-});
+const browser = await chromium.launch(chromiumLaunchOptions());
 
 try {
   // ── Fixture: pick a regular (non-removable-top) table ─────────────────────
@@ -155,6 +147,7 @@ try {
     });
     const [inserted] = await json(insertResp);
     checkinReservationId = inserted?.id;
+    created.checkinReservationId = checkinReservationId;
 
     if (checkinReservationId) {
       // ── 4. Activate via app API ─────────────────────────────────────────────
@@ -179,44 +172,26 @@ try {
         message: secondBody?.message,
       });
     } else {
-      // Log as non-blocking; timing might make fixture impossible
-      checks.push({ name: 'check-in fixture', pass: false, evidence: { reason: 'Could not insert today fixture' } });
+      checks.push({ name: 'check-in fixture', skipped: true, evidence: { reason: 'Could not insert today fixture' } });
     }
   } else {
-    checks.push({ name: 'check-in fixture', pass: false, evidence: { reason: 'Time unsuitable for check-in fixture', nowMins } });
+    checks.push({ name: 'check-in fixture', skipped: true, evidence: { reason: 'Time unsuitable for check-in fixture', nowMins } });
   }
 
   await context.close();
 
   const passed = checks.filter((c) => c.pass).length;
-  const total = checks.length;
-  console.log(JSON.stringify({ summary: { passed, total }, checks }, null, 2));
-  if (passed < total) throw new Error(`${total - passed} check(s) failed`);
+  const failed = checks.filter((c) => c.pass === false).length;
+  const skipped = checks.filter((c) => c.skipped).length;
+  console.log(JSON.stringify({ summary: { passed, failed, skipped }, checks }, null, 2));
+  if (failed > 0) throw new Error(`${failed} check(s) failed`);
 } finally {
   await browser.close();
   if (created.reservationId) {
     await rest(`reservations?id=eq.${created.reservationId}`, { method: 'DELETE' });
   }
-  // Clean up any lingering today fixtures inserted by this runner
-  const profileResp2 = await rest(
-    `profiles?select=id&member_number=eq.${encodeURIComponent(env.PLAYWRIGHT_QA_USER)}&limit=1`
-  ).catch(() => null);
-  if (profileResp2) {
-    const [p2] = await json(profileResp2).catch(() => []);
-    if (p2?.id && created.tableId) {
-      const tomorrow2 = (() => {
-        const d = new Date(); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10);
-      })();
-      await rest(
-        `reservations?table_id=eq.${created.tableId}&date=eq.${tomorrow2}&user_id=eq.${p2.id}`,
-        { method: 'DELETE' }
-      ).catch(() => null);
-      const today2 = new Date().toISOString().slice(0, 10);
-      await rest(
-        `reservations?table_id=eq.${created.tableId}&date=eq.${today2}&user_id=eq.${p2.id}`,
-        { method: 'DELETE' }
-      ).catch(() => null);
-    }
+  if (created.checkinReservationId) {
+    await rest(`reservations?id=eq.${created.checkinReservationId}`, { method: 'DELETE' });
   }
   console.log(JSON.stringify({ cleanup: 'done' }));
 }

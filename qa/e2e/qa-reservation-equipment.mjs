@@ -8,19 +8,14 @@
  *  4. Use unknown equipment ID → assert 400 INVALID_ROOM_EQUIPMENT
  */
 import { chromium } from 'playwright';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+import { chromiumLaunchOptions, env, requireE2EEnv } from './env.mjs';
 
-const envPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.env.local');
-dotenv.config({ path: envPath });
-const env = process.env;
 const required = [
   'PLAYWRIGHT_QA_USER', 'PLAYWRIGHT_QA_PASSWORD',
   'PLAYWRIGHT_QA_SECONDARY_USER', 'PLAYWRIGHT_QA_SECONDARY_PASSWORD',
   'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SECRET_DEFAULT_KEY',
 ];
-for (const name of required) if (!env[name]) throw new Error(`Missing env var: ${name}`);
+requireE2EEnv(required);
 
 const appUrl = process.env.E2E_BASE_URL || 'http://localhost:3001';
 const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
@@ -36,12 +31,9 @@ const check = (name, pass, evidence) => {
   if (!pass) throw new Error(`FAIL [${name}]: ${JSON.stringify(evidence)}`);
 };
 
-const created = { equipmentId: null, reservation1Id: null, reservation2Id: null, extraTableId: null };
+const created = { equipmentId: null, reservation1Id: null, reservation2Id: null, extraTableId: null, roomDefaultSeeded: false };
 
-const browser = await chromium.launch({
-  headless: true,
-  executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-});
+const browser = await chromium.launch(chromiumLaunchOptions());
 
 try {
   // ── 1. Create a fresh equipment item via admin REST ───────────────────────
@@ -84,6 +76,13 @@ try {
   } else {
     check('fixture table 2 (same room)', Boolean(table2.id), { table2 });
   }
+
+  const roomDefaultResp = await rest('room_default_equipment', {
+    method: 'POST',
+    body: JSON.stringify({ room_id: table.room_id, equipment_id: created.equipmentId }),
+  });
+  created.roomDefaultSeeded = roomDefaultResp.status === 201;
+  check('equipment assigned to fixture room', created.roomDefaultSeeded, { status: roomDefaultResp.status });
 
   // ── 4. Compute date: tomorrow ─────────────────────────────────────────────
   const timeResp = await rest('rpc/get_database_time', { method: 'POST', body: '{}' });
@@ -131,16 +130,12 @@ try {
     `${appUrl}/api/rooms/${table.room_id}/available-equipment?date=${date}&startTime=${startTime}&endTime=${endTime}`
   );
   const eqAvailBody = await json(eqAvailResp);
-  if (eqAvailResp.status() === 200 && Array.isArray(eqAvailBody)) {
-    const eqEntry = eqAvailBody.find((e) => e.id === created.equipmentId);
-    if (eqEntry) {
-      check('equipment shows as unavailable after booking', eqEntry.available === false, { eqEntry });
-    } else {
-      checks.push({ name: 'equipment availability', pass: true, evidence: { note: 'not in pool (may be locked to another room)' } });
-    }
-  } else {
-    checks.push({ name: 'equipment availability', pass: true, evidence: { note: `endpoint status ${eqAvailResp.status()}` } });
-  }
+  check('equipment availability endpoint returns 200', eqAvailResp.status() === 200 && Array.isArray(eqAvailBody), {
+    status: eqAvailResp.status(), body: eqAvailBody,
+  });
+  const eqEntry = eqAvailBody.find((e) => e.id === created.equipmentId);
+  check('equipment appears in room pool', Boolean(eqEntry), { equipmentId: created.equipmentId, body: eqAvailBody });
+  check('equipment shows as unavailable after booking', eqEntry.available === false, { eqEntry });
 
   // ── 8. Unknown equipment ID → 400 INVALID_ROOM_EQUIPMENT ─────────────────
   const unknownResp = await post1('/reservations', {
@@ -209,6 +204,9 @@ try {
   if (created.reservation2Id) {
     await rest(`reservation_equipment?reservation_id=eq.${created.reservation2Id}`, { method: 'DELETE' });
     await rest(`reservations?id=eq.${created.reservation2Id}`, { method: 'DELETE' });
+  }
+  if (created.roomDefaultSeeded && created.equipmentId) {
+    await rest(`room_default_equipment?equipment_id=eq.${created.equipmentId}`, { method: 'DELETE' });
   }
   if (created.equipmentId) {
     await rest(`equipment?id=eq.${created.equipmentId}`, { method: 'DELETE' });

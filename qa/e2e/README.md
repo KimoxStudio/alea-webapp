@@ -22,7 +22,7 @@ npx playwright install chromium
 
 ### 2. Environment variables
 
-Ensure `.env.local` at the **repo root** contains:
+Create a dedicated `.env.e2e.local` at the **repo root**. The runners intentionally do not load the app's `.env.local` because they perform privileged fixture writes and deletes.
 
 | Variable | Description |
 |---|---|
@@ -33,13 +33,14 @@ Ensure `.env.local` at the **repo root** contains:
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SECRET_DEFAULT_KEY` | Supabase service-role key (bypasses RLS for fixtures) |
 | `CRON_SECRET` | Secret used to authenticate the no-show cron endpoint |
+| `E2E_ALLOW_DESTRUCTIVE` | Must be exactly `1` to acknowledge privileged fixture writes/deletes |
 
 ### 3. Override variables (optional)
 
 | Variable | Default | Description |
 |---|---|---|
 | `E2E_BASE_URL` | `http://localhost:3001` | Base URL of the running app |
-| `CHROME_PATH` | `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` | Path to Chrome executable |
+| `CHROME_PATH` | Playwright bundled Chromium | Optional path to a custom Chrome executable |
 
 ---
 
@@ -56,7 +57,7 @@ Wait until the server is ready (you should see "Ready in Xs" in the terminal), t
 
 ## Running the runners
 
-From the repo root (each runner resolves `.env.local` relative to its own file location):
+From the repo root (each runner resolves `.env.e2e.local` relative to its own file location):
 
 ```bash
 node qa/e2e/qa-reservation-lifecycle.mjs
@@ -105,6 +106,7 @@ Equipment conflict and validation:
 
 ## Notes
 
-- All runners clean up their DB fixtures in the `finally` block (reservations, equipment, extra tables).
+- The runners refuse to start unless `E2E_ALLOW_DESTRUCTIVE=1` is present in `.env.e2e.local`.
+- All runners clean up only the exact DB fixture IDs they created in the `finally` block.
 - Time-sensitive checks (check-in window, cancellation cutoff) are skipped gracefully if the time of day makes the fixture impossible.
 - Screenshots or videos generated during a run are gitignored (`qa/e2e/*.png`, `*.webm`, `*.pdf`).

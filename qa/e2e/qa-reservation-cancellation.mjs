@@ -7,19 +7,14 @@
  * NOTE: The cutoff guard is `session.role !== 'admin'` — must use member (secondary) user.
  */
 import { chromium } from 'playwright';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+import { chromiumLaunchOptions, env, requireE2EEnv } from './env.mjs';
 
-const envPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.env.local');
-dotenv.config({ path: envPath });
-const env = process.env;
 const required = [
   'PLAYWRIGHT_QA_USER', 'PLAYWRIGHT_QA_PASSWORD',
   'PLAYWRIGHT_QA_SECONDARY_USER', 'PLAYWRIGHT_QA_SECONDARY_PASSWORD',
   'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SECRET_DEFAULT_KEY',
 ];
-for (const name of required) if (!env[name]) throw new Error(`Missing env var: ${name}`);
+requireE2EEnv(required);
 
 const appUrl = process.env.E2E_BASE_URL || 'http://localhost:3001';
 const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
@@ -37,10 +32,7 @@ const check = (name, pass, evidence) => {
 
 const created = { earlyReservationId: null, lateReservationId: null, tableId: null };
 
-const browser = await chromium.launch({
-  headless: true,
-  executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-});
+const browser = await chromium.launch(chromiumLaunchOptions());
 
 try {
   // ── Fixture: regular table ─────────────────────────────────────────────────

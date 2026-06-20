@@ -7,15 +7,10 @@
  *  4. Assert that slot is released (slot is available again)
  *  5. Assert that cron without auth returns 401
  */
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+import { env, requireE2EEnv } from './env.mjs';
 
-const envPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.env.local');
-dotenv.config({ path: envPath });
-const env = process.env;
 const required = ['PLAYWRIGHT_QA_USER', 'CRON_SECRET', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SECRET_DEFAULT_KEY'];
-for (const name of required) if (!env[name]) throw new Error(`Missing env var: ${name}`);
+requireE2EEnv(required);
 
 const appUrl = process.env.E2E_BASE_URL || 'http://localhost:3001';
 const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
