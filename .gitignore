@@ -42,7 +42,6 @@ pnpm-debug.log
 **/next-env.d.ts
 *.bak
 
-.aia/
 AGENTS.md
 
 # Claude tooling lockfiles (ephemeral, not for commit)
@@ -52,3 +51,11 @@ AGENTS.md
 qa/e2e/*.png
 qa/e2e/*.webm
 qa/e2e/*.pdf
+
+# Loose tooling artifacts (repo root)
+/*.png
+/*.pdf
+/*.webm
+
+# Local-only working docs
+docs/AUDIT-*.md
