@@ -1,4 +1,5 @@
 import type { SavedGame, SavedGameStatus } from '@/lib/types'
+import { ERROR_CODES } from '@/lib/types/error-codes'
 import type { SessionUser } from '@/lib/server/auth'
 import { getCurrentClubDate, isValidDateOnlyString } from '@/lib/club-time'
 import { createSupabaseServerAdminClient } from '@/lib/supabase/server'
@@ -68,7 +69,7 @@ async function assertTableAndEventAvailability(tableId: string, startDate: strin
 
   if (tableError) serviceError('Internal server error', 500)
   if (!table) serviceError('Table not found', 404)
-  if (table.type !== 'removable_top') serviceError('SAVED_GAME_REQUIRES_REMOVABLE_TOP', 400)
+  if (table.type !== 'removable_top') serviceError(ERROR_CODES.SAVED_GAME_REQUIRES_REMOVABLE_TOP, 400)
 
   const { data: blocks, error: blocksError } = await admin
     .from('event_room_blocks')
@@ -79,14 +80,14 @@ async function assertTableAndEventAvailability(tableId: string, startDate: strin
     .limit(1)
 
   if (blocksError) serviceError('Internal server error', 500)
-  if (blocks && blocks.length > 0) serviceError('SAVED_GAME_EVENT_CONFLICT', 409)
+  if (blocks && blocks.length > 0) serviceError(ERROR_CODES.SAVED_GAME_EVENT_CONFLICT, 409)
 }
 
 function validateDateRange(startDate: string, endDate: string) {
   const today = getCurrentClubDate()
-  if (startDate < today) serviceError('SAVED_GAME_START_IN_PAST', 400)
-  if (endDate < startDate) serviceError('SAVED_GAME_INVALID_RANGE', 400)
-  if (endDate > getMaxEndDate(startDate)) serviceError('SAVED_GAME_MAX_DURATION', 400)
+  if (startDate < today) serviceError(ERROR_CODES.SAVED_GAME_START_IN_PAST, 400)
+  if (endDate < startDate) serviceError(ERROR_CODES.SAVED_GAME_INVALID_RANGE, 400)
+  if (endDate > getMaxEndDate(startDate)) serviceError(ERROR_CODES.SAVED_GAME_MAX_DURATION, 400)
 }
 
 export async function listSavedGamesForSession(session: SessionUser): Promise<SavedGame[]> {
@@ -122,7 +123,7 @@ export async function createSavedGameForSession(
     .select(SAVED_GAME_JOINED_COLUMNS)
     .single()
 
-  if (error?.code === '23P01') serviceError('SAVED_GAME_CONFLICT', 409)
+  if (error?.code === '23P01') serviceError(ERROR_CODES.SAVED_GAME_CONFLICT, 409)
   if (error?.code === '23514') serviceError(error.message, 400)
   if (error || !data) serviceError('Internal server error', 500)
   return mapSavedGame(data as unknown as SavedGameJoinedRow)
@@ -139,11 +140,11 @@ export async function renewSavedGameForSession(session: SessionUser, id: string)
   if (currentError) serviceError('Internal server error', 500)
   if (!current) serviceError('Saved Game not found', 404)
   if (session.role !== 'admin' && current.user_id !== session.id) serviceError('Forbidden', 403)
-  if (current.status !== 'active') serviceError('SAVED_GAME_NOT_ACTIVE', 409)
+  if (current.status !== 'active') serviceError(ERROR_CODES.SAVED_GAME_NOT_ACTIVE, 409)
 
   const today = getCurrentClubDate()
   const renewalOpensOn = addDays(current.end_date, -14)
-  if (today < renewalOpensOn || today > current.end_date) serviceError('SAVED_GAME_RENEWAL_NOT_OPEN', 409)
+  if (today < renewalOpensOn || today > current.end_date) serviceError(ERROR_CODES.SAVED_GAME_RENEWAL_NOT_OPEN, 409)
 
   const startDate = addDays(current.end_date, 1)
   const endDate = getMaxEndDate(startDate)
@@ -161,8 +162,8 @@ export async function renewSavedGameForSession(session: SessionUser, id: string)
     .select(SAVED_GAME_JOINED_COLUMNS)
     .single()
 
-  if (error?.code === '23505') serviceError('SAVED_GAME_ALREADY_RENEWED', 409)
-  if (error?.code === '23P01') serviceError('SAVED_GAME_CONFLICT', 409)
+  if (error?.code === '23505') serviceError(ERROR_CODES.SAVED_GAME_ALREADY_RENEWED, 409)
+  if (error?.code === '23P01') serviceError(ERROR_CODES.SAVED_GAME_CONFLICT, 409)
   if (error || !data) serviceError('Internal server error', 500)
   return mapSavedGame(data as unknown as SavedGameJoinedRow, today)
 }
