@@ -58,6 +58,11 @@
     "xlsx": "^0.18.5",
     "zod": "^3.25.76"
   },
+  "pnpm": {
+    "overrides": {
+      "ws": ">=8.20.1"
+    }
+  },
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.96.2",
     "@testing-library/jest-dom": "^6.9.1",
