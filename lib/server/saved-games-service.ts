@@ -1,3 +1,17 @@
+/**
+ * Saved-games service — admin client usage policy
+ *
+ * This service uses createSupabaseServerAdminClient() throughout deliberately.
+ * RLS is being removed as part of the Vercel/Postgres migration (Phase 2), so
+ * the session-scoped client cannot be relied upon for row-level isolation.
+ * Member isolation is instead enforced at the application layer via:
+ *   - explicit `user_id = session.id` filters on member-scoped reads/writes
+ *   - assertMemberRowsScoped() (KIM-397) called on any multi-row member read
+ *   - explicit ownership checks (`current.user_id !== session.id`) before
+ *     mutations such as renew
+ * Cross-user operations (attendance recording, table/event conflict checks)
+ * legitimately need to span users and therefore require the admin client.
+ */
 import type { SavedGame, SavedGameStatus } from '@/lib/types'
 import type { SessionUser } from '@/lib/server/auth'
 import { getCurrentClubDate, isValidDateOnlyString } from '@/lib/club-time'
@@ -59,6 +73,8 @@ function mapSavedGame(row: SavedGameJoinedRow, today = getCurrentClubDate()): Sa
 }
 
 async function assertTableAndEventAvailability(tableId: string, startDate: string, endDate: string) {
+  // Admin client required: table and event-block lookups span all users/rooms;
+  // no member isolation needed — these are global availability checks.
   const admin = createSupabaseServerAdminClient()
   const { data: table, error: tableError } = await admin
     .from('tables')
@@ -90,6 +106,9 @@ function validateDateRange(startDate: string, endDate: string) {
 }
 
 export async function listSavedGamesForSession(session: SessionUser): Promise<SavedGame[]> {
+  // Admin client required: RLS is removed in Phase 2. Member isolation is
+  // enforced by the `user_id = session.id` filter below (non-admin path).
+  // Admins intentionally receive all rows.
   const admin = createSupabaseServerAdminClient()
   const today = getCurrentClubDate()
   let query = admin
@@ -115,6 +134,9 @@ export async function createSavedGameForSession(
   validateDateRange(startDate, endDate)
   await assertTableAndEventAvailability(tableId, startDate, endDate)
 
+  // Admin client required: RLS is removed in Phase 2. Member isolation is
+  // enforced by writing `user_id: session.id` explicitly into the insert
+  // payload — the authenticated user can only create rows for themselves.
   const admin = createSupabaseServerAdminClient()
   const { data, error } = await admin
     .from('saved_games')
@@ -129,6 +151,9 @@ export async function createSavedGameForSession(
 }
 
 export async function renewSavedGameForSession(session: SessionUser, id: string): Promise<SavedGame> {
+  // Admin client required: RLS is removed in Phase 2. Member isolation is
+  // enforced by the ownership check below (`current.user_id !== session.id`)
+  // which throws 403 before any mutation occurs for non-admin users.
   const admin = createSupabaseServerAdminClient()
   const { data: current, error: currentError } = await admin
     .from('saved_games')
@@ -170,6 +195,9 @@ export async function renewSavedGameForSession(session: SessionUser, id: string)
 export async function recordSavedGameAttendance(playReservation: Tables<'reservations'>): Promise<void> {
   if (playReservation.surface !== 'top' || playReservation.status !== 'active') return
 
+  // Admin client required: this function is called from a system/cron context
+  // (not a user request) and intentionally reads across all users to match a
+  // reservation to its saved game. No per-user scoping is appropriate here.
   const admin = createSupabaseServerAdminClient()
   const { data: savedGame, error } = await admin
     .from('saved_games')
