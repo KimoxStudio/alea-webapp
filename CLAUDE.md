@@ -52,6 +52,7 @@ The user may write prompts in any language; replies to the user are in their lan
 - i18n keys must maintain full parity between `en.json` and `es.json`
 - Test files must be excluded from `tsconfig.app.json`
 - Test files are owned exclusively by `qa-engineer` — `software-engineer` must never create or modify test files
+- Every read of `reservations` / `saved_games` for a `member` session MUST filter `WHERE user_id = session.id`; member-scoped reads must also pass through `assertMemberRowsScoped()` (from `lib/server/data-scoping.ts`) as defense-in-depth after the DB fetch and before mapping rows to the public shape (admins exempt).
 
 ---
 

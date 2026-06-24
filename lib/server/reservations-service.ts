@@ -3,6 +3,7 @@ import type { SessionUser } from '@/lib/server/auth'
 import { CLUB_TIMEZONE, getCurrentClubDate, isValidDateOnlyString, zonedDateTimeToUtc } from '@/lib/club-time'
 import { getDatabaseNow } from '@/lib/server/database-time'
 import { serviceError } from '@/lib/server/service-error'
+import { assertMemberRowsScoped } from '@/lib/server/data-scoping'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
 import { normalizeTime } from '@/lib/server/availability'
@@ -648,10 +649,16 @@ export async function listVisibleReservations(input: {
     serviceError('Internal server error', 500)
   }
 
+  // Defense-in-depth: verify the query filter held before mapping rows out.
+  const rawRows = assertMemberRowsScoped(
+    (data ?? []) as EnrichedReservationRow[],
+    input.session,
+  )
+
   const isAdmin = input.session.role === 'admin'
   const nowUtc = await getDatabaseNow(supabase)
 
-  return (data ?? [])
+  return rawRows
     .filter((row) => {
       // Lazy evaluation: treat expired pending reservations as cancelled
       if (row.status === 'pending' && row.activated_at === null) {
