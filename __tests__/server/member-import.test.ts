@@ -88,7 +88,19 @@ vi.mock('@/lib/supabase/server', () => ({
 
 async function loadService() {
   vi.resetModules()
-  return import('@/lib/server/users-service')
+  const [usersService, memberImport] = await Promise.all([
+    import('@/lib/server/users-service'),
+    import('@/lib/server/member-import'),
+  ])
+  return {
+    ...usersService,
+    // Ensure parsing functions come from member-import module
+    parseMemberImportCsv: memberImport.parseMemberImportCsv,
+    normalizeMemberImportSource: memberImport.normalizeMemberImportSource,
+    // Keep orchestration functions from users-service
+    importMembersFromCsv: usersService.importMembersFromCsv,
+    importMembersFromSource: usersService.importMembersFromSource,
+  }
 }
 
 describe('parseMemberImportCsv', () => {
