@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   const securityError = enforceMutationSecurity(request)
   if (securityError) return securityError
 
-  const rateLimitError = enforceRateLimit(request, RATE_LIMIT_POLICIES.authLogout)
+  const rateLimitError = await enforceRateLimit(request, RATE_LIMIT_POLICIES.authLogout)
   if (rateLimitError) return rateLimitError
 
   try {

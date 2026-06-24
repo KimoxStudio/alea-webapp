@@ -7,7 +7,7 @@ import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const securityError = enforceMutationSecurity(request)
   if (securityError) return securityError
-  const rateLimitError = enforceRateLimit(request, RATE_LIMIT_POLICIES.reservationMutation)
+  const rateLimitError = await enforceRateLimit(request, RATE_LIMIT_POLICIES.reservationMutation)
   if (rateLimitError) return rateLimitError
 
   const auth = await requireAuth(request)

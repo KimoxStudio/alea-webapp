@@ -1,12 +1,26 @@
 import 'server-only'
 import { timingSafeEqual, createHash } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import type { CookieOptionsWithName } from '@supabase/ssr'
+import type { Redis } from '@upstash/redis'
+import type { Ratelimit } from '@upstash/ratelimit'
 
-export const CSRF_COOKIE_NAME = 'alea-csrf-token'
-export const CSRF_HEADER_NAME = 'x-csrf-token'
+// Re-export all Edge-safe helpers so that existing route-handler imports from
+// `@/lib/server/security` continue to work without any call-site changes.
+export {
+  CSRF_COOKIE_NAME,
+  CSRF_HEADER_NAME,
+  isSecureContext,
+  createCsrfToken,
+  getCsrfCookieOptions,
+  getSupabaseCookieOptions,
+  ensureCsrfCookie,
+} from './security-edge'
 
-type RateLimitPolicy = {
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type RateLimitPolicy = {
   bucket: string
   limit: number
   windowMs: number
@@ -26,12 +40,21 @@ type ParsedCidr = ParsedIpAddress & {
   mask: bigint
 }
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 const ALLOWED_FETCH_SITES = new Set(['same-origin', 'same-site', 'none'])
-const RATE_LIMIT_STORE_KEY = '__aleaRateLimitStore'
 const TRUST_PROXY_HEADERS_ENV = 'TRUST_PROXY_HEADERS'
 const TRUSTED_PROXY_CIDRS_ENV = 'TRUSTED_PROXY_CIDRS'
 const DEFAULT_TRUSTED_PROXY_CIDRS = ['127.0.0.1/32', '::1/128'] as const
+
+// ---------------------------------------------------------------------------
+// Rate limit store (in-memory fallback)
+// ---------------------------------------------------------------------------
+
+const RATE_LIMIT_STORE_KEY = '__aleaRateLimitStore'
 
 const globalRateLimitStore = globalThis as typeof globalThis & {
   [RATE_LIMIT_STORE_KEY]?: Map<string, RateLimitEntry>
@@ -49,23 +72,9 @@ export function resetRateLimitStoreForTests() {
   globalRateLimitStore[RATE_LIMIT_STORE_KEY]?.clear()
 }
 
-// Determines whether cookies should have the Secure flag.
-// Based on NEXT_PUBLIC_APP_URL — not NODE_ENV — because the environment
-// is defined by which Supabase keys are configured, not Node's runtime mode.
-// Warn at most once per process — this is called on every request.
-let _warnedAboutMissingAppUrl = false
-
-function isSecureContext(): boolean {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL
-  if (!appUrl && !_warnedAboutMissingAppUrl) {
-    _warnedAboutMissingAppUrl = true
-    console.warn(
-      '[security] NEXT_PUBLIC_APP_URL is not set — cookies will be issued without the Secure flag.' +
-        ' Set it to your app URL (e.g. https://app.alea.club).',
-    )
-  }
-  return (appUrl ?? '').startsWith('https://')
-}
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
 
 function forbidden(message: string) {
   return NextResponse.json({ message, statusCode: 403 }, { status: 403 })
@@ -282,6 +291,10 @@ function getClientAddress(request: NextRequest) {
   return realIp || 'local'
 }
 
+// ---------------------------------------------------------------------------
+// Node-only crypto helpers (NOT safe for Edge Runtime)
+// ---------------------------------------------------------------------------
+
 export function tokensMatch(a: string, b: string): boolean {
   // Hash both strings to a fixed 32-byte length so timingSafeEqual can always
   // run, eliminating the length side-channel entirely while keeping constant-time
@@ -291,42 +304,9 @@ export function tokensMatch(a: string, b: string): boolean {
   return timingSafeEqual(hashA, hashB)
 }
 
-export function createCsrfToken() {
-  const bytes = new Uint8Array(32)
-  crypto.getRandomValues(bytes)
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
-}
-
-export function getCsrfCookieOptions() {
-  return {
-    httpOnly: false,
-    path: '/',
-    sameSite: 'lax',
-    secure: isSecureContext(),
-  } satisfies CookieOptionsWithName
-}
-
-export function getSupabaseCookieOptions() {
-  return {
-    httpOnly: true,
-    path: '/',
-    sameSite: 'lax',
-    secure: isSecureContext(),
-  } satisfies CookieOptionsWithName
-}
-
-export function ensureCsrfCookie(request: NextRequest, response: NextResponse) {
-  const currentToken = request.cookies.get(CSRF_COOKIE_NAME)?.value
-  const shouldSetCookie = !currentToken || currentToken.length < 32
-  const token = shouldSetCookie ? createCsrfToken() : currentToken
-
-  if (shouldSetCookie) {
-    request.cookies.set(CSRF_COOKIE_NAME, token)
-    response.cookies.set(CSRF_COOKIE_NAME, token, getCsrfCookieOptions())
-  }
-
-  return response
-}
+// ---------------------------------------------------------------------------
+// Mutation security (Node runtime only — uses tokensMatch → Node crypto)
+// ---------------------------------------------------------------------------
 
 export function enforceMutationSecurity(request: NextRequest): NextResponse | null {
   if (!isUnsafeMethod(request.method)) return null
@@ -350,8 +330,8 @@ export function enforceMutationSecurity(request: NextRequest): NextResponse | nu
     return forbidden('Invalid request origin')
   }
 
-  const csrfCookie = request.cookies.get(CSRF_COOKIE_NAME)?.value
-  const csrfHeader = request.headers.get(CSRF_HEADER_NAME)
+  const csrfCookie = request.cookies.get('alea-csrf-token')?.value
+  const csrfHeader = request.headers.get('x-csrf-token')
 
   if (!csrfCookie || !csrfHeader) {
     return forbidden('Invalid CSRF token')
@@ -373,10 +353,100 @@ export function enforceSameOriginForMutation(request: NextRequest): NextResponse
   return enforceMutationSecurity(request)
 }
 
-export function enforceRateLimit(
+// ---------------------------------------------------------------------------
+// Rate limiting (KIM-401)
+//
+// When UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are both set, uses
+// @upstash/ratelimit with a sliding-window algorithm backed by Upstash Redis —
+// shared across all serverless instances.
+//
+// Otherwise falls back to the in-memory Map on globalThis. In production
+// without Redis the fallback emits a one-time console.warn (per instance)
+// because rate limit state is not shared across instances.
+// ---------------------------------------------------------------------------
+
+export const RATE_LIMIT_POLICIES = {
+  authLogin: { bucket: 'auth-login', limit: 5, windowMs: 60_000 },
+  authActivate: { bucket: 'auth-activate', limit: 5, windowMs: 60_000 },
+  authRegister: { bucket: 'auth-register', limit: 3, windowMs: 60_000 },
+  authLogout: { bucket: 'auth-logout', limit: 10, windowMs: 60_000 },
+  adminMutation: { bucket: 'admin-mutation', limit: 30, windowMs: 60_000 },
+  reservationMutation: { bucket: 'reservation-mutation', limit: 20, windowMs: 60_000 },
+} satisfies Record<string, RateLimitPolicy>
+
+// One-time warning flag (per process instance) for the in-memory fallback path.
+let _warnedAboutInMemoryRateLimit = false
+
+function isRedisRateLimitConfigured(): boolean {
+  return !!(
+    process.env.UPSTASH_REDIS_REST_URL &&
+    process.env.UPSTASH_REDIS_REST_TOKEN
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Redis + Ratelimit singletons (lazy, module-level)
+//
+// Dynamic imports keep @upstash/* tree-shaken from builds that don't set the
+// Redis env vars. Once initialised the same Redis client and per-bucket
+// Ratelimit instances are reused across requests — no reconnect overhead.
+// ---------------------------------------------------------------------------
+
+let _redisClient: Redis | null = null
+const _ratelimitCache = new Map<string, Ratelimit>()
+
+async function getRatelimitForPolicy(policy: RateLimitPolicy): Promise<Ratelimit> {
+  const { Redis } = await import('@upstash/redis')
+  const { Ratelimit } = await import('@upstash/ratelimit')
+
+  if (!_redisClient) {
+    _redisClient = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL!,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+    })
+  }
+
+  let ratelimit = _ratelimitCache.get(policy.bucket)
+  if (!ratelimit) {
+    ratelimit = new Ratelimit({
+      redis: _redisClient,
+      limiter: Ratelimit.slidingWindow(policy.limit, `${policy.windowMs}ms`),
+      prefix: `alea:rl:${policy.bucket}`,
+    })
+    _ratelimitCache.set(policy.bucket, ratelimit)
+  }
+
+  return ratelimit
+}
+
+async function enforceRateLimitRedis(
+  request: NextRequest,
+  policy: RateLimitPolicy,
+): Promise<NextResponse | null> {
+  const ratelimit = await getRatelimitForPolicy(policy)
+  const identifier = getClientAddress(request)
+  const result = await ratelimit.limit(identifier)
+
+  if (!result.success) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((result.reset - Date.now()) / 1000))
+    return tooManyRequests(retryAfterSeconds)
+  }
+
+  return null
+}
+
+function enforceRateLimitMemory(
   request: NextRequest,
   policy: RateLimitPolicy,
 ): NextResponse | null {
+  if (!_warnedAboutInMemoryRateLimit && process.env.NODE_ENV === 'production') {
+    _warnedAboutInMemoryRateLimit = true
+    console.warn(
+      '[security] Rate limiting is running in-memory (per-instance). ' +
+        'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to enable a shared rate limit store.',
+    )
+  }
+
   const store = getRateLimitStore()
   const now = Date.now()
 
@@ -408,11 +478,19 @@ export function enforceRateLimit(
   return null
 }
 
-export const RATE_LIMIT_POLICIES = {
-  authLogin: { bucket: 'auth-login', limit: 5, windowMs: 60_000 },
-  authActivate: { bucket: 'auth-activate', limit: 5, windowMs: 60_000 },
-  authRegister: { bucket: 'auth-register', limit: 3, windowMs: 60_000 },
-  authLogout: { bucket: 'auth-logout', limit: 10, windowMs: 60_000 },
-  adminMutation: { bucket: 'admin-mutation', limit: 30, windowMs: 60_000 },
-  reservationMutation: { bucket: 'reservation-mutation', limit: 20, windowMs: 60_000 },
-} satisfies Record<string, RateLimitPolicy>
+/**
+ * Enforces a rate limit policy for the incoming request.
+ *
+ * When UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are set, uses
+ * Upstash Redis (shared across serverless instances).
+ * Otherwise uses the in-memory fallback (per-instance, sufficient for dev/test).
+ */
+export async function enforceRateLimit(
+  request: NextRequest,
+  policy: RateLimitPolicy,
+): Promise<NextResponse | null> {
+  if (isRedisRateLimitConfigured()) {
+    return enforceRateLimitRedis(request, policy)
+  }
+  return enforceRateLimitMemory(request, policy)
+}

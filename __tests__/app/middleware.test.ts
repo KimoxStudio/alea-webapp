@@ -40,6 +40,7 @@ describe('middleware', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
+    vi.unstubAllEnvs()
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co')
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY', 'anon-key')
     getUserMock.mockResolvedValue({ data: { user: null }, error: null })
@@ -82,8 +83,8 @@ describe('middleware', () => {
     expect(response.cookies.get('alea-csrf-token')).toBeUndefined()
   })
 
-  it('switches the Supabase auth cookie policy to secure cookies when NEXT_PUBLIC_APP_URL is https', async () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://app.alea.club')
+  it('switches the Supabase auth cookie policy to secure cookies when COOKIE_SECURE is set to true', async () => {
+    vi.stubEnv('COOKIE_SECURE', 'true')
     const middleware = (await import('@/middleware')).default
 
     await middleware(new NextRequest('https://app.alea.club/rooms'))

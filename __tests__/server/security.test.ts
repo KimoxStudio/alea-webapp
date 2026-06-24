@@ -10,8 +10,8 @@ describe('server security helpers', () => {
     resetRateLimitStoreForTests()
   })
 
-  it('uses secure:false for Supabase cookies when NEXT_PUBLIC_APP_URL is http (localhost)', async () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'http://localhost:3000')
+  it('uses secure:false when COOKIE_SECURE is explicitly set to false', async () => {
+    vi.stubEnv('COOKIE_SECURE', 'false')
     const security = await import('@/lib/server/security')
 
     expect(security.getSupabaseCookieOptions()).toMatchObject({
@@ -22,8 +22,8 @@ describe('server security helpers', () => {
     })
   })
 
-  it('uses secure:true for Supabase cookies when NEXT_PUBLIC_APP_URL is https', async () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://app.alea.club')
+  it('uses secure:true when COOKIE_SECURE is explicitly set to true', async () => {
+    vi.stubEnv('COOKIE_SECURE', 'true')
     const security = await import('@/lib/server/security')
 
     expect(security.getSupabaseCookieOptions()).toMatchObject({
@@ -34,13 +34,39 @@ describe('server security helpers', () => {
     })
   })
 
+  it('uses secure:true when COOKIE_SECURE is unset and NODE_ENV is production', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('COOKIE_SECURE', undefined)
+    const security = await import('@/lib/server/security')
+
+    expect(security.getSupabaseCookieOptions()).toMatchObject({
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      path: '/',
+    })
+  })
+
+  it('uses secure:false when COOKIE_SECURE is unset and NODE_ENV is not production', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('COOKIE_SECURE', undefined)
+    const security = await import('@/lib/server/security')
+
+    expect(security.getSupabaseCookieOptions()).toMatchObject({
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/',
+    })
+  })
+
   it('returns 429 when a client exceeds the configured rate limit window', async () => {
     vi.stubEnv('TRUST_PROXY_HEADERS', 'true')
     vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-rate-limit', limit: 2, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -50,7 +76,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -60,7 +86,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const third = enforceRateLimit(
+    const third = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -83,7 +109,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-trusted-forwarded-for', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -93,7 +119,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -114,7 +140,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-untrusted-forwarded-for', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -124,7 +150,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -143,7 +169,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-missing-real-ip', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -152,7 +178,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -172,7 +198,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-forged-platform-header', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -183,7 +209,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -205,7 +231,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-invalid-ipv6-source', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -215,7 +241,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -236,7 +262,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-invalid-ipv6-empty-segment', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -246,7 +272,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -266,7 +292,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-proxy-trust-disabled', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -276,7 +302,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {

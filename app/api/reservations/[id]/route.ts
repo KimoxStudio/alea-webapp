@@ -8,7 +8,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const securityError = enforceMutationSecurity(request)
   if (securityError) return securityError
 
-  const rateLimitError = enforceRateLimit(request, RATE_LIMIT_POLICIES.reservationMutation)
+  const rateLimitError = await enforceRateLimit(request, RATE_LIMIT_POLICIES.reservationMutation)
   if (rateLimitError) return rateLimitError
 
   const auth = await requireAuth(request)
