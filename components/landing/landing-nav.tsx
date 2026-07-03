@@ -1,14 +1,45 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Sword } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 interface LandingNavProps {
   locale: string
 }
 
-export async function LandingNav({ locale }: LandingNavProps) {
-  const t = await getTranslations('home')
+function LangToggle({ locale, className }: { locale: string; className?: string }) {
+  const t = useTranslations('nav')
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const otherLocale = locale === 'es' ? 'en' : 'es'
+  const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '')
+  const qs = searchParams.toString()
+  const href = `/${otherLocale}${pathWithoutLocale}${qs ? `?${qs}` : ''}`
+
+  return (
+    <Link href={href} className={`alea-lang-toggle ${className ?? ''}`} aria-label={t('switchLocale', { locale: otherLocale })}>
+      <span className={locale === 'es' ? 'on' : undefined}>ES</span>
+      <span aria-hidden="true">·</span>
+      <span className={locale === 'en' ? 'on' : undefined}>EN</span>
+    </Link>
+  )
+}
+
+export function LandingNav({ locale }: LandingNavProps) {
+  const t = useTranslations('home')
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
 
   const links = [
     { href: '#about', label: t('nav.about') },
@@ -19,29 +50,42 @@ export async function LandingNav({ locale }: LandingNavProps) {
   ]
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-        <Link href={`/${locale}`} className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md">
-          <Sword className="h-6 w-6 text-primary" aria-hidden="true" />
-          <span className="font-cinzel text-xl font-bold text-gradient-gold">ALEA</span>
-        </Link>
+    <>
+      <header className="mod-nav">
+        <a href="#top" className="mod-logo" data-egg-tap title="Alea Las Palmas">
+          <Sword className="h-8 w-8 text-[var(--gold)]" aria-hidden="true" />
+          <span>
+            <strong>ALEA</strong>
+            <em>Las Palmas</em>
+          </span>
+        </a>
 
-        <nav className="hidden lg:flex items-center gap-6">
+        <nav className={`mod-nav-links ${open ? 'open' : ''}`} aria-hidden={!open}>
+          <LangToggle locale={locale} className="alea-lang-toggle-in-menu" />
           {links.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1"
-            >
+            <a key={link.href} href={link.href} onClick={() => setOpen(false)}>
               {link.label}
             </a>
           ))}
         </nav>
 
-        <Link href={`/${locale}/login`}>
-          <Button size="sm">{t('cta.members')}</Button>
+        <Link className="mod-cta" href={`/${locale}/login`}>
+          {t('cta.join')} →
         </Link>
-      </div>
-    </header>
+
+        <button
+          className={`mod-burger ${open ? 'open' : ''}`}
+          aria-label="Menu"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+      </header>
+
+      <LangToggle locale={locale} />
+    </>
   )
 }

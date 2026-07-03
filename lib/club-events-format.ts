@@ -28,3 +28,20 @@ export function formatClubEventDate(event: FormattableClubEvent, locale: string)
 
   return start
 }
+
+const TONES = ['warm', 'amber', 'ruby', 'olive'] as const
+export type ClubEventTone = (typeof TONES)[number]
+
+/**
+ * Deterministically derives a design "tone" (warm/amber/ruby/olive — see
+ * mod-event-* / mod-modal-* CSS variables) from the event id. The schema has
+ * no stored category/tone column, so this keeps card/badge theming varied
+ * without depending on unmodeled data.
+ */
+export function getClubEventTone(id: string): ClubEventTone {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+  }
+  return TONES[hash % TONES.length]!
+}

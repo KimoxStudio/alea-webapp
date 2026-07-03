@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
-import { MapPin, Mail, Instagram, Facebook } from 'lucide-react'
+import { Sword } from 'lucide-react'
 
 interface LandingFooterSectionProps {
   locale: string
@@ -14,76 +14,63 @@ export async function LandingFooterSection({ locale }: LandingFooterSectionProps
   const instagram = t('business.instagram')
   const facebook = t('business.facebook')
   const mapsUrl = t('business.mapsUrl')
+  const publicSite = t('business.publicSite')
 
   return (
-    <section className="border-t border-border">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-8 sm:grid-cols-3">
-          <div>
-            <h3 className="font-cinzel text-sm font-semibold uppercase tracking-wider text-foreground">
-              {t('footer.find')}
-            </h3>
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 flex items-start gap-2 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-              <span>{address}</span>
-            </a>
+    <footer className="mod-footer" id="contact">
+      <div className="mod-foot-grid">
+        <div>
+          <div className="mod-logo">
+            <Sword className="h-8 w-8 text-[var(--gold)]" aria-hidden="true" />
+            <span>
+              <strong>ALEA</strong>
+              <em>Las Palmas</em>
+            </span>
           </div>
-
-          <div>
-            <h3 className="font-cinzel text-sm font-semibold uppercase tracking-wider text-foreground">
-              {t('footer.write')}
-            </h3>
-            <a
-              href={`mailto:${email}`}
-              className="mt-3 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <Mail className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-              <span>{email}</span>
-            </a>
-          </div>
-
-          <div>
-            <h3 className="font-cinzel text-sm font-semibold uppercase tracking-wider text-foreground">
-              {t('footer.follow')}
-            </h3>
-            <div className="mt-3 flex items-center gap-3">
-              <a
-                href={instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Instagram"
-                className="text-muted-foreground hover:text-primary"
-              >
-                <Instagram className="h-5 w-5" aria-hidden="true" />
-              </a>
-              <a
-                href={facebook}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Facebook"
-                className="text-muted-foreground hover:text-primary"
-              >
-                <Facebook className="h-5 w-5" aria-hidden="true" />
-              </a>
-            </div>
-          </div>
+          <p className="mod-foot-tag">
+            {t('hero.tagline')} · {t('hero.location')}
+          </p>
+          <p className="mod-foot-tag">{t('hero.badgeOpen')}</p>
         </div>
-
-        <div className="mt-10 flex flex-col items-center gap-2 border-t border-border pt-6 text-center sm:flex-row sm:justify-between">
-          <p className="text-xs text-muted-foreground">{t('footer.rights')}</p>
-          <Link
-            href={`/${locale}/login`}
-            className="text-xs font-medium text-muted-foreground hover:text-foreground"
-          >
-            {t('footer.admin')}
-          </Link>
+        <div>
+          <h5>{t('footer.find')}</h5>
+          <p>
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
+              {address}
+            </a>
+          </p>
+        </div>
+        <div>
+          <h5>{t('footer.write')}</h5>
+          <p>
+            <a href={`mailto:${email}`}>{email}</a>
+          </p>
+        </div>
+        <div>
+          <h5>{t('footer.follow')}</h5>
+          <p>
+            <a href={instagram} target="_blank" rel="noopener noreferrer">
+              Instagram
+            </a>
+          </p>
+          <p>
+            <a href={facebook} target="_blank" rel="noopener noreferrer">
+              Facebook
+            </a>
+          </p>
+          <p>
+            <a href={publicSite} target="_blank" rel="noopener noreferrer">
+              alealaspalmas.es
+            </a>
+          </p>
         </div>
       </div>
-    </section>
+      <div className="mod-foot-bottom" style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span>{t('footer.rights')}</span>
+        <Link href={`/${locale}/login`} style={{ color: 'inherit', textDecoration: 'none', borderBottom: '1px dotted rgba(244,234,213,0.3)' }}>
+          {t('footer.admin')}
+        </Link>
+      </div>
+    </footer>
   )
 }

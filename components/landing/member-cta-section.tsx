@@ -1,7 +1,5 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
-import { Check } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 interface MemberCtaSectionProps {
   locale: string
@@ -10,36 +8,39 @@ interface MemberCtaSectionProps {
 export async function MemberCtaSection({ locale }: MemberCtaSectionProps) {
   const t = await getTranslations('home')
 
-  const benefits = [
-    t('register.benefit1'),
-    t('register.benefit2'),
-    t('register.benefit3'),
-    t('register.benefit4'),
-  ]
+  const benefits = [1, 2, 3, 4].map((n) => t(`register.benefit${n}`))
 
   return (
-    <section className="border-t border-border bg-background-secondary">
-      <div className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-6 sm:py-20 lg:px-8">
-        <h2 className="text-balance font-cinzel text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          {t('register.title')}
-        </h2>
-        <p className="mt-4 text-pretty text-base leading-7 text-muted-foreground">
-          {t('register.body')}
-        </p>
-
-        <ul className="mx-auto mt-8 grid max-w-md gap-3 text-left sm:grid-cols-2">
-          {benefits.map((benefit) => (
-            <li key={benefit} className="flex items-start gap-2 text-sm leading-6 text-foreground/90">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-              <span>{benefit}</span>
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-8">
-          <Link href={`/${locale}/login`}>
-            <Button size="lg">{t('cta.join')}</Button>
-          </Link>
+    <section className="mod-cta-section" id="join">
+      <div className="mod-cta-card">
+        <div className="mod-cta-text">
+          <span className="mod-kicker">{t('register.title')}</span>
+          <h2 className="mod-h2">
+            20 € <span className="mod-cta-period">/ {locale === 'en' ? 'month' : 'mes'}</span>
+          </h2>
+          <p className="mod-cta-body">{t('register.body')}</p>
+          <ul className="mod-benefits">
+            {benefits.map((benefit) => (
+              <li key={benefit}>
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <path d="M5 12 L 10 17 L 19 7" stroke="#c8a25b" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span>{benefit}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mod-cta-buttons">
+            <Link className="mod-btn mod-btn-primary mod-btn-lg" href={`/${locale}/login`}>
+              {t('cta.join')} →
+            </Link>
+            <Link className="mod-btn mod-btn-ghost" href={`/${locale}/login`}>
+              {t('cta.members')}
+            </Link>
+          </div>
+        </div>
+        <div className="mod-cta-art" aria-hidden="true">
+          {/* No real "characters" illustration asset was supplied with the
+              design source — omitting rather than fabricating an image URL. */}
         </div>
       </div>
     </section>

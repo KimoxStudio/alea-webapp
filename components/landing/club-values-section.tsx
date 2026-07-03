@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server'
+import { Reveal } from './reveal'
 
 const VALUES = [
   { key: 'comunidad', icon: '🎲' },
@@ -10,28 +11,25 @@ export async function ClubValuesSection() {
   const t = await getTranslations('home')
 
   return (
-    <section className="border-t border-border bg-background-secondary">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <header className="mx-auto max-w-2xl text-center">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-            {t('culture.kicker')}
-          </p>
-          <h2 className="text-balance font-cinzel text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            {t('culture.title')}
-          </h2>
-        </header>
-
-        <div className="mt-12 grid gap-8 sm:grid-cols-3">
-          {VALUES.map(({ key, icon }) => (
-            <div key={key} className="text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-2xl" aria-hidden="true">
+    <section className="mod-culture" id="culture">
+      <div className="mod-section-head center">
+        <span className="mod-kicker">{t('culture.kicker')}</span>
+        <h2 className="mod-h2">{t('culture.title')}</h2>
+      </div>
+      <div className="mod-culture-grid">
+        {VALUES.map(({ key, icon }, i) => (
+          <Reveal key={key} delay={i * 100} className="mod-value">
+            <svg viewBox="0 0 60 60" width="80" height="80" className="mod-value-hex" aria-hidden="true">
+              <polygon points="30,2 56,17 56,43 30,58 4,43 4,17" fill="none" stroke="#c8a25b" strokeWidth="1.5" />
+              <polygon points="30,8 50,20 50,40 30,52 10,40 10,20" fill="rgba(200,162,91,0.12)" />
+              <text x="30" y="40" textAnchor="middle" fontSize="22" fill="#c8a25b">
                 {icon}
-              </div>
-              <h3 className="font-cinzel text-lg font-semibold text-foreground">{t(`values.${key}.title`)}</h3>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{t(`values.${key}.body`)}</p>
-            </div>
-          ))}
-        </div>
+              </text>
+            </svg>
+            <h3>{t(`values.${key}.title`)}</h3>
+            <p>{t(`values.${key}.body`)}</p>
+          </Reveal>
+        ))}
       </div>
     </section>
   )

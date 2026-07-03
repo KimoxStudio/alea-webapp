@@ -1,14 +1,26 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
-import { Sword } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useTranslations } from 'next-intl'
+import type { ClubEvent } from '@/lib/types'
+import { D20 } from './d20'
+import { formatClubEventDate } from '@/lib/club-events-format'
 
 interface HeroSectionProps {
   locale: string
+  upcomingEvents: ClubEvent[]
+  onPickEvent: (event: ClubEvent) => void
 }
 
-export async function HeroSection({ locale }: HeroSectionProps) {
-  const t = await getTranslations('home')
+const ROLL_DURATION_MS = 1400
+
+export function HeroSection({ locale, upcomingEvents, onPickEvent }: HeroSectionProps) {
+  const t = useTranslations('home')
+  const [face, setFace] = useState(20)
+  const [rolling, setRolling] = useState(false)
+  const [pick, setPick] = useState<ClubEvent | null>(null)
+  const [nat20, setNat20] = useState(false)
 
   const stats = [
     { number: t('stats.membersNumber'), label: t('stats.membersLabel') },
@@ -17,57 +29,119 @@ export async function HeroSection({ locale }: HeroSectionProps) {
     { number: t('stats.partnersNumber'), label: t('stats.partnersLabel') },
   ]
 
+  const roll = () => {
+    if (rolling || upcomingEvents.length === 0) return
+    setRolling(true)
+    setPick(null)
+    setNat20(false)
+    const start = Date.now()
+
+    const tick = () => {
+      const dt = Date.now() - start
+      setFace(1 + Math.floor(Math.random() * 20))
+      if (dt < ROLL_DURATION_MS) {
+        requestAnimationFrame(tick)
+      } else {
+        const result = 1 + Math.floor(Math.random() * 20)
+        setFace(result)
+        if (result === 20) {
+          setNat20(true)
+          setPick(null)
+        } else {
+          const idx = (result - 1) % upcomingEvents.length
+          setPick(upcomingEvents[idx] ?? null)
+        }
+        setRolling(false)
+      }
+    }
+    tick()
+  }
+
+  const pickTitle = pick ? (locale === 'en' ? pick.titleEn : pick.titleEs) : null
+  const pickDate = pick ? formatClubEventDate(pick, locale) : null
+
   return (
-    <section className="relative isolate overflow-hidden">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 bg-gradient-to-b from-primary/15 via-primary/5 to-transparent"
-      />
-
-      <div className="mx-auto flex max-w-5xl flex-col items-center px-4 py-20 text-center sm:px-6 sm:py-28 lg:px-8">
-        <div className="mb-6 flex items-center gap-2">
-          <Sword className="h-8 w-8 text-primary" aria-hidden="true" />
-          <span className="font-cinzel text-2xl font-bold text-gradient-gold">ALEA</span>
-        </div>
-
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-          {t('hero.tagline')} · {t('hero.location')}
-        </p>
-
-        <h1 className="mt-4 text-balance font-cinzel text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
-          {t('hero.titleA')} <span className="text-gradient-gold">{t('hero.titleB')}</span> {t('hero.titleC')}
-        </h1>
-        <p className="mt-6 max-w-2xl text-pretty text-base leading-7 text-muted-foreground sm:text-lg">
-          {t('hero.subtitle')}
-        </p>
-
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-          <span className="rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
-            {t('hero.badgeOpen')}
+    <section className="mod-hero" id="top">
+      <div className="mod-hero-grid">
+        <div className="mod-hero-left">
+          <span className="mod-eyebrow">
+            <span className="mod-dot" /> {t('hero.tagline')} · {t('hero.location')}
           </span>
-          <span className="rounded-full border border-border bg-background-secondary px-4 py-1.5 text-sm font-medium text-muted-foreground">
-            {t('hero.badgeFee')}
-          </span>
+          <h1 className="mod-hero-title">
+            <span className="mod-glow">{t('hero.titleA')}</span>, {t('hero.titleB')},<br />
+            <span className="mod-outline">{t('hero.titleC')}</span>
+          </h1>
+          <p className="mod-hero-sub">{t('hero.subtitle')}</p>
+          <div className="mod-hero-badges">
+            <span className="mod-badge mod-badge-live">
+              <span className="mod-dot" />
+              {t('hero.badgeOpen')}
+            </span>
+            <span className="mod-badge">{t('hero.badgeFee')}</span>
+          </div>
+          <div className="mod-hero-cta">
+            <Link className="mod-btn mod-btn-primary" href={`/${locale}/login`}>
+              {t('cta.join')}
+            </Link>
+            <a className="mod-btn mod-btn-ghost" href="#events">
+              {t('cta.discover')}
+            </a>
+          </div>
+          <div className="mod-hero-stats">
+            {stats.map((stat) => (
+              <div key={stat.label} className="mod-stat">
+                <strong>{stat.number}</strong>
+                <span>{stat.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row">
-          <Link href={`/${locale}/login`}>
-            <Button size="lg">{t('cta.join')}</Button>
-          </Link>
-          <Link href={`/${locale}/login`}>
-            <Button size="lg" variant="outline">{t('cta.members')}</Button>
-          </Link>
+        <div className="mod-hero-right">
+          <div className={`mod-roller ${nat20 ? 'nat20' : ''}`}>
+            <span className="mod-roller-glow" />
+            <button
+              type="button"
+              className={`mod-roll-btn ${rolling ? 'rolling' : ''} ${nat20 ? 'crit' : ''}`}
+              onClick={roll}
+              aria-label="Roll d20"
+            >
+              <D20 face={face} size={170} palette={['#c8a25b', '#0a0a12']} critical={nat20} />
+            </button>
+            <span className="mod-roll-cta">
+              {t('roll.cta')} <span className="mod-d20-label">d20</span>
+            </span>
+            <span className="mod-roll-help">{t('roll.help')}</span>
+            <button
+              type="button"
+              className={`mod-pick ${pick || nat20 ? 'show' : ''} ${nat20 ? 'crit' : ''} ${pick && !nat20 ? 'clickable' : ''}`}
+              disabled={!pick || nat20}
+              onClick={() => {
+                if (pick && !nat20) onPickEvent(pick)
+              }}
+              aria-label={pick && !nat20 && pickTitle ? `${locale === 'en' ? 'See' : 'Ver'} ${pickTitle}` : undefined}
+            >
+              {nat20 ? (
+                <>
+                  <span className="mod-pick-tag mod-pick-tag-crit">★ {t('egg.title')} ★</span>
+                  <strong>{locale === 'en' ? 'Natural 20' : '20 natural'}</strong>
+                  <span>{locale === 'en' ? 'You triggered the secret bonus.' : 'Has activado el bonus secreto.'}</span>
+                </>
+              ) : (
+                pick && (
+                  <>
+                    <span className="mod-pick-tag">{t('roll.you')}</span>
+                    <strong>{pickTitle}</strong>
+                    <span>{pickDate}</span>
+                    <span className="mod-pick-cue" aria-hidden="true">
+                      {locale === 'en' ? 'See event' : 'Ver evento'} →
+                    </span>
+                  </>
+                )
+              )}
+            </button>
+          </div>
         </div>
-
-        <dl className="mt-14 grid w-full max-w-3xl grid-cols-2 gap-6 sm:grid-cols-4">
-          {stats.map((stat) => (
-            <div key={stat.label} className="flex flex-col items-center">
-              <dt className="sr-only">{stat.label}</dt>
-              <dd className="font-cinzel text-2xl font-bold text-foreground sm:text-3xl">{stat.number}</dd>
-              <p className="mt-1 text-xs text-muted-foreground">{stat.label}</p>
-            </div>
-          ))}
-        </dl>
       </div>
     </section>
   )

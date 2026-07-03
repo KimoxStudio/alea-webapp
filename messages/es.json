@@ -475,6 +475,14 @@
     "eventStatus": {
       "upcoming": "Próximamente",
       "past": "Finalizado"
+    },
+    "roll": {
+      "cta": "Tira el dado",
+      "help": "Cada tirada revela un evento del club",
+      "you": "Te ha tocado"
+    },
+    "egg": {
+      "title": "Bonus secreto"
     }
   },
   "checkin": {

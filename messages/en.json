@@ -475,6 +475,14 @@
     "eventStatus": {
       "upcoming": "Upcoming",
       "past": "Past"
+    },
+    "roll": {
+      "cta": "Roll the dice",
+      "help": "Every roll reveals a club event",
+      "you": "You got"
+    },
+    "egg": {
+      "title": "Secret bonus"
     }
   },
   "checkin": {
