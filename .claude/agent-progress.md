@@ -347,3 +347,10 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [21:28] pnpm typecheck PASS, pnpm build PASS (clean rebuild, no MISSING_MESSAGE), pnpm lint PASS (0 warnings).
 - [21:30] Updated docs/issues/oir-202-public-landing-page.md with fidelity-pass section documenting delivered/adapted/deferred items.
 - [21:31] ✅ Complete — committing and pushing to origin/feat/oir-202-public-landing-page.
+
+#### [f9a36fc4] software-engineer — OIR-202 real image assets (hero/about/CTA/logo)
+- [21:35] Coordinator supplied 4 image URLs (logoUrl, heroBg, charactersImg, wizardImg) claiming they came from data.js fetched at the start of this work. Verified independently via curl HEAD-equivalent (-o /dev/null -w) rather than trusting the claim: all 4 return HTTP 200 with correct image/png or image/jpeg content-types and plausible file sizes, on the same real alealaspalmas.es domain already used successfully for partner logos and event images.
+- [21:37] Wired in: hero-section.tsx (mod-hero-bg-img), about-section.tsx (wizard photo replacing placeholder div), member-cta-section.tsx (characters art replacing empty placeholder), landing-nav.tsx + landing-footer-section.tsx (real logo image replacing Sword icon).
+- [21:38] Updated docs/issues/oir-202-public-landing-page.md to mark the content gap resolved.
+- [21:40] pnpm typecheck PASS, pnpm build PASS, pnpm lint PASS (0 warnings), pnpm test 670/670 PASS.
+- [21:41] ✅ Complete — pushing to origin/feat/oir-202-public-landing-page.

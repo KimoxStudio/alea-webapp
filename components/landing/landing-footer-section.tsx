@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
-import { Sword } from 'lucide-react'
 
 interface LandingFooterSectionProps {
   locale: string
@@ -21,7 +20,13 @@ export async function LandingFooterSection({ locale }: LandingFooterSectionProps
       <div className="mod-foot-grid">
         <div>
           <div className="mod-logo">
-            <Sword className="h-8 w-8 text-[var(--gold)]" aria-hidden="true" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://alealaspalmas.es/wp-content/uploads/2025/11/logo_final_sin_fondo.png"
+              alt="Alea"
+              width={40}
+              height={40}
+            />
             <span>
               <strong>ALEA</strong>
               <em>Las Palmas</em>

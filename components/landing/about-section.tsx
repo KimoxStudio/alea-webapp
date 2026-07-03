@@ -27,9 +27,11 @@ export async function AboutSection() {
           </ul>
         </Reveal>
         <Reveal delay={140} className="mod-about-img">
-          {/* No real "about" photo asset was supplied with the design source —
-              rendering a themed placeholder instead of fabricating an image URL. */}
-          <div className="mod-about-img-placeholder" aria-hidden="true" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://alealaspalmas.es/wp-content/uploads/2025/10/image-12-e1761825612963.jpg"
+            alt="Mago de Alea"
+          />
           <div className="mod-about-img-tag">
             <strong>{t('business.address')}</strong>
             <span>Schamann · LPGC · {t('hero.badgeOpen')}</span>

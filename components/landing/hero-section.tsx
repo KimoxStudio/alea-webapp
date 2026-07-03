@@ -62,6 +62,13 @@ export function HeroSection({ locale, upcomingEvents, onPickEvent }: HeroSection
 
   return (
     <section className="mod-hero" id="top">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        className="mod-hero-bg-img"
+        src="https://alealaspalmas.es/wp-content/uploads/2025/10/fondo-oscuro.png"
+        alt=""
+        aria-hidden="true"
+      />
       <div className="mod-hero-grid">
         <div className="mod-hero-left">
           <span className="mod-eyebrow">

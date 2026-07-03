@@ -38,9 +38,12 @@ export async function MemberCtaSection({ locale }: MemberCtaSectionProps) {
             </Link>
           </div>
         </div>
-        <div className="mod-cta-art" aria-hidden="true">
-          {/* No real "characters" illustration asset was supplied with the
-              design source — omitting rather than fabricating an image URL. */}
+        <div className="mod-cta-art">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://alealaspalmas.es/wp-content/uploads/2025/10/image-removebg-preview.png"
+            alt="Personajes Alea"
+          />
         </div>
       </div>
     </section>

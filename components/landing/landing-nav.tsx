@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { Sword } from 'lucide-react'
 
 interface LandingNavProps {
   locale: string
@@ -53,7 +52,13 @@ export function LandingNav({ locale }: LandingNavProps) {
     <>
       <header className="mod-nav">
         <a href="#top" className="mod-logo" data-egg-tap title="Alea Las Palmas">
-          <Sword className="h-8 w-8 text-[var(--gold)]" aria-hidden="true" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://alealaspalmas.es/wp-content/uploads/2025/11/logo_final_sin_fondo.png"
+            alt="Alea"
+            width={40}
+            height={40}
+          />
           <span>
             <strong>ALEA</strong>
             <em>Las Palmas</em>
