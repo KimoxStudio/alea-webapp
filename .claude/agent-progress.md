@@ -258,3 +258,15 @@ Real-time log of all agent work. Agents append entries as work progresses.
 
 #### [loading-spinner] software-engineer — fix spinner load states
 - [13:03] Started — branch fix/loading-spinner-states off develop
+
+#### [f9a36fc4] software-engineer — OIR-202 Public landing page impl
+- [17:00] Started — claimed task, branch feat/oir-202-public-landing-page (working in isolated worktree; will push to origin under exact branch name)
+- [17:00] BLOCKER NOTED: DesignSync MCP tool not available in this agent's tool set (not present in mcpServers config, not connected). Proceeding with best-effort landing copy/data consistent with existing i18n tone and task's structural description; will flag to team-lead for real design content verification.
+- [17:20] Migration created: supabase/migrations/20260703000001_oir202_create_club_events.sql (club_events table, RLS select policy for anon+authenticated)
+- [17:20] Seed migration created: supabase/migrations/20260703000002_oir202_seed_club_events.sql (placeholder content — DesignSync unavailable, see blocker note above)
+- [17:25] Added lib/server/club-events-service.ts (listClubEvents, public RLS-respecting read), lib/club-events-format.ts (date formatting), lib/types/index.ts ClubEvent type, lib/supabase/types.ts club_events Row/Insert/Update types
+- [17:35] Added messages/en.json + messages/es.json new "home" namespace keys (events/game library/values/partners sections) — key parity verified (428/428)
+- [17:45] Added components/landing/* (hero, events-section+card+dialog, game-library, club-values, partners, member-cta, landing-view)
+- [17:46] Updated app/[locale]/page.tsx and app/page.tsx: unauthenticated visitors now render LandingView instead of redirecting to /login; authenticated redirect to /rooms unchanged
+- [17:50] pnpm typecheck PASS
+- [17:52] pnpm build PASS (39/39 static pages generated, exit 0)
