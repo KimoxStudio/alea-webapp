@@ -272,3 +272,13 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [17:52] pnpm build PASS (39/39 static pages generated, exit 0)
 - [17:58] pre-push CI: typecheck PASS, lint PASS (0 warnings/errors) after fixing .eslintrc.json root:true (nested-worktree config conflict)
 - [17:58] ✅ Complete — pushed 6 commits to origin/feat/oir-202-public-landing-page. See handoff for full scope decisions and DesignSync blocker note.
+
+#### [f9a36fc4] software-engineer — OIR-202 content-fidelity follow-up (team-lead DesignSync fetch)
+- [18:05] Received real content from team-lead (had DesignSync access this agent lacked): business info, full i18n dictionary, 3 club values, 8 game library highlights, 20 partners, 4 upcoming + 20 past real club_events.
+- [18:10] Rebuilt messages/en.json + messages/es.json "home" namespace (nested nav/cta/hero/stats/events/past/about/games/culture/values/partners/footer/register/modal/business/eventStatus) — parity 90/90 keys.
+- [18:20] Generated real club_events seed (24 rows) via a scratchpad script for safe SQL escaping; replaced supabase/migrations/20260703000002_oir202_seed_club_events.sql content (same filename, not yet applied to any DB). Modal-only fields (when/who/price/organizer/bullets) folded into description_es/en as formatted text since schema unchanged per instruction.
+- [18:30] Added components/landing/about-section.tsx, landing-footer-section.tsx, landing-nav.tsx (new); game-library-data.ts, partners-data.ts (static real data); rewired hero/events/event-card/event-details-dialog/game-library/club-values/partners/member-cta/landing-view to consume real content.
+- [18:32] next.config.ts: added images.remotePatterns for alealaspalmas.es (partner logos + event images).
+- [18:40] pnpm typecheck PASS, pnpm build PASS (39/39 pages), pnpm lint PASS (0 warnings).
+- [18:41] Committed (3 commits) and pushed to origin/feat/oir-202-public-landing-page.
+- [18:41] ✅ Complete — content-fidelity gap closed. Judgement calls: past-event title/blurb EN quick-translated by this agent (source had ES only); past-event long-form description_en reuses ES text (explicitly permitted by team-lead). fenix event modeled as date_kind='range' (2026-01-01..12-31) with cadence note in description meta line rather than 'recurring', since it's a year-long campaign not a fixed weekly slot.
