@@ -270,3 +270,5 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [17:46] Updated app/[locale]/page.tsx and app/page.tsx: unauthenticated visitors now render LandingView instead of redirecting to /login; authenticated redirect to /rooms unchanged
 - [17:50] pnpm typecheck PASS
 - [17:52] pnpm build PASS (39/39 static pages generated, exit 0)
+- [17:58] pre-push CI: typecheck PASS, lint PASS (0 warnings/errors) after fixing .eslintrc.json root:true (nested-worktree config conflict)
+- [17:58] ✅ Complete — pushed 6 commits to origin/feat/oir-202-public-landing-page. See handoff for full scope decisions and DesignSync blocker note.
