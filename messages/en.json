@@ -348,63 +348,134 @@
     }
   },
   "home": {
-    "heroTitle": "Your Adventure Starts Here",
-    "heroSubtitle": "Alea Cultural Association — the reference space for tabletop RPGs, board games, and play culture in our city.",
-    "heroCtaRegister": "Join the association",
-    "heroCtaLearnMore": "About the association",
-    "heroCtaExplore": "Explore rooms",
-    "featuresTitle": "What can you do here?",
-    "featuresSubtitle": "This platform is your control center to manage tables, reservations, and more.",
-    "feature1Title": "Book your table",
-    "feature1Desc": "Check real-time availability across all 6 rooms and reserve your table for any gaming session.",
-    "feature2Title": "Scan the QR",
-    "feature2Desc": "Every table has its own QR code. Scan it to activate your booking or check status at any time.",
-    "feature3Title": "Manage your sessions",
-    "feature3Desc": "Access your reservation history, cancel when you can't attend, and organize your gaming sessions easily.",
-    "feature4Title": "6 themed rooms",
-    "feature4Desc": "From small tables for intimate games to removable-top tables for wargames and 3D dungeon maps.",
-    "ctaTitle": "Ready to play?",
-    "ctaSubtitle": "Create your account with your member number and start booking.",
-    "ctaButton": "Register now",
-    "ctaLoginText": "Already a member?",
-    "ctaLoginLink": "Sign in",
-    "heroCtaLogin": "Enter the club",
-    "upcomingEventsEyebrow": "Schedule",
-    "upcomingEventsTitle": "Upcoming events",
-    "upcomingEventsSubtitle": "Tournaments, RPG sessions and game nights coming up.",
-    "upcomingEventsEmpty": "No events scheduled right now. Check back soon.",
-    "pastEventsEyebrow": "History",
-    "pastEventsTitle": "Past events",
-    "pastEventsSubtitle": "A look back at the tournaments and sessions we've already shared.",
-    "pastEventsEmpty": "There are no past events to show yet.",
-    "eventDetailsCta": "Learn more",
-    "eventModalClose": "Close",
-    "eventStatusUpcoming": "Upcoming",
-    "eventStatusPast": "Past",
-    "gameLibraryEyebrow": "Game library",
-    "gameLibraryTitle": "Our game library",
-    "gameLibrarySubtitle": "Hundreds of board games, RPGs and wargames available to members.",
-    "gameLibraryBoardGamesTitle": "Board games",
-    "gameLibraryBoardGamesDesc": "From family classics to the latest Euro-style strategy releases.",
-    "gameLibraryRoleplayingTitle": "Roleplaying games",
-    "gameLibraryRoleplayingDesc": "Rulebooks and campaigns for the roleplaying systems our community loves most.",
-    "gameLibraryWargamesTitle": "Wargames",
-    "gameLibraryWargamesDesc": "Removable-top tables and modular terrain for large-scale battles.",
-    "valuesEyebrow": "Our values",
-    "valuesTitle": "What drives us",
-    "valuesSubtitle": "The association runs on the work and passion of its members.",
-    "valueCommunityTitle": "Community",
-    "valueCommunityDesc": "An open space where everyone finds a table and a group to play with.",
-    "valueAccessibilityTitle": "Accessibility",
-    "valueAccessibilityDesc": "Affordable fees and a schedule designed to fit any timetable.",
-    "valuePassionTitle": "Passion for games",
-    "valuePassionDesc": "We organize and care for every event with the same enthusiasm as day one.",
-    "valueLearningTitle": "Learning",
-    "valueLearningDesc": "There's always someone happy to teach you the rules of a new game.",
-    "partnersEyebrow": "Partners",
-    "partnersTitle": "Who we work with",
-    "partnersSubtitle": "Stores, publishers and cultural spaces that make our activity possible.",
-    "partnersComingSoon": "The full list of partners will be published here soon."
+    "nav": {
+      "about": "About",
+      "events": "Events",
+      "culture": "Culture",
+      "partners": "Partners",
+      "contact": "Contact"
+    },
+    "cta": {
+      "join": "Become a member",
+      "members": "Member area",
+      "discover": "See events",
+      "calendar": "Full calendar"
+    },
+    "hero": {
+      "tagline": "Cultural & Social Association",
+      "location": "Las Palmas de Gran Canaria",
+      "titleA": "Roll",
+      "titleB": "play",
+      "titleC": "repeat.",
+      "subtitle": "Lovers of role-playing, board games, wargames and miniatures. A 24/7 members venue, an open library and 60+ events a year.",
+      "badgeOpen": "Open 24/7",
+      "badgeFee": "€20/month · member"
+    },
+    "stats": {
+      "membersNumber": "24/7",
+      "membersLabel": "Member access",
+      "eventsNumber": "60+",
+      "eventsLabel": "Events per year",
+      "gamesNumber": "350+",
+      "gamesLabel": "Games in the library",
+      "partnersNumber": "20+",
+      "partnersLabel": "Partner shops"
+    },
+    "events": {
+      "kicker": "Upcoming events",
+      "title": "What's brewing at Alea",
+      "cta": "Sign me up",
+      "all": "Full calendar",
+      "empty": "No events scheduled right now. Check back soon.",
+      "viewDetails": "Learn more"
+    },
+    "past": {
+      "kicker": "Past events",
+      "title": "What we've left on the table",
+      "subtitle": "A pick of games, tournaments and meet-ups from the last few months.",
+      "empty": "There are no past events to show yet.",
+      "viewDetails": "Learn more"
+    },
+    "about": {
+      "kicker": "About Alea",
+      "title": "A club, not a shop.",
+      "body": "We're a non-profit cultural association in Las Palmas de Gran Canaria. If you love fantasy, strategy or just spending a good evening in good company, this is your place.",
+      "body2": "We run events that nurture creativity, strategic thinking and connection. We believe in the power of play to bring people together, break barriers and build community.",
+      "bullet1": "Venue at C. São Paulo, 55 (Schamann) open 24/7 for members.",
+      "bullet2": "Library of 350+ games to borrow.",
+      "bullet3": "Veteran game masters to onboard newcomers.",
+      "bullet4": "Partnerships with 20+ local shops and bars."
+    },
+    "games": {
+      "kicker": "Game library",
+      "title": "What's rolling most this season",
+      "subtitle": "Hover any tile. Each box is an invitation to a table.",
+      "players": "Players",
+      "time": "Playtime",
+      "weight": "Complexity"
+    },
+    "culture": {
+      "kicker": "Our culture",
+      "title": "Three rolls we never fumble"
+    },
+    "values": {
+      "comunidad": {
+        "title": "Community",
+        "body": "Care and company. Empathy, listening and mutual trust around the table."
+      },
+      "participacion": {
+        "title": "Participation",
+        "body": "Being part of something alive: sharing ideas, time and experience every game."
+      },
+      "diversidad": {
+        "title": "Diversity",
+        "body": "Each person brings something unique. We live together with respect and celebrate difference."
+      }
+    },
+    "partners": {
+      "kicker": "Partners",
+      "title": "Shops and allies that keep the club running"
+    },
+    "footer": {
+      "find": "Find us",
+      "write": "Write us",
+      "follow": "Follow us",
+      "rights": "© 2026 Alea Las Palmas · Non-profit association",
+      "admin": "Board access · Admin"
+    },
+    "register": {
+      "title": "Become an Alea member",
+      "body": "€20/month. 24/7 venue access, full library, all events included and discounts at partner shops.",
+      "benefit1": "24/7 access with digital key",
+      "benefit2": "Unlimited library lending",
+      "benefit3": "Free entry to every event",
+      "benefit4": "Discounts at 20+ partner shops"
+    },
+    "modal": {
+      "when": "When",
+      "where": "Where",
+      "who": "Seats",
+      "price": "Price",
+      "organizer": "Organized by",
+      "what": "What it's about",
+      "bullets": "The essentials",
+      "share": "Share",
+      "signup": "Sign me up",
+      "directions": "Get directions",
+      "close": "Close"
+    },
+    "business": {
+      "address": "C. São Paulo, 55 · 35008 Las Palmas de G.C.",
+      "email": "alealaspalmas@gmail.com",
+      "instagram": "https://www.instagram.com/alealaspalmas",
+      "facebook": "https://www.facebook.com/share/1Cdvz1KnLF/",
+      "mapsUrl": "https://maps.app.goo.gl/p94LY5QWHNeaTaBN7",
+      "publicSite": "https://alealaspalmas.es/"
+    },
+    "eventStatus": {
+      "upcoming": "Upcoming",
+      "past": "Past"
+    }
   },
   "checkin": {
     "title": "Check-in",
