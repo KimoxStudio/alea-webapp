@@ -15,5 +15,5 @@ export default async function RootPage() {
     }
   }
 
-  redirect(authenticated ? '/es/rooms' : '/es/login')
+  redirect(authenticated ? '/es/rooms' : '/es')
 }
