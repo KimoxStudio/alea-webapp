@@ -16,10 +16,9 @@ export function EventsSection({ events, locale, variant }: EventsSectionProps) {
   const t = useTranslations('home')
   const [selectedEvent, setSelectedEvent] = useState<ClubEvent | null>(null)
 
-  const eyebrowKey = variant === 'upcoming' ? 'upcomingEventsEyebrow' : 'pastEventsEyebrow'
-  const titleKey = variant === 'upcoming' ? 'upcomingEventsTitle' : 'pastEventsTitle'
-  const subtitleKey = variant === 'upcoming' ? 'upcomingEventsSubtitle' : 'pastEventsSubtitle'
-  const emptyKey = variant === 'upcoming' ? 'upcomingEventsEmpty' : 'pastEventsEmpty'
+  const namespace = variant === 'upcoming' ? 'events' : 'past'
+  const hasSubtitle = variant === 'past'
+  const emptyMessage = variant === 'upcoming' ? t('events.empty') : t('past.empty')
 
   return (
     <section
@@ -28,23 +27,44 @@ export function EventsSection({ events, locale, variant }: EventsSectionProps) {
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
         <header className="mx-auto max-w-2xl text-center">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-            {t(eyebrowKey)}
+            {t(`${namespace}.kicker`)}
           </p>
           <h2 className="text-balance font-cinzel text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            {t(titleKey)}
+            {t(`${namespace}.title`)}
           </h2>
-          <p className="mt-4 text-pretty text-base leading-7 text-muted-foreground">
-            {t(subtitleKey)}
-          </p>
+          {hasSubtitle && (
+            <p className="mt-4 text-pretty text-base leading-7 text-muted-foreground">
+              {t('past.subtitle')}
+            </p>
+          )}
         </header>
 
         {events.length === 0 ? (
-          <p className="mt-12 text-center text-sm text-muted-foreground">{t(emptyKey)}</p>
+          <p className="mt-12 text-center text-sm text-muted-foreground">{emptyMessage}</p>
         ) : (
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {events.map((event) => (
-              <EventCard key={event.id} event={event} locale={locale} onSelect={setSelectedEvent} />
+              <EventCard
+                key={event.id}
+                event={event}
+                locale={locale}
+                variant={variant}
+                onSelect={setSelectedEvent}
+              />
             ))}
+          </div>
+        )}
+
+        {variant === 'upcoming' && (
+          <div className="mt-10 text-center">
+            <a
+              href={t('business.publicSite')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              {t('events.all')}
+            </a>
           </div>
         )}
       </div>
@@ -52,6 +72,7 @@ export function EventsSection({ events, locale, variant }: EventsSectionProps) {
       <EventDetailsDialog
         event={selectedEvent}
         locale={locale}
+        variant={variant}
         onOpenChange={(open) => {
           if (!open) setSelectedEvent(null)
         }}
