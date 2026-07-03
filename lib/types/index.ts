@@ -181,6 +181,33 @@ export interface AdminEvent {
   schedules: AdminEventSchedule[]
 }
 
+export type ClubEventDateKind = 'single' | 'range' | 'recurring'
+export type ClubEventStatus = 'upcoming' | 'past'
+
+/**
+ * Public marketing "club event" (tournaments, game nights, club history) shown
+ * on the public landing page. Distinct from AdminEvent, which models
+ * room-reservation blocking for the booking platform.
+ */
+export interface ClubEvent {
+  id: string
+  titleEs: string
+  titleEn: string
+  blurbEs: string
+  blurbEn: string
+  descriptionEs: string | null
+  descriptionEn: string | null
+  dateKind: ClubEventDateKind
+  startDate: string
+  endDate: string | null
+  recurrenceLabelEs: string | null
+  recurrenceLabelEn: string | null
+  imageUrl: string | null
+  linkUrl: string | null
+  status: ClubEventStatus
+  displayOrder: number
+}
+
 export interface Equipment {
   id: string;
   name: string;

@@ -208,6 +208,69 @@ export type Database = {
           },
         ]
       }
+      club_events: {
+        Row: {
+          blurb_en: string
+          blurb_es: string
+          created_at: string
+          date_kind: string
+          description_en: string | null
+          description_es: string | null
+          display_order: number
+          end_date: string | null
+          id: string
+          image_url: string | null
+          link_url: string | null
+          recurrence_label_en: string | null
+          recurrence_label_es: string | null
+          start_date: string
+          status: string
+          title_en: string
+          title_es: string
+          updated_at: string
+        }
+        Insert: {
+          blurb_en: string
+          blurb_es: string
+          created_at?: string
+          date_kind?: string
+          description_en?: string | null
+          description_es?: string | null
+          display_order?: number
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          recurrence_label_en?: string | null
+          recurrence_label_es?: string | null
+          start_date: string
+          status?: string
+          title_en: string
+          title_es: string
+          updated_at?: string
+        }
+        Update: {
+          blurb_en?: string
+          blurb_es?: string
+          created_at?: string
+          date_kind?: string
+          description_en?: string | null
+          description_es?: string | null
+          display_order?: number
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          link_url?: string | null
+          recurrence_label_en?: string | null
+          recurrence_label_es?: string | null
+          start_date?: string
+          status?: string
+          title_en?: string
+          title_es?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           created_at: string
