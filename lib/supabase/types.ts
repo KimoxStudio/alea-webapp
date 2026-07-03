@@ -208,99 +208,78 @@ export type Database = {
           },
         ]
       }
-      club_events: {
+      events: {
         Row: {
-          blurb_en: string
-          blurb_es: string
+          blurb_en: string | null
+          blurb_es: string | null
+          category_en: string | null
+          category_es: string | null
           created_at: string
+          created_by: string | null
+          date: string
           date_kind: string
+          description: string | null
           description_en: string | null
           description_es: string | null
-          display_order: number
           end_date: string | null
+          end_time: string
           id: string
           image_url: string | null
           link_url: string | null
           recurrence_label_en: string | null
           recurrence_label_es: string | null
-          start_date: string
-          status: string
-          title_en: string
-          title_es: string
-          updated_at: string
-        }
-        Insert: {
-          blurb_en: string
-          blurb_es: string
-          created_at?: string
-          date_kind?: string
-          description_en?: string | null
-          description_es?: string | null
-          display_order?: number
-          end_date?: string | null
-          id?: string
-          image_url?: string | null
-          link_url?: string | null
-          recurrence_label_en?: string | null
-          recurrence_label_es?: string | null
-          start_date: string
-          status?: string
-          title_en: string
-          title_es: string
-          updated_at?: string
-        }
-        Update: {
-          blurb_en?: string
-          blurb_es?: string
-          created_at?: string
-          date_kind?: string
-          description_en?: string | null
-          description_es?: string | null
-          display_order?: number
-          end_date?: string | null
-          id?: string
-          image_url?: string | null
-          link_url?: string | null
-          recurrence_label_en?: string | null
-          recurrence_label_es?: string | null
-          start_date?: string
-          status?: string
-          title_en?: string
-          title_es?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      events: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          date: string
-          description: string | null
-          end_time: string
-          id: string
           start_time: string
           title: string
+          title_en: string | null
+          title_es: string | null
         }
         Insert: {
+          blurb_en?: string | null
+          blurb_es?: string | null
+          category_en?: string | null
+          category_es?: string | null
           created_at?: string
           created_by?: string | null
           date: string
+          date_kind?: string
           description?: string | null
+          description_en?: string | null
+          description_es?: string | null
+          end_date?: string | null
           end_time: string
           id?: string
+          image_url?: string | null
+          link_url?: string | null
+          recurrence_label_en?: string | null
+          recurrence_label_es?: string | null
           start_time: string
           title: string
+          title_en?: string | null
+          title_es?: string | null
         }
         Update: {
+          blurb_en?: string | null
+          blurb_es?: string | null
+          category_en?: string | null
+          category_es?: string | null
           created_at?: string
           created_by?: string | null
           date?: string
+          date_kind?: string
           description?: string | null
+          description_en?: string | null
+          description_es?: string | null
+          end_date?: string | null
           end_time?: string
           id?: string
+          image_url?: string | null
+          link_url?: string | null
+          recurrence_label_en?: string | null
+          recurrence_label_es?: string | null
           start_time?: string
           title?: string
+          title_en?: string | null
+          title_es?: string | null
         }
         Relationships: []
       }

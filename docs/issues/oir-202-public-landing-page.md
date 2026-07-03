@@ -49,14 +49,23 @@ The design project contains 3 separate concerns:
 
 ## Acceptance criteria
 
-- [ ] Unauthenticated visit to `/` (and `/es`, `/en`) renders the new landing instead of redirecting straight to `/login`.
-- [ ] Authenticated visit to `/` still redirects to `/rooms` (unchanged).
-- [ ] Landing renders hero, upcoming events, past events, game library, values, partners, footer sections with content from DB (seeded from design's `data.js`).
-- [ ] ES/EN toggle works via next-intl, full key parity in `messages/en.json` / `messages/es.json`.
-- [ ] "Hazte socio" / "Entrar al club" / footer admin link route to existing `/login`.
-- [ ] No dependency on the design prototype's CDN React/Babel loading — fully integrated as Next.js components.
-- [ ] Build and typecheck pass; test files excluded from `tsconfig.app.json` per project convention.
-- [ ] Migration SQL committed but not applied by any agent.
+- [x] Unauthenticated visit to `/` (and `/es`, `/en`) renders the new landing instead of redirecting straight to `/login`.
+- [x] Authenticated visit to `/` still redirects to `/rooms` (unchanged).
+- [x] Landing renders hero, upcoming events, past events, game library, values, partners, footer sections with content from DB (seeded from design's `data.js`).
+- [x] ES/EN toggle works via next-intl, full key parity in `messages/en.json` / `messages/es.json`.
+- [x] "Hazte socio" / "Entrar al club" / footer admin link route to existing `/login`.
+- [x] No dependency on the design prototype's CDN React/Babel loading — fully integrated as Next.js components.
+- [x] Build and typecheck pass; test files excluded from `tsconfig.app.json` per project convention.
+- [x] Migration SQL committed but not applied by any agent.
+
+## Implementation notes (software-engineer, 2026-07-03)
+
+- `events` table extended with `title_es/en`, `blurb_es/en`, `description_es/en`, `date_kind` (`single`/`range`/`recurring`), `end_date`, `recurrence_label_es/en`, `image_url`, `link_url`, `category_es/en`. Legacy `title`/`description`/`date`/`start_time`/`end_time` columns are populated too (title/description default to the ES copy; start_time/end_time use the existing "all day" `00:00`–`23:59` convention) so the existing admin event tooling keeps working unmodified.
+- New RLS policy `events_select_public` grants `anon` SELECT only on rows where `title_es`/`title_en` are populated — internal admin-created room-blocking events (single-locale `title` only) stay invisible to unauthenticated visitors. No `is_public` column was added.
+- `lib/server/club-events-service.ts` reads from `events` (not a separate table), filters to bilingual rows, and derives `upcoming`/`past` from `date`/`end_date` at read time (`recurring` rows are always `upcoming`) — no stored status column.
+- Seeded with the real 4 upcoming + 20 past events from `window.ALEA_DATA` (see `supabase/migrations/20260703000002_oir202_seed_public_landing_events.sql`).
+- **Known side effect to flag for the admin-CRUD follow-up issue:** the existing admin "Events" dashboard (`listEvents()` in `lib/server/events-service.ts`) selects all rows from `events` unconditionally, so once this migration is applied these 24 landing rows will also appear in the internal admin event list (with no room blocks). That admin surface was out of scope for this issue and was not modified; the follow-up admin-CRUD issue should decide whether to filter admin's event list to exclude bilingual/landing-only rows or surface them distinctly.
+- An earlier commit on this branch (now superseded) created a standalone `club_events` table instead; those migrations were removed and replaced with the `events` extension described above per this doc's decision.
 
 ---
 

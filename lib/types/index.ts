@@ -205,7 +205,6 @@ export interface ClubEvent {
   imageUrl: string | null
   linkUrl: string | null
   status: ClubEventStatus
-  displayOrder: number
 }
 
 export interface Equipment {
