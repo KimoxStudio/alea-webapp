@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: HomePageProps): Promise<Metad
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'home' })
 
-  return { title: `Alea — ${t('heroTitle')}` }
+  return { title: `Alea — ${t('hero.titleA')} ${t('hero.titleB')} ${t('hero.titleC')}` }
 }
 
 export default async function HomePage({ params }: HomePageProps) {

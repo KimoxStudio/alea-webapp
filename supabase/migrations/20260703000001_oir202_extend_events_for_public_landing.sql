@@ -36,3 +36,13 @@ ALTER TABLE "public"."events"
 CREATE POLICY "events_select_public" ON "public"."events"
   FOR SELECT TO "anon"
   USING ("title_es" IS NOT NULL AND "title_en" IS NOT NULL);
+
+-- RLS policies only take effect for a role that already holds the
+-- table-level privilege. Migration 20260617000001_kim383_multi_day_events.sql
+-- deliberately ran `REVOKE ALL ON TABLE public.events FROM anon` as
+-- defense-in-depth (anon had no legitimate reason to read events at the
+-- time). Re-grant strictly SELECT — not ALL — so the new policy above can
+-- actually take effect; anon still has no INSERT/UPDATE/DELETE privilege on
+-- this table, and the "events_select_public" USING clause further restricts
+-- which rows are visible.
+GRANT SELECT ON TABLE "public"."events" TO "anon";
