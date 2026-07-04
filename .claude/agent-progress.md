@@ -287,3 +287,16 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [23:00] ✅ Complete — fix + regression test committed and pushed
 - [23:05] Applied approved eslintrc root:true fix (fix(lint) commit a1e9044), confirmed pnpm lint passes standalone and via pre-push hook
 - [23:06] git push origin kim-407-extract-member-import succeeded — 2e41767..a1e9044, both commits (4c276d5, a1e9044) pushed
+
+#### [PR146-rebase] software-engineer — rebase kim-407 onto kim-395 to remove conflict
+- [00:11] Started — fetched origin, detached HEAD at origin/kim-407-extract-member-import (b80606d)
+- [00:11] Identified true merge-base between kim-395 and kim-407 is 169be44 (shared "build xlsx fixtures with exceljs" commit); kim-407's unique commits beyond it: 3a697df, 2e41767, 4c276d5, a1e9044, b80606d
+- [00:12] Ran `git rebase --onto origin/kim-395-replace-xlsx 169be44` (HEAD at kim-407 tip)
+- [00:12] Conflict 1/5 (3a697df, lib/server/users-service.ts): resolved by taking kim-407's extraction side (deletes the block of parser functions now duplicated in the new lib/server/member-import.ts, which applied cleanly as a new file). Verified byte-identical to kim-407's original users-service.ts.
+- [00:13] a1e9044 (.eslintrc.json "root": true) auto-dropped by git — patch already upstream via kim-395's d0c2cd2
+- [00:13] Conflict 2/5 (4c276d5, .claude/agent-progress.md): concatenated both sides' log entries (PR136 sliced-buffer log + PR146 sliced-buffer log)
+- [00:13] Verified lib/server/member-import.ts retains the byte-range slice fix: `bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)`
+- [00:14] Rebase completed: 4 commits replayed (0c1a8dc, 9644591, 67d9bac, fcc2ca5), 1 dropped as already-upstream
+- [00:14] Found follow-on breakage: __tests__/server/users-service.test.ts had a stale `describe('extractSpreadsheetCsv', ...)` block (added on kim-395 as a conflict-avoidance workaround) referencing an export removed by kim-407's extraction. Removed the block + unused ExcelJS import (commit 0cdca33) — equivalent coverage already exists in member-import.test.ts.
+- [00:14] pnpm build: succeeded. pnpm exec vitest run member-import.test.ts + users-service.test.ts: 54/54 passed. Full suite: 666/670 passed (4 pre-existing unrelated availability.test.ts date/timezone failures). pnpm run lint: no warnings/errors.
+- [00:14] git merge-tree HEAD vs origin/kim-395-replace-xlsx: conflict-free. Simulated develop+kim-395+HEAD merge chain: conflict-free.
