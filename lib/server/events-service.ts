@@ -251,6 +251,22 @@ export function validateAndNormaliseSchedule(
 
 // ---------------------------------------------------------------------------
 // Public API
+//
+// OIR-208 review (Finding 2 — legacy /api/events double-write surface):
+// listEvents/createEvent/updateEvent/deleteEvent below back the legacy
+// internal-events dashboard section, which has since been replaced by the
+// unified "Eventos" flow in lib/server/club-events-service.ts. No component
+// or hook consumes app/api/events/route.ts or app/api/events/[id]/route.ts
+// anymore (verified: no references to the use-admin.ts event hooks outside
+// that hook file and its tests). Those routes — and these functions — are
+// intentionally NOT removed here because __tests__/app/api/events.test.ts
+// and __tests__/server/events-service.test.ts (and
+// events-service-multiday.test.ts) exercise them directly and test edits are
+// out of scope for this change. Divergence risk: a unified internal event
+// (both title_es/title_en NULL, created via the unified admin flow) remains
+// writable/deletable through this surface too, with different
+// validation/defaults than the unified service. Do not wire any new
+// consumer to this surface — prefer lib/server/club-events-service.ts.
 // ---------------------------------------------------------------------------
 
 export async function listEvents(): Promise<AdminEvent[]> {

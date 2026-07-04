@@ -668,3 +668,21 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [18:10] ✅ Test suite: PASS (864 tests, all green)
 - [18:10] ✅ Typecheck: PASS
 - [18:10] ✅ Lint: PASS
+
+#### [OIR-208] software-engineer — review fixes
+- [Started] Reset worktree to origin/feat/oir-208-unified-events (a8713a6)
+- Fix 1 (CRITICAL): resolveClubEventFields in lib/server/club-events-service.ts now preserves
+  current.description/start_time/end_time on UPDATE (only defaults null/'00:00:00'/'23:59:00' on CREATE) —
+  editing a pre-existing legacy internal event no longer destroys its real anchor times/description.
+- Fix 2: investigated consumers of legacy /api/events routes — no component/hook usage beyond
+  lib/hooks/use-admin.ts itself; BUT __tests__/app/api/events.test.ts (37 tests, imports GET/POST/PUT/DELETE
+  directly from these route files) and __tests__/server/events-service.test.ts /
+  events-service-multiday.test.ts test createEvent/updateEvent/deleteEvent directly. Removing routes/functions
+  would break those suites, and test edits are out of scope. Decision: kept routes + service functions,
+  added divergence-risk comments in app/api/events/route.ts, app/api/events/[id]/route.ts,
+  lib/server/events-service.ts, and lib/api/endpoints.ts documenting the double-write risk and pointing
+  future consumers to the unified club-events service.
+- Fix 3: added explicit "deliberate" comment in resolveClubEventFields documenting that
+  blurb/description/image are intentionally preserved when visibleOnLanding toggles OFF (re-publish support).
+- Validation: pnpm typecheck (green), pnpm lint (green, no warnings), pnpm test (56 files / 864 tests, all green).
+- [Complete] ✅ Commit pushed to feat/oir-208-unified-events.

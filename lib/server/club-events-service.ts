@@ -367,9 +367,23 @@ function resolveClubEventFields(body: ClubEventInput, current: EventRow | null):
     ? parseBooleanFlag(body.visibleOnLanding)
     : (current ? isClubEventRow(current) : true)
 
+  // OIR-208 review fix: the unified form never edits description/start_time/
+  // end_time, so an UPDATE must preserve whatever is already on the row (a
+  // pre-existing legacy internal event may carry a real description and
+  // anchor times, and silently nulling/resetting them on every save would
+  // destroy that data) — only a CREATE gets the all-day/no-description
+  // defaults, since there is no prior row to preserve.
+  const description = current ? current.description : null
+  const startTime = current ? current.start_time : '00:00:00'
+  const endTime = current ? current.end_time : '23:59:00'
+
   return {
     title_es: visibleOnLanding ? titleEs : null,
     title_en: visibleOnLanding ? titleEn : null,
+    // Deliberate (toggle OFF stale content): blurb/description/image are kept
+    // as-is when visibleOnLanding flips to false rather than being cleared.
+    // This preserves the marketing copy for a later re-publish and lets the
+    // admin form show it back for review when the event is re-enabled.
     blurb_es: blurbEs,
     blurb_en: blurbEn,
     description_es: descriptionEs,
@@ -384,9 +398,9 @@ function resolveClubEventFields(body: ClubEventInput, current: EventRow | null):
     image_url: imageUrl,
     link_url: linkUrl,
     title: titleEs,
-    description: null,
-    start_time: '00:00:00',
-    end_time: '23:59:00',
+    description,
+    start_time: startTime,
+    end_time: endTime,
   }
 }
 
