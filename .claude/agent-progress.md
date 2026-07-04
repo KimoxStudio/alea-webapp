@@ -285,3 +285,5 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [22:54] pnpm exec vitest run __tests__/server/member-import.test.ts — 22/22 passed
 - [22:58] pnpm build — success, no type errors
 - [23:00] ✅ Complete — fix + regression test committed and pushed
+- [23:05] Applied approved eslintrc root:true fix (fix(lint) commit a1e9044), confirmed pnpm lint passes standalone and via pre-push hook
+- [23:06] git push origin kim-407-extract-member-import succeeded — 2e41767..a1e9044, both commits (4c276d5, a1e9044) pushed
