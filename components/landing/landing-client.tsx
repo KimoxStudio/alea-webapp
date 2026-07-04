@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import type { ClubEvent } from '@/lib/types'
 import { LandingNav } from './landing-nav'
 import { HeroSection } from './hero-section'
@@ -9,6 +9,14 @@ import { EventsSection } from './events-section'
 import { EventDetailsDialog } from './event-details-dialog'
 import { CustomCursor } from './custom-cursor'
 import { HexGridBackground } from './hex-grid-background'
+import { EasterEgg } from './easter-egg'
+import { DiceRain } from './dice-rain'
+import { MeepleHunt } from './meeple-hunt'
+import { MeepleEgg } from './meeple-egg'
+import { useShake } from '@/lib/hooks/use-shake'
+import { useTapCount } from '@/lib/hooks/use-tap-count'
+
+const NAT20_RAIN_DURATION_MS = 7500
 
 interface LandingClientProps {
   locale: string
@@ -42,6 +50,27 @@ export function LandingClient({
   const [selectedEvent, setSelectedEvent] = useState<ClubEvent | null>(null)
   const selectedVariant = selectedEvent && upcomingEvents.some((e) => e.id === selectedEvent.id) ? 'upcoming' : 'past'
 
+  const [eggOpen, setEggOpen] = useState(false)
+  const [rain, setRain] = useState(false)
+  const [meepleOpen, setMeepleOpen] = useState(false)
+
+  const triggerNat20 = useCallback(() => {
+    setEggOpen(true)
+    setRain(true)
+    setTimeout(() => setRain(false), NAT20_RAIN_DURATION_MS)
+  }, [])
+
+  const triggerMeeple = useCallback(() => setMeepleOpen(true), [])
+
+  useShake(triggerNat20)
+  useTapCount('[data-egg-tap]', 5, 1800, triggerNat20)
+
+  useEffect(() => {
+    const handler = () => triggerNat20()
+    window.addEventListener('alea:nat20', handler)
+    return () => window.removeEventListener('alea:nat20', handler)
+  }, [triggerNat20])
+
   return (
     <div className="modern-root">
       <HexGridBackground />
@@ -66,6 +95,11 @@ export function LandingClient({
           if (!open) setSelectedEvent(null)
         }}
       />
+
+      <EasterEgg open={eggOpen} onClose={() => setEggOpen(false)} />
+      <DiceRain active={rain} />
+      <MeepleHunt onCatch={triggerMeeple} />
+      <MeepleEgg open={meepleOpen} onClose={() => setMeepleOpen(false)} />
     </div>
   )
 }

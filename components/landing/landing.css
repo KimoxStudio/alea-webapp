@@ -422,3 +422,43 @@
   .mod-modal-body { padding: 24px; }
   .mod-modal-grid { grid-template-columns: 1fr; gap: 24px; }
 }
+
+/* === Footer easter-egg hint === */
+.mod-egg-hint { font-size: 12px; opacity: 0.5; margin: 6px 0 0; letter-spacing: 0.5px; }
+
+/* === Easter egg modal (nat-20) === */
+.egg-backdrop { position: fixed; inset: 0; z-index: 9000; background: rgba(0,0,0,0.75); backdrop-filter: blur(10px); display: grid; place-items: center; animation: egg-fade .35s ease; padding: 20px; }
+@keyframes egg-fade { from { opacity: 0; } to { opacity: 1; } }
+.egg-card { position: relative; max-width: 460px; width: 100%; background: linear-gradient(180deg, #1a1410, #2a1f17); border: 1.5px solid #c8a25b; border-radius: 22px; padding: 48px 36px 36px; text-align: center; color: #f4ead5; box-shadow: 0 30px 80px rgba(0,0,0,0.6); animation: egg-pop .5s cubic-bezier(.3,1.4,.4,1); }
+@keyframes egg-pop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.egg-d20 { margin: -120px auto 0; }
+.egg-d20 svg { animation: egg-spin 3s ease-in-out infinite; }
+@keyframes egg-spin { 0% { transform: rotate(-8deg); } 50% { transform: rotate(12deg); } 100% { transform: rotate(-8deg); } }
+.egg-card h3 { font-family: "Space Grotesk", sans-serif; font-size: 34px; font-weight: 700; margin: 16px 0 12px; color: #ffd980; letter-spacing: -0.02em; }
+.egg-card p { font-family: "Space Grotesk", sans-serif; font-size: 16px; line-height: 1.5; opacity: 0.85; margin: 0 0 28px; }
+.egg-card button { background: #c8a25b; color: #1a1410; border: 0; padding: 12px 28px; font-family: "Space Grotesk", sans-serif; font-size: 12px; letter-spacing: 3px; text-transform: uppercase; font-weight: 700; border-radius: 999px; cursor: pointer; transition: transform .15s; }
+.egg-card button:hover { transform: translateY(-1px); }
+
+/* === Lluvia de dados === */
+.dice-rain { position: fixed; inset: 0; z-index: 8000; pointer-events: none; }
+
+/* === Meeple cazable === */
+.meeple-hunt { position: fixed; z-index: 8500; background: none; border: 0; padding: 8px; cursor: pointer; transition: transform .15s; will-change: transform; pointer-events: auto; }
+.meeple-hunt:hover { transform: scale(1.18); }
+.meeple-hunt:hover .meeple-sparkle { opacity: 1; }
+.meeple-hunt svg { filter: drop-shadow(0 4px 14px rgba(122,31,31,0.6)) drop-shadow(0 0 22px rgba(200,162,91,0.45)); }
+.meeple-sparkle { position: absolute; top: -8px; right: -4px; color: #ffd980; font-size: 20px; text-shadow: 0 0 12px #ffd980; opacity: 0.85; animation: meeple-twinkle 1.2s ease-in-out infinite; pointer-events: none; }
+@keyframes meeple-twinkle { 0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.5; } 50% { transform: scale(1.3) rotate(20deg); opacity: 1; } }
+
+.meeple-backdrop { position: fixed; inset: 0; z-index: 9000; background: radial-gradient(ellipse at center, rgba(122,31,31,0.55), rgba(5,8,14,0.92) 70%); backdrop-filter: blur(10px); display: grid; place-items: center; padding: 24px; animation: mod-modal-fade .3s ease; }
+.meeple-card { position: relative; max-width: 460px; width: 100%; background: linear-gradient(180deg, #2a1410, #1a0d08); border: 1.5px solid #c8a25b; border-radius: 24px; padding: 48px 36px 36px; text-align: center; color: var(--ink); box-shadow: 0 40px 100px rgba(0,0,0,0.7), 0 0 80px rgba(200,162,91,0.25); animation: mod-modal-pop .55s cubic-bezier(.2,1.3,.4,1); }
+.meeple-card-art { margin: -120px auto 16px; display: block; animation: meeple-card-dance 2.4s ease-in-out infinite; }
+@keyframes meeple-card-dance { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(8deg); } }
+.meeple-card h3 { font-family: "Space Grotesk", sans-serif; font-size: 30px; font-weight: 700; margin: 8px 0 12px; color: #ffd980; letter-spacing: -0.02em; text-wrap: balance; }
+.meeple-card > p { font-size: 16px; line-height: 1.55; opacity: 0.88; margin: 0 0 24px; }
+.meeple-code { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border: 1.5px dashed rgba(255,217,128,0.5); border-radius: 14px; background: rgba(0,0,0,0.3); margin-bottom: 20px; }
+.meeple-code span { font-family: "Space Grotesk", monospace; font-size: 22px; font-weight: 700; letter-spacing: 4px; color: #ffd980; }
+.meeple-code button { background: #c8a25b; color: #1a0d08; border: 0; padding: 10px 16px; border-radius: 999px; font-family: inherit; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; cursor: pointer; transition: transform .15s, background .2s; }
+.meeple-code button:hover { background: #ffd980; transform: translateY(-1px); }
+.meeple-close { background: transparent; border: 1px solid rgba(200,162,91,0.5); color: var(--ink); padding: 10px 22px; border-radius: 999px; font-family: inherit; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: 600; cursor: pointer; transition: border-color .2s, color .2s; }
+.meeple-close:hover { border-color: #ffd980; color: #ffd980; }

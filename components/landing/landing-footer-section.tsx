@@ -36,6 +36,7 @@ export async function LandingFooterSection({ locale }: LandingFooterSectionProps
             {t('hero.tagline')} · {t('hero.location')}
           </p>
           <p className="mod-foot-tag">{t('hero.badgeOpen')}</p>
+          <p className="mod-egg-hint">{t('easter.hint')}</p>
         </div>
         <div>
           <h5>{t('footer.find')}</h5>

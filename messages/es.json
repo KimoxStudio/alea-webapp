@@ -482,7 +482,19 @@
       "you": "Te ha tocado"
     },
     "egg": {
-      "title": "Bonus secreto"
+      "title": "¡Has tirado un 20 natural!",
+      "body": "Acabas de descubrir el easter egg. Mándale captura a la junta y te invitamos al primer café.",
+      "close": "Cerrar"
+    },
+    "meeple": {
+      "title": "¡Cazaste al meeple perdido!",
+      "body": "Andaba escapado por la landing. Lo devolvemos a la mesa con un detalle para ti: un mes de cuota gratis al hacerte socio.",
+      "copy": "Copiar",
+      "copied": "¡Copiado!",
+      "close": "Cerrar"
+    },
+    "easter": {
+      "hint": "Pssst… anda un meeple suelto por aquí. Pillalo."
     }
   },
   "checkin": {

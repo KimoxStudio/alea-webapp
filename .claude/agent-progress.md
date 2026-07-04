@@ -397,3 +397,15 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [00:00] No other cursor deviations found: lerp factor (0.16), ring size/opacity/border, z-index 9999, transform translate(-50%,-50%), cursor:none scoping to .modern-root, touch/coarse-pointer fallback, and marquee grab/grabbing behavior in landing.css + marquee-row.tsx already matched the design spec exactly.
 - [00:00] Fixed: custom-cursor.tsx now accepts `variant?: 'die' | 'meeple' | 'pawn'` (default 'die') and `color` (default '#e6c281'), rendering the die SVG (rounded rect fill=color, 3 pips #1a1410 at (30,30)/(70,70)/(50,50), 22x22, viewBox 0 0 100 100) as the default/landing icon, matching the design's CustomCursor exactly. landing-client.tsx now mounts `<CustomCursor variant="die" color="#e6c281" />` explicitly.
 - [00:00] ✅ Complete — cursor now matches design 1:1 (die icon, gold color, ring lag, cursor:none scoping unchanged).
+
+#### [OIR-202-eggs] software-engineer — easter eggs + tailwind tokens
+- [13:20] Started. Read easter-eggs-bundle.md reference and existing landing components/messages/tailwind config.
+- [13:22] Added i18n keys (home.egg.body/close, home.meeple.*, home.easter.hint) to messages/en.json and messages/es.json, kept full EN/ES parity.
+- [13:24] Created components/landing/easter-egg.tsx, dice-rain.tsx, meeple-hunt.tsx, meeple-egg.tsx (next-intl useTranslations('home'), no useI18n/useKonami ported).
+- [13:25] Created lib/hooks/use-shake.ts and lib/hooks/use-tap-count.ts.
+- [13:27] Appended egg/dice-rain/meeple CSS blocks (+ .mod-egg-hint) to components/landing/landing.css; reused existing mod-modal-fade/mod-modal-pop keyframes (no duplication).
+- [13:28] Added alea color palette + mod-pulse/mod-marq/mod-float keyframes/animations to tailwind.config.ts (additive only).
+- [13:30] Wired landing-client.tsx: eggOpen/rain/meepleOpen state, triggerNat20 (7500ms rain), useShake, useTapCount on [data-egg-tap] (5/1800ms), alea:nat20 listener, rendered 4 components after main content.
+- [13:31] Added window.dispatchEvent(new CustomEvent('alea:nat20')) in hero-section.tsx on nat20 roll; confirmed landing-nav.tsx logo already had data-egg-tap; added easter.hint paragraph to landing-footer-section.tsx.
+- [13:35] pnpm install (worktree had no node_modules), pnpm run typecheck — clean, pnpm run lint — no warnings/errors, pnpm run build — succeeded (pre-existing unrelated Edge Runtime crypto warning only).
+- [13:36] ✅ Complete — all easter-egg components/hooks/i18n/CSS/Tailwind tokens wired and validated (typecheck/lint/build pass).

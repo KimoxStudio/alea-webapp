@@ -482,7 +482,19 @@
       "you": "You got"
     },
     "egg": {
-      "title": "Secret bonus"
+      "title": "Natural 20!",
+      "body": "You found the easter egg. Screenshot it to the board and your first coffee's on us.",
+      "close": "Close"
+    },
+    "meeple": {
+      "title": "You caught the lost meeple!",
+      "body": "It had escaped across the landing. Bring it back to the table — and we'll give you one month of membership for free.",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "close": "Close"
+    },
+    "easter": {
+      "hint": "Psst… there's a stray meeple loose around here. Catch it."
     }
   },
   "checkin": {

@@ -47,6 +47,7 @@ export function HeroSection({ locale, upcomingEvents, onPickEvent }: HeroSection
         if (result === 20) {
           setNat20(true)
           setPick(null)
+          window.dispatchEvent(new CustomEvent('alea:nat20'))
         } else {
           const idx = (result - 1) % upcomingEvents.length
           setPick(upcomingEvents[idx] ?? null)
