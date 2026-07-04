@@ -72,6 +72,13 @@ function createAdminSession(): SessionUser {
   return { id: 'user-admin-1', role: 'admin' }
 }
 
+// OIR-208: fixed table -> room ownership used by the mocked RPC to simulate
+// the migration's room_id/table_id consistency guard (see rpc mock below).
+const TABLE_ROOM_MAP: Record<string, string> = {
+  'table-1': 'room-1',
+  'table-2': 'room-2',
+}
+
 function buildSupabaseMock() {
   const state: any = {}
   return {
@@ -179,6 +186,13 @@ function buildSupabaseMock() {
             if (!('table_id' in block)) {
               return { data: null, error: { code: '22P02' } }
             }
+            // OIR-208 regression: the migration's apply_club_event_room_blocks
+            // rejects a block whose table_id does not belong to the given
+            // room_id (mirrors the RAISE EXCEPTION ... USING ERRCODE = '23514'
+            // guard added to the migration).
+            if (block.table_id && TABLE_ROOM_MAP[block.table_id] && TABLE_ROOM_MAP[block.table_id] !== block.room_id) {
+              return { data: null, error: { code: '23514' } }
+            }
           }
         }
         if (params.p_materials !== null && Array.isArray(params.p_materials)) {
@@ -285,13 +299,39 @@ describe('OIR-208: Unified Events', () => {
 
   describe('Materials Validation', () => {
     it('rejects materials with quantity 0', async () => {
-      const material = [{ equipmentId: 'eq-1', quantity: 0 }]
-      expect(material[0].quantity).toBeLessThan(1)
+      const mockSupabase = buildSupabaseMock()
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
+        mockSupabase as any,
+      )
+
+      const { createClubEvent } = await import('@/lib/server/club-events-service')
+
+      await expect(
+        createClubEvent(createAdminSession(), {
+          titleEs: 'Event',
+          date: '2026-05-01',
+          dateKind: 'single',
+          materials: [{ equipmentId: 'eq-1', quantity: 0 }] as any,
+        }),
+      ).rejects.toMatchObject({ statusCode: 400 })
     })
 
     it('rejects materials with negative quantity', async () => {
-      const material = [{ equipmentId: 'eq-1', quantity: -5 }]
-      expect(material[0].quantity).toBeLessThan(1)
+      const mockSupabase = buildSupabaseMock()
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
+        mockSupabase as any,
+      )
+
+      const { createClubEvent } = await import('@/lib/server/club-events-service')
+
+      await expect(
+        createClubEvent(createAdminSession(), {
+          titleEs: 'Event',
+          date: '2026-05-01',
+          dateKind: 'single',
+          materials: [{ equipmentId: 'eq-1', quantity: -5 }] as any,
+        }),
+      ).rejects.toMatchObject({ statusCode: 400 })
     })
 
     it('rejects non-array materials payload', async () => {
@@ -570,6 +610,90 @@ describe('OIR-208: Unified Events', () => {
       })
 
       expect(rpcSpy).toHaveBeenCalled()
+    })
+
+    it('rejects a block whose table_id does not belong to room_id (mismatched room/table payload)', async () => {
+      const mockSupabase = buildSupabaseMock()
+
+      mockSupabase.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: {
+                    id: 'evt-1',
+                    title: 'Event',
+                    title_es: 'Evento',
+                    title_en: 'Event',
+                    date_kind: 'single',
+                    date: '2026-04-20',
+                    created_at: '2026-04-01T00:00:00Z',
+                  } as EventRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      id: 'evt-1',
+                      title: 'Event',
+                      title_es: 'Evento',
+                      title_en: 'Event',
+                      date_kind: 'single',
+                      date: '2026-04-20',
+                      created_at: '2026-04-01T00:00:00Z',
+                    } as EventRow,
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        if (table === 'event_room_blocks') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                [Symbol.toStringTag]: 'Promise',
+                then: async (cb: any) =>
+                  cb?.({
+                    data: [],
+                    error: null,
+                  }),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
+        mockSupabase as any,
+      )
+
+      const { updateClubEvent } = await import('@/lib/server/club-events-service')
+
+      // table-1 belongs to room-1 (TABLE_ROOM_MAP); pairing it with room-2
+      // simulates an admin payload where the table selection doesn't match
+      // the selected room — the RPC must reject this before inserting.
+      await expect(
+        updateClubEvent(createAdminSession(), 'evt-1', {
+          schedules: [
+            {
+              roomId: 'room-2',
+              tableId: 'table-1',
+              date: '2026-04-20',
+              startTime: '14:00',
+              endTime: '16:00',
+            },
+          ],
+          blocksRooms: true,
+        }),
+      ).rejects.toMatchObject({ statusCode: 400 })
     })
   })
 

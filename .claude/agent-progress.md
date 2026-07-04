@@ -717,3 +717,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [18:44] Searched __tests__ for coverage of app/[locale]/page.tsx directly — none exists. auth-pages.test.tsx's "root page redirects valid sessions directly to rooms" test covers the separate app/page.tsx (RootPage), unaffected by this change
 - [18:44] pnpm typecheck / pnpm lint / pnpm test all green (56 test files, 868 tests, including auth-pages.test.tsx 9/9 passing)
 - [18:44] ✅ Complete — app/[locale]/page.tsx diff minimal, behavior identical (landing renders for everyone)
+
+#### [PR154] software-engineer — room/table FK + fix sham quantity test
+- Started
+- [22:52] Migration: added in-RPC room_id/table_id consistency guard (RAISE EXCEPTION ERRCODE 23514) inside apply_club_event_room_blocks, before INSERT — avoids the broader schema change a composite FK would require (UNIQUE(id, room_id) on tables). Service layer already maps 23514 -> 400.
+- [22:52] Test: fixed sham "rejects materials with quantity 0"/"negative quantity" tests to route through createClubEvent and assert statusCode 400; added regression test for mismatched room_id/table_id block payload (updateClubEvent) rejecting with statusCode 400 (RPC Payload: tableId in blocks describe).
+- [22:52] pnpm test -- __tests__/server/oir208-unified-events.test.ts: 33/33 passing. Full suite: 3 pre-existing unrelated failures (hardcoded absolute paths to main repo checkout in library-games/partners/uploads service tests — reproduced identically on unmodified branch, not caused by this change).
+- [22:53] pnpm build: succeeded.
+- [22:53] ✅ Complete — migration + tests pushed to feat/oir-208-unified-events

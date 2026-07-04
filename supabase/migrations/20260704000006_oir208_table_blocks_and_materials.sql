@@ -14,6 +14,15 @@
 --    table_id per block and an optional p_materials payload so the unified
 --    event service (lib/server/club-events-service.ts) can replace blocks
 --    and materials atomically in one call.
+-- 4. room_id/table_id consistency: event_room_blocks.room_id and .table_id
+--    are independent FKs, so nothing at the schema level stops a caller
+--    from pairing a table_id with a room_id from a different room. A
+--    composite FK would require adding a UNIQUE("id","room_id") constraint
+--    on "public"."tables" purely to support this check — broader than the
+--    fix warrants. Instead, apply_club_event_room_blocks validates in-RPC
+--    (before insert) that table_id's parent room matches the supplied
+--    room_id, raising a 23514 (check_violation) that the service layer
+--    already maps to a 400 "Invalid event data" ServiceError.
 
 ALTER TABLE "public"."event_room_blocks"
   ADD COLUMN IF NOT EXISTS "table_id" uuid REFERENCES "public"."tables"("id") ON DELETE CASCADE;
@@ -97,6 +106,21 @@ BEGIN
                          ELSE (v_elem->>'end_time')::time END;
 
       IF v_room_id IS NOT NULL THEN
+        -- Guard against a table_id/room_id mismatch: independent FKs alone
+        -- would let a caller pair a table_id from one room with a
+        -- room_id from another, leaving cancellation/availability logic
+        -- acting on a table that does not belong to the block's room.
+        IF v_table_id IS NOT NULL
+           AND NOT EXISTS (
+             SELECT 1 FROM public.tables
+             WHERE id = v_table_id AND room_id = v_room_id
+           )
+        THEN
+          RAISE EXCEPTION
+            'table_id % does not belong to room_id %', v_table_id, v_room_id
+            USING ERRCODE = '23514';
+        END IF;
+
         INSERT INTO public.event_room_blocks (event_id, room_id, table_id, date, start_time, end_time, all_day)
         VALUES (p_event_id, v_room_id, v_table_id, v_date, v_start, v_end, v_all_day);
 
