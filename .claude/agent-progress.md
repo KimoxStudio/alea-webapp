@@ -500,3 +500,12 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [15:46] Started: audited diff origin/feat/oir-204-partners-management...HEAD (migration, service layer, routes, admin UI, landing wiring, i18n)
 - [15:46] Checked: RLS/grants on library_games (SELECT-only active=true, no write policies), requireAdmin+enforceMutationSecurity+rate-limit on routes, no URL fields/no unvalidated URL rendering, no dangerouslySetInnerHTML, i18n parity confirmed (libraryGames.* en/es), no secrets in diff, landing degradation wrapper catches fetch failures server-side
 - [15:46] ✅ Complete — APPROVED, no blocking findings. Opened PR #151 (final PR of the #148→#149→#150→#151 stacked chain) targeting develop.
+
+#### [PR149] software-engineer — atomic club-event insert+blocks
+- [22:51] Started: reviewer inline comment on club-events-service.ts:467 — createClubEvent could leave an orphan "events" row if apply_club_event_room_blocks RPC fails after the insert.
+- [22:51] Chose smallest-diff fallback (reviewer-approved alternative to a full transactional RPC): (1) validateRoomsExist() checks all referenced room ids against the `rooms` table BEFORE the event insert, rejecting bad ids with 400 up front; (2) wrapped applyClubEventRoomBlocks() in try/catch — on any RPC failure (including transient ones after valid room ids), the just-inserted event row is compensating-deleted before rethrowing, so no orphan row survives.
+- [22:51] Did not touch updateClubEvent — reviewer comment scoped to the create flow only; update doesn't create a new row on RPC failure so the orphan-row risk doesn't apply there.
+- [22:51] No new migration needed — apply_club_event_room_blocks RPC (20260704000004) unchanged.
+- [22:51] Added 2 regression tests to __tests__/server/club-events-service.test.ts: (a) forces the block RPC to fail and asserts the event row is deleted via events.delete().eq('id', 'evt-new-1'); (b) forces the room-existence check to fail and asserts 400 + zero calls to from('events') (no insert at all). Also updated the shared mock's `rooms` `.in()` handler to default to "room exists" so pre-existing tests using roomId fixtures keep passing.
+- [22:51] pnpm test (full suite): 52 files / 700 tests passed. pnpm build: succeeded, no new type errors.
+- [22:51] ✅ Complete — pushed to feat/oir-203-admin-club-events
