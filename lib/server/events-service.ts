@@ -188,11 +188,23 @@ function jsonToAdminEvent(obj: Record<string, unknown>): AdminEvent {
 
 // ---------------------------------------------------------------------------
 // Validate a raw schedule payload element and return normalised block
+//
+// Exported so lib/server/club-events-service.ts (OIR-203) can reuse the same
+// validation for the public club-event "blocks rooms" sub-flow instead of
+// duplicating date/time parsing rules.
 // ---------------------------------------------------------------------------
-function validateAndNormaliseSchedule(
+export interface NormalisedEventSchedule {
+  room_id: string | null
+  date: string
+  start_time: string
+  end_time: string
+  all_day: boolean
+}
+
+export function validateAndNormaliseSchedule(
   raw: unknown,
   index: number,
-): { room_id: string | null; date: string; start_time: string; end_time: string; all_day: boolean } {
+): NormalisedEventSchedule {
   if (typeof raw !== 'object' || raw === null) {
     serviceError(`schedules[${index}] must be an object`, 400)
   }
@@ -222,6 +234,12 @@ export async function listEvents(): Promise<AdminEvent[]> {
   const { data: events, error: eventsError } = await supabase
     .from('events')
     .select('id, title, description, date, start_time, end_time, created_by, created_at')
+    // Exclude public "club event" landing rows (OIR-203): a row becomes
+    // landing content once both bilingual titles are populated (see
+    // lib/server/club-events-service.ts). Those are managed exclusively via
+    // the dedicated "Club events" dashboard section, not this legacy
+    // internal room-booking view.
+    .or('title_es.is.null,title_en.is.null')
     .order('date', { ascending: true })
     .order('start_time', { ascending: true })
 
