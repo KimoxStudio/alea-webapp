@@ -176,6 +176,12 @@ function buildSupabaseMock() {
                   if (table === 'event_room_blocks') {
                     return onFulfilled?.({ data: [], error: null })
                   }
+                  if (table === 'rooms') {
+                    // Default: every referenced room id "exists" so tests that
+                    // don't specifically exercise the room-validation path
+                    // (PR #149 review, createClubEvent) keep passing unmodified.
+                    return onFulfilled?.({ data: vals.map((id: string) => ({ id })), error: null })
+                  }
                   return onFulfilled?.({ data: [], error: null })
                 },
               }
@@ -527,6 +533,116 @@ describe('club-events-service', () => {
 
       expect(result.blocksRooms).toBe(true)
       expect(result.roomBlocks.length).toBe(1)
+    })
+
+    it('rolls back (deletes) the created event when apply_club_event_room_blocks RPC fails, leaving no orphan row (PR #149 review)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      // Simulate a block-replacement RPC failure that happens AFTER the
+      // event row has already been inserted (e.g. a transient DB error, not
+      // necessarily a bad room id — room ids are validated separately and
+      // still pass here).
+      mockSupabaseAdmin.rpc = vi.fn(async () => ({
+        data: null,
+        error: { message: 'transient failure', code: 'XX000' },
+      }))
+
+      const deleteEq = vi.fn(async () => ({ data: null, error: null }))
+      const baseFrom = mockSupabaseAdmin.from
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        const result = baseFrom(table)
+        if (table === 'events') {
+          return { ...result, delete: vi.fn(() => ({ eq: deleteEq })) }
+        }
+        return result
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError
+        .mockImplementation((msg, code) => {
+          const err = new Error(msg) as ServiceError
+          err.statusCode = code
+          throw err
+        })
+
+      const { createClubEvent } = await loadClubEventsService()
+
+      await expect(
+        createClubEvent(adminSession, {
+          titleEs: 'Torneo con Bloques',
+          titleEn: 'Tournament with Blocks',
+          date: '2026-05-01',
+          dateKind: 'single',
+          blocksRooms: true,
+          schedules: [
+            {
+              date: '2026-05-01',
+              startTime: '18:00',
+              endTime: '22:00',
+              allDay: false,
+              roomId: 'room-1',
+            },
+          ],
+        })
+      ).rejects.toMatchObject({ statusCode: 500 })
+
+      // The event row created by the earlier insert (id: evt-new-1, per the
+      // shared mock) must be deleted once the block RPC fails — no orphan
+      // club event should ever be left behind.
+      expect(deleteEq).toHaveBeenCalledWith('id', 'evt-new-1')
+    })
+
+    it('rejects an unknown room id in schedules with 400 BEFORE inserting the event row (PR #149 review)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      const baseFrom = mockSupabaseAdmin.from
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'rooms') {
+          // No rooms exist — every referenced room id is "unknown".
+          return {
+            select: vi.fn(() => ({
+              in: vi.fn(() => Promise.resolve({ data: [], error: null })),
+            })),
+          }
+        }
+        return baseFrom(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError
+        .mockImplementation((msg, code) => {
+          const err = new Error(msg) as ServiceError
+          err.statusCode = code
+          throw err
+        })
+
+      const { createClubEvent } = await loadClubEventsService()
+
+      await expect(
+        createClubEvent(adminSession, {
+          titleEs: 'Torneo con Bloques',
+          titleEn: 'Tournament with Blocks',
+          date: '2026-05-01',
+          dateKind: 'single',
+          blocksRooms: true,
+          schedules: [
+            {
+              date: '2026-05-01',
+              startTime: '18:00',
+              endTime: '22:00',
+              allDay: false,
+              roomId: 'room-does-not-exist',
+            },
+          ],
+        })
+      ).rejects.toMatchObject({ statusCode: 400 })
+
+      const eventsFromCalls = mockSupabaseAdmin.from.mock.calls.filter((call: any[]) => call[0] === 'events')
+      expect(eventsFromCalls.length).toBe(0)
     })
 
     it('rejects malformed schedules with 400 and no insert on events table (Finding 2)', async () => {
