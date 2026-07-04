@@ -415,23 +415,25 @@ function MaterialsEditor({
       ) : (
         <div className="space-y-2">
           {materials.map((entry, i) => (
-            <div key={entry.id} className="flex items-center gap-2">
-              <Select
-                value={entry.equipmentId}
-                onValueChange={(v) => updateMaterial(i, { ...entry, equipmentId: v })}
-              >
-                <SelectTrigger
-                  id={`${dialogId}-material-${i}-equipment`}
-                  className="bg-background-secondary border-border h-8 text-sm flex-1"
+            <div key={entry.id} className="flex flex-wrap items-center gap-2">
+              <div className="min-w-0 flex-1 basis-40">
+                <Select
+                  value={entry.equipmentId}
+                  onValueChange={(v) => updateMaterial(i, { ...entry, equipmentId: v })}
                 >
-                  <SelectValue placeholder={t('clubEvents.selectMaterial')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(equipment ?? []).map((item) => (
-                    <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <SelectTrigger
+                    id={`${dialogId}-material-${i}-equipment`}
+                    className="bg-background-secondary border-border h-8 text-sm w-full"
+                  >
+                    <SelectValue placeholder={t('clubEvents.selectMaterial')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(equipment ?? []).map((item) => (
+                      <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Input
                 type="number"
                 min={1}
