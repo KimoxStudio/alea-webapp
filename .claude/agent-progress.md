@@ -631,3 +631,32 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [17:30] i18n parity confirmed for imageUpload.* keys in en/es. No secrets found in diff.
 - [17:30] npx vitest run: 836/836 passed.
 - [17:35] ✅ Complete — APPROVE. Opened PR #153 (feat/oir-207-image-uploads → develop), stacked-chain final PR note included.
+
+#### [OIR-208] software-engineer — unified events + table blocks + materials
+- [18:00] Started. Explored equipment domain (public.equipment, lib/server/equipment-service.ts),
+  event_room_blocks read paths (tables-service, rooms-service, reservations-service,
+  saved-games-service), tables schema, use-admin.ts hooks (useAdminRoomTables/useAdminEquipment
+  already existed).
+- [18:10] Migration 20260704000006: event_room_blocks.table_id (nullable FK, ON DELETE CASCADE),
+  event_equipment table (service-role only RLS), apply_club_event_room_blocks extended with
+  table_id-per-block + p_materials (both null-leaves-untouched / array-replaces semantics).
+- [18:20] club-events-service.ts unified: dropped AND-not-null filter from listAdminClubEvents,
+  dropped isClubEventRow guard from update/delete, added visibleOnLanding toggle (nulls
+  title_es/title_en when off, legacy title always populated), materials validate+fetch,
+  table-scoped block replace.
+- [18:30] Extended every availability read path for table granularity: tables-service
+  getTableAvailability, rooms-service getRoomTablesAvailability, reservations-service
+  hasEventBlockConflict (both call sites), saved-games-service assertTableAndEventAvailability.
+  Used `== null` (not `=== null`) for table_id checks — treats absent/undefined the same as
+  NULL ("whole room"), consistent with lib/server/availability.ts's existing convention.
+- [18:45] UI: club-events-section.tsx rewritten — Mesa select per schedule row (useAdminRoomTables),
+  materials multi-select with quantity (useAdminEquipment), visibleOnLanding toggle gating
+  landing-only fields, Landing badge on rows. Deleted events-tab.tsx + events-section.tsx
+  (dashboard); admin-dashboard.tsx now renders ClubEventsSection directly under the Eventos tab.
+- [18:50] i18n: messages/en.json + es.json updated (clubEvents.* renamed/added keys,
+  eventsTab.* removed). Key parity verified via script — OK.
+- [19:00] pnpm typecheck / lint / build: all green. npx vitest run: 836/836 passed (no test
+  files touched) — 3 tests initially failed due to `=== null` vs `== null` on table_id in
+  fixture rows lacking the field entirely; fixed by using `== null` (see above), not by
+  editing tests.
+- [19:05] ✅ Complete — migration, service, availability, UI, i18n all done; full suite green.
