@@ -561,6 +561,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_club_event_room_blocks: {
+        Args: {
+          p_event_id: string
+          p_blocks: Json
+        }
+        Returns: Json
+      }
       cancel_expired_pending_reservations: {
         Args: {
           club_timezone?: string
