@@ -962,3 +962,64 @@ describe('partners-service', () => {
     })
   })
 })
+
+  describe('createPartner with optional English (OIR-206)', () => {
+    it('admin can create a partner with descriptionEn absent, falls back to descriptionEs', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createPartner } = await loadPartnersService()
+
+      const result = await createPartner(adminSession, {
+        name: 'Librería Local',
+        imageUrl: 'https://example.com/library.png',
+        descriptionEs: 'Tu tienda de libros favorita',
+        // descriptionEn absent — should fallback
+      })
+
+      expect(result.name).toBe('Librería Local')
+      expect(result.descriptionEs).toBe('Tu tienda de libros favorita')
+      expect(result.descriptionEn).toBe('Tu tienda de libros favorita') // Fallback to ES
+    })
+
+    it('admin can create a partner with descriptionEn empty string, falls back to descriptionEs', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createPartner } = await loadPartnersService()
+
+      const result = await createPartner(adminSession, {
+        name: 'Tienda de Juegos',
+        imageUrl: 'https://example.com/games.png',
+        descriptionEs: 'Juegos de mesa y más',
+        descriptionEn: '', // Empty string — should fallback
+      })
+
+      expect(result.descriptionEn).toBe('Juegos de mesa y más')
+    })
+
+    it('admin can create a partner with explicit descriptionEn, preserves EN value', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createPartner } = await loadPartnersService()
+
+      const result = await createPartner(adminSession, {
+        name: 'Café Artesanal',
+        imageUrl: 'https://example.com/cafe.png',
+        descriptionEs: 'Café y pasteles locales',
+        descriptionEn: 'Artisanal coffee and pastries',
+      })
+
+      expect(result.descriptionEn).toBe('Artisanal coffee and pastries')
+    })
+  })
