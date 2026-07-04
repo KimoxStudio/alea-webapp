@@ -761,7 +761,18 @@ export async function createClubEvent(session: SessionUser, body: ClubEventInput
       // notwithstanding — e.g. a transient DB error). Remove the now-orphaned
       // row so a failed create never leaves a partial club event behind, then
       // rethrow the original error (preserves its status code/message).
-      await admin.from('events').delete().eq('id', row.id)
+      const { error: compensatingDeleteError } = await admin.from('events').delete().eq('id', row.id)
+      if (compensatingDeleteError) {
+        // PR #149 review (round 2): if the compensating delete itself fails,
+        // the client still sees the original RPC error (500) below, but a
+        // fully public, un-blocked event row would otherwise silently persist
+        // with no room blocks and no visibility for ops. Log it loudly so the
+        // orphaned row can be found and cleaned up manually.
+        console.error(
+          '[club-events] compensating delete failed after apply_club_event_room_blocks error — orphaned event row requires manual cleanup:',
+          row.id,
+        )
+      }
       throw err
     }
   }
