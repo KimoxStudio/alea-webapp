@@ -277,3 +277,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [23:14] pnpm exec vitest run users-service.test.ts + member-import.test.ts: 54/54 passed. Full suite: 666/670 passed (4 pre-existing unrelated failures in availability.test.ts, date/timezone flakiness, not touched by this change).
 - [23:15] pnpm build: succeeded. pnpm run lint: no warnings/errors.
 - [23:16] ✅ Complete — commit 7ade28a pushed to origin/kim-395-replace-xlsx
+
+#### [PR146] software-engineer — sliced-buffer fix member-import
+- [22:47] Started — reviewer comment on lib/server/member-import.ts:195 (bytes.buffer passed whole instead of byte range)
+- [22:49] Fixed extractSpreadsheetCsv to use bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) before handing to ExcelJS
+- [22:53] Added regression test in __tests__/server/member-import.test.ts: Uint8Array view with non-zero byteOffset + crafted trailing fake zip EOCD record proves the bug (verified test fails with old code: "Spreadsheet does not contain any sheets", passes with fix)
+- [22:54] pnpm exec vitest run __tests__/server/member-import.test.ts — 22/22 passed
+- [22:58] pnpm build — success, no type errors
+- [23:00] ✅ Complete — fix + regression test committed and pushed
