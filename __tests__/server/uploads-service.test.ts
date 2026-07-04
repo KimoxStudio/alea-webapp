@@ -50,11 +50,47 @@ interface MockFile {
   arrayBuffer: () => Promise<ArrayBuffer>
 }
 
+// Real magic-byte signatures for each allowed image MIME type, used so the
+// happy-path fixtures pass the service's magic-byte verification.
+const REAL_SIGNATURE_BYTES: Record<string, number[]> = {
+  'image/png': [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+  'image/jpeg': [0xff, 0xd8, 0xff, 0xe0],
+  'image/webp': [0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50],
+  'image/gif': [0x47, 0x49, 0x46, 0x38, 0x39, 0x61],
+}
+
+/**
+ * Builds a mock File-like object whose body bytes are a real, matching magic
+ * signature for `type` (when `type` is a known image MIME), padded with
+ * zero bytes up to `size`. For non-image / unrecognized `type` values, the
+ * body is left as all-zero bytes (no known signature applies).
+ */
 function createMockFile(size: number, type: string): MockFile {
   const buffer = new ArrayBuffer(size)
+  const bytes = new Uint8Array(buffer)
+  const signature = REAL_SIGNATURE_BYTES[type]
+  if (signature) {
+    bytes.set(signature.slice(0, Math.min(signature.length, size)))
+  }
   return {
     size,
     type,
+    arrayBuffer: async () => buffer,
+  }
+}
+
+/**
+ * Builds a mock File-like object that *claims* `declaredType` via `.type`
+ * but whose body bytes carry a different (or no) real signature — used to
+ * simulate a spoofed / mismatched upload.
+ */
+function createSpoofedMockFile(size: number, declaredType: string, actualBytes: number[]): MockFile {
+  const buffer = new ArrayBuffer(size)
+  const bytes = new Uint8Array(buffer)
+  bytes.set(actualBytes.slice(0, Math.min(actualBytes.length, size)))
+  return {
+    size,
+    type: declaredType,
     arrayBuffer: async () => buffer,
   }
 }
@@ -508,6 +544,154 @@ describe('uploads-service', () => {
     })
   })
 
+  describe('magic-byte verification — body does not match declared MIME', () => {
+    it('file.type is "image/png" but body is not PNG (plain text bytes) → 400, storage never called', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      const textBytes = Array.from(Buffer.from('not a real png file contents'))
+      const mockFile = createSpoofedMockFile(1024, 'image/png', textBytes)
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
+        mockSupabaseAdmin as any
+      )
+      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+        const err = new Error(msg) as ServiceError
+        err.statusCode = code
+        throw err
+      })
+
+      const { uploadLandingMediaImage } = await loadUploadsService()
+
+      await expect(
+        uploadLandingMediaImage(adminSession, {
+          file: mockFile,
+          folder: 'events',
+        })
+      ).rejects.toMatchObject({ statusCode: 400 })
+
+      expect(mockSupabaseAdmin._uploadSpy).not.toHaveBeenCalled()
+    })
+
+    it('file.type is "image/jpeg" but body is not JPEG (plain text bytes) → 400, storage never called', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      const textBytes = Array.from(Buffer.from('definitely not a jpeg'))
+      const mockFile = createSpoofedMockFile(1024, 'image/jpeg', textBytes)
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
+        mockSupabaseAdmin as any
+      )
+      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+        const err = new Error(msg) as ServiceError
+        err.statusCode = code
+        throw err
+      })
+
+      const { uploadLandingMediaImage } = await loadUploadsService()
+
+      await expect(
+        uploadLandingMediaImage(adminSession, {
+          file: mockFile,
+          folder: 'events',
+        })
+      ).rejects.toMatchObject({ statusCode: 400 })
+
+      expect(mockSupabaseAdmin._uploadSpy).not.toHaveBeenCalled()
+    })
+
+    it('file.type is "image/png" but body bytes are a real JPEG signature (cross-format mismatch) → 400', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      const mockFile = createSpoofedMockFile(1024, 'image/png', REAL_SIGNATURE_BYTES['image/jpeg'])
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
+        mockSupabaseAdmin as any
+      )
+      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+        const err = new Error(msg) as ServiceError
+        err.statusCode = code
+        throw err
+      })
+
+      const { uploadLandingMediaImage } = await loadUploadsService()
+
+      await expect(
+        uploadLandingMediaImage(adminSession, {
+          file: mockFile,
+          folder: 'events',
+        })
+      ).rejects.toMatchObject({ statusCode: 400 })
+
+      expect(mockSupabaseAdmin._uploadSpy).not.toHaveBeenCalled()
+    })
+
+    it('file.type is "image/webp" but body bytes are a real GIF signature (cross-format mismatch) → 400', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      const mockFile = createSpoofedMockFile(1024, 'image/webp', REAL_SIGNATURE_BYTES['image/gif'])
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
+        mockSupabaseAdmin as any
+      )
+      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+        const err = new Error(msg) as ServiceError
+        err.statusCode = code
+        throw err
+      })
+
+      const { uploadLandingMediaImage } = await loadUploadsService()
+
+      await expect(
+        uploadLandingMediaImage(adminSession, {
+          file: mockFile,
+          folder: 'events',
+        })
+      ).rejects.toMatchObject({ statusCode: 400 })
+
+      expect(mockSupabaseAdmin._uploadSpy).not.toHaveBeenCalled()
+    })
+
+    it('real matching PNG signature with file.type "image/png" → passes and uploads', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      const mockFile = createMockFile(1024, 'image/png')
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
+        mockSupabaseAdmin as any
+      )
+
+      const { uploadLandingMediaImage } = await loadUploadsService()
+
+      const result = await uploadLandingMediaImage(adminSession, {
+        file: mockFile,
+        folder: 'events',
+      })
+
+      expect(result.url).toBeDefined()
+      expect(mockSupabaseAdmin._uploadSpy).toHaveBeenCalled()
+    })
+
+    it('real matching JPEG signature with file.type "image/jpeg" → passes and uploads', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      const mockFile = createMockFile(1024, 'image/jpeg')
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
+        mockSupabaseAdmin as any
+      )
+
+      const { uploadLandingMediaImage } = await loadUploadsService()
+
+      const result = await uploadLandingMediaImage(adminSession, {
+        file: mockFile,
+        folder: 'events',
+      })
+
+      expect(result.url).toBeDefined()
+      expect(mockSupabaseAdmin._uploadSpy).toHaveBeenCalled()
+    })
+  })
+
   describe('storage error handling', () => {
     it('storage upload error → 500 ServiceError and console.error called', async () => {
       const adminSession = createAdminSession()
@@ -594,7 +778,8 @@ describe('uploads-service', () => {
 
   describe('migration sanity checks (OIR-207)', () => {
     const migrationPath = join(
-      '/Users/samuelromeroarbelo/Projects/Alea/alea-webapp/supabase/migrations',
+      process.cwd(),
+      'supabase/migrations',
       '20260704000005_oir207_landing_media_bucket.sql'
     )
     const migrationContent = readFileSync(migrationPath, 'utf8')

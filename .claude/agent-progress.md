@@ -631,3 +631,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [17:30] i18n parity confirmed for imageUpload.* keys in en/es. No secrets found in diff.
 - [17:30] npx vitest run: 836/836 passed.
 - [17:35] ✅ Complete — APPROVE. Opened PR #153 (feat/oir-207-image-uploads → develop), stacked-chain final PR note included.
+
+#### [PR153] software-engineer — magic-byte upload validation
+- [23:00] Started: address Oiranca review comment on uploads-service.ts:61 (client MIME trusted alone)
+- [23:00] Added dependency-free magic-byte signature check (PNG/JPEG/WEBP/GIF) run on the actual file body bytes, executed before the Supabase Storage write. Rejects via existing ServiceError (400, same message as MIME-allowlist rejection) when detected signature is missing or doesn't match the client-declared File.type.
+- [23:05] Fixed pre-existing portability bug in uploads-service.test.ts (hardcoded absolute path to migration file) using process.cwd() so tests run in any worktree/CI checkout — needed to unblock running the suite.
+- [23:10] Added 6 new tests: 2 spoofed-content-type (declared image/png|jpeg with plain-text body), 2 cross-format signature mismatch (declared png/webp with real jpeg/gif bytes), 2 positive (real matching png/jpeg signature accepted). Updated createMockFile fixture to embed real signature bytes so pre-existing happy-path tests still pass.
+- [23:12] Validation: pnpm exec vitest run __tests__/server/uploads-service.test.ts → 31/31 passed. pnpm exec tsc --noEmit → clean. pnpm build → succeeded. Full __tests__/server run: 459/459 tests passed (2 unrelated pre-existing failed suites: library-games-service.test.ts / partners-service.test.ts, same hardcoded-path bug in files outside this task's scope — not touched).
+- [23:12] ✅ Complete — magic-byte verification added, regression tests green, build clean.
