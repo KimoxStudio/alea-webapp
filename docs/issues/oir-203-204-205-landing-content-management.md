@@ -143,11 +143,9 @@ partner requires a deploy.
      `created_at/updated_at timestamptz default now()`.
    - RLS + grants identical in shape to `partners` (public SELECT where active, writes
      service_role only).
-   - **Seed** from `game-library-data.ts` (translate the single-language category to
-     ES/EN pairs; e.g. "Rol" → "Rol"/"TTRPG", "Wargame" → "Wargame"/"Wargame",
-     "Deducción" → "Deducción"/"Deduction", "Familiar" → "Familiar"/"Family",
-     "Carreras" → "Carreras"/"Racing", "Estrategia" → "Estrategia"/"Strategy",
-     "Deportes" → "Deportes"/"Sports").
+   - **Seed** from `game-library-data.ts`, preserving its existing ES/EN category
+     pairs verbatim (the data file is authoritative for labels — e.g. "Rol"/"RPG"
+     for Pathfinder 2e, matching what the landing already renders).
 2. **Service layer** `lib/server/library-games-service.ts`: `listLibraryGames` (public),
    CRUD (admin-only).
 3. **Route handlers** for CRUD.
