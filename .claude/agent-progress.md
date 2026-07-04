@@ -459,3 +459,17 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [15:24] Added `partners` table type to lib/supabase/types.ts and Partner/AdminPartner to lib/types/index.ts.
 - [15:26] Validation: pnpm typecheck ✅, pnpm lint ✅ (no warnings), pnpm build ✅ (includes /api/partners routes), pnpm test ✅ 698/698 passed (52 files) — no test files referenced partners-data.ts, none broke.
 - [15:26] ✅ Complete — migration + service + routes + dashboard UI + landing wiring + i18n done; all checks green.
+
+#### [OIR-204] qa-engineer — test coverage
+- [15:09] Started QA validation for partners-service.ts implementation
+- [15:10] Read spec, migration, implementation, and existing test patterns
+- [15:11] Wrote 35 comprehensive test cases covering:
+  - listPartners: public read, RLS-respecting, sort_order ordering
+  - listAdminPartners: admin-only, includes inactive partners
+  - createPartner: URL validation, privilege check, type guards, validate-before-write
+  - updatePartner: same coverage as create, preserve omitted fields
+  - deletePartner: admin-only, 404 handling
+  - Migration sanity: RLS enabled, SELECT-only policy, 20 partners seeded, column types
+- [15:11] ✅ All tests passing: 35/35 partners-service tests + 698 existing tests = 733 total
+- [15:12] ✅ pnpm typecheck: green
+- [15:12] ✅ pnpm lint: green (no ESLint warnings/errors)
