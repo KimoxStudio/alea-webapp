@@ -686,3 +686,12 @@ Real-time log of all agent work. Agents append entries as work progresses.
   blurb/description/image are intentionally preserved when visibleOnLanding toggles OFF (re-publish support).
 - Validation: pnpm typecheck (green), pnpm lint (green, no warnings), pnpm test (56 files / 864 tests, all green).
 - [Complete] ✅ Commit pushed to feat/oir-208-unified-events.
+
+#### OIR-208 security-reviewer — final gate (unified events, table blocks, materials)
+- [18:20] Started. Pulled origin/feat/oir-208-unified-events (already up to date, no drift).
+- [18:20] Reviewed migration 20260704000006: table_id nullable FK w/ ON DELETE CASCADE, event_equipment RLS service-role-only with quantity>0 CHECK, apply_club_event_room_blocks RPC (drop-2arg/create-3arg) keeps SECURITY DEFINER + pinned search_path + revoke public/anon/authenticated + grant service_role; table-scoped cancellation predicate confirmed scoped to its own table only.
+- [18:20] Reviewed lib/server/club-events-service.ts: admin checks intact on all paths (list/create/update/delete); visibleOnLanding cannot publish without title_es (validated unconditionally); legacy anchor-preservation fix (65485a1) is data-preservation only, doesn't reopen write paths; materials validation rejects quantity<1 and duplicate equipmentId before RPC call.
+- [18:20] Confirmed legacy /api/events routes remain admin-gated + rate-limited + isClubEventRow-guarded (dead surface, documented, not wired to any UI).
+- [18:20] Confirmed availability table-granularity (tables-service, rooms-service, reservations-service, saved-games-service) only narrows blocking (table_id null = whole room unchanged; non-null = single table only) — never widens prior anon/member access.
+- [18:20] No dangerouslySetInnerHTML/innerHTML/eval in diff; en.json/es.json key parity verified (no missing keys either direction); no secrets/hardcoded credentials found; all commit messages in English.
+- [18:20] ✅ Complete — APPROVE. Opened PR #154 (feat/oir-208-unified-events → develop): https://github.com/KimoxStudio/alea-webapp/pull/154
