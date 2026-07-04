@@ -258,3 +258,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
 
 #### [loading-spinner] software-engineer — fix spinner load states
 - [13:03] Started — branch fix/loading-spinner-states off develop
+
+#### [PR143] software-engineer — enable coverage.all
+- [22:50] Started. Branch kim-406-coverage-config checked out in isolated worktree.
+- [22:52] Baseline coverage run (before change): 51 test files / 669 tests passed. All files: 80.57% stmts / 76.24% branch / 88.36% funcs / 80.57% lines. Untested app/api routes (equipment, reservations, rooms, saved-games, tables/*, users) already appeared at 0% — Vitest 3.2.4's coverage.all default is true.
+- [22:53] Added explicit `coverage.all: true` to vitest.config.mts with a comment explaining why, per reviewer request for explicit config (defense against future Vitest/provider default changes).
+- [22:54] Re-ran coverage after the change — numbers identical to baseline (all: true was already effective), thresholds still pass (exit code 0), untested routes still counted at 0%.
+- [22:55] Committed a3a6921 — fix(coverage): make coverage.all explicit for honest API route denominator
+- [22:55] ✅ Complete — pushed to kim-406-coverage-config
