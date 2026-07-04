@@ -423,3 +423,10 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [14:21] pnpm typecheck / pnpm lint / pnpm build all clean (only pre-existing unrelated Edge Runtime crypto warning in security.ts). Committed chunk 2 (aaa08e9).
 - [14:22] git push origin HEAD:feat/oir-203-admin-club-events — pre-push hook ran typecheck+lint again, both passed ("CI local pasado ✓"); push succeeded (5747bfb..aaa08e9).
 - [14:22] ✅ Complete — service/routes/UI/i18n all pushed; no test files touched (qa-engineer owns tests next).
+- [14:46] Migration 20260704000004: apply_club_event_room_blocks SECURITY DEFINER RPC + events_bilingual_titles_paired CHECK constraint (Findings 1, 6) — file only, never executed
+- [14:46] lib/validations/url.ts: extracted shared validateOptionalUrl (Finding 7)
+- [14:46] lib/server/events-service.ts: isClubEventRow predicate + deleteEventCascade extraction; updateEvent/deleteEvent 404 on club-event rows (Finding 3)
+- [14:46] lib/server/club-events-service.ts: validate-before-write reorder (Finding 2), RPC-based applyClubEventRoomBlocks (Finding 1), blocksMatchSchedules dedupe (Finding 4), optionalString typeof guard (Finding 5)
+- [14:46] pnpm typecheck / lint / build all pass; pnpm test: 52/52 files, 686/686 tests passed (no club-events test regressions)
+- [14:46] Pushed 4 commits (5db03b7, 1862b12, ec6b34a, 83e5645) to feat/oir-203-admin-club-events
+- [14:46] ✅ Complete — all 7 findings fixed, full suite green, pushed
