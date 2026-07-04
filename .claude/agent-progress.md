@@ -430,3 +430,19 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [14:46] pnpm typecheck / lint / build all pass; pnpm test: 52/52 files, 686/686 tests passed (no club-events test regressions)
 - [14:46] Pushed 4 commits (5db03b7, 1862b12, ec6b34a, 83e5645) to feat/oir-203-admin-club-events
 - [14:46] ✅ Complete — all 7 findings fixed, full suite green, pushed
+
+#### [OIR-203] qa-engineer — round 2 coverage (extended test suite)
+- [14:54] Started QA round 2 for code-review fixes (commits 5db03b7..4988a23)
+- [14:54] Extended club-events-service.test.ts with 9 new tests:
+  - Finding 1: Atomic RPC call with normalized blocks payload
+  - Finding 2: Validate-before-write ordering (reject malformed schedules)
+  - Finding 5: optionalString rejection of non-string types (objects, arrays)
+  - Finding 4: blocksMatchSchedules skip optimization (order-insensitive)
+- [14:54] Extended events-service.test.ts with 4 new tests:
+  - Finding 3: isClubEventRow guard rejects club events in updateEvent/deleteEvent
+  - Verify legacy rows (missing one of title_es/title_en) are allowed
+- [14:54] Full test suite: 698 tests PASS
+- [14:54] Typecheck: PASS
+- [14:54] Lint: PASS
+- [14:54] ✅ Complete — All validation gates pass
+

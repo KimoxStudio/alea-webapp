@@ -830,4 +830,191 @@ describe('events-service — updateEvent with cancellation', () => {
     expect(caught?.statusCode).toBe(400)
     expect(mock.rpc).not.toHaveBeenCalled()
   })
+
+  describe('isClubEventRow guard (Finding 3)', () => {
+    it('updateEvent rejects club event rows (both title_es and title_en set)', async () => {
+      const mock = buildSupabaseMock()
+
+      mock.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: {
+                    id: 'evt-club-1',
+                    title: 'Club Event',
+                    title_es: 'Evento Club',
+                    title_en: 'Club Event',
+                    description: null,
+                    date: '2026-04-20',
+                    start_time: '18:00',
+                    end_time: '22:00',
+                  },
+                  error: null,
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+      vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+      const { updateEvent } = await import('@/lib/server/events-service')
+
+      let caught: ServiceError | undefined
+      try {
+        await updateEvent('evt-club-1', {
+          title: 'Updated',
+        })
+      } catch (err) {
+        caught = err as ServiceError
+      }
+
+      expect(caught).toBeDefined()
+      expect(caught?.statusCode).toBe(404)
+      expect(caught?.message).toBe('Event not found')
+    })
+
+    it('deleteEvent rejects club event rows (both title_es and title_en set)', async () => {
+      const mock = buildSupabaseMock()
+
+      mock.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: {
+                    id: 'evt-club-2',
+                    title: 'Another Club Event',
+                    title_es: 'Otro Evento Club',
+                    title_en: 'Another Club Event',
+                  },
+                  error: null,
+                })),
+              })),
+            })),
+            delete: vi.fn(() => ({
+              eq: vi.fn(async () => ({
+                data: null,
+                error: null,
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+      vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+      const { deleteEvent } = await import('@/lib/server/events-service')
+
+      let caught: ServiceError | undefined
+      try {
+        await deleteEvent('evt-club-2')
+      } catch (err) {
+        caught = err as ServiceError
+      }
+
+      expect(caught).toBeDefined()
+      expect(caught?.statusCode).toBe(404)
+      expect(caught?.message).toBe('Event not found')
+    })
+
+    it('updateEvent allows legacy rows (only one of title_es or title_en)', async () => {
+      const mock = buildSupabaseMock()
+
+      mock.rpc = vi.fn(async () => ({
+        data: {
+          id: 'evt-legacy-1',
+          title: 'Updated Legacy Event',
+          title_es: 'Evento Legado Actualizado',
+          title_en: null,
+          description: null,
+          date: '2026-04-20',
+          start_time: '18:00',
+          end_time: '22:00',
+        },
+        error: null,
+      }))
+
+      mock.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: {
+                    id: 'evt-legacy-1',
+                    title: 'Legacy Event',
+                    title_es: 'Evento Legado',
+                    title_en: null,
+                    description: null,
+                    date: '2026-04-20',
+                    start_time: '18:00',
+                    end_time: '22:00',
+                  },
+                  error: null,
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+      vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+      const { updateEvent } = await import('@/lib/server/events-service')
+
+      const result = await updateEvent('evt-legacy-1', { title: 'Updated Legacy Event' })
+      expect(result.id).toBe('evt-legacy-1')
+      expect(result.title).toBe('Updated Legacy Event')
+    })
+
+    it('deleteEvent allows legacy rows (only one of title_es or title_en)', async () => {
+      const mock = buildSupabaseMock()
+
+      mock.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: {
+                    id: 'evt-legacy-2',
+                    title: 'Another Legacy',
+                    title_es: null,
+                    title_en: 'Another Legacy',
+                  },
+                  error: null,
+                })),
+              })),
+            })),
+            delete: vi.fn(() => ({
+              eq: vi.fn(async () => ({
+                data: null,
+                error: null,
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+      vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+      const { deleteEvent } = await import('@/lib/server/events-service')
+
+      // Should not throw
+      await deleteEvent('evt-legacy-2')
+    })
+  })
 })
