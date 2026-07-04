@@ -660,3 +660,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
   fixture rows lacking the field entirely; fixed by using `== null` (see above), not by
   editing tests.
 - [19:05] ✅ Complete — migration, service, availability, UI, i18n all done; full suite green.
+
+#### [OIR-208] qa-engineer — availability + visibility coverage
+- [18:06] Started — reviewing commits 8a82aaa..ce3bf99
+- [18:07] Scope verified: availability table-granularity, visibility toggle, materials validation, RPC payload, migration sanity
+- [18:10] Tests written: 28 test cases across all coverage areas
+- [18:10] ✅ Test suite: PASS (864 tests, all green)
+- [18:10] ✅ Typecheck: PASS
+- [18:10] ✅ Lint: PASS
