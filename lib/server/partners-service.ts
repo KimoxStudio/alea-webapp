@@ -40,6 +40,7 @@ export async function listPartners(): Promise<Partner[]> {
     .from('partners')
     .select(PUBLIC_PARTNER_COLUMNS)
     .order('sort_order', { ascending: true })
+    .order('name', { ascending: true })
 
   if (error) serviceError('Internal server error', 500)
 
@@ -158,6 +159,7 @@ export async function listAdminPartners(session: SessionUser): Promise<AdminPart
     .from('partners')
     .select(ADMIN_PARTNER_COLUMNS)
     .order('sort_order', { ascending: true })
+    .order('name', { ascending: true })
 
   if (error) serviceError('Internal server error', 500)
 

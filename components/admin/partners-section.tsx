@@ -165,23 +165,41 @@ function PartnerRow({ partner }: { partner: AdminPartner }) {
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [form, setForm] = useState<PartnerFormState>(() => formFromPartner(partner))
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [toggleError, setToggleError] = useState<string | null>(null)
 
   const updatePartner = useAdminUpdatePartner()
   const deletePartner = useAdminDeletePartner()
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    await updatePartner.mutateAsync({ id: partner.id, data: formToPayload(form) })
-    setEditing(false)
+    setSaveError(null)
+    try {
+      await updatePartner.mutateAsync({ id: partner.id, data: formToPayload(form) })
+      setEditing(false)
+    } catch {
+      setSaveError(t('partners.saveError'))
+    }
   }
 
   async function handleDelete() {
-    await deletePartner.mutateAsync(partner.id)
-    setDeleting(false)
+    setDeleteError(null)
+    try {
+      await deletePartner.mutateAsync(partner.id)
+      setDeleting(false)
+    } catch {
+      setDeleteError(t('partners.deleteError'))
+    }
   }
 
   async function handleToggleActive(checked: boolean) {
-    await updatePartner.mutateAsync({ id: partner.id, data: { active: checked } })
+    setToggleError(null)
+    try {
+      await updatePartner.mutateAsync({ id: partner.id, data: { active: checked } })
+    } catch {
+      setToggleError(t('partners.saveError'))
+    }
   }
 
   return (
@@ -200,6 +218,11 @@ function PartnerRow({ partner }: { partner: AdminPartner }) {
                 {partner.descriptionEs || partner.descriptionEn}
               </span>
             )}
+            {toggleError && (
+              <span role="alert" className="text-xs text-destructive block truncate mt-0.5">
+                {toggleError}
+              </span>
+            )}
           </div>
           <Badge variant={partner.active ? 'available' : 'outline'} className="flex-shrink-0">
             {partner.active ? t('partners.active') : t('partners.inactive')}
@@ -213,6 +236,7 @@ function PartnerRow({ partner }: { partner: AdminPartner }) {
             aria-label={t('partners.editPartner')}
             onClick={() => {
               setForm(formFromPartner(partner))
+              setSaveError(null)
               setEditing(true)
             }}
             className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
@@ -223,7 +247,10 @@ function PartnerRow({ partner }: { partner: AdminPartner }) {
             variant="ghost"
             size="icon"
             aria-label={t('partners.deletePartner')}
-            onClick={() => setDeleting(true)}
+            onClick={() => {
+              setDeleteError(null)
+              setDeleting(true)
+            }}
             className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
           >
             <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -232,13 +259,24 @@ function PartnerRow({ partner }: { partner: AdminPartner }) {
       </div>
 
       {/* Edit dialog */}
-      <Dialog open={editing} onOpenChange={setEditing}>
+      <Dialog
+        open={editing}
+        onOpenChange={(open) => {
+          setEditing(open)
+          if (!open) setSaveError(null)
+        }}
+      >
         <DialogContent className="bg-card border-border max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="font-cinzel text-gradient-gold">{t('partners.editPartner')}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4 py-2">
             <PartnerFormFields form={form} onChange={setForm} idPrefix={`partner-edit-${partner.id}`} />
+            {saveError && (
+              <div role="alert" className="rounded-md bg-destructive/15 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+                {saveError}
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditing(false)} className="border-border">
                 {tc('cancel')}
@@ -254,14 +292,27 @@ function PartnerRow({ partner }: { partner: AdminPartner }) {
       </Dialog>
 
       {/* Delete confirmation dialog */}
-      <Dialog open={deleting} onOpenChange={setDeleting}>
+      <Dialog
+        open={deleting}
+        onOpenChange={(open) => {
+          setDeleting(open)
+          if (!open) setDeleteError(null)
+        }}
+      >
         <DialogContent className="bg-card border-border">
           <DialogHeader>
             <DialogTitle className="font-cinzel text-gradient-gold">{t('partners.deletePartner')}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground py-2">
-            {t('partners.deletePartnerConfirm', { name: partner.name })}
-          </p>
+          <div className="py-2 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {t('partners.deletePartnerConfirm', { name: partner.name })}
+            </p>
+            {deleteError && (
+              <div role="alert" className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3">
+                <p className="text-sm text-destructive font-medium">{deleteError}</p>
+              </div>
+            )}
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setDeleting(false)} className="border-border">
               {tc('cancel')}
@@ -293,12 +344,18 @@ export function PartnersSection() {
 
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState<PartnerFormState>(emptyForm())
+  const [createError, setCreateError] = useState<string | null>(null)
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
-    await createPartner.mutateAsync(formToPayload(form))
-    setForm(emptyForm())
-    setShowCreate(false)
+    setCreateError(null)
+    try {
+      await createPartner.mutateAsync(formToPayload(form))
+      setForm(emptyForm())
+      setShowCreate(false)
+    } catch {
+      setCreateError(t('partners.saveError'))
+    }
   }
 
   const sorted = [...(partners ?? [])].sort((a, b) => a.sortOrder - b.sortOrder)
@@ -323,6 +380,7 @@ export function PartnersSection() {
           size="sm"
           onClick={() => {
             setForm(emptyForm())
+            setCreateError(null)
             setShowCreate(true)
           }}
           className="gap-1.5 border-primary/30 text-primary/80 hover:bg-primary/10 hover:border-primary/50 hover:text-primary transition-colors"
@@ -359,6 +417,7 @@ export function PartnersSection() {
               type="button"
               onClick={() => {
                 setForm(emptyForm())
+                setCreateError(null)
                 setShowCreate(true)
               }}
               className="mt-2 text-xs text-primary hover:text-primary/80 transition-colors underline-offset-4 hover:underline"
@@ -376,7 +435,13 @@ export function PartnersSection() {
       )}
 
       {/* Create Partner Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+      <Dialog
+        open={showCreate}
+        onOpenChange={(open) => {
+          setShowCreate(open)
+          if (!open) setCreateError(null)
+        }}
+      >
         <DialogContent className="bg-card border-border max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
@@ -388,6 +453,11 @@ export function PartnersSection() {
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4 py-2">
             <PartnerFormFields form={form} onChange={setForm} idPrefix="partner-new" />
+            {createError && (
+              <div role="alert" className="rounded-md bg-destructive/15 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+                {createError}
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowCreate(false)} className="border-border">
                 {tc('cancel')}
