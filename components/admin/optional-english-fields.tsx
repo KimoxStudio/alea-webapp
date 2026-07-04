@@ -38,11 +38,9 @@ export function OptionalEnglishFields({ children, idPrefix }: { children: ReactN
           aria-hidden="true"
         />
       </button>
-      {open && (
-        <div id={contentId} className="space-y-3 border-t border-border p-3">
-          {children}
-        </div>
-      )}
+      <div id={contentId} hidden={!open} className="space-y-3 border-t border-border p-3">
+        {children}
+      </div>
     </div>
   )
 }

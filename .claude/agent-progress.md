@@ -560,3 +560,10 @@ Real-time log of all agent work. Agents append entries as work progresses.
 ✅ Non-string EN (object) still rejected with 400
 ✅ Full test suite green (789 tests)
 ✅ TypeScript build green, lint OK
+
+#### [OIR-206] software-engineer — fallback semantics fixes
+- [16:47] Started — fix 3 verified code-review findings in resolveBilingualEnFallback + disclosure component
+- [16:47] Rewrote resolveBilingualEnFallback in lib/server/club-events-service.ts, lib/server/partners-service.ts, lib/server/library-games-service.ts with 3 explicit rules: (1) enProvided+non-empty -> use verbatim, (2) enProvided+blank -> re-enable auto-copy (return new ES), (3) not provided -> preserve current.en if it differs from OLD es, else auto-copy new ES. Documented rules in a comment above each helper (identical logic in all three services).
+- [16:47] Fixed components/admin/optional-english-fields.tsx: content div is now always rendered with `hidden={!open}` instead of being conditionally mounted, so aria-controls never dangles.
+- [16:47] pnpm typecheck: PASS. pnpm lint: PASS (no warnings/errors). pnpm test: 789/789 PASSED (54 test files) — no failures, existing fallback tests already matched the new explicit semantics.
+- [16:47] ✅ Complete — 3 findings fixed, all validations green, committing and pushing.

@@ -91,12 +91,25 @@ function parseBooleanFlag(value: unknown): boolean {
 /**
  * OIR-206: English copy is optional — when categoryEn is absent/empty, fall
  * back to categoryEs (a NOT NULL column) so the landing still renders
- * content in the EN locale. Explicit EN input always wins. On update,
- * "auto-copy tracking" re-copies a previously auto-copied EN value (current
- * EN === old ES) when ES changes, while preserving an explicitly-set EN
- * value that differs from the old ES. `?? esValue` is a type-level safety
- * net only — categoryEs is always a non-empty string, so the fallback chain
- * never actually resolves to null here.
+ * content in the EN locale.
+ *
+ * Resolution rules (explicit, in priority order):
+ * 1. `enProvided` and the trimmed value is non-empty → use it verbatim.
+ * 2. `enProvided` and the trimmed value is empty → treat blanking as
+ *    "re-enable auto-copy": return the (new) ES value.
+ * 3. Not provided (`undefined`) → preserve `current.en` if it exists and
+ *    differs from the OLD ES value (a deliberate edit); if `current.en`
+ *    equals the OLD ES value (or there is no current row), auto-copy the
+ *    new ES value.
+ *
+ * Rule 3's "identical EN === ES" auto-copy heuristic is safe because our
+ * admin forms always resend every field: a deliberately identical EN is
+ * resent explicitly on every update and is preserved by rule 1, so it never
+ * falls into rule 3's heuristic path.
+ *
+ * `?? esValue` is a type-level safety net only — categoryEs is always a
+ * non-empty string, so the fallback chain never actually resolves to null
+ * here.
  */
 function resolveBilingualEnFallback(
   field: string,
@@ -114,7 +127,7 @@ function resolveBilingualEnFallback(
       serviceError(`${field} must be a string`, 400)
     }
     const trimmed = typeof rawEn === 'string' ? rawEn.trim() : ''
-    if (trimmed !== '') return trimmed
+    return trimmed !== '' ? trimmed : esValue
   }
   if (!current) return esValue
   const wasAutoCopied = current.en === current.es
