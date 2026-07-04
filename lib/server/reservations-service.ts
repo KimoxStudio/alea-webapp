@@ -214,6 +214,7 @@ async function getTable(tableId: string) {
 
 async function hasEventBlockConflict(input: {
   roomId: string
+  tableId: string
   date: string
   startTime: string
   endTime: string
@@ -221,18 +222,21 @@ async function hasEventBlockConflict(input: {
   const admin = createSupabaseServerAdminClient()
   const { data, error } = await admin
     .from('event_room_blocks')
-    .select('id')
+    .select('id, table_id')
     .eq('room_id', input.roomId)
     .eq('date', input.date)
     .lt('start_time', input.endTime)
     .gt('end_time', input.startTime)
-    .limit(1)
 
   if (error) {
     serviceError('Internal server error', 500)
   }
 
-  return Boolean(data && data.length > 0)
+  // OIR-208: a block with a table_id only conflicts with that single table;
+  // NULL (the pre-OIR-208 default) conflicts with every table of the room.
+  return ((data ?? []) as Array<{ id: string; table_id: string | null }>).some(
+    (block) => block.table_id == null || block.table_id === input.tableId,
+  )
 }
 
 async function hasSavedGameBottomConflict(input: {
@@ -777,7 +781,7 @@ export async function createReservationForSession(
   if (hasReservationConflict(conflictingReservations, { startTime, endTime, surface })) {
     throwSlotTaken()
   }
-  if (await hasEventBlockConflict({ roomId: table.room_id, date, startTime, endTime })) {
+  if (await hasEventBlockConflict({ roomId: table.room_id, tableId, date, startTime, endTime })) {
     serviceError('ROOM_BLOCKED_BY_EVENT', 409)
   }
   if (await hasSavedGameBottomConflict({ tableId, date, surface })) {
@@ -911,6 +915,7 @@ export async function updateReservationForSession(
   }
   if (await hasEventBlockConflict({
     roomId: table.room_id,
+    tableId: existingReservation.table_id,
     date: nextDate,
     startTime: nextStartTime,
     endTime: nextEndTime,

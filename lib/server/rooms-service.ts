@@ -188,7 +188,7 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
       .in('table_id', tables.map((table) => table.id)),
     admin
       .from('event_room_blocks')
-      .select('id, event_id, room_id, date, start_time, end_time, all_day')
+      .select('id, event_id, room_id, table_id, date, start_time, end_time, all_day')
       .eq('room_id', roomId)
       .eq('date', effectiveDate),
     admin
@@ -242,18 +242,24 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
     reservationsByTable.set(reservation.table_id, items)
   }
 
-  const eventSlots = eventBlocks.map((block) => ({
-    start: block.start_time.slice(0, 5),
-    end: block.end_time.slice(0, 5),
-    label: eventTitleById.get(block.event_id) ?? null,
-  }))
+  // OIR-208: a block with a table_id only blocks that single table; NULL
+  // (the pre-OIR-208 default) blocks every table of the room, unchanged.
+  function eventSlotsForTable(tableId: string) {
+    return eventBlocks
+      .filter((block) => block.table_id == null || block.table_id === tableId)
+      .map((block) => ({
+        start: block.start_time.slice(0, 5),
+        end: block.end_time.slice(0, 5),
+        label: eventTitleById.get(block.event_id) ?? null,
+      }))
+  }
 
   return tables.reduce<Record<string, TableAvailability>>((acc, table) => {
     acc[table.id] = buildAvailability(
       table,
       effectiveDate,
       reservationsByTable.get(table.id) ?? [],
-      eventSlots,
+      eventSlotsForTable(table.id),
       savedGameTableIds.has(table.id),
     )
     return acc
