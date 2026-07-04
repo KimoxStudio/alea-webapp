@@ -244,6 +244,42 @@ describe('normalizeMemberImportSource', () => {
     ])
   })
 
+  it('parses xlsx bytes sliced from a padded backing buffer with a non-zero byteOffset', async () => {
+    const { normalizeMemberImportSource } = await loadService()
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Members')
+    worksheet.addRow(['USUARIOS', 'ID', 'email', 'phone'])
+    worksheet.addRow(['Offset Member', '100041', 'offset@alea.club', '611222333'])
+    const buffer = await workbook.xlsx.writeBuffer()
+    const xlsxBytes = new Uint8Array(buffer as ArrayBuffer)
+
+    const prefixPadding = 16
+    const suffixPadding = 16
+    const padded = new Uint8Array(prefixPadding + xlsxBytes.byteLength + suffixPadding)
+    padded.fill(0xff)
+    padded.set(xlsxBytes, prefixPadding)
+    const slicedView = new Uint8Array(padded.buffer, prefixPadding, xlsxBytes.byteLength)
+
+    expect(slicedView.byteOffset).toBe(prefixPadding)
+    expect(slicedView.buffer.byteLength).not.toBe(slicedView.byteLength)
+
+    const result = await normalizeMemberImportSource({
+      fileName: 'members.xlsx',
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      bytes: slicedView,
+    })
+
+    expect(result.normalizedRows).toEqual([
+      {
+        rowNumber: 2,
+        memberNumber: '100041',
+        fullName: 'Offset Member',
+        email: 'offset@alea.club',
+        phone: '611222333',
+      },
+    ])
+  })
+
   it('normalizes odt table files into the canonical dataset', async () => {
     const { normalizeMemberImportSource } = await loadService()
     const bytes = Uint8Array.from(Buffer.from(

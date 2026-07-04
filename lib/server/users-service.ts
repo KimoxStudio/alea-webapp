@@ -254,7 +254,7 @@ async function extractSpreadsheetCsv(bytes: Uint8Array): Promise<string> {
   const wb = new ExcelJS.Workbook()
 
   try {
-    await wb.xlsx.load(bytes.buffer as ArrayBuffer)
+    await wb.xlsx.load(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer)
   } catch {
     serviceError('Spreadsheet file is invalid or corrupted', 400)
   }
