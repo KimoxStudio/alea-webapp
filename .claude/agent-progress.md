@@ -567,3 +567,9 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [16:47] Fixed components/admin/optional-english-fields.tsx: content div is now always rendered with `hidden={!open}` instead of being conditionally mounted, so aria-controls never dangles.
 - [16:47] pnpm typecheck: PASS. pnpm lint: PASS (no warnings/errors). pnpm test: 789/789 PASSED (54 test files) — no failures, existing fallback tests already matched the new explicit semantics.
 - [16:47] ✅ Complete — 3 findings fixed, all validations green, committing and pushing.
+
+#### [OIR-206] qa-engineer — round 2 fallback edge cases
+- [HH:MM] Started QA validation for fallback semantics rules 1-3
+- [HH:MM] Reading implementation to identify test gaps
+- [HH:MM] Analyzing existing test coverage for three services
+- [HH:MM] Adding tests for edge cases: rule 2 (blank->re-enable), rule 3 (whitespace)

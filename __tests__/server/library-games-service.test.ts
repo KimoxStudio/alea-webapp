@@ -1101,7 +1101,6 @@ describe('library-games-service', () => {
       expect(migrationContent).toContain('"updated_at" timestamptz NOT NULL DEFAULT now()')
     })
   })
-})
 
   describe('createLibraryGame with optional English (OIR-206)', () => {
     it('admin can create a game with categoryEn absent, falls back to categoryEs', async () => {
@@ -1293,3 +1292,189 @@ describe('library-games-service', () => {
       expect(result.categoryEn).toBe('Explicitly Set Category') // Preserved
     })
   })
+
+  describe('updateLibraryGame with fallback semantics edge cases (OIR-206 round 2)', () => {
+    it('rule 2: explicit different categoryEn + blank categoryEn payload = re-enable auto-copy to new ES', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      const currentRow = {
+        id: 'game-1',
+        title: 'Game Title',
+        category_es: 'Vieja Categoría',
+        category_en: 'Old Explicit Category', // Deliberately different from ES
+        players: '2-4',
+        play_time: '45 min',
+        weight: 2.0,
+        sort_order: 0,
+        active: true,
+        created_at: '2026-04-01T00:00:00Z',
+        updated_at: '2026-04-01T00:00:00Z',
+      }
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'library_games') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: currentRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      ...currentRow,
+                      category_es: 'Nueva Categoría',
+                      category_en: 'Nueva Categoría', // Should become new ES (rule 2)
+                    },
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updateLibraryGame } = await loadLibraryGamesService()
+
+      const result = await updateLibraryGame(adminSession, 'game-1', {
+        categoryEs: 'Nueva Categoría',
+        categoryEn: '', // Blank = re-enable auto-copy
+      })
+
+      expect(result.categoryEn).toBe('Nueva Categoría') // Follows new ES
+    })
+
+    it('rule 1: resending identical categoryEn (en === es deliberately) + ES change = EN preserved', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      const currentRow = {
+        id: 'game-1',
+        title: 'Game Title',
+        category_es: 'Vieja Categoría',
+        category_en: 'Vieja Categoría', // Same as ES (deliberately or auto-copied)
+        players: '2-4',
+        play_time: '45 min',
+        weight: 2.0,
+        sort_order: 0,
+        active: true,
+        created_at: '2026-04-01T00:00:00Z',
+        updated_at: '2026-04-01T00:00:00Z',
+      }
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'library_games') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: currentRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      ...currentRow,
+                      category_es: 'Nueva Categoría',
+                      category_en: 'Vieja Categoría', // Preserved because explicitly resent (rule 1)
+                    },
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updateLibraryGame } = await loadLibraryGamesService()
+
+      const result = await updateLibraryGame(adminSession, 'game-1', {
+        categoryEs: 'Nueva Categoría',
+        categoryEn: 'Vieja Categoría', // Resend explicit identical value
+      })
+
+      expect(result.categoryEn).toBe('Vieja Categoría') // Preserved by rule 1
+    })
+
+    it('rule 2: whitespace-only categoryEn behaves as blank (re-enable auto-copy to new ES)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      const currentRow = {
+        id: 'game-1',
+        title: 'Game Title',
+        category_es: 'Vieja Categoría',
+        category_en: 'Old Explicit Category',
+        players: '2-4',
+        play_time: '45 min',
+        weight: 2.0,
+        sort_order: 0,
+        active: true,
+        created_at: '2026-04-01T00:00:00Z',
+        updated_at: '2026-04-01T00:00:00Z',
+      }
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'library_games') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: currentRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      ...currentRow,
+                      category_es: 'Nueva Categoría',
+                      category_en: 'Nueva Categoría', // Should become new ES (whitespace trimmed = empty)
+                    },
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updateLibraryGame } = await loadLibraryGamesService()
+
+      const result = await updateLibraryGame(adminSession, 'game-1', {
+        categoryEs: 'Nueva Categoría',
+        categoryEn: '   ', // Whitespace-only = treated as empty (rule 2)
+      })
+
+      expect(result.categoryEn).toBe('Nueva Categoría') // Follows new ES
+    })
+  })
+})
