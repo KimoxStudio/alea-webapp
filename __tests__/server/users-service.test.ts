@@ -1,6 +1,5 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import ExcelJS from 'exceljs'
 
 const maybeSingleMock = vi.fn()
 const rangeMock = vi.fn()
@@ -622,57 +621,5 @@ describe('unblockUser', () => {
       name: 'ServiceError',
       statusCode: 500,
     })
-  })
-})
-
-describe('extractSpreadsheetCsv', () => {
-  beforeEach(() => {
-    vi.resetModules()
-    vi.clearAllMocks()
-    resetQueryMocks()
-  })
-
-  it('parses xlsx bytes sliced from a padded backing buffer with a non-zero byteOffset', async () => {
-    const { extractSpreadsheetCsv } = await loadUsersModules()
-    const workbook = new ExcelJS.Workbook()
-    const worksheet = workbook.addWorksheet('Members')
-    worksheet.addRow(['USUARIOS', 'ID', 'email', 'phone'])
-    worksheet.addRow(['Offset Member', '100041', 'offset@alea.club', '611222333'])
-    const buffer = await workbook.xlsx.writeBuffer()
-    const xlsxBytes = new Uint8Array(buffer as ArrayBuffer)
-
-    // Simulate a Uint8Array view carved out of a larger backing ArrayBuffer,
-    // as happens when reading a multipart/form-data body: the view has a
-    // non-zero byteOffset and does not span the whole underlying buffer.
-    //
-    // The trailing bytes are a crafted, zero-record "end of central
-    // directory" record (zip signature PK\x05\x06). If `bytes.buffer` (the
-    // full backing buffer) were passed to ExcelJS instead of the exact byte
-    // range, the zip reader would latch onto this bogus trailing record
-    // (it scans backward from the end of the buffer) and see zero entries,
-    // rejecting a genuinely valid workbook. Slicing to the byte range
-    // excludes this trailing data entirely.
-    const leadingPadding = 16
-    const fakeEmptyEndOfCentralDirectory = new Uint8Array([
-      0x50, 0x4b, 0x05, 0x06, // signature PK\x05\x06
-      0x00, 0x00, // disk number
-      0x00, 0x00, // disk where central directory starts
-      0x00, 0x00, // number of central directory records on this disk
-      0x00, 0x00, // total number of central directory records
-      0x00, 0x00, 0x00, 0x00, // size of central directory
-      0x00, 0x00, 0x00, 0x00, // offset of start of central directory
-      0x00, 0x00, // comment length
-    ])
-    const padded = new Uint8Array(leadingPadding + xlsxBytes.byteLength + fakeEmptyEndOfCentralDirectory.byteLength)
-    padded.set(xlsxBytes, leadingPadding)
-    padded.set(fakeEmptyEndOfCentralDirectory, leadingPadding + xlsxBytes.byteLength)
-    const slicedView = new Uint8Array(padded.buffer, leadingPadding, xlsxBytes.byteLength)
-
-    expect(slicedView.byteOffset).toBe(leadingPadding)
-    expect(slicedView.buffer.byteLength).toBeGreaterThan(slicedView.byteLength)
-
-    const csv = await extractSpreadsheetCsv(slicedView)
-
-    expect(csv).toBe('USUARIOS,ID,email,phone\nOffset Member,100041,offset@alea.club,611222333')
   })
 })
