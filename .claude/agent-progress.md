@@ -263,3 +263,8 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [22:46] Started
 - [22:47] All 22 member-import tests pass incl. new sliced-buffer regression test
 - [22:47] pnpm build succeeded (no type errors)
+- [22:52] ⚠️ BLOCKED — push halted by pre-push hook (scripts/ci-local.sh → pnpm lint). Root cause: this branch's .eslintrc.json lacks "root": true, so ESLint legacy config resolution walks up into the parent worktree (nested under .claude/worktrees/) and loads a second copy of eslint-plugin-next, causing "Plugin @next/next was conflicted". Confirmed pre-existing and unrelated to this diff (reproduces identically without the change); typecheck and targeted tests are green. A sibling agent already fixed the identical issue on kim-401-403-security-hardening (commit ee37057), not yet on develop. Did not touch .eslintrc.json (out of task scope) or use --no-verify (no explicit user permission). Commit 4c2f8a7 is ready locally, not yet pushed.
+- [22:55] Coordinator approved the same one-line .eslintrc.json "root": true fix for this branch (commit d0c2cd2)
+- [22:55] Verified pnpm lint now passes cleanly (No ESLint warnings or errors)
+- [22:56] Pushed both commits via git push (pre-push hook ran: typecheck ✅, lint ✅, --no-verify NOT used)
+- [22:56] ✅ Complete — origin/kim-395-replace-xlsx now at d0c2cd2c23b3451ddceceec9f37b57df8ce7dc1b (169be44..d0c2cd2)
