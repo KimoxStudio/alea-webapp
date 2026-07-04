@@ -709,3 +709,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [18:36] Investigated app/[locale]/page.tsx redirect: found the `redirect()` call for authenticated users is wrapped inside a try/catch that also catches the NEXT_REDIRECT throw Next.js uses internally to perform the redirect — the catch block swallows it silently, so the redirect to /rooms never actually fires for a valid session. This is why an authenticated user was seeing the landing page directly (not a caching/hydration artifact). Reported only, not fixed (out of scope per task instructions)
 - [18:38] pnpm typecheck / pnpm lint / pnpm test all green (56 test files, 868 tests)
 - [18:39] ✅ Complete — header.tsx fixed, redirect bug found and reported
+
+#### [OIR-208] software-engineer — make landing public-for-authenticated explicit
+- [18:44] Started
+- [18:44] Read app/[locale]/page.tsx; confirmed `session`/`getCurrentUser` resolution had no other use (LandingView props don't take user/session data) — the whole session lookup existed only to feed the dead try/catch-swallowed redirect(`/${locale}/rooms`)
+- [18:44] Removed getSessionFromServerCookies/getCurrentUser/redirect imports and calls entirely (no other usages remained); replaced with an explicit comment: authenticated users deliberately view the public landing (chrome hidden via header/footer pathname gates), no redirect here
+- [18:44] Searched __tests__ for coverage of app/[locale]/page.tsx directly — none exists. auth-pages.test.tsx's "root page redirects valid sessions directly to rooms" test covers the separate app/page.tsx (RootPage), unaffected by this change
+- [18:44] pnpm typecheck / pnpm lint / pnpm test all green (56 test files, 868 tests, including auth-pages.test.tsx 9/9 passing)
+- [18:44] ✅ Complete — app/[locale]/page.tsx diff minimal, behavior identical (landing renders for everyone)
