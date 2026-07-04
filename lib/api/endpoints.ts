@@ -46,6 +46,10 @@ export const endpoints = {
     list: '/club-events',
     byId: (id: string) => `/club-events/${id}`,
   },
+  partners: {
+    list: '/partners',
+    byId: (id: string) => `/partners/${id}`,
+  },
   equipment: {
     list: '/equipment',
     byId: (id: string) => `/equipment/${id}`,

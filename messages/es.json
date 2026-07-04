@@ -389,6 +389,25 @@
       "allDay": "Todo el día",
       "startTime": "Hora de inicio",
       "endTime": "Hora de fin"
+    },
+    "partners": {
+      "title": "Colaboradores",
+      "sectionDescription": "Gestiona los comercios y colaboradores mostrados en la página pública.",
+      "createPartner": "Crear colaborador",
+      "editPartner": "Editar colaborador",
+      "deletePartner": "Eliminar colaborador",
+      "deletePartnerConfirm": "¿Seguro que quieres eliminar \"{name}\"? Esta acción no se puede deshacer.",
+      "deleteError": "Ocurrió un error al eliminar el colaborador. Inténtalo de nuevo.",
+      "saveError": "Ocurrió un error al guardar el colaborador. Inténtalo de nuevo.",
+      "noPartners": "No se encontraron colaboradores",
+      "name": "Nombre",
+      "imageUrl": "URL del logo",
+      "linkUrl": "URL del enlace",
+      "descriptionEs": "Descripción (Español)",
+      "descriptionEn": "Descripción (Inglés)",
+      "sortOrder": "Orden",
+      "active": "Activo",
+      "inactive": "Inactivo"
     }
   },
   "home": {

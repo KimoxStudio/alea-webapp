@@ -1,9 +1,9 @@
 'use client'
 
-import type { PartnerEntry } from './partners-data'
+import type { Partner } from '@/lib/types'
 
 interface PartnerCardProps {
-  partner: PartnerEntry
+  partner: Partner
   locale: string
   ctaLabel: string
   isMap: boolean
@@ -15,7 +15,7 @@ export function PartnerCard({ partner, locale, ctaLabel, isMap }: PartnerCardPro
   return (
     <a
       className="mod-partner-card"
-      href={partner.linkUrl}
+      href={partner.linkUrl ?? undefined}
       target="_blank"
       rel="noopener noreferrer"
       title={partner.name}

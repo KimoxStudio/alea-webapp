@@ -1,13 +1,14 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { LayoutDashboard, Users, CalendarDays, DoorOpen, CalendarRange, CalendarHeart, Package } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, DoorOpen, CalendarRange, CalendarHeart, Package, Handshake } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UsersSection } from './users-section'
 import { ReservationsSection } from './reservations-section'
 import { RoomsSection } from './rooms-section'
 import { EventsSection } from './events-section'
 import { ClubEventsSection } from './club-events-section'
+import { PartnersSection } from './partners-section'
 import { EquipmentSection } from './equipment-section'
 
 export function AdminDashboard() {
@@ -58,6 +59,10 @@ export function AdminDashboard() {
             <CalendarHeart className="h-4 w-4" aria-hidden="true" />
             {t('clubEvents.title')}
           </TabsTrigger>
+          <TabsTrigger value="partners" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
+            <Handshake className="h-4 w-4" aria-hidden="true" />
+            {t('partners.title')}
+          </TabsTrigger>
           <TabsTrigger value="equipment" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
             <Package className="h-4 w-4" aria-hidden="true" />
             {t('equipment.title')}
@@ -82,6 +87,10 @@ export function AdminDashboard() {
 
         <TabsContent value="club-events">
           <ClubEventsSection />
+        </TabsContent>
+
+        <TabsContent value="partners">
+          <PartnersSection />
         </TabsContent>
 
         <TabsContent value="equipment">

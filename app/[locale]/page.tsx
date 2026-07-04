@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { getSessionFromServerCookies } from '@/lib/server/auth'
 import { getCurrentUser } from '@/lib/server/auth-service'
 import { listClubEvents } from '@/lib/server/club-events-service'
+import { listPartners } from '@/lib/server/partners-service'
 import { LandingView } from '@/components/landing/landing-view'
 
 interface HomePageProps {
@@ -30,7 +31,10 @@ export default async function HomePage({ params }: HomePageProps) {
     }
   }
 
-  const { upcoming, past } = await listClubEvents()
+  const [{ upcoming, past }, partners] = await Promise.all([
+    listClubEvents(),
+    listPartners(),
+  ])
 
-  return <LandingView locale={locale} upcomingEvents={upcoming} pastEvents={past} />
+  return <LandingView locale={locale} upcomingEvents={upcoming} pastEvents={past} partners={partners} />
 }

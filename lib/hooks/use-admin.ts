@@ -10,6 +10,7 @@ import type {
   AdminEvent,
   AdminClubEvent,
   AdminListClubEventsResult,
+  AdminPartner,
   MemberImportResult,
   Equipment,
 } from '@/lib/types'
@@ -351,6 +352,51 @@ export function useAdminDeleteClubEvent() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'club-events'] }),
       queryClient.invalidateQueries({ queryKey: ['availability'] }),
     ]),
+  })
+}
+
+// ----- Partners (OIR-204, public landing content) -----
+
+export interface PartnerPayload {
+  name: string
+  imageUrl?: string
+  linkUrl?: string | null
+  descriptionEs?: string | null
+  descriptionEn?: string | null
+  sortOrder?: number
+  active?: boolean
+}
+
+export function useAdminPartners() {
+  return useQuery<AdminPartner[]>({
+    queryKey: ['admin', 'partners'],
+    queryFn: () => apiClient.get<AdminPartner[]>(endpoints.partners.list),
+    staleTime: 30_000,
+  })
+}
+
+export function useAdminCreatePartner() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: PartnerPayload) => apiClient.post<AdminPartner>(endpoints.partners.list, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'partners'] }),
+  })
+}
+
+export function useAdminUpdatePartner() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<PartnerPayload> }) =>
+      apiClient.put<AdminPartner>(endpoints.partners.byId(id), data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'partners'] }),
+  })
+}
+
+export function useAdminDeletePartner() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete<void>(endpoints.partners.byId(id)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'partners'] }),
   })
 }
 

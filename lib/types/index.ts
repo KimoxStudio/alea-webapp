@@ -241,6 +241,30 @@ export interface AdminListClubEventsResult {
   past: AdminClubEvent[]
 }
 
+/**
+ * Public "partner" (colaborador) shown on the landing page — a shop or ally
+ * that supports the club. Admin-managed (OIR-204); anon/authenticated
+ * visitors only ever see active partners via RLS.
+ */
+export interface Partner {
+  id: string
+  name: string
+  imageUrl: string
+  linkUrl: string | null
+  descriptionEs: string | null
+  descriptionEn: string | null
+  sortOrder: number
+}
+
+/**
+ * Admin (dashboard) view of a partner — same underlying row as `Partner`,
+ * plus the `active` flag the board toggles to show/hide it from the
+ * landing without deleting it.
+ */
+export interface AdminPartner extends Partner {
+  active: boolean
+}
+
 export interface Equipment {
   id: string;
   name: string;
