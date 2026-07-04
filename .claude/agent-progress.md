@@ -509,3 +509,9 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [22:51] Added 2 regression tests to __tests__/server/club-events-service.test.ts: (a) forces the block RPC to fail and asserts the event row is deleted via events.delete().eq('id', 'evt-new-1'); (b) forces the room-existence check to fail and asserts 400 + zero calls to from('events') (no insert at all). Also updated the shared mock's `rooms` `.in()` handler to default to "room exists" so pre-existing tests using roomId fixtures keep passing.
 - [22:51] pnpm test (full suite): 52 files / 700 tests passed. pnpm build: succeeded, no new type errors.
 - [22:51] ✅ Complete — pushed to feat/oir-203-admin-club-events
+
+#### [PR149-v2] software-engineer — log compensating-delete failure
+- [23:42] Started — fixing HIGH security finding: compensating delete result discarded/unlogged in createClubEvent
+- [23:43] Captured compensating delete `{ error }` in lib/server/club-events-service.ts createClubEvent; logs console.error with orphaned event id on failure, then still rethrows original RPC error (matches uploads-service.ts logging style)
+- [23:44] Added regression test in __tests__/server/club-events-service.test.ts forcing both block RPC and compensating delete to fail; verified it fails without the fix (0 console.error calls) and passes with it
+- [23:44] ✅ Complete — vitest 27/27 passed, pnpm build green, pushed to feat/oir-203-admin-club-events
