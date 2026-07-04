@@ -12,7 +12,13 @@ import { serviceError } from '@/lib/server/service-error'
 import { getCurrentClubDate } from '@/lib/club-time'
 import type { Tables } from '@/lib/supabase/types'
 import type { SessionUser } from '@/lib/server/auth'
-import { deleteEvent, validateAndNormaliseSchedule, type NormalisedEventSchedule } from '@/lib/server/events-service'
+import {
+  deleteEventCascade,
+  isClubEventRow,
+  validateAndNormaliseSchedule,
+  type NormalisedEventSchedule,
+} from '@/lib/server/events-service'
+import { validateOptionalUrl } from '@/lib/validations/url'
 
 export type { AdminClubEvent, AdminListClubEventsResult }
 
@@ -152,9 +158,14 @@ function requireNonEmptyString(value: unknown, field: string): string {
   return str
 }
 
-function optionalString(value: unknown): string | null {
+function optionalString(value: unknown, field: string): string | null {
   if (value === undefined || value === null) return null
-  const str = String(value).trim()
+  // Finding 5: mirror requireNonEmptyString's typeof guard — a non-string,
+  // non-null value (e.g. `{}`, `[]`, a number) must be rejected rather than
+  // silently coerced via String(value), which would persist "[object
+  // Object]" or similar garbage into the row.
+  if (typeof value !== 'string') serviceError(`${field} must be a string`, 400)
+  const str = value.trim()
   return str === '' ? null : str
 }
 
@@ -183,30 +194,6 @@ function normaliseDateKind(value: unknown): ClubEventDateKind {
 
 function parseBooleanFlag(value: unknown): boolean {
   return value === true || value === 'true'
-}
-
-// URL hardening (MEDIUM finding from PR #148 security review): image_url and
-// link_url only accept absolute http(s) URLs (or empty/omitted). Anything
-// else — javascript:, data:, relative paths — is rejected here before the
-// board can ever save it, since these values render as <img src>/<a href> on
-// the public landing page.
-const ALLOWED_URL_PROTOCOLS = new Set(['http:', 'https:'])
-
-function validateOptionalUrl(value: unknown, field: string): string | null {
-  if (value === undefined || value === null) return null
-  const str = String(value).trim()
-  if (str === '') return null
-
-  let parsed: URL
-  try {
-    parsed = new URL(str)
-  } catch {
-    serviceError(`${field} must be an absolute http(s) URL`, 400)
-  }
-  if (!ALLOWED_URL_PROTOCOLS.has(parsed.protocol)) {
-    serviceError(`${field} must be an absolute http(s) URL`, 400)
-  }
-  return str
 }
 
 interface ClubEventFieldSet {
@@ -249,17 +236,17 @@ function resolveClubEventFields(body: ClubEventInput, current: EventRow | null):
     ? requireNonEmptyString(body.titleEn, 'titleEn')
     : requireNonEmptyString(current?.title_en, 'titleEn')
 
-  const blurbEs = body.blurbEs !== undefined ? optionalString(body.blurbEs) : (current?.blurb_es ?? null)
-  const blurbEn = body.blurbEn !== undefined ? optionalString(body.blurbEn) : (current?.blurb_en ?? null)
-  const descriptionEs = body.descriptionEs !== undefined ? optionalString(body.descriptionEs) : (current?.description_es ?? null)
-  const descriptionEn = body.descriptionEn !== undefined ? optionalString(body.descriptionEn) : (current?.description_en ?? null)
-  const categoryEs = body.categoryEs !== undefined ? optionalString(body.categoryEs) : (current?.category_es ?? null)
-  const categoryEn = body.categoryEn !== undefined ? optionalString(body.categoryEn) : (current?.category_en ?? null)
+  const blurbEs = body.blurbEs !== undefined ? optionalString(body.blurbEs, 'blurbEs') : (current?.blurb_es ?? null)
+  const blurbEn = body.blurbEn !== undefined ? optionalString(body.blurbEn, 'blurbEn') : (current?.blurb_en ?? null)
+  const descriptionEs = body.descriptionEs !== undefined ? optionalString(body.descriptionEs, 'descriptionEs') : (current?.description_es ?? null)
+  const descriptionEn = body.descriptionEn !== undefined ? optionalString(body.descriptionEn, 'descriptionEn') : (current?.description_en ?? null)
+  const categoryEs = body.categoryEs !== undefined ? optionalString(body.categoryEs, 'categoryEs') : (current?.category_es ?? null)
+  const categoryEn = body.categoryEn !== undefined ? optionalString(body.categoryEn, 'categoryEn') : (current?.category_en ?? null)
   const recurrenceLabelEs = body.recurrenceLabelEs !== undefined
-    ? optionalString(body.recurrenceLabelEs)
+    ? optionalString(body.recurrenceLabelEs, 'recurrenceLabelEs')
     : (current?.recurrence_label_es ?? null)
   const recurrenceLabelEn = body.recurrenceLabelEn !== undefined
-    ? optionalString(body.recurrenceLabelEn)
+    ? optionalString(body.recurrenceLabelEn, 'recurrenceLabelEn')
     : (current?.recurrence_label_en ?? null)
 
   const dateKind = body.dateKind !== undefined
@@ -338,74 +325,70 @@ function toAdminClubEvent(row: EventRow, blocks: EventRoomBlockRow[], today: str
   }
 }
 
-/** Cancel active/pending reservations that overlap a newly-created room block. */
-async function cancelConflictingReservations(
-  admin: ReturnType<typeof createSupabaseServerAdminClient>,
-  roomId: string,
-  date: string,
-  startTime: string,
-  endTime: string,
-): Promise<void> {
-  const { data: tables, error: tablesError } = await admin.from('tables').select('id').eq('room_id', roomId)
-  if (tablesError) serviceError('Internal server error', 500)
-
-  const tableIds = ((tables ?? []) as { id: string }[]).map((t) => t.id)
-  if (tableIds.length === 0) return
-
-  const { error } = await admin
-    .from('reservations')
-    .update({ status: 'cancelled' })
-    .in('table_id', tableIds)
-    .eq('date', date)
-    .lt('start_time', endTime)
-    .gt('end_time', startTime)
-    .in('status', ['active', 'pending'])
-
-  if (error) serviceError('Internal server error', 500)
-}
-
 /**
- * Replace all room blocks for a club event: deletes existing blocks, then
- * inserts one row per schedule entry that has a room attached (entries with
- * no room are informational-only and create no block — this is how "room
- * blocking optional" is enforced even when `blocksRooms` is true but a given
- * schedule row has no room selected). Cancels conflicting reservations for
- * every newly-created block, mirroring create_event_with_blocks /
- * update_event_with_blocks in events-service.ts.
+ * Replace all room blocks for a club event via the atomic
+ * `apply_club_event_room_blocks` SECURITY DEFINER RPC (Finding 1 — replaces
+ * the previous non-transactional delete-all → per-block insert → per-block
+ * reservation-cancel JS loop). In one DB transaction: deletes existing
+ * blocks for the event, inserts one row per schedule entry that has a room
+ * attached (entries with no room are informational-only and create no block
+ * — this is how "room blocking optional" is enforced even when
+ * `blocksRooms` is true but a given schedule row has no room selected), and
+ * cancels overlapping active/pending reservations for every newly-created
+ * block using the same overlap predicate as `update_event_with_blocks`.
  */
 async function applyClubEventRoomBlocks(
   admin: ReturnType<typeof createSupabaseServerAdminClient>,
   eventId: string,
   blocks: NormalisedEventSchedule[],
 ): Promise<EventRoomBlockRow[]> {
-  const { error: deleteError } = await admin.from('event_room_blocks').delete().eq('event_id', eventId)
-  if (deleteError) serviceError('Internal server error', 500)
+  const blocksPayload = blocks
+    .filter((b) => b.room_id)
+    .map((b) => ({
+      room_id: b.room_id,
+      date: b.date,
+      all_day: b.all_day,
+      start_time: b.start_time,
+      end_time: b.end_time,
+    }))
 
-  const inserted: EventRoomBlockRow[] = []
-  for (const block of blocks) {
-    if (!block.room_id) continue
+  const { data, error } = await admin.rpc('apply_club_event_room_blocks', {
+    p_event_id: eventId,
+    p_blocks: blocksPayload,
+  })
 
-    const { data, error } = await admin
-      .from('event_room_blocks')
-      .insert({
-        event_id: eventId,
-        room_id: block.room_id,
-        date: block.date,
-        start_time: block.start_time,
-        end_time: block.end_time,
-        all_day: block.all_day,
-      })
-      .select('id, event_id, room_id, date, start_time, end_time, all_day')
-      .maybeSingle()
-
-    if (error) serviceError('Internal server error', 500)
-    if (data) {
-      inserted.push(data as EventRoomBlockRow)
-      await cancelConflictingReservations(admin, block.room_id, block.date, block.start_time, block.end_time)
+  if (error) {
+    const pgCode = (error as { code?: string }).code
+    if (pgCode === 'P0001') {
+      serviceError('Club event not found', 404)
     }
+    if (pgCode === '23514' || pgCode === '22P02' || pgCode === '23502') {
+      serviceError('Invalid event data', 400)
+    }
+    serviceError('Internal server error', 500)
   }
 
-  return inserted
+  return (data ?? []) as EventRoomBlockRow[]
+}
+
+/**
+ * Order-insensitive comparison of the currently-stored room blocks against
+ * an incoming (already-validated) schedules payload — used by Finding 4 to
+ * skip the block-replace RPC entirely when a save carries no actual block
+ * changes (e.g. a metadata-only edit that always resends the current
+ * schedules from the edit form).
+ */
+function blocksMatchSchedules(current: EventRoomBlockRow[], incoming: NormalisedEventSchedule[]): boolean {
+  const incomingWithRoom = incoming.filter((s): s is NormalisedEventSchedule & { room_id: string } => !!s.room_id)
+  if (current.length !== incomingWithRoom.length) return false
+
+  const blockKey = (b: { room_id: string; date: string; all_day: boolean; start_time: string; end_time: string }) =>
+    `${b.room_id}|${b.date}|${b.all_day}|${b.start_time.slice(0, 5)}|${b.end_time.slice(0, 5)}`
+
+  const currentKeys = current.map((b) => blockKey(b)).sort()
+  const incomingKeys = incomingWithRoom.map((s) => blockKey(s)).sort()
+
+  return currentKeys.every((key, i) => key === incomingKeys[i])
 }
 
 function validateSchedulesPayload(raw: unknown): NormalisedEventSchedule[] {
@@ -473,7 +456,12 @@ export async function listAdminClubEvents(session: SessionUser): Promise<AdminLi
 export async function createClubEvent(session: SessionUser, body: ClubEventInput): Promise<AdminClubEvent> {
   requireAdminSession(session)
 
+  // Finding 2: validate EVERYTHING — fields, URL allowlist, and (when
+  // blocksRooms is set) the schedules payload — before any DB write.
   const fields = resolveClubEventFields(body, null)
+  const wantsBlocks = parseBooleanFlag(body.blocksRooms)
+  const schedules = wantsBlocks ? validateSchedulesPayload(body.schedules) : null
+
   const admin = createSupabaseServerAdminClient()
 
   const { data, error } = await admin
@@ -494,8 +482,7 @@ export async function createClubEvent(session: SessionUser, body: ClubEventInput
   const row = data as EventRow
 
   let blocks: EventRoomBlockRow[] = []
-  if (parseBooleanFlag(body.blocksRooms)) {
-    const schedules = validateSchedulesPayload(body.schedules)
+  if (schedules) {
     blocks = await applyClubEventRoomBlocks(admin, row.id, schedules)
   }
 
@@ -514,9 +501,19 @@ export async function updateClubEvent(session: SessionUser, id: string, body: Cl
 
   if (fetchError) serviceError('Internal server error', 500)
   const current = currentData as EventRow | null
-  if (!current || !current.title_es || !current.title_en) serviceError('Club event not found', 404)
+  if (!current || !isClubEventRow(current)) serviceError('Club event not found', 404)
 
+  // Finding 2: validate EVERYTHING — fields, URL allowlist, and (when
+  // applicable) the schedules payload — before any DB write (UPDATE below).
   const fields = resolveClubEventFields(body, current)
+
+  const blocksRoomsProvided = body.blocksRooms !== undefined
+  const schedulesProvided = body.schedules !== undefined
+  const wantsBlocks = blocksRoomsProvided ? parseBooleanFlag(body.blocksRooms) : undefined
+
+  const validatedSchedules = wantsBlocks !== false && schedulesProvided
+    ? validateSchedulesPayload(body.schedules)
+    : null
 
   const { data, error } = await admin
     .from('events')
@@ -537,18 +534,21 @@ export async function updateClubEvent(session: SessionUser, id: string, body: Cl
   const row = data as EventRow
 
   let blocks: EventRoomBlockRow[]
-  const blocksRoomsProvided = body.blocksRooms !== undefined
-  const schedulesProvided = body.schedules !== undefined
-  const wantsBlocks = blocksRoomsProvided ? parseBooleanFlag(body.blocksRooms) : undefined
 
   if (wantsBlocks === false) {
     // Explicit opt-out: remove any existing room blocks for this event.
     const { error: deleteError } = await admin.from('event_room_blocks').delete().eq('event_id', id)
     if (deleteError) serviceError('Internal server error', 500)
     blocks = []
-  } else if (schedulesProvided) {
-    const schedules = validateSchedulesPayload(body.schedules)
-    blocks = await applyClubEventRoomBlocks(admin, id, schedules)
+  } else if (validatedSchedules) {
+    // Finding 4: skip the (now atomic, but still non-free) block-replace RPC
+    // entirely when the incoming schedules are identical to what's already
+    // stored — metadata-only edits (title/blurb/etc) always resend the
+    // current schedules from the edit form, so this avoids needless churn.
+    const currentBlocks = await fetchEventRoomBlocks(admin, id)
+    blocks = blocksMatchSchedules(currentBlocks, validatedSchedules)
+      ? currentBlocks
+      : await applyClubEventRoomBlocks(admin, id, validatedSchedules)
   } else {
     // Neither blocksRooms nor schedules provided — leave existing blocks untouched.
     blocks = await fetchEventRoomBlocks(admin, id)
@@ -569,10 +569,13 @@ export async function deleteClubEvent(session: SessionUser, id: string): Promise
 
   if (error) serviceError('Internal server error', 500)
   const row = data as Pick<EventRow, 'id' | 'title_es' | 'title_en'> | null
-  if (!row || !row.title_es || !row.title_en) serviceError('Club event not found', 404)
+  if (!row || !isClubEventRow(row)) serviceError('Club event not found', 404)
 
   // Reuse the internal delete flow: cancels overlapping reservations for any
   // attached room blocks, then removes the row (and its blocks, via FK
-  // cascade) — same behavior as deleting a room-booking event today.
-  await deleteEvent(id)
+  // cascade) — same behavior as deleting a room-booking event today. Calls
+  // deleteEventCascade directly (not the guarded deleteEvent) since we've
+  // already validated this row IS a club event above — the inverse of
+  // deleteEvent's own isClubEventRow guard.
+  await deleteEventCascade(admin, id)
 }
