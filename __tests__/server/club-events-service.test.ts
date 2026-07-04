@@ -840,6 +840,75 @@ describe('club-events-service', () => {
       expect(deleteEq).toHaveBeenCalledWith('id', 'evt-new-1')
     })
 
+    it('logs the orphaned event id when BOTH the block RPC and the compensating delete fail, and still rethrows the original RPC error (PR #149 review round 2)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      // Block-replacement RPC fails after the event row was already inserted.
+      mockSupabaseAdmin.rpc = vi.fn(async () => ({
+        data: null,
+        error: { message: 'transient failure', code: 'XX000' },
+      }))
+
+      // The compensating delete ALSO fails — this is the silent-orphan gap:
+      // without the fix, this failure is discarded and never logged.
+      const deleteEq = vi.fn(async () => ({
+        data: null,
+        error: { message: 'delete failed', code: 'XX000' },
+      }))
+      const baseFrom = mockSupabaseAdmin.from
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        const result = baseFrom(table)
+        if (table === 'events') {
+          return { ...result, delete: vi.fn(() => ({ eq: deleteEq })) }
+        }
+        return result
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError
+        .mockImplementation((msg, code) => {
+          const err = new Error(msg) as ServiceError
+          err.statusCode = code
+          throw err
+        })
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      const { createClubEvent } = await loadClubEventsService()
+
+      await expect(
+        createClubEvent(adminSession, {
+          titleEs: 'Torneo con Bloques',
+          titleEn: 'Tournament with Blocks',
+          date: '2026-05-01',
+          dateKind: 'single',
+          blocksRooms: true,
+          schedules: [
+            {
+              date: '2026-05-01',
+              startTime: '18:00',
+              endTime: '22:00',
+              allDay: false,
+              roomId: 'room-1',
+            },
+          ],
+        })
+        // The ORIGINAL RPC error (from apply_club_event_room_blocks) must
+        // still be what the client sees — never the compensating delete's
+        // own error — since the delete error is only a logging concern.
+      ).rejects.toMatchObject({ statusCode: 500, message: 'Internal server error' })
+
+      expect(deleteEq).toHaveBeenCalledWith('id', 'evt-new-1')
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('orphaned event row requires manual cleanup'),
+        'evt-new-1',
+      )
+
+      consoleErrorSpy.mockRestore()
+    })
+
     it('rejects an unknown room id in schedules with 400 BEFORE inserting the event row (PR #149 review)', async () => {
       const adminSession = createAdminSession()
       const mockSupabaseAdmin = buildSupabaseMock()
