@@ -31,6 +31,12 @@ export default defineConfig({
         'app/api/**/*.ts',
         'lib/auth/auth-context.tsx',
       ],
+      // Explicitly measure every file matched by `include`, not just files
+      // touched by an imported test. Without this, an untested route (e.g.
+      // an app/api/**/*.ts handler with zero test imports) is silently
+      // dropped from the report instead of counting as 0% — inflating the
+      // aggregate percentage and hiding real gaps from the thresholds below.
+      all: true,
       // Global thresholds: baseline floor across all measured files (80.57% actual lines).
       // Untested API routes (0% coverage) are allowed at global floor; they must be
       // improved separately as part of KIM-408+. Per-glob overrides below preserve
