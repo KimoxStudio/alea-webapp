@@ -55,6 +55,70 @@ function requireValidFolder(folder: unknown): UploadFolder {
   return folder as UploadFolder
 }
 
+// ---------------------------------------------------------------------------
+// Magic-byte (file signature) verification.
+//
+// `File.type` is a client-supplied MIME type — a caller can set it to
+// "image/png" while sending an arbitrary (or malicious) byte stream. Because
+// the uploaded object is written to a *public* bucket and later rendered
+// directly (landing page / admin previews), we must not trust that value
+// alone. Before writing anything to Storage we re-derive the type from the
+// first bytes of the actual body and require it to match one of the allowed
+// image formats *and* match the MIME type the client declared.
+//
+// This is a small, dependency-free signature check — no full image
+// decoder/probe library is needed for this use case.
+// ---------------------------------------------------------------------------
+
+type ImageMime = keyof typeof MIME_TO_EXTENSION
+
+const MAGIC_BYTE_SIGNATURES: Record<ImageMime, (bytes: Uint8Array) => boolean> = {
+  'image/png': (bytes) => startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  'image/jpeg': (bytes) => startsWith(bytes, [0xff, 0xd8, 0xff]),
+  'image/webp': (bytes) =>
+    // "RIFF" <4-byte size, ignored> "WEBP"
+    startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) &&
+    bytes.length >= 12 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50,
+  'image/gif': (bytes) =>
+    // "GIF87a" or "GIF89a"
+    startsWith(bytes, [0x47, 0x49, 0x46, 0x38]) &&
+    bytes.length >= 6 &&
+    (bytes[4] === 0x37 || bytes[4] === 0x39) &&
+    bytes[5] === 0x61,
+}
+
+function startsWith(bytes: Uint8Array, signature: number[]): boolean {
+  if (bytes.length < signature.length) return false
+  return signature.every((byte, index) => bytes[index] === byte)
+}
+
+/**
+ * Detects the actual image format from the leading bytes of the file body,
+ * regardless of what the client claims via `File.type`.
+ */
+function detectImageMimeFromBytes(bytes: Uint8Array): ImageMime | null {
+  for (const mime of Object.keys(MAGIC_BYTE_SIGNATURES) as ImageMime[]) {
+    if (MAGIC_BYTE_SIGNATURES[mime](bytes)) return mime
+  }
+  return null
+}
+
+/**
+ * Verifies the file body's magic bytes match a known image signature AND
+ * match the MIME type the client declared via `File.type`. Must be called
+ * with the already-read body bytes, before anything is written to Storage.
+ */
+function requireMatchingMagicBytes(bytes: Uint8Array, declaredType: string): void {
+  const detected = detectImageMimeFromBytes(bytes)
+  if (!detected || detected !== declaredType) {
+    serviceError('file must be one of: image/png, image/jpeg, image/webp, image/gif', 400)
+  }
+}
+
 function requireValidFile(file: UploadFileLike | null): { file: UploadFileLike; extension: string } {
   if (!file) serviceError('file is required', 400)
 
@@ -88,6 +152,11 @@ export async function uploadLandingMediaImage(session: SessionUser, input: Uploa
   const { file, extension } = requireValidFile(input.file)
 
   const bytes = new Uint8Array(await file.arrayBuffer())
+  // Re-verify the actual file signature BEFORE writing anything to Storage —
+  // the client-supplied `file.type` alone is not trustworthy (see
+  // requireMatchingMagicBytes doc comment above).
+  requireMatchingMagicBytes(bytes, file.type)
+
   const objectPath = `${folder}/${crypto.randomUUID()}.${extension}`
 
   const admin = createSupabaseServerAdminClient()

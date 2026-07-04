@@ -622,6 +622,32 @@ function validateSchedulesPayload(raw: unknown): NormalisedEventSchedule[] {
   return raw.map((s, i) => validateAndNormaliseSchedule(s, i))
 }
 
+/**
+ * Validate that every room referenced by an incoming schedules payload
+ * actually exists, BEFORE any write to the "events" table (PR #149 review).
+ * Creating the event row before calling the apply_club_event_room_blocks RPC
+ * could otherwise leave an orphaned club event behind if the RPC failed
+ * (bad room id, FK issue, transient DB error) — rejecting unknown room ids
+ * up front removes the most common failure cause before the insert ever
+ * happens. The try/catch rollback in createClubEvent still guards against
+ * any other RPC failure (e.g. transient errors) so the "no orphan event row"
+ * invariant holds unconditionally, not just for bad-room-id cases.
+ */
+async function validateRoomsExist(
+  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  schedules: NormalisedEventSchedule[],
+): Promise<void> {
+  const roomIds = Array.from(new Set(schedules.map((s) => s.room_id).filter((id): id is string => !!id)))
+  if (roomIds.length === 0) return
+
+  const { data, error } = await admin.from('rooms').select('id').in('id', roomIds)
+  if (error) serviceError('Internal server error', 500)
+
+  const foundIds = new Set((data ?? []).map((r) => (r as { id: string }).id))
+  const missing = roomIds.filter((id) => !foundIds.has(id))
+  if (missing.length > 0) serviceError('Invalid room id in schedules', 400)
+}
+
 async function fetchEventRoomBlocks(
   admin: ReturnType<typeof createSupabaseServerAdminClient>,
   eventId: string,
@@ -700,6 +726,14 @@ export async function createClubEvent(session: SessionUser, body: ClubEventInput
 
   const admin = createSupabaseServerAdminClient()
 
+  // PR #149 review: validate every referenced room exists BEFORE the event
+  // insert, so the most common cause of a post-insert block-RPC failure
+  // (an invalid room id) is rejected up front instead of leaving an orphan
+  // "events" row.
+  if (schedules) {
+    await validateRoomsExist(admin, schedules)
+  }
+
   const { data, error } = await admin
     .from('events')
     .insert({ ...fields, created_by: session.id })
@@ -719,7 +753,17 @@ export async function createClubEvent(session: SessionUser, body: ClubEventInput
 
   let blocks: EventRoomBlockRow[] = []
   if (schedules || materials.length > 0) {
-    blocks = await applyClubEventRoomBlocksAndMaterials(admin, row.id, schedules, materials.length > 0 ? materials : null)
+    try {
+      blocks = await applyClubEventRoomBlocksAndMaterials(admin, row.id, schedules, materials.length > 0 ? materials : null)
+    } catch (err) {
+      // Compensating delete (PR #149 review): the block-replacement RPC
+      // failed after the event row was already inserted (validated room ids
+      // notwithstanding — e.g. a transient DB error). Remove the now-orphaned
+      // row so a failed create never leaves a partial club event behind, then
+      // rethrow the original error (preserves its status code/message).
+      await admin.from('events').delete().eq('id', row.id)
+      throw err
+    }
   }
   const eventMaterials = materials.length > 0 ? await fetchEventMaterials(admin, row.id) : []
 

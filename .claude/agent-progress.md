@@ -725,3 +725,18 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [22:52] pnpm test -- __tests__/server/oir208-unified-events.test.ts: 33/33 passing. Full suite: 3 pre-existing unrelated failures (hardcoded absolute paths to main repo checkout in library-games/partners/uploads service tests — reproduced identically on unmodified branch, not caused by this change).
 - [22:53] pnpm build: succeeded.
 - [22:53] ✅ Complete — migration + tests pushed to feat/oir-208-unified-events
+#### [PR153] software-engineer — magic-byte upload validation
+- [23:00] Started: address Oiranca review comment on uploads-service.ts:61 (client MIME trusted alone)
+- [23:00] Added dependency-free magic-byte signature check (PNG/JPEG/WEBP/GIF) run on the actual file body bytes, executed before the Supabase Storage write. Rejects via existing ServiceError (400, same message as MIME-allowlist rejection) when detected signature is missing or doesn't match the client-declared File.type.
+- [23:05] Fixed pre-existing portability bug in uploads-service.test.ts (hardcoded absolute path to migration file) using process.cwd() so tests run in any worktree/CI checkout — needed to unblock running the suite.
+- [23:10] Added 6 new tests: 2 spoofed-content-type (declared image/png|jpeg with plain-text body), 2 cross-format signature mismatch (declared png/webp with real jpeg/gif bytes), 2 positive (real matching png/jpeg signature accepted). Updated createMockFile fixture to embed real signature bytes so pre-existing happy-path tests still pass.
+- [23:12] Validation: pnpm exec vitest run __tests__/server/uploads-service.test.ts → 31/31 passed. pnpm exec tsc --noEmit → clean. pnpm build → succeeded. Full __tests__/server run: 459/459 tests passed (2 unrelated pre-existing failed suites: library-games-service.test.ts / partners-service.test.ts, same hardcoded-path bug in files outside this task's scope — not touched).
+- [23:12] ✅ Complete — magic-byte verification added, regression tests green, build clean.
+#### [PR149] software-engineer — atomic club-event insert+blocks
+- [22:51] Started: reviewer inline comment on club-events-service.ts:467 — createClubEvent could leave an orphan "events" row if apply_club_event_room_blocks RPC fails after the insert.
+- [22:51] Chose smallest-diff fallback (reviewer-approved alternative to a full transactional RPC): (1) validateRoomsExist() checks all referenced room ids against the `rooms` table BEFORE the event insert, rejecting bad ids with 400 up front; (2) wrapped applyClubEventRoomBlocks() in try/catch — on any RPC failure (including transient ones after valid room ids), the just-inserted event row is compensating-deleted before rethrowing, so no orphan row survives.
+- [22:51] Did not touch updateClubEvent — reviewer comment scoped to the create flow only; update doesn't create a new row on RPC failure so the orphan-row risk doesn't apply there.
+- [22:51] No new migration needed — apply_club_event_room_blocks RPC (20260704000004) unchanged.
+- [22:51] Added 2 regression tests to __tests__/server/club-events-service.test.ts: (a) forces the block RPC to fail and asserts the event row is deleted via events.delete().eq('id', 'evt-new-1'); (b) forces the room-existence check to fail and asserts 400 + zero calls to from('events') (no insert at all). Also updated the shared mock's `rooms` `.in()` handler to default to "room exists" so pre-existing tests using roomId fixtures keep passing.
+- [22:51] pnpm test (full suite): 52 files / 700 tests passed. pnpm build: succeeded, no new type errors.
+- [22:51] ✅ Complete — pushed to feat/oir-203-admin-club-events
