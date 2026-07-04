@@ -695,3 +695,10 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [18:20] Confirmed availability table-granularity (tables-service, rooms-service, reservations-service, saved-games-service) only narrows blocking (table_id null = whole room unchanged; non-null = single table only) — never widens prior anon/member access.
 - [18:20] No dangerouslySetInnerHTML/innerHTML/eval in diff; en.json/es.json key parity verified (no missing keys either direction); no secrets/hardcoded credentials found; all commit messages in English.
 - [18:20] ✅ Complete — APPROVE. Opened PR #154 (feat/oir-208-unified-events → develop): https://github.com/KimoxStudio/alea-webapp/pull/154
+
+#### [OIR-208] software-engineer — remove duplicate global footer on landing
+- [18:24] Started
+- [18:24] Found mechanism: Header hides itself via `!isAuthenticated` check (auth-based), but Footer has no gate at all, so it always rendered — including under the landing's own LandingFooterSection, on `/[locale]` root. Root path always redirects authenticated users to /rooms (app/[locale]/page.tsx), so locale root is anon-only in practice.
+- [18:24] Fix: added `usePathname()` check in components/layout/footer.tsx; Footer returns null when pathname matches `/^\/[a-z]{2}$/` (locale root only). All other routes unaffected.
+- [18:24] Validation: pnpm typecheck, pnpm lint, pnpm build, pnpm test (868 tests) all green.
+- [18:24] ✅ Complete — single-file diff in components/layout/footer.tsx
