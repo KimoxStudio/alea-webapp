@@ -22,6 +22,7 @@ ON CONFLICT ("id") DO NOTHING;
 -- bucket only (uploaded event/partner/game images are public landing
 -- content by design). No write policies are defined — writes go exclusively
 -- through the service_role client, which bypasses storage RLS entirely.
+DROP POLICY IF EXISTS "landing_media_select_public" ON "storage"."objects";
 CREATE POLICY "landing_media_select_public" ON "storage"."objects"
   FOR SELECT TO "anon", "authenticated"
   USING ("bucket_id" = 'landing-media');

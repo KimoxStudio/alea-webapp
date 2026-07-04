@@ -611,3 +611,12 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [17:25] All tests green: 555 passed (24 files, +25 uploads-service + 12 imageUrl in library-games)
 - [17:25] Typecheck passed: ✓ no errors
 - [17:25] Lint passed: ✓ no ESLint errors
+
+#### [OIR-207] software-engineer — review fixes
+- [17:15] Started: fix 4 review findings on feat/oir-207-image-uploads
+- [17:15] Migration: added DROP POLICY IF EXISTS guard before CREATE POLICY landing_media_select_public
+- [17:15] game-card.tsx + landing.css: added .mod-game-img-scrim dark gradient overlay for readability over uploaded cover images
+- [17:15] uploads/route.ts: wrapped request.formData() in try/catch, throws ServiceError('Invalid upload payload', 400) on parse failure
+- [17:15] uploads-service.ts: added doc comment clarifying size check is a validation gate, not a memory-exhaustion defense (bounded by admin auth + rate limit; storage bucket enforces limit)
+- [17:15] Validation: pnpm typecheck OK, pnpm lint OK (no warnings/errors), pnpm test 55 files / 836 tests passed
+- [17:15] ✅ Complete — all 4 findings fixed, no test files touched

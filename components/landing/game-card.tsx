@@ -47,8 +47,11 @@ export function GameCard({ game, locale, idx, playersLabel, timeLabel, weightLab
     >
       <div className="mod-game-cover" style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
         {game.imgUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={game.imgUrl} alt="" className="mod-game-img" loading="lazy" />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={game.imgUrl} alt="" className="mod-game-img" loading="lazy" />
+            <div className="mod-game-img-scrim" />
+          </>
         )}
         <div
           className="mod-game-shine"

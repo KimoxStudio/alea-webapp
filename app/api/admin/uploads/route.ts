@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/server/auth'
 import { uploadLandingMediaImage, type UploadFileLike } from '@/lib/server/uploads-service'
 import { toServiceErrorResponse } from '@/lib/server/http-error'
 import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
+import { ServiceError } from '@/lib/server/service-error'
 
 function toUploadFileLike(value: FormDataEntryValue | null): UploadFileLike | null {
   if (!value || typeof value === 'string' || typeof value.arrayBuffer !== 'function') return null
@@ -20,7 +21,13 @@ export async function POST(request: NextRequest) {
   if (admin instanceof NextResponse) return admin
 
   try {
-    const formData = await request.formData()
+    let formData: FormData
+    try {
+      formData = await request.formData()
+    } catch {
+      throw new ServiceError('Invalid upload payload', 400)
+    }
+
     const { url } = await uploadLandingMediaImage(admin.session, {
       file: toUploadFileLike(formData.get('file')),
       folder: formData.get('folder'),

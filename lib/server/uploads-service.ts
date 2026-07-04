@@ -63,6 +63,12 @@ function requireValidFile(file: UploadFileLike | null): { file: UploadFileLike; 
     serviceError('file must be one of: image/png, image/jpeg, image/webp, image/gif', 400)
   }
 
+  // NOTE: by the time we get here, request.formData() has already buffered
+  // the entire multipart body into memory — this check is a validation gate
+  // on the parsed size, not a memory-exhaustion defense. Request size is
+  // bounded upstream by requireAdmin() (auth-gated) and the adminMutation
+  // rate limit; the "landing-media" bucket's file_size_limit is what
+  // actually enforces the 5 MB cap at the storage layer.
   if (file.size <= 0 || file.size > MAX_UPLOAD_SIZE_BYTES) {
     serviceError('file must be between 1 byte and 5 MB', 400)
   }
