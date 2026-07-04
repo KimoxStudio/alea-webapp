@@ -45,7 +45,7 @@ export function LandingClient({
   return (
     <div className="modern-root">
       <HexGridBackground />
-      <CustomCursor />
+      <CustomCursor variant="die" color="#e6c281" />
       <LandingNav locale={locale} />
       <HeroSection locale={locale} upcomingEvents={upcomingEvents} onPickEvent={setSelectedEvent} />
       <Ticker locale={locale} />

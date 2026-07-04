@@ -390,3 +390,10 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [11:59] Worktree was stale (checked out at unrelated commit 4be567d on branch worktree-agent-a02554af644924965); reset it to origin/feat/oir-202-public-landing-page (b3c24fe) to get access to the current migration files before authoring the repair.
 - [12:00] Created supabase/migrations/20260704000001_oir202_repair_events_anon_grant.sql — idempotent repair: re-GRANT SELECT to anon, DROP POLICY IF EXISTS + recreate events_select_public exactly as in 20260703000001. No column/seed changes. Did not run any SQL or supabase CLI commands against any database.
 - [12:01] ✅ Complete — committed and pushed to origin/feat/oir-202-public-landing-page.
+
+#### [OIR-202-cursor] software-engineer — landing cursor design parity
+- [00:00] Started. Compared components/landing/custom-cursor.tsx, landing.css, landing-client.tsx, marquee-row.tsx against design reference (shared-cursor-and-marquee.jsx, styles.css, NOTES.md).
+- [00:00] Deviation found: custom-cursor.tsx rendered a "pawn" SVG (circle+paths, 22x28, viewBox 0 0 100 120) hardcoded, ignoring the design's `variant` prop entirely, and defaulted color to #c8a25b instead of #e6c281. landing-client.tsx mounted `<CustomCursor />` with no props, so the wrong icon/color always rendered.
+- [00:00] No other cursor deviations found: lerp factor (0.16), ring size/opacity/border, z-index 9999, transform translate(-50%,-50%), cursor:none scoping to .modern-root, touch/coarse-pointer fallback, and marquee grab/grabbing behavior in landing.css + marquee-row.tsx already matched the design spec exactly.
+- [00:00] Fixed: custom-cursor.tsx now accepts `variant?: 'die' | 'meeple' | 'pawn'` (default 'die') and `color` (default '#e6c281'), rendering the die SVG (rounded rect fill=color, 3 pips #1a1410 at (30,30)/(70,70)/(50,50), 22x22, viewBox 0 0 100 100) as the default/landing icon, matching the design's CustomCursor exactly. landing-client.tsx now mounts `<CustomCursor variant="die" color="#e6c281" />` explicitly.
+- [00:00] ✅ Complete — cursor now matches design 1:1 (die icon, gold color, ring lag, cursor:none scoping unchanged).
