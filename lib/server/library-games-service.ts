@@ -88,6 +88,39 @@ function parseBooleanFlag(value: unknown): boolean {
   return value === true || value === 'true'
 }
 
+/**
+ * OIR-206: English copy is optional — when categoryEn is absent/empty, fall
+ * back to categoryEs (a NOT NULL column) so the landing still renders
+ * content in the EN locale. Explicit EN input always wins. On update,
+ * "auto-copy tracking" re-copies a previously auto-copied EN value (current
+ * EN === old ES) when ES changes, while preserving an explicitly-set EN
+ * value that differs from the old ES. `?? esValue` is a type-level safety
+ * net only — categoryEs is always a non-empty string, so the fallback chain
+ * never actually resolves to null here.
+ */
+function resolveBilingualEnFallback(
+  field: string,
+  esValue: string,
+  rawEn: unknown,
+  enProvided: boolean,
+  current: { es: string | null; en: string | null } | null,
+): string {
+  if (enProvided) {
+    // Finding 5 (mirrors optionalString elsewhere in the codebase): a
+    // non-string, non-null value (an array, object, number…) must be
+    // rejected rather than silently treated as "absent" and falling back to
+    // the ES value.
+    if (rawEn !== null && typeof rawEn !== 'string') {
+      serviceError(`${field} must be a string`, 400)
+    }
+    const trimmed = typeof rawEn === 'string' ? rawEn.trim() : ''
+    if (trimmed !== '') return trimmed
+  }
+  if (!current) return esValue
+  const wasAutoCopied = current.en === current.es
+  return (wasAutoCopied ? esValue : current.en) ?? esValue
+}
+
 /** weight is a numeric(2,1) column: required, must be a number in [0, 5]. */
 function requireWeight(value: unknown): number {
   const num = typeof value === 'number' ? value : Number(value)
@@ -123,9 +156,13 @@ function resolveLibraryGameFields(body: LibraryGameInput, current: LibraryGameRo
     ? requireNonEmptyString(body.categoryEs, 'categoryEs')
     : requireNonEmptyString(current?.category_es, 'categoryEs')
 
-  const categoryEn = body.categoryEn !== undefined
-    ? requireNonEmptyString(body.categoryEn, 'categoryEn')
-    : requireNonEmptyString(current?.category_en, 'categoryEn')
+  const categoryEn = resolveBilingualEnFallback(
+    'categoryEn',
+    categoryEs,
+    body.categoryEn,
+    body.categoryEn !== undefined,
+    current ? { es: current.category_es, en: current.category_en } : null,
+  )
 
   const players = body.players !== undefined
     ? requireNonEmptyString(body.players, 'players')

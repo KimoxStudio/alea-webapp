@@ -196,6 +196,41 @@ function parseBooleanFlag(value: unknown): boolean {
   return value === true || value === 'true'
 }
 
+/**
+ * OIR-206: English copy is optional everywhere — when the admin leaves an
+ * `*En` field blank, fall back to the paired `*Es` value so DB NOT NULL /
+ * paired constraints (`events_bilingual_titles_paired`) stay satisfied and
+ * the landing still renders content in the EN locale. Explicit EN input
+ * always wins.
+ *
+ * "Auto-copy tracking" on update: a field whose current EN value equals its
+ * OLD ES value is treated as a previous auto-copy (not an explicit EN edit),
+ * so it re-copies to track ES changes. A current EN value that differs from
+ * the old ES value is treated as explicitly set and is preserved even when
+ * ES changes.
+ */
+function resolveBilingualEnFallback(
+  field: string,
+  esValue: string | null,
+  rawEn: unknown,
+  enProvided: boolean,
+  current: { es: string | null; en: string | null } | null,
+): string | null {
+  if (enProvided) {
+    // Finding 5 (mirrors optionalString): a non-string, non-null value (an
+    // array, object, number…) must be rejected rather than silently treated
+    // as "absent" and falling back to the ES value.
+    if (rawEn !== null && typeof rawEn !== 'string') {
+      serviceError(`${field} must be a string`, 400)
+    }
+    const trimmed = typeof rawEn === 'string' ? rawEn.trim() : ''
+    if (trimmed !== '') return trimmed
+  }
+  if (!current) return esValue
+  const wasAutoCopied = current.en === current.es
+  return wasAutoCopied ? esValue : current.en
+}
+
 interface ClubEventFieldSet {
   title_es: string
   title_en: string
@@ -232,22 +267,53 @@ function resolveClubEventFields(body: ClubEventInput, current: EventRow | null):
   const titleEs = body.titleEs !== undefined
     ? requireNonEmptyString(body.titleEs, 'titleEs')
     : requireNonEmptyString(current?.title_es, 'titleEs')
-  const titleEn = body.titleEn !== undefined
-    ? requireNonEmptyString(body.titleEn, 'titleEn')
-    : requireNonEmptyString(current?.title_en, 'titleEn')
+  // OIR-206: titleEn is optional — falls back to titleEs (see
+  // resolveBilingualEnFallback) rather than being required client- or
+  // service-side. `?? titleEs` is a type-level safety net only; in practice
+  // the fallback never returns null here because titleEs is always a
+  // non-empty string.
+  const titleEn = resolveBilingualEnFallback(
+    'titleEn',
+    titleEs,
+    body.titleEn,
+    body.titleEn !== undefined,
+    current ? { es: current.title_es, en: current.title_en } : null,
+  ) ?? titleEs
 
   const blurbEs = body.blurbEs !== undefined ? optionalString(body.blurbEs, 'blurbEs') : (current?.blurb_es ?? null)
-  const blurbEn = body.blurbEn !== undefined ? optionalString(body.blurbEn, 'blurbEn') : (current?.blurb_en ?? null)
+  const blurbEn = resolveBilingualEnFallback(
+    'blurbEn',
+    blurbEs,
+    body.blurbEn,
+    body.blurbEn !== undefined,
+    current ? { es: current.blurb_es, en: current.blurb_en } : null,
+  )
   const descriptionEs = body.descriptionEs !== undefined ? optionalString(body.descriptionEs, 'descriptionEs') : (current?.description_es ?? null)
-  const descriptionEn = body.descriptionEn !== undefined ? optionalString(body.descriptionEn, 'descriptionEn') : (current?.description_en ?? null)
+  const descriptionEn = resolveBilingualEnFallback(
+    'descriptionEn',
+    descriptionEs,
+    body.descriptionEn,
+    body.descriptionEn !== undefined,
+    current ? { es: current.description_es, en: current.description_en } : null,
+  )
   const categoryEs = body.categoryEs !== undefined ? optionalString(body.categoryEs, 'categoryEs') : (current?.category_es ?? null)
-  const categoryEn = body.categoryEn !== undefined ? optionalString(body.categoryEn, 'categoryEn') : (current?.category_en ?? null)
+  const categoryEn = resolveBilingualEnFallback(
+    'categoryEn',
+    categoryEs,
+    body.categoryEn,
+    body.categoryEn !== undefined,
+    current ? { es: current.category_es, en: current.category_en } : null,
+  )
   const recurrenceLabelEs = body.recurrenceLabelEs !== undefined
     ? optionalString(body.recurrenceLabelEs, 'recurrenceLabelEs')
     : (current?.recurrence_label_es ?? null)
-  const recurrenceLabelEn = body.recurrenceLabelEn !== undefined
-    ? optionalString(body.recurrenceLabelEn, 'recurrenceLabelEn')
-    : (current?.recurrence_label_en ?? null)
+  const recurrenceLabelEn = resolveBilingualEnFallback(
+    'recurrenceLabelEn',
+    recurrenceLabelEs,
+    body.recurrenceLabelEn,
+    body.recurrenceLabelEn !== undefined,
+    current ? { es: current.recurrence_label_es, en: current.recurrence_label_en } : null,
+  )
 
   const dateKind = body.dateKind !== undefined
     ? normaliseDateKind(body.dateKind)

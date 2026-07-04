@@ -21,6 +21,7 @@ import {
   type LibraryGamePayload,
 } from '@/lib/hooks/use-admin'
 import type { AdminLibraryGame } from '@/lib/types'
+import { OptionalEnglishFields } from './optional-english-fields'
 
 interface LibraryGameFormState {
   title: string
@@ -84,19 +85,22 @@ function LibraryGameFormFields({ form, onChange, idPrefix }: {
           className="bg-background-secondary border-border focus:border-primary/50"
         />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor={`${idPrefix}-category-es`} className="text-sm text-muted-foreground font-medium">
-            {t('libraryGames.categoryEs')}
-          </Label>
-          <Input
-            id={`${idPrefix}-category-es`}
-            value={form.categoryEs}
-            onChange={(e) => onChange({ ...form, categoryEs: e.target.value })}
-            required
-            className="bg-background-secondary border-border focus:border-primary/50"
-          />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${idPrefix}-category-es`} className="text-sm text-muted-foreground font-medium">
+          {t('libraryGames.categoryEs')}
+        </Label>
+        <Input
+          id={`${idPrefix}-category-es`}
+          value={form.categoryEs}
+          onChange={(e) => onChange({ ...form, categoryEs: e.target.value })}
+          required
+          className="bg-background-secondary border-border focus:border-primary/50"
+        />
+      </div>
+
+      {/* English copy is optional (OIR-206) — collapsed by default; the
+          service falls back to the Spanish text above when left blank. */}
+      <OptionalEnglishFields idPrefix={idPrefix}>
         <div className="space-y-2">
           <Label htmlFor={`${idPrefix}-category-en`} className="text-sm text-muted-foreground font-medium">
             {t('libraryGames.categoryEn')}
@@ -105,11 +109,12 @@ function LibraryGameFormFields({ form, onChange, idPrefix }: {
             id={`${idPrefix}-category-en`}
             value={form.categoryEn}
             onChange={(e) => onChange({ ...form, categoryEn: e.target.value })}
-            required
+            placeholder={t('englishOptional.hint')}
             className="bg-background-secondary border-border focus:border-primary/50"
           />
         </div>
-      </div>
+      </OptionalEnglishFields>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor={`${idPrefix}-players`} className="text-sm text-muted-foreground font-medium">

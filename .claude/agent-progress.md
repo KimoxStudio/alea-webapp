@@ -500,3 +500,15 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [15:46] Started: audited diff origin/feat/oir-204-partners-management...HEAD (migration, service layer, routes, admin UI, landing wiring, i18n)
 - [15:46] Checked: RLS/grants on library_games (SELECT-only active=true, no write policies), requireAdmin+enforceMutationSecurity+rate-limit on routes, no URL fields/no unvalidated URL rendering, no dangerouslySetInnerHTML, i18n parity confirmed (libraryGames.* en/es), no secrets in diff, landing degradation wrapper catches fetch failures server-side
 - [15:46] ✅ Complete — APPROVED, no blocking findings. Opened PR #151 (final PR of the #148→#149→#150→#151 stacked chain) targeting develop.
+
+#### [OIR-206] software-engineer — single events tab + optional EN
+- [16:20] Started. Reset worktree to origin/feat/oir-206-admin-events-ux (57e490c); ran pnpm install (node_modules missing in fresh worktree).
+- [16:20] admin-dashboard.tsx: removed club-events top-level tab, reordered TabsTriggers/Contents to users, reservations, rooms, equipment, library-games, events, partners.
+- [16:20] Added components/admin/events-tab.tsx: thin wrapper rendering nested sub-tabs "Club (landing)" (default) / "Internos (salas)", reusing ClubEventsSection and EventsSection unchanged.
+- [16:20] Added components/admin/optional-english-fields.tsx: plain disclosure (no new dependency — @radix-ui/react-collapsible isn't installed) grouping *_en inputs, collapsed by default.
+- [16:20] Service layer EN fallback (lib/server/club-events-service.ts, partners-service.ts, library-games-service.ts): new resolveBilingualEnFallback(field, esValue, rawEn, enProvided, current) — explicit non-empty EN wins; absent/empty falls back to ES; on update, "auto-copy tracking" (current.en === current.es) re-copies on ES change, else preserves explicit EN; non-string/non-null EN input still rejected with 400 (Finding 5 parity). Applied to titleEn/blurbEn/descriptionEn/categoryEn/recurrenceLabelEn (club events), descEn (partners), categoryEn (library games, NOT NULL column).
+- [16:20] lib/hooks/use-admin.ts: ClubEventPayload.titleEn now optional.
+- [16:20] Admin forms (club-events-section.tsx, partners-section.tsx, library-games-section.tsx): removed `required` from EN inputs, moved all EN fields into OptionalEnglishFields disclosure with placeholder hint "copies Spanish if left blank".
+- [16:20] i18n: added admin.eventsTab.{clubSubTab,internalSubTab} and admin.englishOptional.{title,hint} to messages/en.json + es.json — parity verified (554/554 keys each).
+- [16:20] Validation: pnpm typecheck ✅, pnpm lint ✅ (no warnings), pnpm build ✅, pnpm test: 773/774 passed — 1 known/expected failure: club-events-service.test.ts "requires both titleEs and titleEn" asserts the OLD required-EN behavior the spec explicitly changes (titleEn now optional, falls back to titleEs). Not edited per instructions (test files owned by qa-engineer).
+- [16:20] ✅ Complete — ready for qa-engineer to update/replace the one outdated assertion and add coverage for the new fallback/auto-copy-tracking behavior.

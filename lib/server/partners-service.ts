@@ -103,6 +103,36 @@ function parseBooleanFlag(value: unknown): boolean {
   return value === true || value === 'true'
 }
 
+/**
+ * OIR-206: English copy is optional — when descriptionEn is absent/empty,
+ * fall back to the paired descriptionEs value so the landing still renders
+ * content in the EN locale. Explicit EN input always wins. On update,
+ * "auto-copy tracking" re-copies a previously auto-copied EN value (current
+ * EN === old ES) when ES changes, while preserving an explicitly-set EN
+ * value that differs from the old ES.
+ */
+function resolveBilingualEnFallback(
+  field: string,
+  esValue: string | null,
+  rawEn: unknown,
+  enProvided: boolean,
+  current: { es: string | null; en: string | null } | null,
+): string | null {
+  if (enProvided) {
+    // Finding 5 (mirrors optionalString): a non-string, non-null value (an
+    // array, object, number…) must be rejected rather than silently treated
+    // as "absent" and falling back to the ES value.
+    if (rawEn !== null && typeof rawEn !== 'string') {
+      serviceError(`${field} must be a string`, 400)
+    }
+    const trimmed = typeof rawEn === 'string' ? rawEn.trim() : ''
+    if (trimmed !== '') return trimmed
+  }
+  if (!current) return esValue
+  const wasAutoCopied = current.en === current.es
+  return wasAutoCopied ? esValue : current.en
+}
+
 interface PartnerFieldSet {
   name: string
   img_url: string
@@ -131,7 +161,13 @@ function resolvePartnerFields(body: PartnerInput, current: PartnerRow | null): P
 
   const linkUrl = body.linkUrl !== undefined ? validateOptionalUrl(body.linkUrl, 'linkUrl') : (current?.link_url ?? null)
   const descEs = body.descriptionEs !== undefined ? optionalString(body.descriptionEs, 'descriptionEs') : (current?.desc_es ?? null)
-  const descEn = body.descriptionEn !== undefined ? optionalString(body.descriptionEn, 'descriptionEn') : (current?.desc_en ?? null)
+  const descEn = resolveBilingualEnFallback(
+    'descriptionEn',
+    descEs,
+    body.descriptionEn,
+    body.descriptionEn !== undefined,
+    current ? { es: current.desc_es, en: current.desc_en } : null,
+  )
 
   const sortOrder = body.sortOrder !== undefined
     ? (optionalInteger(body.sortOrder, 'sortOrder') ?? 0)

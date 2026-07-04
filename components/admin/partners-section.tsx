@@ -21,6 +21,7 @@ import {
   type PartnerPayload,
 } from '@/lib/hooks/use-admin'
 import type { AdminPartner } from '@/lib/types'
+import { OptionalEnglishFields } from './optional-english-fields'
 
 interface PartnerFormState {
   name: string
@@ -106,18 +107,21 @@ function PartnerFormFields({ form, onChange, idPrefix }: {
           className="bg-background-secondary border-border focus:border-primary/50"
         />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor={`${idPrefix}-desc-es`} className="text-sm text-muted-foreground font-medium">
-            {t('partners.descriptionEs')}
-          </Label>
-          <Input
-            id={`${idPrefix}-desc-es`}
-            value={form.descriptionEs}
-            onChange={(e) => onChange({ ...form, descriptionEs: e.target.value })}
-            className="bg-background-secondary border-border focus:border-primary/50"
-          />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${idPrefix}-desc-es`} className="text-sm text-muted-foreground font-medium">
+          {t('partners.descriptionEs')}
+        </Label>
+        <Input
+          id={`${idPrefix}-desc-es`}
+          value={form.descriptionEs}
+          onChange={(e) => onChange({ ...form, descriptionEs: e.target.value })}
+          className="bg-background-secondary border-border focus:border-primary/50"
+        />
+      </div>
+
+      {/* English copy is optional (OIR-206) — collapsed by default; the
+          service falls back to the Spanish text above when left blank. */}
+      <OptionalEnglishFields idPrefix={idPrefix}>
         <div className="space-y-2">
           <Label htmlFor={`${idPrefix}-desc-en`} className="text-sm text-muted-foreground font-medium">
             {t('partners.descriptionEn')}
@@ -126,10 +130,12 @@ function PartnerFormFields({ form, onChange, idPrefix }: {
             id={`${idPrefix}-desc-en`}
             value={form.descriptionEn}
             onChange={(e) => onChange({ ...form, descriptionEn: e.target.value })}
+            placeholder={t('englishOptional.hint')}
             className="bg-background-secondary border-border focus:border-primary/50"
           />
         </div>
-      </div>
+      </OptionalEnglishFields>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor={`${idPrefix}-sort-order`} className="text-sm text-muted-foreground font-medium">
