@@ -620,3 +620,14 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [17:15] uploads-service.ts: added doc comment clarifying size check is a validation gate, not a memory-exhaustion defense (bounded by admin auth + rate limit; storage bucket enforces limit)
 - [17:15] Validation: pnpm typecheck OK, pnpm lint OK (no warnings/errors), pnpm test 55 files / 836 tests passed
 - [17:15] ✅ Complete — all 4 findings fixed, no test files touched
+
+#### [OIR-207] security-reviewer — final gate
+- [17:30] Started: security review of feat/oir-207-image-uploads (NEW chain tail), diff vs origin/feat/oir-206-admin-events-ux.
+- [17:30] Migration 20260704000005 verified: bucket public read-only, 5MB file_size_limit, 4-MIME allowlist at bucket level, single SELECT-only storage.objects policy scoped to landing-media, DROP POLICY IF EXISTS idempotency, no write policies, library_games.img_url guarded with ADD COLUMN IF NOT EXISTS.
+- [17:30] uploads-service.ts verified: admin check runs before storage access, folder allowlist strict (events/partners/library-games), MIME allowlist excludes SVG (XSS vector confirmed absent), extension derived only from MIME map (never filename), path is `${folder}/${randomUUID()}.${ext}` with no user-controlled segments, storage errors logged server-side with generic 500 to client.
+- [17:30] Route verified: enforceMutationSecurity + rate limit (adminMutation) + requireAdmin all run before formData() parse; parse failure returns 400.
+- [17:30] Confirmed apiClient wrapper attaches CSRF header for FormData bodies too (skips JSON Content-Type override only).
+- [17:30] Confirmed game-card.tsx uses plain <img> (no dangerouslySetInnerHTML) with scrim overlay; library-games imageUrl passes through shared validateOptionalUrl http(s)-only validator.
+- [17:30] i18n parity confirmed for imageUpload.* keys in en/es. No secrets found in diff.
+- [17:30] npx vitest run: 836/836 passed.
+- [17:35] ✅ Complete — APPROVE. Opened PR #153 (feat/oir-207-image-uploads → develop), stacked-chain final PR note included.
