@@ -20,6 +20,7 @@ import type { ServiceError } from '@/lib/server/service-error'
  * - Validate-before-write: invalid input prevents DB calls
  * - Type guards: name as object/array rejected with 400
  * - Migration enables RLS, creates SELECT-only policy, seeds 20 partners
+ * - Chained .order() calls: secondary order('name') tie-break for consistent results
  */
 
 vi.mock('server-only', () => ({}))
@@ -60,75 +61,101 @@ type SessionUser = {
 function buildSupabaseMock() {
   return {
     from: vi.fn(function (table: string) {
-      const state = { table, filters: {} as any, updateData: {} as any, data: null as any, insertData: null as any }
+      const state = { 
+        table, 
+        filters: {} as any, 
+        updateData: {} as any, 
+        data: null as any, 
+        insertData: null as any,
+        orders: [] as any[]
+      }
+
+      // Helper: Create a chainable query builder with .order() and .eq() support
+      function createOrderableBuilder() {
+        return {
+          eq: vi.fn(function (col: string, val: any) {
+            state.filters[col] = val
+            return {
+              maybeSingle: vi.fn(async () => {
+                if (table === 'partners' && state.filters.id === 'partner-1') {
+                  return {
+                    data: {
+                      id: 'partner-1',
+                      name: 'Existing Partner',
+                      img_url: 'https://example.com/partner.png',
+                      link_url: 'https://example.com',
+                      desc_es: 'Descripción',
+                      desc_en: 'Description',
+                      sort_order: 0,
+                      active: true,
+                      created_at: '2026-04-01T00:00:00Z',
+                      updated_at: '2026-04-01T00:00:00Z',
+                    },
+                    error: null,
+                  }
+                }
+                return { data: null, error: null }
+              }),
+            }
+          }),
+          order: vi.fn(function (col: string, opts: any) {
+            state.orders.push({ col, opts })
+            return createChainableQuery()
+          }),
+        }
+      }
+
+      // Helper: Create a thenable that is also chainable (supports multiple .order() calls)
+      function createChainableQuery() {
+        return {
+          [Symbol.toStringTag]: 'Promise',
+          order: vi.fn(function (col: string, opts: any) {
+            state.orders.push({ col, opts })
+            // Return another chainable query for further chaining
+            return createChainableQuery()
+          }),
+          then: async (onFulfilled?: any, onRejected?: any) => {
+            try {
+              if (table === 'partners') {
+                const mockData = [
+                  {
+                    id: 'partner-1',
+                    name: 'Amantis Informática',
+                    img_url: 'https://alealaspalmas.es/wp-content/uploads/2025/10/amantisinformatica.png',
+                    link_url: 'https://maps.app.goo.gl/KPiF4nxabjBYu8YA6',
+                    desc_es: 'Tienda de informática',
+                    desc_en: 'Computer store',
+                    sort_order: 0,
+                    active: true,
+                    created_at: '2026-04-01T00:00:00Z',
+                    updated_at: '2026-04-01T00:00:00Z',
+                  },
+                  {
+                    id: 'partner-2',
+                    name: 'El Desván del Leprechaun',
+                    img_url: 'https://alealaspalmas.es/wp-content/uploads/2025/10/eldesvandelleprechaun.png',
+                    link_url: 'https://maps.app.goo.gl/CM96Gnighr4YGMbC7',
+                    desc_es: 'Videojuegos y más',
+                    desc_en: 'Video games and more',
+                    sort_order: 1,
+                    active: true,
+                    created_at: '2026-04-01T00:00:00Z',
+                    updated_at: '2026-04-01T00:00:00Z',
+                  },
+                ]
+                return onFulfilled?.({ data: mockData, error: null })
+              }
+              return onFulfilled?.({ data: [], error: null })
+            } catch (err) {
+              return onRejected?.(err)
+            }
+          },
+        }
+      }
 
       return {
         select: vi.fn(function (cols?: string) {
-          return {
-            eq: vi.fn(function (col: string, val: any) {
-              state.filters[col] = val
-              return {
-                maybeSingle: vi.fn(async () => {
-                  if (table === 'partners' && state.filters.id === 'partner-1') {
-                    return {
-                      data: {
-                        id: 'partner-1',
-                        name: 'Existing Partner',
-                        img_url: 'https://example.com/partner.png',
-                        link_url: 'https://example.com',
-                        desc_es: 'Descripción',
-                        desc_en: 'Description',
-                        sort_order: 0,
-                        active: true,
-                        created_at: '2026-04-01T00:00:00Z',
-                        updated_at: '2026-04-01T00:00:00Z',
-                      },
-                      error: null,
-                    }
-                  }
-                  return { data: null, error: null }
-                }),
-              }
-            }),
-            order: vi.fn(function (col: string, opts: any) {
-              return {
-                [Symbol.toStringTag]: 'Promise',
-                then: async (onFulfilled?: any) => {
-                  if (table === 'partners') {
-                    // Return mock partners for listing
-                    const mockData = [
-                      {
-                        id: 'partner-1',
-                        name: 'Amantis Informática',
-                        img_url: 'https://alealaspalmas.es/wp-content/uploads/2025/10/amantisinformatica.png',
-                        link_url: 'https://maps.app.goo.gl/KPiF4nxabjBYu8YA6',
-                        desc_es: 'Tienda de informática',
-                        desc_en: 'Computer store',
-                        sort_order: 0,
-                        active: true,
-                        created_at: '2026-04-01T00:00:00Z',
-                        updated_at: '2026-04-01T00:00:00Z',
-                      },
-                      {
-                        id: 'partner-2',
-                        name: 'El Desván del Leprechaun',
-                        img_url: 'https://alealaspalmas.es/wp-content/uploads/2025/10/eldesvandelleprechaun.png',
-                        link_url: 'https://maps.app.goo.gl/CM96Gnighr4YGMbC7',
-                        desc_es: 'Videojuegos y más',
-                        desc_en: 'Video games and more',
-                        sort_order: 1,
-                        active: true,
-                        created_at: '2026-04-01T00:00:00Z',
-                        updated_at: '2026-04-01T00:00:00Z',
-                      },
-                    ]
-                    return onFulfilled?.({ data: mockData, error: null })
-                  }
-                  return onFulfilled?.({ data: [], error: null })
-                },
-              }
-            }),
-          }
+          return createOrderableBuilder()
         }),
         insert: vi.fn(function (data: any) {
           state.insertData = data
@@ -226,6 +253,22 @@ describe('partners-service', () => {
       expect(result[1].sortOrder).toBe(1)
     })
 
+    it('chains multiple order() calls without error (sort_order primary, name secondary)', async () => {
+      const mockSupabaseClient = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerClient.mockResolvedValue(
+        mockSupabaseClient as any
+      )
+
+      const { listPartners } = await loadPartnersService()
+
+      // This test verifies that the chainable .order() mock works correctly
+      // The service calls .order('sort_order').order('name'), which would fail
+      // without the fix (chainable mock). If it doesn't throw, chaining works.
+      const result = await listPartners()
+      expect(Array.isArray(result)).toBe(true)
+    })
+
     it('uses user-scoped client (RLS-respecting) for public listing', async () => {
       const mockSupabaseClient = buildSupabaseMock()
 
@@ -279,6 +322,23 @@ describe('partners-service', () => {
 
       expect(Array.isArray(result)).toBe(true)
       expect(result[0]).toHaveProperty('active')
+    })
+
+    it('chains multiple order() calls without error (sort_order primary, name secondary)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
+        mockSupabaseAdmin as any
+      )
+
+      const { listAdminPartners } = await loadPartnersService()
+
+      // This test verifies that the chainable .order() mock works correctly.
+      // The service calls .order('sort_order').order('name'). If it doesn't throw,
+      // the mock fidelity fix (chainable .order()) is working.
+      const result = await listAdminPartners(adminSession)
+      expect(Array.isArray(result)).toBe(true)
     })
 
     it('non-admin member gets 403 Forbidden', async () => {
