@@ -23,20 +23,26 @@ import {
   useAdminUpdateClubEvent,
   useAdminDeleteClubEvent,
   useAdminRooms,
+  useAdminRoomTables,
+  useAdminEquipment,
   type ClubEventPayload,
 } from '@/lib/hooks/use-admin'
 import { formatClubEventDate } from '@/lib/club-events-format'
-import type { AdminClubEvent, AdminEventRoomBlock } from '@/lib/types'
+import type { AdminClubEvent, AdminEventMaterial, AdminEventRoomBlock } from '@/lib/types'
 import { OptionalEnglishFields } from './optional-english-fields'
 import { ImageUpload } from './image-upload'
 
 const NONE_ROOM = '__none__'
+const WHOLE_ROOM = '__whole_room__'
 
 type DateKind = 'single' | 'range' | 'recurring'
 
 // ---------------------------------------------------------------------------
 // Room-block schedule entry — mirrors the internal admin event flow's
 // schedule editor so "blocks rooms" behaves like a normal room-booking event.
+// OIR-208: each entry may also scope its block to a single table of the
+// selected room ("Sala entera" / WHOLE_ROOM = block the whole room, unchanged
+// default behavior).
 // ---------------------------------------------------------------------------
 interface ScheduleEntry {
   id: string
@@ -44,11 +50,20 @@ interface ScheduleEntry {
   startTime: string
   endTime: string
   roomId: string
+  tableId: string
   allDay: boolean
 }
 
 function emptySchedule(): ScheduleEntry {
-  return { id: crypto.randomUUID(), date: '', startTime: '', endTime: '', roomId: NONE_ROOM, allDay: false }
+  return {
+    id: crypto.randomUUID(),
+    date: '',
+    startTime: '',
+    endTime: '',
+    roomId: NONE_ROOM,
+    tableId: WHOLE_ROOM,
+    allDay: false,
+  }
 }
 
 function scheduleFromBlock(b: AdminEventRoomBlock): ScheduleEntry {
@@ -58,8 +73,26 @@ function scheduleFromBlock(b: AdminEventRoomBlock): ScheduleEntry {
     startTime: b.startTime,
     endTime: b.endTime,
     roomId: b.roomId ?? NONE_ROOM,
+    tableId: b.tableId ?? WHOLE_ROOM,
     allDay: b.allDay,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Material (equipment) entry — OIR-208.
+// ---------------------------------------------------------------------------
+interface MaterialEntry {
+  id: string
+  equipmentId: string
+  quantity: number
+}
+
+function emptyMaterial(): MaterialEntry {
+  return { id: crypto.randomUUID(), equipmentId: '', quantity: 1 }
+}
+
+function materialFromAdmin(m: AdminEventMaterial): MaterialEntry {
+  return { id: crypto.randomUUID(), equipmentId: m.equipmentId, quantity: m.quantity }
 }
 
 // ---------------------------------------------------------------------------
@@ -81,8 +114,11 @@ interface ClubEventFormState {
   recurrenceLabelEn: string
   imageUrl: string
   linkUrl: string
+  /** OIR-208: ON publishes the event on the public landing; OFF is internal-only. */
+  visibleOnLanding: boolean
   blocksRooms: boolean
   schedules: ScheduleEntry[]
+  materials: MaterialEntry[]
 }
 
 function emptyForm(): ClubEventFormState {
@@ -102,8 +138,10 @@ function emptyForm(): ClubEventFormState {
     recurrenceLabelEn: '',
     imageUrl: '',
     linkUrl: '',
+    visibleOnLanding: true,
     blocksRooms: false,
     schedules: [emptySchedule()],
+    materials: [],
   }
 }
 
@@ -124,8 +162,10 @@ function formFromEvent(event: AdminClubEvent): ClubEventFormState {
     recurrenceLabelEn: event.recurrenceLabelEn ?? '',
     imageUrl: event.imageUrl ?? '',
     linkUrl: event.linkUrl ?? '',
+    visibleOnLanding: event.visibleOnLanding,
     blocksRooms: event.blocksRooms,
     schedules: event.roomBlocks.length > 0 ? event.roomBlocks.map(scheduleFromBlock) : [emptySchedule()],
+    materials: event.materials.map(materialFromAdmin),
   }
 }
 
@@ -146,6 +186,7 @@ function buildPayload(form: ClubEventFormState): ClubEventPayload {
     recurrenceLabelEn: form.dateKind === 'recurring' ? (form.recurrenceLabelEn.trim() || null) : null,
     imageUrl: form.imageUrl.trim() || null,
     linkUrl: form.linkUrl.trim() || null,
+    visibleOnLanding: form.visibleOnLanding,
     blocksRooms: form.blocksRooms,
     schedules: form.blocksRooms
       ? form.schedules.map((s) => ({
@@ -153,9 +194,13 @@ function buildPayload(form: ClubEventFormState): ClubEventPayload {
         startTime: s.allDay ? undefined : s.startTime,
         endTime: s.allDay ? undefined : s.endTime,
         roomId: s.roomId === NONE_ROOM ? null : s.roomId,
+        tableId: s.roomId === NONE_ROOM || s.tableId === WHOLE_ROOM ? null : s.tableId,
         allDay: s.allDay,
       }))
       : undefined,
+    materials: form.materials
+      .filter((m) => m.equipmentId)
+      .map((m) => ({ equipmentId: m.equipmentId, quantity: m.quantity })),
   }
 }
 
@@ -180,6 +225,7 @@ function ScheduleRow({
   const t = useTranslations('admin')
   const tc = useTranslations('common')
   const { data: rooms } = useAdminRooms()
+  const { data: tables } = useAdminRoomTables(entry.roomId !== NONE_ROOM ? entry.roomId : null)
   const id = (suffix: string) => `${dialogId}-sched-${index}-${suffix}`
 
   function field(key: keyof ScheduleEntry) {
@@ -205,24 +251,48 @@ function ScheduleRow({
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor={id('room')} className="text-xs text-muted-foreground font-medium">
-          {t('clubEvents.room')}
-        </Label>
-        <Select
-          value={entry.roomId}
-          onValueChange={(v) => onChange({ ...entry, roomId: v })}
-        >
-          <SelectTrigger id={id('room')} className="bg-background-secondary border-border h-8 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE_ROOM}>—</SelectItem>
-            {(rooms ?? []).map((room) => (
-              <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="space-y-1.5">
+          <Label htmlFor={id('room')} className="text-xs text-muted-foreground font-medium">
+            {t('clubEvents.room')}
+          </Label>
+          <Select
+            value={entry.roomId}
+            onValueChange={(v) => onChange({ ...entry, roomId: v, tableId: WHOLE_ROOM })}
+          >
+            <SelectTrigger id={id('room')} className="bg-background-secondary border-border h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE_ROOM}>—</SelectItem>
+              {(rooms ?? []).map((room) => (
+                <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {entry.roomId !== NONE_ROOM && (
+          <div className="space-y-1.5">
+            <Label htmlFor={id('table')} className="text-xs text-muted-foreground font-medium">
+              {t('clubEvents.table')}
+            </Label>
+            <Select
+              value={entry.tableId}
+              onValueChange={(v) => onChange({ ...entry, tableId: v })}
+            >
+              <SelectTrigger id={id('table')} className="bg-background-secondary border-border h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={WHOLE_ROOM}>{t('clubEvents.wholeRoom')}</SelectItem>
+                {(tables ?? []).map((table) => (
+                  <SelectItem key={table.id} value={table.id}>{table.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <div className="flex items-start gap-2">
@@ -289,6 +359,99 @@ function ScheduleRow({
           </>
         )}
       </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// MaterialsEditor — materials (equipment) needed for the event, with
+// quantities (OIR-208). Shown regardless of visibleOnLanding — internal
+// logistics never appear on the landing.
+// ---------------------------------------------------------------------------
+function MaterialsEditor({
+  materials,
+  onChange,
+  dialogId,
+}: {
+  materials: MaterialEntry[]
+  onChange: (materials: MaterialEntry[]) => void
+  dialogId: string
+}) {
+  const t = useTranslations('admin')
+  const { data: equipment } = useAdminEquipment()
+
+  function updateMaterial(index: number, updated: MaterialEntry) {
+    onChange(materials.map((m, i) => (i === index ? updated : m)))
+  }
+
+  function addMaterial() {
+    onChange([...materials, emptyMaterial()])
+  }
+
+  function removeMaterial(index: number) {
+    onChange(materials.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border bg-background-secondary/30 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <span className="text-sm text-foreground font-medium leading-tight">{t('clubEvents.materials')}</span>
+          <p className="text-xs text-muted-foreground">{t('clubEvents.materialsHelp')}</p>
+        </div>
+        <button
+          type="button"
+          onClick={addMaterial}
+          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors flex-shrink-0"
+          aria-label={t('clubEvents.addMaterial')}
+        >
+          <PlusCircle className="h-3.5 w-3.5" aria-hidden="true" />
+          {t('clubEvents.addMaterial')}
+        </button>
+      </div>
+
+      {materials.length === 0 ? (
+        <p className="text-xs text-muted-foreground">{t('clubEvents.noMaterials')}</p>
+      ) : (
+        <div className="space-y-2">
+          {materials.map((entry, i) => (
+            <div key={entry.id} className="flex items-center gap-2">
+              <Select
+                value={entry.equipmentId}
+                onValueChange={(v) => updateMaterial(i, { ...entry, equipmentId: v })}
+              >
+                <SelectTrigger
+                  id={`${dialogId}-material-${i}-equipment`}
+                  className="bg-background-secondary border-border h-8 text-sm flex-1"
+                >
+                  <SelectValue placeholder={t('clubEvents.selectMaterial')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {(equipment ?? []).map((item) => (
+                    <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                type="number"
+                min={1}
+                value={entry.quantity}
+                onChange={(e) => updateMaterial(i, { ...entry, quantity: Math.max(1, Number(e.target.value) || 1) })}
+                aria-label={t('clubEvents.materialQuantity')}
+                className="bg-background-secondary border-border focus:border-primary/50 h-8 text-sm w-20 flex-shrink-0"
+              />
+              <button
+                type="button"
+                aria-label={t('clubEvents.removeMaterial')}
+                onClick={() => removeMaterial(i)}
+                className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+              >
+                <MinusCircle className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -365,44 +528,64 @@ function ClubEventFormDialog({
             />
           </div>
 
-          {/* Blurb */}
-          <div className="space-y-2">
-            <Label htmlFor={`${dialogId}-blurb-es`} className="text-sm text-muted-foreground font-medium">
-              {t('clubEvents.blurbEs')}
-            </Label>
-            <Input
-              id={`${dialogId}-blurb-es`}
-              value={form.blurbEs}
-              onChange={(e) => setForm({ ...form, blurbEs: e.target.value })}
-              className="bg-background-secondary border-border focus:border-primary/50"
+          {/* Visible on landing toggle (OIR-208) */}
+          <div className="flex items-start gap-2 rounded-lg border border-border bg-background-secondary/30 p-3">
+            <Checkbox
+              id={`${dialogId}-visible-on-landing`}
+              checked={form.visibleOnLanding}
+              onCheckedChange={(checked) => setForm({ ...form, visibleOnLanding: checked === true })}
+              className="mt-0.5"
             />
+            <div className="space-y-0.5">
+              <Label htmlFor={`${dialogId}-visible-on-landing`} className="text-sm text-foreground font-medium leading-tight">
+                {t('clubEvents.visibleOnLanding')}
+              </Label>
+              <p className="text-xs text-muted-foreground">{t('clubEvents.visibleOnLandingHelp')}</p>
+            </div>
           </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor={`${dialogId}-description-es`} className="text-sm text-muted-foreground font-medium">
-              {t('clubEvents.descriptionEs')}
-            </Label>
-            <textarea
-              id={`${dialogId}-description-es`}
-              value={form.descriptionEs}
-              onChange={(e) => setForm({ ...form, descriptionEs: e.target.value })}
-              className={textareaClass}
-            />
-          </div>
+          {form.visibleOnLanding && (
+            <>
+              {/* Blurb */}
+              <div className="space-y-2">
+                <Label htmlFor={`${dialogId}-blurb-es`} className="text-sm text-muted-foreground font-medium">
+                  {t('clubEvents.blurbEs')}
+                </Label>
+                <Input
+                  id={`${dialogId}-blurb-es`}
+                  value={form.blurbEs}
+                  onChange={(e) => setForm({ ...form, blurbEs: e.target.value })}
+                  className="bg-background-secondary border-border focus:border-primary/50"
+                />
+              </div>
 
-          {/* Category */}
-          <div className="space-y-2">
-            <Label htmlFor={`${dialogId}-category-es`} className="text-sm text-muted-foreground font-medium">
-              {t('clubEvents.categoryEs')}
-            </Label>
-            <Input
-              id={`${dialogId}-category-es`}
-              value={form.categoryEs}
-              onChange={(e) => setForm({ ...form, categoryEs: e.target.value })}
-              className="bg-background-secondary border-border focus:border-primary/50"
-            />
-          </div>
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor={`${dialogId}-description-es`} className="text-sm text-muted-foreground font-medium">
+                  {t('clubEvents.descriptionEs')}
+                </Label>
+                <textarea
+                  id={`${dialogId}-description-es`}
+                  value={form.descriptionEs}
+                  onChange={(e) => setForm({ ...form, descriptionEs: e.target.value })}
+                  className={textareaClass}
+                />
+              </div>
+
+              {/* Category */}
+              <div className="space-y-2">
+                <Label htmlFor={`${dialogId}-category-es`} className="text-sm text-muted-foreground font-medium">
+                  {t('clubEvents.categoryEs')}
+                </Label>
+                <Input
+                  id={`${dialogId}-category-es`}
+                  value={form.categoryEs}
+                  onChange={(e) => setForm({ ...form, categoryEs: e.target.value })}
+                  className="bg-background-secondary border-border focus:border-primary/50"
+                />
+              </div>
+            </>
+          )}
 
           {/* Date kind + date(s) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -469,107 +652,113 @@ function ClubEventFormDialog({
           )}
 
           {/* English copy is optional (OIR-206) — collapsed by default; the
-              service falls back to the Spanish text above when left blank. */}
-          <OptionalEnglishFields idPrefix={dialogId}>
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-title-en`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.titleEn')}
-              </Label>
-              <Input
-                id={`${dialogId}-title-en`}
-                value={form.titleEn}
-                onChange={(e) => setForm({ ...form, titleEn: e.target.value })}
-                placeholder={t('englishOptional.hint')}
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-blurb-en`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.blurbEn')}
-              </Label>
-              <Input
-                id={`${dialogId}-blurb-en`}
-                value={form.blurbEn}
-                onChange={(e) => setForm({ ...form, blurbEn: e.target.value })}
-                placeholder={t('englishOptional.hint')}
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-description-en`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.descriptionEn')}
-              </Label>
-              <textarea
-                id={`${dialogId}-description-en`}
-                value={form.descriptionEn}
-                onChange={(e) => setForm({ ...form, descriptionEn: e.target.value })}
-                placeholder={t('englishOptional.hint')}
-                className={textareaClass}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-category-en`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.categoryEn')}
-              </Label>
-              <Input
-                id={`${dialogId}-category-en`}
-                value={form.categoryEn}
-                onChange={(e) => setForm({ ...form, categoryEn: e.target.value })}
-                placeholder={t('englishOptional.hint')}
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
-            </div>
-            {form.dateKind === 'recurring' && (
+              service falls back to the Spanish text above when left blank.
+              Only relevant when the event is visible on the (bilingual)
+              landing page. */}
+          {form.visibleOnLanding && (
+            <OptionalEnglishFields idPrefix={dialogId}>
               <div className="space-y-2">
-                <Label htmlFor={`${dialogId}-recurrence-en`} className="text-sm text-muted-foreground font-medium">
-                  {t('clubEvents.recurrenceLabelEn')}
+                <Label htmlFor={`${dialogId}-title-en`} className="text-sm text-muted-foreground font-medium">
+                  {t('clubEvents.titleEn')}
                 </Label>
                 <Input
-                  id={`${dialogId}-recurrence-en`}
-                  value={form.recurrenceLabelEn}
-                  onChange={(e) => setForm({ ...form, recurrenceLabelEn: e.target.value })}
+                  id={`${dialogId}-title-en`}
+                  value={form.titleEn}
+                  onChange={(e) => setForm({ ...form, titleEn: e.target.value })}
                   placeholder={t('englishOptional.hint')}
                   className="bg-background-secondary border-border focus:border-primary/50"
                 />
               </div>
-            )}
-          </OptionalEnglishFields>
+              <div className="space-y-2">
+                <Label htmlFor={`${dialogId}-blurb-en`} className="text-sm text-muted-foreground font-medium">
+                  {t('clubEvents.blurbEn')}
+                </Label>
+                <Input
+                  id={`${dialogId}-blurb-en`}
+                  value={form.blurbEn}
+                  onChange={(e) => setForm({ ...form, blurbEn: e.target.value })}
+                  placeholder={t('englishOptional.hint')}
+                  className="bg-background-secondary border-border focus:border-primary/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`${dialogId}-description-en`} className="text-sm text-muted-foreground font-medium">
+                  {t('clubEvents.descriptionEn')}
+                </Label>
+                <textarea
+                  id={`${dialogId}-description-en`}
+                  value={form.descriptionEn}
+                  onChange={(e) => setForm({ ...form, descriptionEn: e.target.value })}
+                  placeholder={t('englishOptional.hint')}
+                  className={textareaClass}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`${dialogId}-category-en`} className="text-sm text-muted-foreground font-medium">
+                  {t('clubEvents.categoryEn')}
+                </Label>
+                <Input
+                  id={`${dialogId}-category-en`}
+                  value={form.categoryEn}
+                  onChange={(e) => setForm({ ...form, categoryEn: e.target.value })}
+                  placeholder={t('englishOptional.hint')}
+                  className="bg-background-secondary border-border focus:border-primary/50"
+                />
+              </div>
+              {form.dateKind === 'recurring' && (
+                <div className="space-y-2">
+                  <Label htmlFor={`${dialogId}-recurrence-en`} className="text-sm text-muted-foreground font-medium">
+                    {t('clubEvents.recurrenceLabelEn')}
+                  </Label>
+                  <Input
+                    id={`${dialogId}-recurrence-en`}
+                    value={form.recurrenceLabelEn}
+                    onChange={(e) => setForm({ ...form, recurrenceLabelEn: e.target.value })}
+                    placeholder={t('englishOptional.hint')}
+                    className="bg-background-secondary border-border focus:border-primary/50"
+                  />
+                </div>
+              )}
+            </OptionalEnglishFields>
+          )}
 
-          {/* Image / link URLs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <ImageUpload
-                idPrefix={dialogId}
-                folder="events"
-                value={form.imageUrl}
-                onChange={(url) => setForm({ ...form, imageUrl: url })}
-              />
-              <Label htmlFor={`${dialogId}-image-url`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.imageUrl')}
-              </Label>
-              <Input
-                id={`${dialogId}-image-url`}
-                type="url"
-                value={form.imageUrl}
-                onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                placeholder="https://…"
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
+          {/* Image / link URLs — landing-only */}
+          {form.visibleOnLanding && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <ImageUpload
+                  idPrefix={dialogId}
+                  folder="events"
+                  value={form.imageUrl}
+                  onChange={(url) => setForm({ ...form, imageUrl: url })}
+                />
+                <Label htmlFor={`${dialogId}-image-url`} className="text-sm text-muted-foreground font-medium">
+                  {t('clubEvents.imageUrl')}
+                </Label>
+                <Input
+                  id={`${dialogId}-image-url`}
+                  type="url"
+                  value={form.imageUrl}
+                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                  placeholder="https://…"
+                  className="bg-background-secondary border-border focus:border-primary/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`${dialogId}-link-url`} className="text-sm text-muted-foreground font-medium">
+                  {t('clubEvents.linkUrl')}
+                </Label>
+                <Input
+                  id={`${dialogId}-link-url`}
+                  type="url"
+                  value={form.linkUrl}
+                  onChange={(e) => setForm({ ...form, linkUrl: e.target.value })}
+                  placeholder="https://…"
+                  className="bg-background-secondary border-border focus:border-primary/50"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-link-url`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.linkUrl')}
-              </Label>
-              <Input
-                id={`${dialogId}-link-url`}
-                type="url"
-                value={form.linkUrl}
-                onChange={(e) => setForm({ ...form, linkUrl: e.target.value })}
-                placeholder="https://…"
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
-            </div>
-          </div>
+          )}
 
           {/* Blocks rooms toggle + sub-flow */}
           <div className="space-y-3 rounded-lg border border-border bg-background-secondary/30 p-3">
@@ -620,6 +809,13 @@ function ClubEventFormDialog({
               </div>
             )}
           </div>
+
+          {/* Materials (equipment) — OIR-208 */}
+          <MaterialsEditor
+            materials={form.materials}
+            onChange={(materials) => setForm({ ...form, materials })}
+            dialogId={dialogId}
+          />
 
           {error && (
             <div role="alert" className="rounded-md bg-destructive/15 border border-destructive/30 px-3 py-2 text-sm text-destructive">
@@ -741,12 +937,22 @@ function ClubEventRow({
           )}
           <div className="flex flex-wrap items-center gap-2 mt-1.5">
             <Badge variant="outline" className="text-xs font-mono">{dateLabel}</Badge>
+            {event.visibleOnLanding && (
+              <Badge variant="default" className="text-xs">
+                {t('clubEvents.landingBadge')}
+              </Badge>
+            )}
             {category && (
               <Badge variant="partial" className="text-xs">{category}</Badge>
             )}
             {event.blocksRooms && (
               <Badge variant="outline" className="text-xs">
                 {t('clubEvents.blocksRooms')}
+              </Badge>
+            )}
+            {event.materials.length > 0 && (
+              <Badge variant="outline" className="text-xs">
+                {t('clubEvents.materials')}: {event.materials.length}
               </Badge>
             )}
           </div>
@@ -806,6 +1012,11 @@ function ClubEventList({
 
 // ---------------------------------------------------------------------------
 // ClubEventsSection — main export
+//
+// OIR-208: this is the ONE unified "Eventos" section — there is no more
+// Club/Internos split. Every event (landing-published or internal-only)
+// lives in the same list; the "Landing" badge marks published rows and the
+// "Visible en landing" toggle in the form controls it.
 // ---------------------------------------------------------------------------
 export function ClubEventsSection() {
   const t = useTranslations('admin')

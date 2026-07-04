@@ -282,15 +282,23 @@ export function useAdminPreviewEventConflicts() {
   })
 }
 
-// ----- Club events (OIR-203, public landing content) -----
+// ----- Club events (OIR-203/OIR-208, unified events) -----
 
 /** Room-block entry used in club event create/update payloads. */
 export interface ClubEventSchedulePayload {
   roomId?: string | null
+  /** Null/absent blocks the whole room; a table id scopes the block to that single table (OIR-208). */
+  tableId?: string | null
   date: string
   startTime?: string
   endTime?: string
   allDay?: boolean
+}
+
+/** One material (equipment) needed for the event, with quantity (OIR-208). */
+export interface ClubEventMaterialPayload {
+  equipmentId: string
+  quantity: number
 }
 
 export interface ClubEventPayload {
@@ -313,6 +321,13 @@ export interface ClubEventPayload {
   /** When true, `schedules` is required and creates/replaces room blocks. */
   blocksRooms?: boolean
   schedules?: ClubEventSchedulePayload[]
+  /**
+   * OIR-208: ON (default for new events) publishes the event on the public
+   * landing; OFF keeps it internal-only (bilingual columns stay NULL).
+   */
+  visibleOnLanding?: boolean
+  /** Materials (equipment) needed for the event; replace-set on every save. */
+  materials?: ClubEventMaterialPayload[]
 }
 
 export function useAdminClubEvents() {

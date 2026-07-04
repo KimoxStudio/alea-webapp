@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UsersSection } from './users-section'
 import { ReservationsSection } from './reservations-section'
 import { RoomsSection } from './rooms-section'
-import { EventsTab } from './events-tab'
+import { ClubEventsSection } from './club-events-section'
 import { PartnersSection } from './partners-section'
 import { LibraryGamesSection } from './library-games-section'
 import { EquipmentSection } from './equipment-section'
@@ -90,7 +90,7 @@ export function AdminDashboard() {
         </TabsContent>
 
         <TabsContent value="events">
-          <EventsTab />
+          <ClubEventsSection />
         </TabsContent>
 
         <TabsContent value="partners">
