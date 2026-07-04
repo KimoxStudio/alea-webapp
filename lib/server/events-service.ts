@@ -9,6 +9,19 @@ export type { AdminEvent, AdminEventRoomBlock, AdminEventSchedule }
 type EventRow = Tables<'events'>
 type EventRoomBlockRow = Tables<'event_room_blocks'>
 
+// ---------------------------------------------------------------------------
+// Shared "is this a club-event (landing) row?" predicate (OIR-203 code
+// review, Finding 3). A row becomes public landing content once BOTH
+// title_es and title_en are populated (see lib/server/club-events-service.ts).
+// Every legacy internal room-booking entry point (updateEvent, deleteEvent,
+// and listEvents' `.or('title_es.is.null,title_en.is.null')` filter) must
+// treat such rows as out of scope for this surface — they are owned
+// exclusively by the "Club events" admin flow.
+// ---------------------------------------------------------------------------
+export function isClubEventRow(row: Pick<EventRow, 'title_es' | 'title_en'>): boolean {
+  return row.title_es != null && row.title_en != null
+}
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 const WHOLE_HOUR_TIME_RE = /^([01]\d|2[0-3]):00$/
@@ -380,14 +393,22 @@ export async function updateEvent(
   // Load current event to fill in any fields not provided in the body
   const { data: current, error: fetchError } = await admin
     .from('events')
-    .select('title, description, date, start_time, end_time')
+    .select('title, description, date, start_time, end_time, title_es, title_en')
     .eq('id', id)
     .maybeSingle()
 
   if (fetchError) serviceError('Internal server error', 500)
   if (!current) serviceError('Event not found', 404)
 
-  const currentRow = current as Pick<EventRow, 'title' | 'description' | 'date' | 'start_time' | 'end_time'>
+  const currentRow = current as Pick<
+    EventRow,
+    'title' | 'description' | 'date' | 'start_time' | 'end_time' | 'title_es' | 'title_en'
+  >
+
+  // Finding 3: a club-event (landing) row is out of scope for this legacy
+  // internal surface — treat it as not found, same as listEvents' filter.
+  if (isClubEventRow(currentRow)) serviceError('Event not found', 404)
+
   const title = body.title !== undefined ? String(body.title).trim() || currentRow.title : currentRow.title
   const description =
     body.description !== undefined
@@ -478,12 +499,34 @@ export async function deleteEvent(id: string): Promise<void> {
 
   const { data: eventData } = await admin
     .from('events')
-    .select('id')
+    .select('id, title_es, title_en')
     .eq('id', id)
     .maybeSingle()
 
   if (!eventData) serviceError('Event not found', 404)
 
+  // Finding 3: a club-event (landing) row is out of scope for this legacy
+  // internal surface — treat it as not found, same as listEvents' filter.
+  if (isClubEventRow(eventData as Pick<EventRow, 'id' | 'title_es' | 'title_en'>)) {
+    serviceError('Event not found', 404)
+  }
+
+  await deleteEventCascade(admin, id)
+}
+
+/**
+ * Cancel overlapping reservations for every room block attached to `id`,
+ * then delete the event row (blocks cascade via FK). Shared by `deleteEvent`
+ * (legacy internal surface, guarded above) and
+ * `lib/server/club-events-service.ts`'s `deleteClubEvent` (which performs its
+ * own club-event-row validation — the inverse of the guard above — before
+ * calling this directly, so it must NOT go through the `isClubEventRow`
+ * check in `deleteEvent`).
+ */
+export async function deleteEventCascade(
+  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  id: string,
+): Promise<void> {
   const { data: blocks } = await admin
     .from('event_room_blocks')
     .select('room_id, date, start_time, end_time')
