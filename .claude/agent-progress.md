@@ -276,4 +276,4 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [23:12] Added regression test to users-service.test.ts exercising extractSpreadsheetCsv (exported it, was previously private) with a crafted fake zero-record zip EOCD trailing record so the test genuinely fails without the users-service.ts fix (4c2f8a7) and passes with it (verified both ways manually).
 - [23:14] pnpm exec vitest run users-service.test.ts + member-import.test.ts: 54/54 passed. Full suite: 666/670 passed (4 pre-existing unrelated failures in availability.test.ts, date/timezone flakiness, not touched by this change).
 - [23:15] pnpm build: succeeded. pnpm run lint: no warnings/errors.
-- [HH:MM] ✅ Complete — pushed to kim-395-replace-xlsx
+- [23:16] ✅ Complete — commit 7ade28a pushed to origin/kim-395-replace-xlsx
