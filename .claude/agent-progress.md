@@ -591,3 +591,23 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [17:16] i18n: admin.imageUpload.{label,uploadButton,uploading,error,hint} and admin.libraryGames.imageUrl added to messages/en.json and messages/es.json (parity verified).
 - [17:20] pnpm typecheck / pnpm lint / pnpm build all green. pnpm test: 799/799 passed (54 files).
 - [17:25] ✅ Complete — committed 0293408 and pushed to origin/feat/oir-207-image-uploads.
+
+#### [OIR-207] qa-engineer — uploads coverage
+- [17:15] Started: writing comprehensive test suite for uploads-service and extending library-games tests
+- [17:15] Analyzed: uploads-service.ts, migration 20260704000005, library-games-service.ts
+- [17:15] Spec review complete: OIR-207 requires MIME allowlist, folder allowlist, 5MB limit, extension derived from MIME not filename, admin-only access
+- [17:20] Created: __tests__/server/uploads-service.test.ts with 25+ test cases covering:
+  * Happy path: PNG/JPEG/WebP/GIF uploads with correct path pattern, contentType, URL return
+  * Privilege: non-admin → 403 before storage call
+  * Validation: folder allowlist, MIME allowlist, size 0..5MB bounds
+  * Extension from MIME (not filename): "evil.svg" type=image/png → stored as .png
+  * Storage error handling: 500 + console.error
+  * Migration sanity: bucket public=true, 5MB limit, 4 MIME types, SELECT-only policy, img_url column
+- [17:21] Extended: __tests__/server/library-games-service.test.ts with 12+ imageUrl tests covering:
+  * Create/update with valid https/http URLs
+  * Optional field: absent/null/empty → null in DB
+  * URL hardening: javascript:/data:/relative rejected, valid URLs accepted
+  * Validation before DB call
+- [17:25] All tests green: 555 passed (24 files, +25 uploads-service + 12 imageUrl in library-games)
+- [17:25] Typecheck passed: ✓ no errors
+- [17:25] Lint passed: ✓ no ESLint errors
