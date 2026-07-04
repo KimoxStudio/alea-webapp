@@ -136,6 +136,8 @@ export interface PaginatedResponse<T> {
 export interface AdminEventRoomBlock {
   id: string
   roomId: string
+  /** Null blocks the whole room; a table id scopes the block to that single table (OIR-208). */
+  tableId: string | null
   date: string
   startTime: string
   endTime: string
@@ -151,10 +153,19 @@ export interface AdminEventSchedule {
   /** Present only on persisted blocks, absent in create payloads */
   id?: string
   roomId: string | null
+  /** Null (or absent) blocks the whole room; a table id scopes the block to that single table (OIR-208). */
+  tableId?: string | null
   date: string
   startTime: string
   endTime: string
   allDay: boolean
+}
+
+/** One material (equipment) attached to an event, with the quantity needed (OIR-208). */
+export interface AdminEventMaterial {
+  equipmentId: string
+  name: string
+  quantity: number
 }
 
 export interface AdminEvent {
@@ -234,6 +245,14 @@ export interface AdminClubEvent {
   /** True when this event currently has at least one room block attached. */
   blocksRooms: boolean
   roomBlocks: AdminEventRoomBlock[]
+  /**
+   * OIR-208: unified events — true when both title_es/title_en are
+   * populated (the row is published on the public landing). False means an
+   * internal-only event (bilingual columns NULL, legacy `title` populated).
+   */
+  visibleOnLanding: boolean
+  /** Materials (equipment) reserved for this event, with quantities (OIR-208). */
+  materials: AdminEventMaterial[]
 }
 
 export interface AdminListClubEventsResult {
