@@ -28,6 +28,7 @@ import {
 import { formatClubEventDate } from '@/lib/club-events-format'
 import type { AdminClubEvent, AdminEventRoomBlock } from '@/lib/types'
 import { OptionalEnglishFields } from './optional-english-fields'
+import { ImageUpload } from './image-upload'
 
 const NONE_ROOM = '__none__'
 
@@ -537,6 +538,12 @@ function ClubEventFormDialog({
           {/* Image / link URLs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
+              <ImageUpload
+                idPrefix={dialogId}
+                folder="events"
+                value={form.imageUrl}
+                onChange={(url) => setForm({ ...form, imageUrl: url })}
+              />
               <Label htmlFor={`${dialogId}-image-url`} className="text-sm text-muted-foreground font-medium">
                 {t('clubEvents.imageUrl')}
               </Label>

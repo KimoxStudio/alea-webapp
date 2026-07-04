@@ -4,13 +4,14 @@ import { createSupabaseServerClient, createSupabaseServerAdminClient } from '@/l
 import { serviceError } from '@/lib/server/service-error'
 import type { Tables } from '@/lib/supabase/types'
 import type { SessionUser } from '@/lib/server/auth'
+import { validateOptionalUrl } from '@/lib/validations/url'
 
 type LibraryGameRow = Tables<'library_games'>
 
-const PUBLIC_LIBRARY_GAME_COLUMNS = 'id, title, category_es, category_en, players, play_time, weight, sort_order'
-const ADMIN_LIBRARY_GAME_COLUMNS = 'id, title, category_es, category_en, players, play_time, weight, sort_order, active'
+const PUBLIC_LIBRARY_GAME_COLUMNS = 'id, title, category_es, category_en, players, play_time, weight, sort_order, img_url'
+const ADMIN_LIBRARY_GAME_COLUMNS = 'id, title, category_es, category_en, players, play_time, weight, sort_order, active, img_url'
 
-function toLibraryGame(row: Pick<LibraryGameRow, 'id' | 'title' | 'category_es' | 'category_en' | 'players' | 'play_time' | 'weight' | 'sort_order'>): LibraryGame {
+function toLibraryGame(row: Pick<LibraryGameRow, 'id' | 'title' | 'category_es' | 'category_en' | 'players' | 'play_time' | 'weight' | 'sort_order' | 'img_url'>): LibraryGame {
   return {
     id: row.id,
     title: row.title,
@@ -20,6 +21,7 @@ function toLibraryGame(row: Pick<LibraryGameRow, 'id' | 'title' | 'category_es' 
     playTime: row.play_time,
     weight: Number(row.weight),
     sortOrder: row.sort_order,
+    imgUrl: row.img_url,
   }
 }
 
@@ -65,6 +67,7 @@ export interface LibraryGameInput {
   weight?: unknown
   sortOrder?: unknown
   active?: unknown
+  imageUrl?: unknown
 }
 
 function requireAdminSession(session: SessionUser): void {
@@ -151,6 +154,7 @@ interface LibraryGameFieldSet {
   weight: number
   sort_order: number
   active: boolean
+  img_url: string | null
 }
 
 /**
@@ -195,6 +199,10 @@ function resolveLibraryGameFields(body: LibraryGameInput, current: LibraryGameRo
 
   const active = body.active !== undefined ? parseBooleanFlag(body.active) : (current?.active ?? true)
 
+  const imgUrl = body.imageUrl !== undefined
+    ? validateOptionalUrl(body.imageUrl, 'imageUrl')
+    : (current?.img_url ?? null)
+
   return {
     title,
     category_es: categoryEs,
@@ -204,6 +212,7 @@ function resolveLibraryGameFields(body: LibraryGameInput, current: LibraryGameRo
     weight,
     sort_order: sortOrder,
     active,
+    img_url: imgUrl,
   }
 }
 

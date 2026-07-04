@@ -22,6 +22,7 @@ import {
 } from '@/lib/hooks/use-admin'
 import type { AdminLibraryGame } from '@/lib/types'
 import { OptionalEnglishFields } from './optional-english-fields'
+import { ImageUpload } from './image-upload'
 
 interface LibraryGameFormState {
   title: string
@@ -32,10 +33,11 @@ interface LibraryGameFormState {
   weight: string
   sortOrder: string
   active: boolean
+  imageUrl: string
 }
 
 function emptyForm(): LibraryGameFormState {
-  return { title: '', categoryEs: '', categoryEn: '', players: '', playTime: '', weight: '0', sortOrder: '0', active: true }
+  return { title: '', categoryEs: '', categoryEn: '', players: '', playTime: '', weight: '0', sortOrder: '0', active: true, imageUrl: '' }
 }
 
 function formFromGame(game: AdminLibraryGame): LibraryGameFormState {
@@ -48,6 +50,7 @@ function formFromGame(game: AdminLibraryGame): LibraryGameFormState {
     weight: String(game.weight),
     sortOrder: String(game.sortOrder),
     active: game.active,
+    imageUrl: game.imgUrl ?? '',
   }
 }
 
@@ -61,6 +64,7 @@ function formToPayload(form: LibraryGameFormState): LibraryGamePayload {
     weight: Number.isFinite(Number(form.weight)) ? Number(form.weight) : 0,
     sortOrder: Number.isFinite(Number(form.sortOrder)) ? Number(form.sortOrder) : 0,
     active: form.active,
+    imageUrl: form.imageUrl.trim() || null,
   }
 }
 
@@ -169,6 +173,25 @@ function LibraryGameFormFields({ form, onChange, idPrefix }: {
             className="bg-background-secondary border-border focus:border-primary/50"
           />
         </div>
+      </div>
+      <div className="space-y-2">
+        <ImageUpload
+          idPrefix={idPrefix}
+          folder="library-games"
+          value={form.imageUrl}
+          onChange={(url) => onChange({ ...form, imageUrl: url })}
+        />
+        <Label htmlFor={`${idPrefix}-image-url`} className="text-sm text-muted-foreground font-medium">
+          {t('libraryGames.imageUrl')}
+        </Label>
+        <Input
+          id={`${idPrefix}-image-url`}
+          type="url"
+          value={form.imageUrl}
+          onChange={(e) => onChange({ ...form, imageUrl: e.target.value })}
+          placeholder="https://…"
+          className="bg-background-secondary border-border focus:border-primary/50"
+        />
       </div>
       <div className="flex items-center gap-2">
         <Checkbox

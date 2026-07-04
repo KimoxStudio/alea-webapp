@@ -427,7 +427,8 @@
       "weight": "Complejidad (0-5)",
       "sortOrder": "Orden",
       "active": "Activo",
-      "inactive": "Inactivo"
+      "inactive": "Inactivo",
+      "imageUrl": "URL de la imagen de portada"
     },
     "eventsTab": {
       "clubSubTab": "Club (landing)",
@@ -436,6 +437,13 @@
     "englishOptional": {
       "title": "Inglés (opcional)",
       "hint": "Déjalo en blanco para copiar automáticamente el texto en español."
+    },
+    "imageUpload": {
+      "label": "Subir imagen desde el dispositivo",
+      "uploadButton": "Elegir archivo",
+      "uploading": "Subiendo...",
+      "error": "No se pudo subir la imagen. Inténtalo de nuevo.",
+      "hint": "PNG, JPEG, WebP o GIF, hasta 5 MB."
     }
   },
   "home": {

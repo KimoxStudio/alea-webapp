@@ -22,6 +22,7 @@ import {
 } from '@/lib/hooks/use-admin'
 import type { AdminPartner } from '@/lib/types'
 import { OptionalEnglishFields } from './optional-english-fields'
+import { ImageUpload } from './image-upload'
 
 interface PartnerFormState {
   name: string
@@ -83,6 +84,12 @@ function PartnerFormFields({ form, onChange, idPrefix }: {
         />
       </div>
       <div className="space-y-2">
+        <ImageUpload
+          idPrefix={idPrefix}
+          folder="partners"
+          value={form.imageUrl}
+          onChange={(url) => onChange({ ...form, imageUrl: url })}
+        />
         <Label htmlFor={`${idPrefix}-image-url`} className="text-sm text-muted-foreground font-medium">
           {t('partners.imageUrl')}
         </Label>

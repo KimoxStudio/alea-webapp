@@ -279,6 +279,8 @@ export interface LibraryGame {
   playTime: string
   weight: number
   sortOrder: number
+  /** Optional cover image (OIR-207); when absent the landing renders the gradient cover. */
+  imgUrl: string | null
 }
 
 /**

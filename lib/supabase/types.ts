@@ -329,6 +329,7 @@ export type Database = {
           category_es: string
           created_at: string
           id: string
+          img_url: string | null
           play_time: string
           players: string
           sort_order: number
@@ -342,6 +343,7 @@ export type Database = {
           category_es: string
           created_at?: string
           id?: string
+          img_url?: string | null
           play_time: string
           players: string
           sort_order?: number
@@ -355,6 +357,7 @@ export type Database = {
           category_es?: string
           created_at?: string
           id?: string
+          img_url?: string | null
           play_time?: string
           players?: string
           sort_order?: number

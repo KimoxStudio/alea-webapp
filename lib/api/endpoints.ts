@@ -59,4 +59,7 @@ export const endpoints = {
     byId: (id: string) => `/equipment/${id}`,
     roomDefaults: (roomId: string) => `/rooms/${roomId}/default-equipment`,
   },
+  uploads: {
+    create: '/admin/uploads',
+  },
 } as const

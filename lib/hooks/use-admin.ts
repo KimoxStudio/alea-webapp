@@ -413,6 +413,7 @@ export interface LibraryGamePayload {
   weight?: number
   sortOrder?: number
   active?: boolean
+  imageUrl?: string | null
 }
 
 export function useAdminLibraryGames() {
@@ -445,6 +446,21 @@ export function useAdminDeleteLibraryGame() {
   return useMutation({
     mutationFn: (id: string) => apiClient.delete<void>(endpoints.libraryGames.byId(id)),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'library-games'] }),
+  })
+}
+
+// ----- Image uploads (OIR-207, landing content) -----
+
+export type UploadFolder = 'events' | 'partners' | 'library-games'
+
+export function useAdminUploadImage() {
+  return useMutation({
+    mutationFn: ({ file, folder }: { file: File; folder: UploadFolder }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', folder)
+      return apiClient.post<{ url: string }>(endpoints.uploads.create, formData)
+    },
   })
 }
 

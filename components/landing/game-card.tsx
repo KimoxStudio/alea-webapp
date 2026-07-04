@@ -46,6 +46,10 @@ export function GameCard({ game, locale, idx, playersLabel, timeLabel, weightLab
       style={{ transform: `perspective(900px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }}
     >
       <div className="mod-game-cover" style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}>
+        {game.imgUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={game.imgUrl} alt="" className="mod-game-img" loading="lazy" />
+        )}
         <div
           className="mod-game-shine"
           style={{ opacity: tilt.p, transform: `translate(${tilt.y * 4}px, ${-tilt.x * 4}px)` }}
