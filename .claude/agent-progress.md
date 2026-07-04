@@ -580,3 +580,14 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [16:55] Confirmed no new endpoints/route handlers, requireAdminSession checks and URL protocol allowlist untouched, no dangerouslySetInnerHTML, no secrets, i18n parity (eventsTab.*, englishOptional.* in en/es).
 - [16:55] tsc --noEmit clean; npx vitest run 799/799 passed.
 - [16:55] ✅ Complete — APPROVE. Opened PR #152 (feat/oir-206-admin-events-ux → develop).
+
+#### [OIR-207] software-engineer — image uploads
+- [17:00] Started. Reset to origin/feat/oir-207-image-uploads. Found a matching in-progress draft in a stale sibling worktree (agent-a6bdb164818f8c51f, uncommitted) implementing the same spec — reviewed it file-by-file for correctness against the spec and existing service-layer conventions before reusing it as a base.
+- [17:00] Migration 20260704000005_oir207_landing_media_bucket.sql: landing-media public bucket (5MB limit, image/png|jpeg|webp|gif), SELECT-only storage.objects policy for anon+authenticated, ALTER library_games ADD COLUMN IF NOT EXISTS img_url text. Not executed (user-only per project rule).
+- [17:05] lib/server/uploads-service.ts: requireAdminSession, folder allowlist (events/partners/library-games), MIME allowlist mapped to extension (never from filename), 5MB size check, upload via admin client, logs storage errors server-side before returning generic 500. Thin route app/api/admin/uploads/route.ts (requireAdmin + enforceMutationSecurity + enforceRateLimit(adminMutation)).
+- [17:10] components/admin/image-upload.tsx: shared upload control (file input + preview + progress/error + hint), wired into club-events, partners and library-games admin forms alongside the existing manual URL input.
+- [17:12] library-games: added optional imageUrl end-to-end — migration column, lib/supabase/types.ts, lib/types/index.ts (imgUrl), lib/server/library-games-service.ts (validateOptionalUrl, merged into the existing OIR-206 fallback-based field resolver), lib/hooks/use-admin.ts payload + useAdminUploadImage, admin form + mapper.
+- [17:15] components/landing/game-card.tsx: renders game.imgUrl as an absolute-cover <img> behind the title/cat overlays inside .mod-game-cover when present; unchanged gradient fallback otherwise. Added .mod-game-img rule to landing.css.
+- [17:16] i18n: admin.imageUpload.{label,uploadButton,uploading,error,hint} and admin.libraryGames.imageUrl added to messages/en.json and messages/es.json (parity verified).
+- [17:20] pnpm typecheck / pnpm lint / pnpm build all green. pnpm test: 799/799 passed (54 files).
+- [17:25] ✅ Complete — committed 0293408 and pushed to origin/feat/oir-207-image-uploads.
