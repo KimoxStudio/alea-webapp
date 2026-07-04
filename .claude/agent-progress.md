@@ -702,3 +702,10 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [18:24] Fix: added `usePathname()` check in components/layout/footer.tsx; Footer returns null when pathname matches `/^\/[a-z]{2}$/` (locale root only). All other routes unaffected.
 - [18:24] Validation: pnpm typecheck, pnpm lint, pnpm build, pnpm test (868 tests) all green.
 - [18:24] ✅ Complete — single-file diff in components/layout/footer.tsx
+
+#### [OIR-208] software-engineer — hide global header on landing
+- [18:30] Started
+- [18:32] Added pathname gate (isLocaleRoot regex) to components/layout/header.tsx mirroring footer.tsx (commit 8b0ee4c); header now returns null on locale-root landing route regardless of auth state
+- [18:36] Investigated app/[locale]/page.tsx redirect: found the `redirect()` call for authenticated users is wrapped inside a try/catch that also catches the NEXT_REDIRECT throw Next.js uses internally to perform the redirect — the catch block swallows it silently, so the redirect to /rooms never actually fires for a valid session. This is why an authenticated user was seeing the landing page directly (not a caching/hydration artifact). Reported only, not fixed (out of scope per task instructions)
+- [18:38] pnpm typecheck / pnpm lint / pnpm test all green (56 test files, 868 tests)
+- [18:39] ✅ Complete — header.tsx fixed, redirect bug found and reported
