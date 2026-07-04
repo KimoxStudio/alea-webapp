@@ -483,3 +483,15 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [15:21] Fixed landing partners-section.tsx: returns null when partners array is empty (no orphaned section)
 - [15:21] Validation: typecheck clean, lint clean, tests 729/733 passed — 4 failures are pre-existing partners-service.test.ts mock limitation (single .order() chain), not edited per instructions
 - [15:21] ✅ Complete — 5 files modified, committed and pushed
+
+#### [OIR-205] software-engineer — game library management
+- [15:40] Started — mirrored OIR-204 (partners) final patterns for the game library
+- [15:40] Migration: supabase/migrations/20260704000003_oir205_library_games_table.sql — table library_games (title, category_es/en, players, play_time, weight numeric(2,1), sort_order, active), RLS SELECT-only where active=true for anon+authenticated, GRANT SELECT only, seeded 8 games from the former game-library-data.ts with bilingual category pairs
+- [15:40] Service: lib/server/library-games-service.ts — listLibraryGames (public), listAdminLibraryGames/create/update/delete (admin-only), requireAdminSession, validate-before-write, typeof guards, weight validated as number 0-5, secondary .order('title') tie-break in both list functions
+- [15:40] Routes: app/api/library-games/route.ts + [id]/route.ts — requireAdmin, enforceMutationSecurity, enforceRateLimit(adminMutation), thin handlers
+- [15:40] Dashboard: components/admin/library-games-section.tsx + tab wired into admin-dashboard.tsx — mirrors partners-section.tsx incl. try/catch on every mutateAsync, dialog stays open + error rendered on failure, toggle-active error feedback
+- [15:40] Landing: app/[locale]/page.tsx adds loadLibraryGames() degradation wrapper (failure -> [] + console.error); game-library-section.tsx now takes games prop and returns null when empty; game-card.tsx localizes category via LibraryGame type; deleted components/landing/game-library-data.ts (no remaining references)
+- [15:40] Types: lib/types/index.ts (LibraryGame/AdminLibraryGame), lib/supabase/types.ts (library_games table Row/Insert/Update), lib/api/endpoints.ts, lib/hooks/use-admin.ts (useAdminLibraryGames/Create/Update/Delete, cache scoped to ['admin','library-games'])
+- [15:40] i18n: admin.libraryGames.* full ES/EN parity added to messages/en.json + es.json
+- [15:41] ✅ Validation: pnpm typecheck green, pnpm lint green (no warnings), pnpm build green, pnpm test green — 735/735 tests passed (53 files), no regressions
+- [15:41] ✅ Complete — committing and pushing to feat/oir-205-game-library-management

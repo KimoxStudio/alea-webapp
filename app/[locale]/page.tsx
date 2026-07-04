@@ -5,7 +5,8 @@ import { getSessionFromServerCookies } from '@/lib/server/auth'
 import { getCurrentUser } from '@/lib/server/auth-service'
 import { listClubEvents, type ListClubEventsResult } from '@/lib/server/club-events-service'
 import { listPartners } from '@/lib/server/partners-service'
-import type { Partner } from '@/lib/types'
+import { listLibraryGames } from '@/lib/server/library-games-service'
+import type { LibraryGame, Partner } from '@/lib/types'
 import { LandingView } from '@/components/landing/landing-view'
 
 interface HomePageProps {
@@ -39,6 +40,15 @@ async function loadPartners(): Promise<Partner[]> {
   }
 }
 
+async function loadLibraryGames(): Promise<LibraryGame[]> {
+  try {
+    return await listLibraryGames()
+  } catch (err) {
+    console.error('[HomePage] Failed to load library games for the public landing page', err)
+    return []
+  }
+}
+
 export async function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'home' })
@@ -59,10 +69,19 @@ export default async function HomePage({ params }: HomePageProps) {
     }
   }
 
-  const [{ upcoming, past }, partners] = await Promise.all([
+  const [{ upcoming, past }, partners, games] = await Promise.all([
     loadClubEvents(),
     loadPartners(),
+    loadLibraryGames(),
   ])
 
-  return <LandingView locale={locale} upcomingEvents={upcoming} pastEvents={past} partners={partners} />
+  return (
+    <LandingView
+      locale={locale}
+      upcomingEvents={upcoming}
+      pastEvents={past}
+      partners={partners}
+      games={games}
+    />
+  )
 }

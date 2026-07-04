@@ -1,13 +1,18 @@
 import { getTranslations } from 'next-intl/server'
-import { GAME_LIBRARY_HIGHLIGHTS } from './game-library-data'
+import type { LibraryGame } from '@/lib/types'
 import { GameCard } from './game-card'
 import { MarqueeRow } from './marquee-row'
 
 interface GameLibrarySectionProps {
   locale: string
+  games: LibraryGame[]
 }
 
-export async function GameLibrarySection({ locale }: GameLibrarySectionProps) {
+export async function GameLibrarySection({ locale, games }: GameLibrarySectionProps) {
+  // No active games to show — don't render an orphaned section (kicker +
+  // heading with no content below it).
+  if (games.length === 0) return null
+
   const t = await getTranslations('home')
   const prevLabel = locale === 'en' ? 'Previous game' : 'Juego anterior'
   const nextLabel = locale === 'en' ? 'Next game' : 'Siguiente juego'
@@ -23,9 +28,9 @@ export async function GameLibrarySection({ locale }: GameLibrarySectionProps) {
       </div>
 
       <MarqueeRow ariaLabel={t('games.title')} speedPxSec={20} prevLabel={prevLabel} nextLabel={nextLabel}>
-        {GAME_LIBRARY_HIGHLIGHTS.map((game, i) => (
+        {games.map((game, i) => (
           <GameCard
-            key={game.title}
+            key={game.id}
             game={game}
             locale={locale}
             idx={i}

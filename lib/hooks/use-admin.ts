@@ -11,6 +11,7 @@ import type {
   AdminClubEvent,
   AdminListClubEventsResult,
   AdminPartner,
+  AdminLibraryGame,
   MemberImportResult,
   Equipment,
 } from '@/lib/types'
@@ -397,6 +398,52 @@ export function useAdminDeletePartner() {
   return useMutation({
     mutationFn: (id: string) => apiClient.delete<void>(endpoints.partners.byId(id)),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'partners'] }),
+  })
+}
+
+// ----- Library games (OIR-205, public landing content) -----
+
+export interface LibraryGamePayload {
+  title: string
+  categoryEs?: string
+  categoryEn?: string
+  players?: string
+  playTime?: string
+  weight?: number
+  sortOrder?: number
+  active?: boolean
+}
+
+export function useAdminLibraryGames() {
+  return useQuery<AdminLibraryGame[]>({
+    queryKey: ['admin', 'library-games'],
+    queryFn: () => apiClient.get<AdminLibraryGame[]>(endpoints.libraryGames.list),
+    staleTime: 30_000,
+  })
+}
+
+export function useAdminCreateLibraryGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: LibraryGamePayload) => apiClient.post<AdminLibraryGame>(endpoints.libraryGames.list, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'library-games'] }),
+  })
+}
+
+export function useAdminUpdateLibraryGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<LibraryGamePayload> }) =>
+      apiClient.put<AdminLibraryGame>(endpoints.libraryGames.byId(id), data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'library-games'] }),
+  })
+}
+
+export function useAdminDeleteLibraryGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete<void>(endpoints.libraryGames.byId(id)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'library-games'] }),
   })
 }
 
