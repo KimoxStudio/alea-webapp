@@ -1,13 +1,12 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { LayoutDashboard, Users, CalendarDays, DoorOpen, CalendarRange, CalendarHeart, Package, Handshake, Dices } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, DoorOpen, CalendarRange, Package, Handshake, Dices } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UsersSection } from './users-section'
 import { ReservationsSection } from './reservations-section'
 import { RoomsSection } from './rooms-section'
-import { EventsSection } from './events-section'
-import { ClubEventsSection } from './club-events-section'
+import { EventsTab } from './events-tab'
 import { PartnersSection } from './partners-section'
 import { LibraryGamesSection } from './library-games-section'
 import { EquipmentSection } from './equipment-section'
@@ -52,25 +51,21 @@ export function AdminDashboard() {
             <DoorOpen className="h-4 w-4" aria-hidden="true" />
             {t('rooms')}
           </TabsTrigger>
-          <TabsTrigger value="events" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
-            <CalendarRange className="h-4 w-4" aria-hidden="true" />
-            {t('events.title')}
-          </TabsTrigger>
-          <TabsTrigger value="club-events" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
-            <CalendarHeart className="h-4 w-4" aria-hidden="true" />
-            {t('clubEvents.title')}
-          </TabsTrigger>
-          <TabsTrigger value="partners" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
-            <Handshake className="h-4 w-4" aria-hidden="true" />
-            {t('partners.title')}
+          <TabsTrigger value="equipment" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
+            <Package className="h-4 w-4" aria-hidden="true" />
+            {t('equipment.title')}
           </TabsTrigger>
           <TabsTrigger value="library-games" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
             <Dices className="h-4 w-4" aria-hidden="true" />
             {t('libraryGames.title')}
           </TabsTrigger>
-          <TabsTrigger value="equipment" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
-            <Package className="h-4 w-4" aria-hidden="true" />
-            {t('equipment.title')}
+          <TabsTrigger value="events" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
+            <CalendarRange className="h-4 w-4" aria-hidden="true" />
+            {t('events.title')}
+          </TabsTrigger>
+          <TabsTrigger value="partners" className="gap-2 data-[state=active]:border data-[state=active]:border-primary/30">
+            <Handshake className="h-4 w-4" aria-hidden="true" />
+            {t('partners.title')}
           </TabsTrigger>
         </TabsList>
 
@@ -86,24 +81,20 @@ export function AdminDashboard() {
           <RoomsSection />
         </TabsContent>
 
-        <TabsContent value="events">
-          <EventsSection />
-        </TabsContent>
-
-        <TabsContent value="club-events">
-          <ClubEventsSection />
-        </TabsContent>
-
-        <TabsContent value="partners">
-          <PartnersSection />
+        <TabsContent value="equipment">
+          <EquipmentSection />
         </TabsContent>
 
         <TabsContent value="library-games">
           <LibraryGamesSection />
         </TabsContent>
 
-        <TabsContent value="equipment">
-          <EquipmentSection />
+        <TabsContent value="events">
+          <EventsTab />
+        </TabsContent>
+
+        <TabsContent value="partners">
+          <PartnersSection />
         </TabsContent>
       </Tabs>
     </div>

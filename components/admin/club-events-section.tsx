@@ -27,6 +27,7 @@ import {
 } from '@/lib/hooks/use-admin'
 import { formatClubEventDate } from '@/lib/club-events-format'
 import type { AdminClubEvent, AdminEventRoomBlock } from '@/lib/types'
+import { OptionalEnglishFields } from './optional-english-fields'
 
 const NONE_ROOM = '__none__'
 
@@ -349,110 +350,57 @@ function ClubEventFormDialog({
           </div>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4 py-2">
-          {/* Titles */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-title-es`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.titleEs')}
-              </Label>
-              <Input
-                id={`${dialogId}-title-es`}
-                value={form.titleEs}
-                onChange={(e) => setForm({ ...form, titleEs: e.target.value })}
-                required
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-title-en`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.titleEn')}
-              </Label>
-              <Input
-                id={`${dialogId}-title-en`}
-                value={form.titleEn}
-                onChange={(e) => setForm({ ...form, titleEn: e.target.value })}
-                required
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
-            </div>
+          {/* Title */}
+          <div className="space-y-2">
+            <Label htmlFor={`${dialogId}-title-es`} className="text-sm text-muted-foreground font-medium">
+              {t('clubEvents.titleEs')}
+            </Label>
+            <Input
+              id={`${dialogId}-title-es`}
+              value={form.titleEs}
+              onChange={(e) => setForm({ ...form, titleEs: e.target.value })}
+              required
+              className="bg-background-secondary border-border focus:border-primary/50"
+            />
           </div>
 
-          {/* Blurbs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-blurb-es`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.blurbEs')}
-              </Label>
-              <Input
-                id={`${dialogId}-blurb-es`}
-                value={form.blurbEs}
-                onChange={(e) => setForm({ ...form, blurbEs: e.target.value })}
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-blurb-en`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.blurbEn')}
-              </Label>
-              <Input
-                id={`${dialogId}-blurb-en`}
-                value={form.blurbEn}
-                onChange={(e) => setForm({ ...form, blurbEn: e.target.value })}
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
-            </div>
+          {/* Blurb */}
+          <div className="space-y-2">
+            <Label htmlFor={`${dialogId}-blurb-es`} className="text-sm text-muted-foreground font-medium">
+              {t('clubEvents.blurbEs')}
+            </Label>
+            <Input
+              id={`${dialogId}-blurb-es`}
+              value={form.blurbEs}
+              onChange={(e) => setForm({ ...form, blurbEs: e.target.value })}
+              className="bg-background-secondary border-border focus:border-primary/50"
+            />
           </div>
 
-          {/* Descriptions */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-description-es`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.descriptionEs')}
-              </Label>
-              <textarea
-                id={`${dialogId}-description-es`}
-                value={form.descriptionEs}
-                onChange={(e) => setForm({ ...form, descriptionEs: e.target.value })}
-                className={textareaClass}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-description-en`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.descriptionEn')}
-              </Label>
-              <textarea
-                id={`${dialogId}-description-en`}
-                value={form.descriptionEn}
-                onChange={(e) => setForm({ ...form, descriptionEn: e.target.value })}
-                className={textareaClass}
-              />
-            </div>
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor={`${dialogId}-description-es`} className="text-sm text-muted-foreground font-medium">
+              {t('clubEvents.descriptionEs')}
+            </Label>
+            <textarea
+              id={`${dialogId}-description-es`}
+              value={form.descriptionEs}
+              onChange={(e) => setForm({ ...form, descriptionEs: e.target.value })}
+              className={textareaClass}
+            />
           </div>
 
           {/* Category */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-category-es`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.categoryEs')}
-              </Label>
-              <Input
-                id={`${dialogId}-category-es`}
-                value={form.categoryEs}
-                onChange={(e) => setForm({ ...form, categoryEs: e.target.value })}
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`${dialogId}-category-en`} className="text-sm text-muted-foreground font-medium">
-                {t('clubEvents.categoryEn')}
-              </Label>
-              <Input
-                id={`${dialogId}-category-en`}
-                value={form.categoryEn}
-                onChange={(e) => setForm({ ...form, categoryEn: e.target.value })}
-                className="bg-background-secondary border-border focus:border-primary/50"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${dialogId}-category-es`} className="text-sm text-muted-foreground font-medium">
+              {t('clubEvents.categoryEs')}
+            </Label>
+            <Input
+              id={`${dialogId}-category-es`}
+              value={form.categoryEs}
+              onChange={(e) => setForm({ ...form, categoryEs: e.target.value })}
+              className="bg-background-secondary border-border focus:border-primary/50"
+            />
           </div>
 
           {/* Date kind + date(s) */}
@@ -506,18 +454,71 @@ function ClubEventFormDialog({
           </div>
 
           {form.dateKind === 'recurring' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor={`${dialogId}-recurrence-es`} className="text-sm text-muted-foreground font-medium">
-                  {t('clubEvents.recurrenceLabelEs')}
-                </Label>
-                <Input
-                  id={`${dialogId}-recurrence-es`}
-                  value={form.recurrenceLabelEs}
-                  onChange={(e) => setForm({ ...form, recurrenceLabelEs: e.target.value })}
-                  className="bg-background-secondary border-border focus:border-primary/50"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor={`${dialogId}-recurrence-es`} className="text-sm text-muted-foreground font-medium">
+                {t('clubEvents.recurrenceLabelEs')}
+              </Label>
+              <Input
+                id={`${dialogId}-recurrence-es`}
+                value={form.recurrenceLabelEs}
+                onChange={(e) => setForm({ ...form, recurrenceLabelEs: e.target.value })}
+                className="bg-background-secondary border-border focus:border-primary/50"
+              />
+            </div>
+          )}
+
+          {/* English copy is optional (OIR-206) — collapsed by default; the
+              service falls back to the Spanish text above when left blank. */}
+          <OptionalEnglishFields idPrefix={dialogId}>
+            <div className="space-y-2">
+              <Label htmlFor={`${dialogId}-title-en`} className="text-sm text-muted-foreground font-medium">
+                {t('clubEvents.titleEn')}
+              </Label>
+              <Input
+                id={`${dialogId}-title-en`}
+                value={form.titleEn}
+                onChange={(e) => setForm({ ...form, titleEn: e.target.value })}
+                placeholder={t('englishOptional.hint')}
+                className="bg-background-secondary border-border focus:border-primary/50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`${dialogId}-blurb-en`} className="text-sm text-muted-foreground font-medium">
+                {t('clubEvents.blurbEn')}
+              </Label>
+              <Input
+                id={`${dialogId}-blurb-en`}
+                value={form.blurbEn}
+                onChange={(e) => setForm({ ...form, blurbEn: e.target.value })}
+                placeholder={t('englishOptional.hint')}
+                className="bg-background-secondary border-border focus:border-primary/50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`${dialogId}-description-en`} className="text-sm text-muted-foreground font-medium">
+                {t('clubEvents.descriptionEn')}
+              </Label>
+              <textarea
+                id={`${dialogId}-description-en`}
+                value={form.descriptionEn}
+                onChange={(e) => setForm({ ...form, descriptionEn: e.target.value })}
+                placeholder={t('englishOptional.hint')}
+                className={textareaClass}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`${dialogId}-category-en`} className="text-sm text-muted-foreground font-medium">
+                {t('clubEvents.categoryEn')}
+              </Label>
+              <Input
+                id={`${dialogId}-category-en`}
+                value={form.categoryEn}
+                onChange={(e) => setForm({ ...form, categoryEn: e.target.value })}
+                placeholder={t('englishOptional.hint')}
+                className="bg-background-secondary border-border focus:border-primary/50"
+              />
+            </div>
+            {form.dateKind === 'recurring' && (
               <div className="space-y-2">
                 <Label htmlFor={`${dialogId}-recurrence-en`} className="text-sm text-muted-foreground font-medium">
                   {t('clubEvents.recurrenceLabelEn')}
@@ -526,11 +527,12 @@ function ClubEventFormDialog({
                   id={`${dialogId}-recurrence-en`}
                   value={form.recurrenceLabelEn}
                   onChange={(e) => setForm({ ...form, recurrenceLabelEn: e.target.value })}
+                  placeholder={t('englishOptional.hint')}
                   className="bg-background-secondary border-border focus:border-primary/50"
                 />
               </div>
-            </div>
-          )}
+            )}
+          </OptionalEnglishFields>
 
           {/* Image / link URLs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -428,6 +428,14 @@
       "sortOrder": "Orden",
       "active": "Activo",
       "inactive": "Inactivo"
+    },
+    "eventsTab": {
+      "clubSubTab": "Club (landing)",
+      "internalSubTab": "Internos (salas)"
+    },
+    "englishOptional": {
+      "title": "Inglés (opcional)",
+      "hint": "Déjalo en blanco para copiar automáticamente el texto en español."
     }
   },
   "home": {

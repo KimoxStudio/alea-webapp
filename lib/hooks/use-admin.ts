@@ -295,7 +295,8 @@ export interface ClubEventSchedulePayload {
 
 export interface ClubEventPayload {
   titleEs: string
-  titleEn: string
+  /** Optional (OIR-206) — the service falls back to titleEs when absent/empty. */
+  titleEn?: string
   blurbEs?: string | null
   blurbEn?: string | null
   descriptionEs?: string | null

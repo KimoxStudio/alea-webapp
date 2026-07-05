@@ -103,6 +103,47 @@ function parseBooleanFlag(value: unknown): boolean {
   return value === true || value === 'true'
 }
 
+/**
+ * OIR-206: English copy is optional — when descriptionEn is absent/empty,
+ * fall back to the paired descriptionEs value so the landing still renders
+ * content in the EN locale.
+ *
+ * Resolution rules (explicit, in priority order):
+ * 1. `enProvided` and the trimmed value is non-empty → use it verbatim.
+ * 2. `enProvided` and the trimmed value is empty → treat blanking as
+ *    "re-enable auto-copy": return the (new) ES value.
+ * 3. Not provided (`undefined`) → preserve `current.en` if it exists and
+ *    differs from the OLD ES value (a deliberate edit); if `current.en`
+ *    equals the OLD ES value (or there is no current row), auto-copy the
+ *    new ES value.
+ *
+ * Rule 3's "identical EN === ES" auto-copy heuristic is safe because our
+ * admin forms always resend every field: a deliberately identical EN is
+ * resent explicitly on every update and is preserved by rule 1, so it never
+ * falls into rule 3's heuristic path.
+ */
+function resolveBilingualEnFallback(
+  field: string,
+  esValue: string | null,
+  rawEn: unknown,
+  enProvided: boolean,
+  current: { es: string | null; en: string | null } | null,
+): string | null {
+  if (enProvided) {
+    // Finding 5 (mirrors optionalString): a non-string, non-null value (an
+    // array, object, number…) must be rejected rather than silently treated
+    // as "absent" and falling back to the ES value.
+    if (rawEn !== null && typeof rawEn !== 'string') {
+      serviceError(`${field} must be a string`, 400)
+    }
+    const trimmed = typeof rawEn === 'string' ? rawEn.trim() : ''
+    return trimmed !== '' ? trimmed : esValue
+  }
+  if (!current) return esValue
+  const wasAutoCopied = current.en === current.es
+  return wasAutoCopied ? esValue : current.en
+}
+
 interface PartnerFieldSet {
   name: string
   img_url: string
@@ -131,7 +172,13 @@ function resolvePartnerFields(body: PartnerInput, current: PartnerRow | null): P
 
   const linkUrl = body.linkUrl !== undefined ? validateOptionalUrl(body.linkUrl, 'linkUrl') : (current?.link_url ?? null)
   const descEs = body.descriptionEs !== undefined ? optionalString(body.descriptionEs, 'descriptionEs') : (current?.desc_es ?? null)
-  const descEn = body.descriptionEn !== undefined ? optionalString(body.descriptionEn, 'descriptionEn') : (current?.desc_en ?? null)
+  const descEn = resolveBilingualEnFallback(
+    'descriptionEn',
+    descEs,
+    body.descriptionEn,
+    body.descriptionEn !== undefined,
+    current ? { es: current.desc_es, en: current.desc_en } : null,
+  )
 
   const sortOrder = body.sortOrder !== undefined
     ? (optionalInteger(body.sortOrder, 'sortOrder') ?? 0)

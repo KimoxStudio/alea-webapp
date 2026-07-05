@@ -961,4 +961,247 @@ describe('partners-service', () => {
       expect(migrationContent).toContain('"updated_at" timestamptz NOT NULL DEFAULT now()')
     })
   })
+
+  describe('createPartner with optional English (OIR-206)', () => {
+    it('admin can create a partner with descriptionEn absent, falls back to descriptionEs', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createPartner } = await loadPartnersService()
+
+      const result = await createPartner(adminSession, {
+        name: 'Librería Local',
+        imageUrl: 'https://example.com/library.png',
+        descriptionEs: 'Tu tienda de libros favorita',
+        // descriptionEn absent — should fallback
+      })
+
+      expect(result.name).toBe('Librería Local')
+      expect(result.descriptionEs).toBe('Tu tienda de libros favorita')
+      expect(result.descriptionEn).toBe('Tu tienda de libros favorita') // Fallback to ES
+    })
+
+    it('admin can create a partner with descriptionEn empty string, falls back to descriptionEs', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createPartner } = await loadPartnersService()
+
+      const result = await createPartner(adminSession, {
+        name: 'Tienda de Juegos',
+        imageUrl: 'https://example.com/games.png',
+        descriptionEs: 'Juegos de mesa y más',
+        descriptionEn: '', // Empty string — should fallback
+      })
+
+      expect(result.descriptionEn).toBe('Juegos de mesa y más')
+    })
+
+    it('admin can create a partner with explicit descriptionEn, preserves EN value', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createPartner } = await loadPartnersService()
+
+      const result = await createPartner(adminSession, {
+        name: 'Café Artesanal',
+        imageUrl: 'https://example.com/cafe.png',
+        descriptionEs: 'Café y pasteles locales',
+        descriptionEn: 'Artisanal coffee and pastries',
+      })
+
+      expect(result.descriptionEn).toBe('Artisanal coffee and pastries')
+    })
+  })
+
+  describe('updatePartner with fallback semantics edge cases (OIR-206 round 2)', () => {
+    it('rule 2: explicit different descriptionEn + blank descriptionEn payload = re-enable auto-copy to new ES', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      const currentRow = {
+        id: 'partner-1',
+        name: 'Partner Name',
+        img_url: 'https://example.com/partner.png',
+        link_url: null,
+        desc_es: 'Descripción antigua',
+        desc_en: 'Old Explicit Description', // Deliberately different from ES
+        sort_order: 0,
+        active: true,
+        created_at: '2026-04-01T00:00:00Z',
+        updated_at: '2026-04-01T00:00:00Z',
+      }
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'partners') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: currentRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      ...currentRow,
+                      desc_es: 'Nueva descripción',
+                      desc_en: 'Nueva descripción', // Should become new ES (rule 2)
+                    },
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updatePartner } = await loadPartnersService()
+
+      const result = await updatePartner(adminSession, 'partner-1', {
+        descriptionEs: 'Nueva descripción',
+        descriptionEn: '', // Blank = re-enable auto-copy
+      })
+
+      expect(result.descriptionEn).toBe('Nueva descripción') // Follows new ES
+    })
+
+    it('rule 1: resending identical descriptionEn (en === es deliberately) + ES change = EN preserved', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      const currentRow = {
+        id: 'partner-1',
+        name: 'Partner Name',
+        img_url: 'https://example.com/partner.png',
+        link_url: null,
+        desc_es: 'Descripción antigua',
+        desc_en: 'Descripción antigua', // Same as ES (deliberately or auto-copied)
+        sort_order: 0,
+        active: true,
+        created_at: '2026-04-01T00:00:00Z',
+        updated_at: '2026-04-01T00:00:00Z',
+      }
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'partners') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: currentRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      ...currentRow,
+                      desc_es: 'Nueva descripción',
+                      desc_en: 'Descripción antigua', // Preserved because explicitly resent (rule 1)
+                    },
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updatePartner } = await loadPartnersService()
+
+      const result = await updatePartner(adminSession, 'partner-1', {
+        descriptionEs: 'Nueva descripción',
+        descriptionEn: 'Descripción antigua', // Resend explicit identical value
+      })
+
+      expect(result.descriptionEn).toBe('Descripción antigua') // Preserved by rule 1
+    })
+
+    it('rule 2: whitespace-only descriptionEn behaves as blank (re-enable auto-copy to new ES)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      const currentRow = {
+        id: 'partner-1',
+        name: 'Partner Name',
+        img_url: 'https://example.com/partner.png',
+        link_url: null,
+        desc_es: 'Descripción antigua',
+        desc_en: 'Old Explicit Description',
+        sort_order: 0,
+        active: true,
+        created_at: '2026-04-01T00:00:00Z',
+        updated_at: '2026-04-01T00:00:00Z',
+      }
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'partners') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: currentRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      ...currentRow,
+                      desc_es: 'Nueva descripción',
+                      desc_en: 'Nueva descripción', // Should become new ES (whitespace trimmed = empty)
+                    },
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updatePartner } = await loadPartnersService()
+
+      const result = await updatePartner(adminSession, 'partner-1', {
+        descriptionEs: 'Nueva descripción',
+        descriptionEn: '   ', // Whitespace-only = treated as empty (rule 2)
+      })
+
+      expect(result.descriptionEn).toBe('Nueva descripción') // Follows new ES
+    })
+  })
 })

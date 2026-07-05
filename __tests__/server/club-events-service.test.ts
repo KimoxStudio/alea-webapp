@@ -449,7 +449,111 @@ describe('club-events-service', () => {
       expect(result.linkUrl).toBeNull()
     })
 
-    it('requires both titleEs and titleEn', async () => {
+    it('creates a club event with titleEn absent, succeeds with title_en === title_es in DB (OIR-206)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createClubEvent } = await loadClubEventsService()
+
+      const result = await createClubEvent(adminSession, {
+        titleEs: 'Evento en Español',
+        // titleEn absent — should fallback
+        date: '2026-05-01',
+        dateKind: 'single',
+      })
+
+      expect(result.id).toBe('evt-new-1')
+      expect(result.titleEs).toBe('Evento en Español')
+      expect(result.titleEn).toBe('Evento en Español') // Fallback to ES
+    })
+
+    it('creates a club event with titleEn empty string, succeeds with fallback (OIR-206)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createClubEvent } = await loadClubEventsService()
+
+      const result = await createClubEvent(adminSession, {
+        titleEs: 'Evento Viernes',
+        titleEn: '', // Empty string — should fallback
+        date: '2026-05-01',
+        dateKind: 'single',
+      })
+
+      expect(result.titleEn).toBe('Evento Viernes')
+    })
+
+    it('creates a club event with explicit titleEn, preserves EN value (OIR-206)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createClubEvent } = await loadClubEventsService()
+
+      const result = await createClubEvent(adminSession, {
+        titleEs: 'Torneo de Ajedrez',
+        titleEn: 'Chess Tournament',
+        date: '2026-05-01',
+        dateKind: 'single',
+      })
+
+      expect(result.titleEn).toBe('Chess Tournament')
+    })
+
+    it('creates a club event with blurbEn absent, falls back to blurbEs (OIR-206)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createClubEvent } = await loadClubEventsService()
+
+      const result = await createClubEvent(adminSession, {
+        titleEs: 'Event',
+        titleEn: 'Event',
+        blurbEs: 'Descripción breve',
+        // blurbEn absent
+        date: '2026-05-01',
+        dateKind: 'single',
+      })
+
+      // The mock builder returns the input data from insert, so verify via result mapping
+      expect(result.blurbEs).toBe('Descripción breve')
+      // result.blurbEn would also be 'Descripción breve' due to fallback
+    })
+
+    it('creates a club event with categoryEn absent, falls back to categoryEs (OIR-206)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createClubEvent } = await loadClubEventsService()
+
+      const result = await createClubEvent(adminSession, {
+        titleEs: 'Event',
+        titleEn: 'Event',
+        categoryEs: 'Torneo',
+        // categoryEn absent
+        date: '2026-05-01',
+        dateKind: 'single',
+      })
+
+      // Fallback behavior: categoryEn should equal categoryEs when absent
+      expect(result.id).toBe('evt-new-1')
+    })
+
+    it('rejects categoryEn as non-string object (still 400, not fallback) (OIR-206)', async () => {
       const adminSession = createAdminSession()
       const mockSupabaseAdmin = buildSupabaseMock()
       
@@ -467,11 +571,153 @@ describe('club-events-service', () => {
       await expect(
         createClubEvent(adminSession, {
           titleEs: 'Event',
-          titleEn: '', // Empty
+          titleEn: 'Event',
+          categoryEs: 'Torneo',
+          categoryEn: { nested: 'object' }, // Non-string — still 400
           date: '2026-05-01',
           dateKind: 'single',
         })
-      ).rejects.toMatchObject({ statusCode: 400 })
+      ).rejects.toMatchObject({ statusCode: 400, message: expect.stringContaining('must be a string') })
+    })
+
+    it('updates club event: auto-copied titleEn follows new titleEs when ES changes (OIR-206)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      // Current row has title_en === title_es (auto-copied)
+      const currentRow = {
+        id: 'evt-1',
+        title: 'Old Event',
+        title_es: 'Evento Viejo',
+        title_en: 'Evento Viejo', // Was auto-copied (equals ES)
+        blurb_es: null,
+        blurb_en: null,
+        description_es: null,
+        description_en: null,
+        category_es: null,
+        category_en: null,
+        date_kind: 'single',
+        date: '2026-04-20',
+        end_date: null,
+        recurrence_label_es: null,
+        recurrence_label_en: null,
+        image_url: null,
+        link_url: null,
+        created_by: 'user-1',
+        created_at: '2026-04-01T00:00:00Z',
+      }
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: currentRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      ...currentRow,
+                      title_es: 'Evento Nuevo',
+                      title_en: 'Evento Nuevo', // Should follow ES
+                    },
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updateClubEvent } = await loadClubEventsService()
+
+      const result = await updateClubEvent(adminSession, 'evt-1', {
+        titleEs: 'Evento Nuevo',
+        // titleEn absent — should re-copy from new ES value
+      })
+
+      expect(result.titleEn).toBe('Evento Nuevo')
+    })
+
+    it('updates club event: explicitly different titleEn is preserved when ES changes (OIR-206)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      // Current row has title_en !== title_es (explicitly set)
+      const currentRow = {
+        id: 'evt-1',
+        title: 'Old Event',
+        title_es: 'Evento Viejo',
+        title_en: 'Old Event Tournament', // Explicit EN (different from ES)
+        blurb_es: null,
+        blurb_en: null,
+        description_es: null,
+        description_en: null,
+        category_es: null,
+        category_en: null,
+        date_kind: 'single',
+        date: '2026-04-20',
+        end_date: null,
+        recurrence_label_es: null,
+        recurrence_label_en: null,
+        image_url: null,
+        link_url: null,
+        created_by: 'user-1',
+        created_at: '2026-04-01T00:00:00Z',
+      }
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: currentRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      ...currentRow,
+                      title_es: 'Evento Nuevo',
+                      title_en: 'Old Event Tournament', // Preserved (explicitly set)
+                    },
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updateClubEvent } = await loadClubEventsService()
+
+      const result = await updateClubEvent(adminSession, 'evt-1', {
+        titleEs: 'Evento Nuevo',
+        // titleEn absent — but should preserve the explicit value
+      })
+
+      expect(result.titleEn).toBe('Old Event Tournament') // Preserved
     })
 
     it('calls apply_club_event_room_blocks RPC with normalized payload on create with blocksRooms:true (Finding 1)', async () => {
@@ -1639,6 +1885,286 @@ describe('club-events-service', () => {
       const result = await listEvents()
 
       expect(Array.isArray(result)).toBe(true)
+    })
+  })
+
+  describe('updateClubEvent with fallback semantics edge cases (OIR-206 round 2)', () => {
+    it('rule 2: explicit different titleEn + blank titleEn payload = re-enable auto-copy to new ES', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      // Current row: title_en !== title_es (deliberately set)
+      const currentRow = {
+        id: 'evt-1',
+        title: 'Event',
+        title_es: 'Evento Antiguo',
+        title_en: 'Old Explicit Title', // Deliberately different from ES
+        blurb_es: null,
+        blurb_en: null,
+        description_es: null,
+        description_en: null,
+        category_es: null,
+        category_en: null,
+        date_kind: 'single',
+        date: '2026-04-20',
+        end_date: null,
+        recurrence_label_es: null,
+        recurrence_label_en: null,
+        image_url: null,
+        link_url: null,
+        created_by: 'user-1',
+        created_at: '2026-04-01T00:00:00Z',
+      }
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: currentRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      ...currentRow,
+                      title_es: 'Evento Nuevo',
+                      title_en: 'Evento Nuevo', // Should become new ES (rule 2)
+                    },
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updateClubEvent } = await loadClubEventsService()
+
+      const result = await updateClubEvent(adminSession, 'evt-1', {
+        titleEs: 'Evento Nuevo',
+        titleEn: '', // Blank = re-enable auto-copy
+      })
+
+      expect(result.titleEn).toBe('Evento Nuevo') // Follows new ES
+    })
+
+    it('rule 1: resending identical titleEn (en === es deliberately) + ES change = EN preserved', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      // Current row: title_en === title_es (could be deliberate or auto-copied, but identical)
+      const currentRow = {
+        id: 'evt-1',
+        title: 'Event',
+        title_es: 'Evento Antiguo',
+        title_en: 'Evento Antiguo', // Same as ES (deliberately or auto-copied)
+        blurb_es: null,
+        blurb_en: null,
+        description_es: null,
+        description_en: null,
+        category_es: null,
+        category_en: null,
+        date_kind: 'single',
+        date: '2026-04-20',
+        end_date: null,
+        recurrence_label_es: null,
+        recurrence_label_en: null,
+        image_url: null,
+        link_url: null,
+        created_by: 'user-1',
+        created_at: '2026-04-01T00:00:00Z',
+      }
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: currentRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      ...currentRow,
+                      title_es: 'Evento Nuevo',
+                      title_en: 'Evento Antiguo', // Preserved because explicitly resent (rule 1)
+                    },
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updateClubEvent } = await loadClubEventsService()
+
+      const result = await updateClubEvent(adminSession, 'evt-1', {
+        titleEs: 'Evento Nuevo',
+        titleEn: 'Evento Antiguo', // Resend explicit identical value
+      })
+
+      expect(result.titleEn).toBe('Evento Antiguo') // Preserved by rule 1
+    })
+
+    it('rule 2: whitespace-only titleEn behaves as blank (re-enable auto-copy to new ES)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      const currentRow = {
+        id: 'evt-1',
+        title: 'Event',
+        title_es: 'Evento Antiguo',
+        title_en: 'Old Explicit Title',
+        blurb_es: null,
+        blurb_en: null,
+        description_es: null,
+        description_en: null,
+        category_es: null,
+        category_en: null,
+        date_kind: 'single',
+        date: '2026-04-20',
+        end_date: null,
+        recurrence_label_es: null,
+        recurrence_label_en: null,
+        image_url: null,
+        link_url: null,
+        created_by: 'user-1',
+        created_at: '2026-04-01T00:00:00Z',
+      }
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: currentRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      ...currentRow,
+                      title_es: 'Evento Nuevo',
+                      title_en: 'Evento Nuevo', // Should become new ES (whitespace trimmed = empty)
+                    },
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updateClubEvent } = await loadClubEventsService()
+
+      const result = await updateClubEvent(adminSession, 'evt-1', {
+        titleEs: 'Evento Nuevo',
+        titleEn: '   ', // Whitespace-only = treated as empty (rule 2)
+      })
+
+      expect(result.titleEn).toBe('Evento Nuevo') // Follows new ES
+    })
+
+    it('rule 2: blank blurbEn (nullable) re-enables auto-copy to new ES (nullable field)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+      
+      const currentRow = {
+        id: 'evt-1',
+        title: 'Event',
+        title_es: 'Evento',
+        title_en: 'Event',
+        blurb_es: 'Viejo resumen',
+        blurb_en: 'Old blurb summary', // Explicitly set
+        description_es: null,
+        description_en: null,
+        category_es: null,
+        category_en: null,
+        date_kind: 'single',
+        date: '2026-04-20',
+        end_date: null,
+        recurrence_label_es: null,
+        recurrence_label_en: null,
+        image_url: null,
+        link_url: null,
+        created_by: 'user-1',
+        created_at: '2026-04-01T00:00:00Z',
+      }
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({
+                  data: currentRow,
+                  error: null,
+                })),
+              })),
+            })),
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  maybeSingle: vi.fn(async () => ({
+                    data: {
+                      ...currentRow,
+                      blurb_es: 'Nuevo resumen',
+                      blurb_en: 'Nuevo resumen', // Becomes new ES (rule 2, nullable)
+                    },
+                    error: null,
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updateClubEvent } = await loadClubEventsService()
+
+      const result = await updateClubEvent(adminSession, 'evt-1', {
+        blurbEs: 'Nuevo resumen',
+        blurbEn: '', // Blank = re-enable auto-copy (rule 2)
+      })
+
+      expect(result.blurbEn).toBe('Nuevo resumen')
     })
   })
 })

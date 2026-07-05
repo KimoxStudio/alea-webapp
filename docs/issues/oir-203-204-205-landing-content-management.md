@@ -164,11 +164,95 @@ partner requires a deploy.
 
 ---
 
+## OIR-206 — Admin dashboard UX: single Events tab, tab order, optional English
+
+**Problem (user feedback 2026-07-04).** "Eventos del club" as a separate tab is confusing —
+it's all "Eventos" to the board. Tab order is wrong. The forms demand English copy the
+board doesn't want to write (the public language toggle may be removed entirely later).
+
+**Scope.**
+
+1. **Single "Eventos" tab.** Remove the `club-events` top-level tab. The `events` tab
+   renders ONE section with two inner sub-tabs (shadcn Tabs nested or segmented control):
+   - **"Club (landing)"** — the existing club-events management UI (default sub-tab).
+   - **"Internos (salas)"** — the existing legacy room-booking events UI.
+   Reuse both existing section components as-is inside the wrapper; no logic changes.
+2. **Tab order:** `users`, `reservations`, `rooms`, `equipment`, `library-games`,
+   `events`, `partners` — i.e. Usuarios, Reservas, Salas, Material, Ludoteca, Eventos,
+   Colaboradores.
+3. **Optional English with ES fallback.** In club-events, partners and library-games
+   services: all `*En` inputs become optional; when absent/empty, the service copies the
+   ES value on create AND update (`title_en = title_es`, etc.) so DB constraints
+   (`events_bilingual_titles_paired`, NOT NULL categories) and the landing RLS gate stay
+   satisfied. Admin forms: EN inputs moved into a collapsed "English (opcional)"
+   disclosure, never required client-side. NO DB schema change — full i18n removal is a
+   future issue, explicitly out of scope here.
+4. i18n for changed labels, ES/EN parity.
+
+**Acceptance criteria.**
+- Dashboard shows exactly 7 top-level tabs in the order above; club events reachable
+  under Eventos → Club (landing).
+- Creating a club event/partner/game with ONLY Spanish text succeeds; landing renders it
+  (EN locale shows the ES copy); DB rows satisfy the paired-titles constraint.
+- Explicit EN text, when provided, still wins.
+- Full suite green; qa-engineer covers the ES-fallback service behavior.
+
+**Branch:** `feat/oir-206-admin-events-ux` from `feat/oir-205-game-library-management`.
+
+---
+
+## OIR-207 — Image upload from device to Supabase Storage
+
+**Problem.** Events/partners images are URL-only; the board wants to upload files from
+their device. Library games have no image support at all.
+
+**Scope.**
+
+1. **Migration** `supabase/migrations/20260704000005_oir207_landing_media_bucket.sql`:
+   - Create storage bucket `landing-media` (public read). Insert into `storage.buckets`
+     with `public = true`, plus `storage.objects` policies: public/anon+authenticated
+     SELECT for this bucket only; NO client INSERT/UPDATE/DELETE policies (writes go
+     through the service-role key server-side only). File size limit 5 MB and
+     allowed_mime_types image/png, image/jpeg, image/webp, image/gif on the bucket if
+     supported by the local Supabase version (else enforce only in the route).
+   - `ALTER TABLE public.library_games ADD COLUMN "img_url" text;` (nullable).
+2. **Upload route** `app/api/admin/uploads/route.ts` (POST multipart/form-data):
+   `requireAdmin` + `enforceMutationSecurity` + `enforceRateLimit(adminMutation)`.
+   Validates: file present, content-type in the image allowlist above, size ≤ 5 MB,
+   `folder` param in allowlist {`events`,`partners`,`library-games`}. Stores via admin
+   client at `<folder>/<uuid>.<ext>` (extension derived from MIME, never from filename),
+   returns `{ url }` (public URL). Service-layer helper `lib/server/uploads-service.ts`
+   owns validation; route stays thin.
+3. **Shared UI component** `components/admin/image-upload.tsx`: file input + client-side
+   preview + upload progress/error; on success writes the returned URL into the form's
+   image field (URL field stays visible as fallback/manual option).
+4. **Wire into the three forms**: club-events, partners, library-games (adds image
+   support to library-games create/edit; service accepts optional `imageUrl` validated
+   by the shared URL validator).
+5. **Landing game card**: if `img_url` present render it as the cover (object-fit cover,
+   same container), else keep the existing gradient cover — pixel parity when absent.
+6. i18n ES/EN parity for new strings.
+
+**Acceptance criteria.**
+- Admin uploads a PNG/JPG/WebP from device in any of the three forms → file lands in
+  `landing-media/<folder>/…`, public URL saved on the row, image renders on landing.
+- Upload rejects: >5 MB, non-image MIME, SVG, missing admin session (401/403), folder
+  outside allowlist.
+- Anon can READ uploaded files, cannot write to the bucket.
+- Full suite green; qa covers the uploads service validation matrix.
+
+**Branch:** `feat/oir-207-image-uploads` from `feat/oir-206-admin-events-ux`.
+
+---
+
 ## Post-merge checklist (user)
 
-1. Merge `feat/oir-205-game-library-management` → `develop` (`git merge --no-ff`, push).
-   PRs #148 + OIR-203/204/205 close automatically.
-2. `supabase db push` — applies OIR-202 pending migrations (incl. `20260704000001`
-   repair) + `20260704000002` (partners) + `20260704000003` (library_games).
+1. Merge the LAST branch of the chain → `develop` (`git merge --no-ff`, push).
+   All stacked PRs (#148 onward) close automatically. Current chain tail:
+   `feat/oir-207-image-uploads`.
+2. `supabase db push` — applies all pending migrations: OIR-202 set +
+   `20260704000001` (repair) + `20260704000002` (partners) + `20260704000003`
+   (library_games) + `20260704000004` (club-events RPC) + `20260704000005`
+   (landing-media bucket + library_games.img_url).
 3. Verify `/es` and `/en`: landing renders events, partners and games from DB;
    dashboard manages all three.
