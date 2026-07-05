@@ -1458,6 +1458,294 @@ describe('club-events-service', () => {
         expect.anything()
       )
     })
+
+    const ORIGINAL_ROW = {
+      id: 'evt-1',
+      title: 'Old Event',
+      title_es: 'Evento Antiguo',
+      title_en: 'Old Event',
+      blurb_es: null,
+      blurb_en: null,
+      description_es: null,
+      description_en: null,
+      category_es: null,
+      category_en: null,
+      date_kind: 'single',
+      date: '2026-04-20',
+      end_date: null,
+      recurrence_label_es: null,
+      recurrence_label_en: null,
+      image_url: null,
+      link_url: null,
+      created_by: 'user-1',
+      created_at: '2026-04-01T00:00:00Z',
+    }
+
+    it('rejects an unknown room id in schedules with 400 BEFORE updating the event fields (PR #149 review)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError
+        .mockImplementation((msg, code) => {
+          const err = new Error(msg) as ServiceError
+          err.statusCode = code
+          throw err
+        })
+
+      const { updateClubEvent } = await loadClubEventsService()
+
+      const updateSpy = vi.fn(() => ({
+        eq: vi.fn(() => ({
+          select: vi.fn(() => ({
+            maybeSingle: vi.fn(async () => ({ data: null, error: null })),
+          })),
+        })),
+      }))
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({ data: ORIGINAL_ROW, error: null })),
+              })),
+            })),
+            update: updateSpy,
+          }
+        }
+        if (table === 'rooms') {
+          // Simulate an unknown room id: the "rooms" lookup returns nothing.
+          return {
+            select: vi.fn(() => ({
+              in: vi.fn(async () => ({ data: [], error: null })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      await expect(
+        updateClubEvent(adminSession, 'evt-1', {
+          blocksRooms: true,
+          schedules: [
+            {
+              date: '2026-04-20',
+              startTime: '18:00',
+              endTime: '22:00',
+              allDay: false,
+              roomId: 'room-unknown',
+            },
+          ],
+        })
+      ).rejects.toMatchObject({ statusCode: 400 })
+
+      // The event fields UPDATE must never run once an unknown room id is
+      // detected — the bad reference is rejected before any write happens.
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    it('reverts the event fields UPDATE when apply_club_event_room_blocks RPC fails, leaving no partial update (PR #149 / PR #154 review)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      // Room ids validate fine — the RPC still fails for some other reason
+      // (e.g. a transient DB error), which is the case this fix targets.
+      mockSupabaseAdmin.rpc = vi.fn(async () => ({
+        data: null,
+        error: { message: 'transient failure', code: 'XX000' },
+      }))
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError
+        .mockImplementation((msg, code) => {
+          const err = new Error(msg) as ServiceError
+          err.statusCode = code
+          throw err
+        })
+
+      const { updateClubEvent } = await loadClubEventsService()
+
+      const updateCalls: Record<string, unknown>[] = []
+      const revertEq = vi.fn(async () => ({ data: null, error: null }))
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({ data: ORIGINAL_ROW, error: null })),
+              })),
+            })),
+            update: vi.fn(function (data: Record<string, unknown>) {
+              updateCalls.push(data)
+              // First call = the field-update from the request body;
+              // second call = the compensating revert.
+              if (updateCalls.length === 1) {
+                return {
+                  eq: vi.fn(() => ({
+                    select: vi.fn(() => ({
+                      maybeSingle: vi.fn(async () => ({
+                        data: { ...ORIGINAL_ROW, ...data },
+                        error: null,
+                      })),
+                    })),
+                  })),
+                }
+              }
+              return { eq: revertEq }
+            }),
+          }
+        }
+        if (table === 'rooms') {
+          return {
+            select: vi.fn(() => ({
+              in: vi.fn(async (_col: string, vals: string[]) => ({
+                data: vals.map((id) => ({ id })),
+                error: null,
+              })),
+            })),
+          }
+        }
+        if (table === 'event_room_blocks') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(async () => ({ data: [], error: null })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      await expect(
+        updateClubEvent(adminSession, 'evt-1', {
+          titleEs: 'Nuevo Titulo',
+          blocksRooms: true,
+          schedules: [
+            {
+              date: '2026-04-20',
+              startTime: '18:00',
+              endTime: '22:00',
+              allDay: false,
+              roomId: 'room-1',
+            },
+          ],
+        })
+      ).rejects.toMatchObject({ statusCode: 500 })
+
+      // Two updates on "events": the initial (now-reverted) field write,
+      // then the compensating revert restoring the pre-update values — the
+      // original event fields must survive the failed request unchanged.
+      expect(updateCalls.length).toBe(2)
+      expect(updateCalls[0].title_es).toBe('Nuevo Titulo')
+      expect(updateCalls[1].title_es).toBe('Evento Antiguo')
+      expect(revertEq).toHaveBeenCalledWith('id', 'evt-1')
+    })
+
+    it('logs when both the block RPC and the compensating revert fail, and still rethrows the original RPC error (PR #149 / PR #154 review)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      mockSupabaseAdmin.rpc = vi.fn(async () => ({
+        data: null,
+        error: { message: 'transient failure', code: 'XX000' },
+      }))
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError
+        .mockImplementation((msg, code) => {
+          const err = new Error(msg) as ServiceError
+          err.statusCode = code
+          throw err
+        })
+
+      const { updateClubEvent } = await loadClubEventsService()
+
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      // The FIRST "events".update call (field write) succeeds normally; the
+      // SECOND call (compensating revert) fails, simulating the revert
+      // itself being unable to complete.
+      let updateCallCount = 0
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({ data: ORIGINAL_ROW, error: null })),
+              })),
+            })),
+            update: vi.fn(function (data: Record<string, unknown>) {
+              updateCallCount += 1
+              if (updateCallCount === 1) {
+                return {
+                  eq: vi.fn(() => ({
+                    select: vi.fn(() => ({
+                      maybeSingle: vi.fn(async () => ({
+                        data: { ...ORIGINAL_ROW, ...data },
+                        error: null,
+                      })),
+                    })),
+                  })),
+                }
+              }
+              return {
+                eq: vi.fn(async () => ({
+                  data: null,
+                  error: { message: 'revert failed', code: 'XX000' },
+                })),
+              }
+            }),
+          }
+        }
+        if (table === 'rooms') {
+          return {
+            select: vi.fn(() => ({
+              in: vi.fn(async (_col: string, vals: string[]) => ({
+                data: vals.map((id) => ({ id })),
+                error: null,
+              })),
+            })),
+          }
+        }
+        if (table === 'event_room_blocks') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(async () => ({ data: [], error: null })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      await expect(
+        updateClubEvent(adminSession, 'evt-1', {
+          titleEs: 'Nuevo Titulo',
+          blocksRooms: true,
+          schedules: [
+            {
+              date: '2026-04-20',
+              startTime: '18:00',
+              endTime: '22:00',
+              allDay: false,
+              roomId: 'room-1',
+            },
+          ],
+        })
+        // The ORIGINAL RPC error must still be what the client sees — never
+        // the compensating revert's own error, which is only a logging concern.
+      ).rejects.toMatchObject({ statusCode: 500, message: 'Internal server error' })
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('event row left partially updated'),
+        'evt-1',
+      )
+
+      consoleErrorSpy.mockRestore()
+    })
   })
 
   describe('deleteClubEvent', () => {

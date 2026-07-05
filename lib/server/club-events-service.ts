@@ -643,6 +643,22 @@ export async function updateClubEvent(session: SessionUser, id: string, body: Cl
     ? validateSchedulesPayload(body.schedules)
     : null
 
+  // PR #149 review: validate every referenced room exists BEFORE the event
+  // fields UPDATE below, mirroring the createClubEvent fix. Without this, a
+  // bad room id would only surface later from the block-replace RPC — by
+  // which point the event metadata UPDATE has already been committed,
+  // leaving the event in a partially-updated state even though the request
+  // as a whole failed.
+  if (validatedSchedules) {
+    await validateRoomsExist(admin, validatedSchedules)
+  }
+
+  // Snapshot of the pre-update field values (reconstructed the same way
+  // resolveClubEventFields derives fields from `current`), used to revert
+  // the UPDATE below if the block-replace RPC still fails for some other
+  // reason (e.g. a transient DB error) after room ids were validated.
+  const originalFields = resolveClubEventFields({}, current)
+
   const { data, error } = await admin
     .from('events')
     .update(fields)
@@ -674,9 +690,34 @@ export async function updateClubEvent(session: SessionUser, id: string, body: Cl
     // stored — metadata-only edits (title/blurb/etc) always resend the
     // current schedules from the edit form, so this avoids needless churn.
     const currentBlocks = await fetchEventRoomBlocks(admin, id)
-    blocks = blocksMatchSchedules(currentBlocks, validatedSchedules)
-      ? currentBlocks
-      : await applyClubEventRoomBlocks(admin, id, validatedSchedules)
+    if (blocksMatchSchedules(currentBlocks, validatedSchedules)) {
+      blocks = currentBlocks
+    } else {
+      try {
+        blocks = await applyClubEventRoomBlocks(admin, id, validatedSchedules)
+      } catch (err) {
+        // Compensating revert (PR #149 review): the block-replacement RPC
+        // failed after the event fields UPDATE above had already committed.
+        // Room ids were pre-validated above, so this covers any other RPC
+        // failure (e.g. a transient DB error). Restore the event's
+        // pre-update field values so a failed update never leaves the event
+        // partially changed, then rethrow the original error (preserves its
+        // status code/message).
+        const { error: revertError } = await admin.from('events').update(originalFields).eq('id', id)
+        if (revertError) {
+          // If the compensating revert itself fails, the client still sees
+          // the original RPC error below, but the event row would otherwise
+          // silently persist with only-partially-applied field changes and
+          // no visibility for ops. Log it loudly so it can be reconciled
+          // manually.
+          console.error(
+            '[club-events] compensating revert failed after apply_club_event_room_blocks error — event row left partially updated, requires manual reconciliation:',
+            id,
+          )
+        }
+        throw err
+      }
+    }
   } else {
     // Neither blocksRooms nor schedules provided — leave existing blocks untouched.
     blocks = await fetchEventRoomBlocks(admin, id)
