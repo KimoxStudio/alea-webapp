@@ -624,6 +624,9 @@ export async function listVisibleReservations(input: {
   tableId?: string | null
   date?: string | null
 }) {
+  // Admin client required: RLS is removed in Phase 2. Member isolation is
+  // enforced by deriving effectiveUserId from session.id for non-admin callers
+  // (see line below), ensuring members can only query their own reservations.
   const supabase = createSupabaseServerAdminClient()
   const effectiveUserId = input.session.role === 'admin' ? input.userId ?? undefined : input.session.id
   const effectiveDate = input.date != null && input.date !== '' ? parseDate(input.date) : undefined
