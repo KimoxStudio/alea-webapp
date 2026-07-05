@@ -84,6 +84,11 @@ const eventRoomBlocksState: EventRoomBlockRow[] = []
 let reservationInsertError: { code: string } | null = null
 let reservationUpdateError: { code: string } | null = null
 let sessionDatabaseTimeDenied = false
+// Regression-test knob: simulates the `.eq('user_id', ...)` query filter being
+// accidentally removed/bypassed at the query layer, so the mock returns mixed
+// rows across users. Used to prove assertMemberRowsScoped() itself throws,
+// independent of the query filter working correctly.
+let bypassUserIdFilterInMock = false
 
 function createDatabaseTimeRpc() {
   return vi.fn(async (fn: string) => {
@@ -223,6 +228,12 @@ function buildSelectChain<T>(rows: T[], hydrate?: (row: T) => T) {
 
   return {
     eq(column: string, value: string) {
+      // Regression-test hook: when bypassUserIdFilterInMock is set, pretend the
+      // real query builder dropped the `.eq('user_id', ...)` filter so foreign
+      // rows leak through, exercising the assertMemberRowsScoped() guard.
+      if (column === 'user_id' && bypassUserIdFilterInMock) {
+        return this
+      }
       current = current.filter((row) => String((row as Record<string, unknown>)[column]) === value)
       return this
     },
@@ -502,6 +513,7 @@ describe('reservations service', () => {
     reservationInsertError = null
     reservationUpdateError = null
     sessionDatabaseTimeDenied = false
+    bypassUserIdFilterInMock = false
     seedState()
   })
 
@@ -830,6 +842,40 @@ describe('reservations service', () => {
       expect(adminResult.some((r) => r.id === 'r-foreign-user')).toBe(true)
     })
 
+    it('rejects with a 500 when the query layer leaks a foreign row past the user_id filter (assertMemberRowsScoped regression)', async () => {
+      const { listVisibleReservations } = await loadReservationModules()
+
+      // Create a reservation belonging to a different user
+      const foreignReservation = makeReservation({
+        id: 'r-foreign-leak',
+        user_id: '999',
+        table_id: 't1',
+        date: '2026-12-31',
+        start_time: '14:00:00',
+        end_time: '15:00:00',
+      })
+      const t1 = tablesState.get('t1')!
+      reservationsState.push({
+        ...foreignReservation,
+        profiles: profilesMap.get('999') ?? null,
+        tables: { name: t1.name, rooms: roomsMap.get(t1.room_id) ?? null },
+      })
+
+      // Simulate the `.eq('user_id', ...)` query filter being accidentally
+      // removed/bypassed at the query layer, so the mock now returns mixed
+      // rows across users — exactly what a regression in the query filter
+      // would produce in production. This proves assertMemberRowsScoped()
+      // itself catches the leak, not just the (working) query filter.
+      bypassUserIdFilterInMock = true
+
+      await expect(
+        listVisibleReservations({ session: memberSession }),
+      ).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 500,
+        message: 'Data isolation violation: member read returned foreign rows',
+      })
+    })
 
   describe('listAvailableEquipmentForReservation', () => {
     it('marks overlapping equipment as unavailable', async () => {
