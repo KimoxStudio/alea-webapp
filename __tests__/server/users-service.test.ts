@@ -625,7 +625,7 @@ describe('unblockUser', () => {
   })
 })
 
-describe('extractSpreadsheetCsv', () => {
+describe('normalizeMemberImportSource (xlsx byte-offset handling)', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
@@ -633,7 +633,7 @@ describe('extractSpreadsheetCsv', () => {
   })
 
   it('parses xlsx bytes sliced from a padded backing buffer with a non-zero byteOffset', async () => {
-    const { extractSpreadsheetCsv } = await loadUsersModules()
+    const { normalizeMemberImportSource } = await loadUsersModules()
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet('Members')
     worksheet.addRow(['USUARIOS', 'ID', 'email', 'phone'])
@@ -671,8 +671,23 @@ describe('extractSpreadsheetCsv', () => {
     expect(slicedView.byteOffset).toBe(leadingPadding)
     expect(slicedView.buffer.byteLength).toBeGreaterThan(slicedView.byteLength)
 
-    const csv = await extractSpreadsheetCsv(slicedView)
+    // Exercised through the public import entry point rather than calling
+    // the private extractSpreadsheetCsv helper directly.
+    const result = await normalizeMemberImportSource({
+      fileName: 'members.xlsx',
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      bytes: slicedView,
+    })
 
-    expect(csv).toBe('USUARIOS,ID,email,phone\nOffset Member,100041,offset@alea.club,611222333')
+    expect(result.normalizedCsv).toBe('USUARIOS,ID,email,phone\nOffset Member,100041,offset@alea.club,611222333')
+    expect(result.normalizedRows).toEqual([
+      {
+        rowNumber: 2,
+        memberNumber: '100041',
+        fullName: 'Offset Member',
+        email: 'offset@alea.club',
+        phone: '611222333',
+      },
+    ])
   })
 })

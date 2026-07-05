@@ -250,7 +250,7 @@ function assertSourceArchiveMatchesExtension(extension: 'xlsx' | 'odt', bytes: U
   }
 }
 
-export async function extractSpreadsheetCsv(bytes: Uint8Array): Promise<string> {
+async function extractSpreadsheetCsv(bytes: Uint8Array): Promise<string> {
   const wb = new ExcelJS.Workbook()
 
   try {
