@@ -1,5 +1,6 @@
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
+import { ERROR_CODES } from '@/lib/types/error-codes'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
 import type { Equipment } from '@/lib/types'
 
@@ -149,7 +150,7 @@ export async function setRoomDefaultEquipment(roomId: string, equipmentIds: stri
       .filter((row) => row.room_id !== roomId)
 
     if (conflicts.length > 0) {
-      serviceError('EQUIPMENT_LOCKED_TO_ANOTHER_ROOM', 400)
+      serviceError(ERROR_CODES.EQUIPMENT_LOCKED_TO_ANOTHER_ROOM, 400)
     }
   }
 

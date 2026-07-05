@@ -1,4 +1,5 @@
 import type { AvailableEquipment, Equipment, Reservation, TableSurface } from '@/lib/types'
+import { ERROR_CODES } from '@/lib/types/error-codes'
 import type { SessionUser } from '@/lib/server/auth'
 import { CLUB_TIMEZONE, getCurrentClubDate, isValidDateOnlyString, zonedDateTimeToUtc } from '@/lib/club-time'
 import { getDatabaseNow } from '@/lib/server/database-time'
@@ -147,7 +148,7 @@ function assertReservationWithinBookingWindow(date: string, now: Date = new Date
   const todayInClub = getCurrentClubDate(now)
   const maxAllowedDate = addDaysToDateOnly(todayInClub, BOOKING_WINDOW_DAYS)
   if (date > maxAllowedDate) {
-    serviceError('BOOKING_WINDOW_EXCEEDED', 400)
+    serviceError(ERROR_CODES.BOOKING_WINDOW_EXCEEDED, 400)
   }
 }
 
@@ -347,6 +348,9 @@ async function listOverlappingReservationIds(input: {
   const reservationIds: string[] = []
   let from = 0
 
+  // Capture DB time once before the pagination loop to avoid one RPC per page.
+  const nowUtc = await getDatabaseNow(admin)
+
   // Get full rows to enable lazy evaluation filtering
   while (true) {
     let query = (admin.from('reservations') as unknown as AdminReservationsTableClient)
@@ -369,7 +373,6 @@ async function listOverlappingReservationIds(input: {
     const rows = (data ?? []) as ReservationRow[]
 
     // Lazy evaluation: filter out expired pending reservations
-    const nowUtc = await getDatabaseNow(admin)
     const filteredRows = rows.filter((row) => {
       if (row.status === 'pending' && row.activated_at === null) {
         return !isPendingReservationExpired(row, nowUtc)
@@ -522,18 +525,18 @@ async function assertEquipmentSelectionAllowed(input: {
   // Reject any equipment that does not exist at all
   const unknownIds = input.equipmentIds.filter((id) => !globalEquipmentIds.has(id))
   if (unknownIds.length > 0) {
-    serviceError('INVALID_ROOM_EQUIPMENT', 400)
+    serviceError(ERROR_CODES.INVALID_ROOM_EQUIPMENT, 400)
   }
 
   // Reject any equipment locked as default to a different room
   const lockedIds = input.equipmentIds.filter((id) => lockedToOther.has(id))
   if (lockedIds.length > 0) {
-    serviceError('EQUIPMENT_LOCKED_TO_ANOTHER_ROOM', 400)
+    serviceError(ERROR_CODES.EQUIPMENT_LOCKED_TO_ANOTHER_ROOM, 400)
   }
 
   const conflictingEquipmentIds = await listConflictingEquipmentIds(input)
   if (conflictingEquipmentIds.size > 0) {
-    serviceError('EQUIPMENT_ALREADY_RESERVED', 409)
+    serviceError(ERROR_CODES.EQUIPMENT_ALREADY_RESERVED, 409)
   }
 }
 
@@ -615,7 +618,7 @@ function isConflictError(error: PostgrestErrorLike | null | undefined) {
 }
 
 function throwSlotTaken(): never {
-  serviceError('SLOT_TAKEN', 409)
+  serviceError(ERROR_CODES.SLOT_TAKEN, 409)
 }
 
 export async function listVisibleReservations(input: {
@@ -739,7 +742,7 @@ async function checkUserSlotOverlap(
   })
 
   if (activeReservations.length > 0) {
-    serviceError('USER_ALREADY_HAS_RESERVATION_IN_SLOT', 409)
+    serviceError(ERROR_CODES.USER_ALREADY_HAS_RESERVATION_IN_SLOT, 409)
   }
 }
 
@@ -788,10 +791,10 @@ export async function createReservationForSession(
     throwSlotTaken()
   }
   if (await hasEventBlockConflict({ roomId: table.room_id, date, startTime, endTime })) {
-    serviceError('ROOM_BLOCKED_BY_EVENT', 409)
+    serviceError(ERROR_CODES.ROOM_BLOCKED_BY_EVENT, 409)
   }
   if (await hasSavedGameBottomConflict({ tableId, date, surface })) {
-    serviceError('SAVED_GAME_BOTTOM_RESERVED', 409)
+    serviceError(ERROR_CODES.SAVED_GAME_BOTTOM_RESERVED, 409)
   }
   await assertEquipmentSelectionAllowed({
     roomId: table.room_id,
@@ -859,7 +862,7 @@ export async function updateReservationForSession(
     serviceError('Invalid reservation status', 400)
   }
   if (nextStatus === 'active' && session.role !== 'admin') {
-    serviceError('STATUS_TRANSITION_FORBIDDEN', 403)
+    serviceError(ERROR_CODES.STATUS_TRANSITION_FORBIDDEN, 403)
   }
   if ((nextStatus === 'completed' || nextStatus === 'no_show') && session.role !== 'admin') {
     serviceError('Only admins can mark a reservation as completed or no_show', 403)
@@ -875,7 +878,7 @@ export async function updateReservationForSession(
     }
     const now = new Date()
     if (reservationStart.getTime() - now.getTime() < CANCELLATION_CUTOFF_MS) {
-      serviceError('CANCELLATION_CUTOFF', 403)
+      serviceError(ERROR_CODES.CANCELLATION_CUTOFF, 403)
     }
   }
 
@@ -925,14 +928,14 @@ export async function updateReservationForSession(
     startTime: nextStartTime,
     endTime: nextEndTime,
   })) {
-    serviceError('ROOM_BLOCKED_BY_EVENT', 409)
+    serviceError(ERROR_CODES.ROOM_BLOCKED_BY_EVENT, 409)
   }
   if (await hasSavedGameBottomConflict({
     tableId: existingReservation.table_id,
     date: nextDate,
     surface: nextSurface ?? undefined,
   })) {
-    serviceError('SAVED_GAME_BOTTOM_RESERVED', 409)
+    serviceError(ERROR_CODES.SAVED_GAME_BOTTOM_RESERVED, 409)
   }
 
   const supabase = await createSupabaseServerClient()
@@ -1056,10 +1059,10 @@ export async function activateReservationByTable(
     }
 
     if (activeData) {
-      serviceError('CHECK_IN_ALREADY_ACTIVE', 409)
+      serviceError(ERROR_CODES.CHECK_IN_ALREADY_ACTIVE, 409)
     }
 
-    serviceError('CHECK_IN_NO_RESERVATION', 404)
+    serviceError(ERROR_CODES.CHECK_IN_NO_RESERVATION, 404)
   }
 
   const reservation = pendingData as ReservationRow
@@ -1082,10 +1085,10 @@ export async function activateReservationByTable(
   const windowEnd = getPendingCheckInDeadline(reservation)
 
   if (nowUtc < windowStart) {
-    serviceError('CHECK_IN_TOO_EARLY', 400)
+    serviceError(ERROR_CODES.CHECK_IN_TOO_EARLY, 400)
   }
   if (nowUtc > windowEnd) {
-    serviceError('CHECK_IN_TOO_LATE', 400)
+    serviceError(ERROR_CODES.CHECK_IN_TOO_LATE, 400)
   }
 
   const { data: updated, error: updateError } = await admin
@@ -1100,13 +1103,13 @@ export async function activateReservationByTable(
   // Here it means the reservation was already activated by a concurrent request
   // (TOCTOU race) between our read and this UPDATE. Return 409, not 500.
   if ((updateError as PostgrestErrorLike | null)?.code === 'PGRST116') {
-    serviceError('CHECK_IN_ALREADY_ACTIVE', 409)
+    serviceError(ERROR_CODES.CHECK_IN_ALREADY_ACTIVE, 409)
   }
   if (updateError) {
     serviceError('Internal server error', 500)
   }
   if (!updated) {
-    serviceError('CHECK_IN_ALREADY_ACTIVE', 409)
+    serviceError(ERROR_CODES.CHECK_IN_ALREADY_ACTIVE, 409)
   }
 
   return mapReservation(updated as ReservationRow)
