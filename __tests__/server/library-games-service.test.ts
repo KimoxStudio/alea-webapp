@@ -1477,4 +1477,272 @@ describe('library-games-service', () => {
       expect(result.categoryEn).toBe('Nueva Categoría') // Follows new ES
     })
   })
+
+  describe('imageUrl validation (OIR-207)', () => {
+    it('admin can create a game with optional imageUrl using valid https URL', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createLibraryGame } = await loadLibraryGamesService()
+
+      const result = await createLibraryGame(adminSession, {
+        title: 'Game with Image',
+        categoryEs: 'Estrategia',
+        categoryEn: 'Strategy',
+        players: '2-4',
+        playTime: '60m',
+        weight: 3.0,
+        imageUrl: 'https://example.com/landing-media/library-games/abc123.png',
+      })
+
+      expect(result.id).toBe('game-new-1')
+      expect(result.imgUrl).toBe('https://example.com/landing-media/library-games/abc123.png')
+    })
+
+    it('admin can create a game with imageUrl absent (optional field)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createLibraryGame } = await loadLibraryGamesService()
+
+      const result = await createLibraryGame(adminSession, {
+        title: 'Game without Image',
+        categoryEs: 'Rol',
+        categoryEn: 'RPG',
+        players: '2-4',
+        playTime: '90m',
+        weight: 3.5,
+      })
+
+      expect(result.id).toBe('game-new-1')
+      expect(result.imgUrl).toBeNull()
+    })
+
+    it('admin can create a game with imageUrl null (optional field)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createLibraryGame } = await loadLibraryGamesService()
+
+      const result = await createLibraryGame(adminSession, {
+        title: 'Game without Image',
+        categoryEs: 'Rol',
+        categoryEn: 'RPG',
+        players: '2-4',
+        playTime: '90m',
+        weight: 3.5,
+        imageUrl: null,
+      })
+
+      expect(result.id).toBe('game-new-1')
+      expect(result.imgUrl).toBeNull()
+    })
+
+    it('admin can create a game with imageUrl empty string (optional field)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createLibraryGame } = await loadLibraryGamesService()
+
+      const result = await createLibraryGame(adminSession, {
+        title: 'Game without Image',
+        categoryEs: 'Rol',
+        categoryEn: 'RPG',
+        players: '2-4',
+        playTime: '90m',
+        weight: 3.5,
+        imageUrl: '',
+      })
+
+      expect(result.id).toBe('game-new-1')
+      expect(result.imgUrl).toBeNull()
+    })
+
+    it('admin rejects imageUrl with javascript: protocol', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+        const err = new Error(msg) as ServiceError
+        err.statusCode = code
+        throw err
+      })
+
+      const { createLibraryGame } = await loadLibraryGamesService()
+
+      await expect(
+        createLibraryGame(adminSession, {
+          title: 'Game',
+          categoryEs: 'Estrategia',
+          categoryEn: 'Strategy',
+          players: '2-4',
+          playTime: '60m',
+          weight: 3.0,
+          imageUrl: 'javascript:alert(1)',
+        })
+      ).rejects.toMatchObject({ statusCode: 400 })
+
+      expect(mockSupabaseAdmin.from('library_games').insert).not.toHaveBeenCalled()
+    })
+
+    it('admin rejects imageUrl with data: protocol', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+        const err = new Error(msg) as ServiceError
+        err.statusCode = code
+        throw err
+      })
+
+      const { createLibraryGame } = await loadLibraryGamesService()
+
+      await expect(
+        createLibraryGame(adminSession, {
+          title: 'Game',
+          categoryEs: 'Estrategia',
+          categoryEn: 'Strategy',
+          players: '2-4',
+          playTime: '60m',
+          weight: 3.0,
+          imageUrl: 'data:image/png;base64,iVBORw0KG...',
+        })
+      ).rejects.toMatchObject({ statusCode: 400 })
+
+      expect(mockSupabaseAdmin.from('library_games').insert).not.toHaveBeenCalled()
+    })
+
+    it('admin rejects imageUrl with relative path', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+        const err = new Error(msg) as ServiceError
+        err.statusCode = code
+        throw err
+      })
+
+      const { createLibraryGame } = await loadLibraryGamesService()
+
+      await expect(
+        createLibraryGame(adminSession, {
+          title: 'Game',
+          categoryEs: 'Estrategia',
+          categoryEn: 'Strategy',
+          players: '2-4',
+          playTime: '60m',
+          weight: 3.0,
+          imageUrl: '/images/game.png',
+        })
+      ).rejects.toMatchObject({ statusCode: 400 })
+
+      expect(mockSupabaseAdmin.from('library_games').insert).not.toHaveBeenCalled()
+    })
+
+    it('admin accepts imageUrl with valid http:// URL', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { createLibraryGame } = await loadLibraryGamesService()
+
+      const result = await createLibraryGame(adminSession, {
+        title: 'Game',
+        categoryEs: 'Estrategia',
+        categoryEn: 'Strategy',
+        players: '2-4',
+        playTime: '60m',
+        weight: 3.0,
+        imageUrl: 'http://example.com/game.png',
+      })
+
+      expect(result.id).toBe('game-new-1')
+    })
+
+    it('admin can update game with imageUrl added', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updateLibraryGame } = await loadLibraryGamesService()
+
+      const result = await updateLibraryGame(adminSession, 'game-1', {
+        imageUrl: 'https://example.com/landing-media/library-games/updated.png',
+      })
+
+      expect(result.id).toBe('game-1')
+    })
+
+    it('admin rejects imageUrl update with javascript: protocol', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+        const err = new Error(msg) as ServiceError
+        err.statusCode = code
+        throw err
+      })
+
+      const { updateLibraryGame } = await loadLibraryGamesService()
+
+      await expect(
+        updateLibraryGame(adminSession, 'game-1', {
+          imageUrl: 'javascript:alert(1)',
+        })
+      ).rejects.toMatchObject({ statusCode: 400 })
+
+      expect(mockSupabaseAdmin.from('library_games').update).not.toHaveBeenCalled()
+    })
+
+    it('admin can clear imageUrl by setting to empty string', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+
+      const { updateLibraryGame } = await loadLibraryGamesService()
+
+      const result = await updateLibraryGame(adminSession, 'game-1', {
+        imageUrl: '',
+      })
+
+      expect(result.id).toBe('game-1')
+    })
+
+    it('migration adds img_url column to library_games', () => {
+      const migrationPath = join(
+        '/Users/samuelromeroarbelo/Projects/Alea/alea-webapp/supabase/migrations',
+        '20260704000005_oir207_landing_media_bucket.sql'
+      )
+      const migrationContent = readFileSync(migrationPath, 'utf8')
+
+      expect(migrationContent).toContain('ALTER TABLE "public"."library_games"')
+      expect(migrationContent).toContain('ADD COLUMN IF NOT EXISTS "img_url" text')
+    })
+  })
 })

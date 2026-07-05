@@ -427,7 +427,8 @@
       "weight": "Complexity (0-5)",
       "sortOrder": "Sort order",
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "imageUrl": "Cover image URL"
     },
     "eventsTab": {
       "clubSubTab": "Club (landing)",
@@ -436,6 +437,13 @@
     "englishOptional": {
       "title": "English (optional)",
       "hint": "Leave blank to copy the Spanish text automatically."
+    },
+    "imageUpload": {
+      "label": "Upload image from device",
+      "uploadButton": "Choose file",
+      "uploading": "Uploading...",
+      "error": "The image could not be uploaded. Please try again.",
+      "hint": "PNG, JPEG, WebP or GIF, up to 5 MB."
     }
   },
   "home": {

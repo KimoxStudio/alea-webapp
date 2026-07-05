@@ -645,6 +645,65 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [16:55] Confirmed no new endpoints/route handlers, requireAdminSession checks and URL protocol allowlist untouched, no dangerouslySetInnerHTML, no secrets, i18n parity (eventsTab.*, englishOptional.* in en/es).
 - [16:55] tsc --noEmit clean; npx vitest run 799/799 passed.
 - [16:55] ✅ Complete — APPROVE. Opened PR #152 (feat/oir-206-admin-events-ux → develop).
+
+#### [OIR-207] software-engineer — image uploads
+- [17:00] Started. Reset to origin/feat/oir-207-image-uploads. Found a matching in-progress draft in a stale sibling worktree (agent-a6bdb164818f8c51f, uncommitted) implementing the same spec — reviewed it file-by-file for correctness against the spec and existing service-layer conventions before reusing it as a base.
+- [17:00] Migration 20260704000005_oir207_landing_media_bucket.sql: landing-media public bucket (5MB limit, image/png|jpeg|webp|gif), SELECT-only storage.objects policy for anon+authenticated, ALTER library_games ADD COLUMN IF NOT EXISTS img_url text. Not executed (user-only per project rule).
+- [17:05] lib/server/uploads-service.ts: requireAdminSession, folder allowlist (events/partners/library-games), MIME allowlist mapped to extension (never from filename), 5MB size check, upload via admin client, logs storage errors server-side before returning generic 500. Thin route app/api/admin/uploads/route.ts (requireAdmin + enforceMutationSecurity + enforceRateLimit(adminMutation)).
+- [17:10] components/admin/image-upload.tsx: shared upload control (file input + preview + progress/error + hint), wired into club-events, partners and library-games admin forms alongside the existing manual URL input.
+- [17:12] library-games: added optional imageUrl end-to-end — migration column, lib/supabase/types.ts, lib/types/index.ts (imgUrl), lib/server/library-games-service.ts (validateOptionalUrl, merged into the existing OIR-206 fallback-based field resolver), lib/hooks/use-admin.ts payload + useAdminUploadImage, admin form + mapper.
+- [17:15] components/landing/game-card.tsx: renders game.imgUrl as an absolute-cover <img> behind the title/cat overlays inside .mod-game-cover when present; unchanged gradient fallback otherwise. Added .mod-game-img rule to landing.css.
+- [17:16] i18n: admin.imageUpload.{label,uploadButton,uploading,error,hint} and admin.libraryGames.imageUrl added to messages/en.json and messages/es.json (parity verified).
+- [17:20] pnpm typecheck / pnpm lint / pnpm build all green. pnpm test: 799/799 passed (54 files).
+- [17:25] ✅ Complete — committed 0293408 and pushed to origin/feat/oir-207-image-uploads.
+
+#### [OIR-207] qa-engineer — uploads coverage
+- [17:15] Started: writing comprehensive test suite for uploads-service and extending library-games tests
+- [17:15] Analyzed: uploads-service.ts, migration 20260704000005, library-games-service.ts
+- [17:15] Spec review complete: OIR-207 requires MIME allowlist, folder allowlist, 5MB limit, extension derived from MIME not filename, admin-only access
+- [17:20] Created: __tests__/server/uploads-service.test.ts with 25+ test cases covering:
+  * Happy path: PNG/JPEG/WebP/GIF uploads with correct path pattern, contentType, URL return
+  * Privilege: non-admin → 403 before storage call
+  * Validation: folder allowlist, MIME allowlist, size 0..5MB bounds
+  * Extension from MIME (not filename): "evil.svg" type=image/png → stored as .png
+  * Storage error handling: 500 + console.error
+  * Migration sanity: bucket public=true, 5MB limit, 4 MIME types, SELECT-only policy, img_url column
+- [17:21] Extended: __tests__/server/library-games-service.test.ts with 12+ imageUrl tests covering:
+  * Create/update with valid https/http URLs
+  * Optional field: absent/null/empty → null in DB
+  * URL hardening: javascript:/data:/relative rejected, valid URLs accepted
+  * Validation before DB call
+- [17:25] All tests green: 555 passed (24 files, +25 uploads-service + 12 imageUrl in library-games)
+- [17:25] Typecheck passed: ✓ no errors
+- [17:25] Lint passed: ✓ no ESLint errors
+
+#### [OIR-207] software-engineer — review fixes
+- [17:15] Started: fix 4 review findings on feat/oir-207-image-uploads
+- [17:15] Migration: added DROP POLICY IF EXISTS guard before CREATE POLICY landing_media_select_public
+- [17:15] game-card.tsx + landing.css: added .mod-game-img-scrim dark gradient overlay for readability over uploaded cover images
+- [17:15] uploads/route.ts: wrapped request.formData() in try/catch, throws ServiceError('Invalid upload payload', 400) on parse failure
+- [17:15] uploads-service.ts: added doc comment clarifying size check is a validation gate, not a memory-exhaustion defense (bounded by admin auth + rate limit; storage bucket enforces limit)
+- [17:15] Validation: pnpm typecheck OK, pnpm lint OK (no warnings/errors), pnpm test 55 files / 836 tests passed
+- [17:15] ✅ Complete — all 4 findings fixed, no test files touched
+
+#### [OIR-207] security-reviewer — final gate
+- [17:30] Started: security review of feat/oir-207-image-uploads (NEW chain tail), diff vs origin/feat/oir-206-admin-events-ux.
+- [17:30] Migration 20260704000005 verified: bucket public read-only, 5MB file_size_limit, 4-MIME allowlist at bucket level, single SELECT-only storage.objects policy scoped to landing-media, DROP POLICY IF EXISTS idempotency, no write policies, library_games.img_url guarded with ADD COLUMN IF NOT EXISTS.
+- [17:30] uploads-service.ts verified: admin check runs before storage access, folder allowlist strict (events/partners/library-games), MIME allowlist excludes SVG (XSS vector confirmed absent), extension derived only from MIME map (never filename), path is `${folder}/${randomUUID()}.${ext}` with no user-controlled segments, storage errors logged server-side with generic 500 to client.
+- [17:30] Route verified: enforceMutationSecurity + rate limit (adminMutation) + requireAdmin all run before formData() parse; parse failure returns 400.
+- [17:30] Confirmed apiClient wrapper attaches CSRF header for FormData bodies too (skips JSON Content-Type override only).
+- [17:30] Confirmed game-card.tsx uses plain <img> (no dangerouslySetInnerHTML) with scrim overlay; library-games imageUrl passes through shared validateOptionalUrl http(s)-only validator.
+- [17:30] i18n parity confirmed for imageUpload.* keys in en/es. No secrets found in diff.
+- [17:30] npx vitest run: 836/836 passed.
+- [17:35] ✅ Complete — APPROVE. Opened PR #153 (feat/oir-207-image-uploads → develop), stacked-chain final PR note included.
+
+#### [PR153] software-engineer — magic-byte upload validation
+- [23:00] Started: address Oiranca review comment on uploads-service.ts:61 (client MIME trusted alone)
+- [23:00] Added dependency-free magic-byte signature check (PNG/JPEG/WEBP/GIF) run on the actual file body bytes, executed before the Supabase Storage write. Rejects via existing ServiceError (400, same message as MIME-allowlist rejection) when detected signature is missing or doesn't match the client-declared File.type.
+- [23:05] Fixed pre-existing portability bug in uploads-service.test.ts (hardcoded absolute path to migration file) using process.cwd() so tests run in any worktree/CI checkout — needed to unblock running the suite.
+- [23:10] Added 6 new tests: 2 spoofed-content-type (declared image/png|jpeg with plain-text body), 2 cross-format signature mismatch (declared png/webp with real jpeg/gif bytes), 2 positive (real matching png/jpeg signature accepted). Updated createMockFile fixture to embed real signature bytes so pre-existing happy-path tests still pass.
+- [23:12] Validation: pnpm exec vitest run __tests__/server/uploads-service.test.ts → 31/31 passed. pnpm exec tsc --noEmit → clean. pnpm build → succeeded. Full __tests__/server run: 459/459 tests passed (2 unrelated pre-existing failed suites: library-games-service.test.ts / partners-service.test.ts, same hardcoded-path bug in files outside this task's scope — not touched).
+- [23:12] ✅ Complete — magic-byte verification added, regression tests green, build clean.
 #### [PR149] software-engineer — atomic club-event insert+blocks
 - [22:51] Started: reviewer inline comment on club-events-service.ts:467 — createClubEvent could leave an orphan "events" row if apply_club_event_room_blocks RPC fails after the insert.
 - [22:51] Chose smallest-diff fallback (reviewer-approved alternative to a full transactional RPC): (1) validateRoomsExist() checks all referenced room ids against the `rooms` table BEFORE the event insert, rejecting bad ids with 400 up front; (2) wrapped applyClubEventRoomBlocks() in try/catch — on any RPC failure (including transient ones after valid room ids), the just-inserted event row is compensating-deleted before rethrowing, so no orphan row survives.
