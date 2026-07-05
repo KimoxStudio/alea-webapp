@@ -175,6 +175,21 @@ function buildSupabaseMock() {
         }
       }
 
+      if (table === 'rooms') {
+        // PR #149 review: updateClubEvent/createClubEvent validate
+        // referenced room ids exist before writing. Default to "every
+        // referenced id exists" so tests in this file that don't
+        // specifically exercise that validation path keep passing unmodified.
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn(async (_col: string, vals: string[]) => ({
+              data: vals.map((id) => ({ id })),
+              error: null,
+            })),
+          })),
+        }
+      }
+
       return {}
     }),
     rpc: vi.fn(async (fn: string, params: any) => {
