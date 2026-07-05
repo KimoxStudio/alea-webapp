@@ -389,6 +389,25 @@
       "allDay": "All day",
       "startTime": "Start time",
       "endTime": "End time"
+    },
+    "partners": {
+      "title": "Partners",
+      "sectionDescription": "Manage the shops and allies shown on the landing page.",
+      "createPartner": "Create partner",
+      "editPartner": "Edit partner",
+      "deletePartner": "Delete partner",
+      "deletePartnerConfirm": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+      "deleteError": "An error occurred while deleting the partner. Please try again.",
+      "saveError": "An error occurred while saving the partner. Please try again.",
+      "noPartners": "No partners found",
+      "name": "Name",
+      "imageUrl": "Logo URL",
+      "linkUrl": "Link URL",
+      "descriptionEs": "Description (Spanish)",
+      "descriptionEn": "Description (English)",
+      "sortOrder": "Sort order",
+      "active": "Active",
+      "inactive": "Inactive"
     }
   },
   "home": {

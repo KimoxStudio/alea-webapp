@@ -1,4 +1,4 @@
-import type { ClubEvent } from '@/lib/types'
+import type { ClubEvent, Partner } from '@/lib/types'
 import './landing.css'
 import { LandingClient } from './landing-client'
 import { GameLibrarySection } from './game-library-section'
@@ -12,9 +12,10 @@ interface LandingViewProps {
   locale: string
   upcomingEvents: ClubEvent[]
   pastEvents: ClubEvent[]
+  partners: Partner[]
 }
 
-export function LandingView({ locale, upcomingEvents, pastEvents }: LandingViewProps) {
+export function LandingView({ locale, upcomingEvents, pastEvents, partners }: LandingViewProps) {
   return (
     <LandingClient
       locale={locale}
@@ -23,7 +24,7 @@ export function LandingView({ locale, upcomingEvents, pastEvents }: LandingViewP
       gameLibrarySlot={<GameLibrarySection locale={locale} />}
       aboutSlot={<AboutSection />}
       cultureSlot={<ClubValuesSection />}
-      partnersSlot={<PartnersSection locale={locale} />}
+      partnersSlot={<PartnersSection locale={locale} partners={partners} />}
       ctaSlot={<MemberCtaSection locale={locale} />}
       footerSlot={<LandingFooterSection locale={locale} />}
     />

@@ -1,9 +1,9 @@
 'use client'
 
-import type { PartnerEntry } from './partners-data'
+import type { Partner } from '@/lib/types'
 
 interface PartnerCardProps {
-  partner: PartnerEntry
+  partner: Partner
   locale: string
   ctaLabel: string
   isMap: boolean
@@ -11,6 +11,32 @@ interface PartnerCardProps {
 
 export function PartnerCard({ partner, locale, ctaLabel, isMap }: PartnerCardProps) {
   const desc = locale === 'en' ? partner.descriptionEn : partner.descriptionEs
+
+  const logo = (
+    <span className="mod-partner-logo">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={partner.imageUrl} alt={partner.name} loading="lazy" draggable="false" onDragStart={(e) => e.preventDefault()} />
+    </span>
+  )
+
+  const body = (
+    <span className="mod-partner-body">
+      <span className="mod-partner-name">{partner.name}</span>
+      {desc && <span className="mod-partner-desc">{desc}</span>}
+    </span>
+  )
+
+  // Without a linkUrl there's nothing to navigate to — render a
+  // non-interactive card (no anchor, no target/rel, no CTA) rather than a
+  // dead link, while keeping the exact same visual styling.
+  if (!partner.linkUrl) {
+    return (
+      <div className="mod-partner-card" title={partner.name}>
+        {logo}
+        {body}
+      </div>
+    )
+  }
 
   return (
     <a
@@ -22,14 +48,8 @@ export function PartnerCard({ partner, locale, ctaLabel, isMap }: PartnerCardPro
       draggable="false"
       onDragStart={(e) => e.preventDefault()}
     >
-      <span className="mod-partner-logo">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={partner.imageUrl} alt={partner.name} loading="lazy" draggable="false" onDragStart={(e) => e.preventDefault()} />
-      </span>
-      <span className="mod-partner-body">
-        <span className="mod-partner-name">{partner.name}</span>
-        {desc && <span className="mod-partner-desc">{desc}</span>}
-      </span>
+      {logo}
+      {body}
       <span className="mod-partner-cta">
         {isMap ? (
           <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
