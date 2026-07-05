@@ -7,7 +7,10 @@
 -- Public bucket: file uploads always go through the service_role client
 -- (lib/server/uploads-service.ts), which bypasses RLS/storage policies —
 -- there are intentionally no client INSERT/UPDATE/DELETE policies below.
--- ON CONFLICT DO NOTHING keeps this migration idempotent/re-runnable.
+-- ON CONFLICT DO UPDATE keeps this migration idempotent/re-runnable AND
+-- converges a pre-existing "landing-media" bucket (e.g. created manually,
+-- or by an older migration) back to the intended security-relevant
+-- configuration instead of silently leaving stale settings in place.
 INSERT INTO "storage"."buckets" ("id", "name", "public", "file_size_limit", "allowed_mime_types")
 VALUES (
   'landing-media',
@@ -16,7 +19,10 @@ VALUES (
   5242880, -- 5 MB, mirrors the service-layer limit enforced in uploads-service.ts
   ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']
 )
-ON CONFLICT ("id") DO NOTHING;
+ON CONFLICT ("id") DO UPDATE SET
+  "public" = true,
+  "file_size_limit" = 5242880,
+  "allowed_mime_types" = ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
 -- Public read: anon + authenticated visitors can read any object in this
 -- bucket only (uploaded event/partner/game images are public landing
