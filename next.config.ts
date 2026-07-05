@@ -4,6 +4,15 @@ import createNextIntlPlugin from 'next-intl/plugin'
 const withNextIntl = createNextIntlPlugin('./lib/i18n/request.ts')
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'alealaspalmas.es',
+        pathname: '/wp-content/uploads/**',
+      },
+    ],
+  },
   async headers() {
     return [
       {

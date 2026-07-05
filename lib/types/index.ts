@@ -136,6 +136,8 @@ export interface PaginatedResponse<T> {
 export interface AdminEventRoomBlock {
   id: string
   roomId: string
+  /** Null blocks the whole room; a table id scopes the block to that single table (OIR-208). */
+  tableId: string | null
   date: string
   startTime: string
   endTime: string
@@ -151,10 +153,19 @@ export interface AdminEventSchedule {
   /** Present only on persisted blocks, absent in create payloads */
   id?: string
   roomId: string | null
+  /** Null (or absent) blocks the whole room; a table id scopes the block to that single table (OIR-208). */
+  tableId?: string | null
   date: string
   startTime: string
   endTime: string
   allDay: boolean
+}
+
+/** One material (equipment) attached to an event, with the quantity needed (OIR-208). */
+export interface AdminEventMaterial {
+  equipmentId: string
+  name: string
+  quantity: number
 }
 
 export interface AdminEvent {
@@ -179,6 +190,125 @@ export interface AdminEvent {
    * exactly one element.
    */
   schedules: AdminEventSchedule[]
+}
+
+export type ClubEventDateKind = 'single' | 'range' | 'recurring'
+export type ClubEventStatus = 'upcoming' | 'past'
+
+/**
+ * Public marketing "club event" (tournaments, game nights, club history) shown
+ * on the public landing page. Distinct from AdminEvent, which models
+ * room-reservation blocking for the booking platform.
+ */
+export interface ClubEvent {
+  id: string
+  titleEs: string
+  titleEn: string
+  blurbEs: string
+  blurbEn: string
+  descriptionEs: string | null
+  descriptionEn: string | null
+  dateKind: ClubEventDateKind
+  startDate: string
+  endDate: string | null
+  recurrenceLabelEs: string | null
+  recurrenceLabelEn: string | null
+  imageUrl: string | null
+  linkUrl: string | null
+  status: ClubEventStatus
+}
+
+/**
+ * Admin (dashboard) view of a public club event (OIR-203) — same underlying
+ * "events" row as ClubEvent, with the extra fields the board needs to
+ * manage it: category, room-block status, and the raw room blocks for the
+ * edit form's "blocks rooms" sub-flow pre-fill.
+ */
+export interface AdminClubEvent {
+  id: string
+  titleEs: string
+  titleEn: string
+  blurbEs: string
+  blurbEn: string
+  descriptionEs: string | null
+  descriptionEn: string | null
+  dateKind: ClubEventDateKind
+  startDate: string
+  endDate: string | null
+  recurrenceLabelEs: string | null
+  recurrenceLabelEn: string | null
+  imageUrl: string | null
+  linkUrl: string | null
+  categoryEs: string | null
+  categoryEn: string | null
+  status: ClubEventStatus
+  /** True when this event currently has at least one room block attached. */
+  blocksRooms: boolean
+  roomBlocks: AdminEventRoomBlock[]
+  /**
+   * OIR-208: unified events — true when both title_es/title_en are
+   * populated (the row is published on the public landing). False means an
+   * internal-only event (bilingual columns NULL, legacy `title` populated).
+   */
+  visibleOnLanding: boolean
+  /** Materials (equipment) reserved for this event, with quantities (OIR-208). */
+  materials: AdminEventMaterial[]
+}
+
+export interface AdminListClubEventsResult {
+  upcoming: AdminClubEvent[]
+  past: AdminClubEvent[]
+}
+
+/**
+ * Public "partner" (colaborador) shown on the landing page — a shop or ally
+ * that supports the club. Admin-managed (OIR-204); anon/authenticated
+ * visitors only ever see active partners via RLS.
+ */
+export interface Partner {
+  id: string
+  name: string
+  imageUrl: string
+  linkUrl: string | null
+  descriptionEs: string | null
+  descriptionEn: string | null
+  sortOrder: number
+}
+
+/**
+ * Admin (dashboard) view of a partner — same underlying row as `Partner`,
+ * plus the `active` flag the board toggles to show/hide it from the
+ * landing without deleting it.
+ */
+export interface AdminPartner extends Partner {
+  active: boolean
+}
+
+/**
+ * Featured game from the club's physical game library (ludoteca), shown on
+ * the landing page carousel. Admin-managed (OIR-205); anon/authenticated
+ * visitors only ever see active games via RLS.
+ */
+export interface LibraryGame {
+  id: string
+  title: string
+  categoryEs: string
+  categoryEn: string
+  players: string
+  playTime: string
+  weight: number
+  sortOrder: number
+  /** Optional cover image (OIR-207); when absent the landing renders the gradient cover. */
+  imgUrl: string | null
+}
+
+/**
+ * Admin (dashboard) view of a library game — same underlying row as
+ * `LibraryGame`, plus the `active` flag the board toggles to show/hide it
+ * from the landing without deleting it.
+ */
+export interface AdminLibraryGame extends LibraryGame {
+  active: boolean
 }
 
 export interface Equipment {

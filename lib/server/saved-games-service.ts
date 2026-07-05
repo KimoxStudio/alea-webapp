@@ -1,8 +1,26 @@
+/**
+ * Saved-games service — admin client usage policy
+ *
+ * This service uses createSupabaseServerAdminClient() throughout deliberately.
+ * RLS is being removed as part of the Vercel/Postgres migration (Phase 2), so
+ * the session-scoped client cannot be relied upon for row-level isolation.
+ * Member isolation is instead enforced at the application layer via:
+ *   - explicit `user_id = session.id` filters on member-scoped reads/writes
+ *     (see the non-admin branch of `listSavedGamesForSession` below)
+ *   - explicit ownership checks (`current.user_id !== session.id`) before
+ *     mutations such as renew
+ * NOTE: a stronger multi-row guard (`assertMemberRowsScoped()`, KIM-397) is
+ * planned but not part of this PR — it is not imported or called here today.
+ * Cross-user operations (attendance recording, table/event conflict checks)
+ * legitimately need to span users and therefore require the admin client.
+ */
 import type { SavedGame, SavedGameStatus } from '@/lib/types'
+import { ERROR_CODES } from '@/lib/types/error-codes'
 import type { SessionUser } from '@/lib/server/auth'
 import { getCurrentClubDate, isValidDateOnlyString } from '@/lib/club-time'
 import { createSupabaseServerAdminClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
+import { assertMemberRowsScoped } from '@/lib/server/data-scoping'
 import type { Tables } from '@/lib/supabase/types'
 
 type SavedGameRow = Tables<'saved_games'>
@@ -59,6 +77,8 @@ function mapSavedGame(row: SavedGameJoinedRow, today = getCurrentClubDate()): Sa
 }
 
 async function assertTableAndEventAvailability(tableId: string, startDate: string, endDate: string) {
+  // Admin client required: table and event-block lookups span all users/rooms;
+  // no member isolation needed — these are global availability checks.
   const admin = createSupabaseServerAdminClient()
   const { data: table, error: tableError } = await admin
     .from('tables')
@@ -68,28 +88,37 @@ async function assertTableAndEventAvailability(tableId: string, startDate: strin
 
   if (tableError) serviceError('Internal server error', 500)
   if (!table) serviceError('Table not found', 404)
-  if (table.type !== 'removable_top') serviceError('SAVED_GAME_REQUIRES_REMOVABLE_TOP', 400)
+  if (table.type !== 'removable_top') serviceError(ERROR_CODES.SAVED_GAME_REQUIRES_REMOVABLE_TOP, 400)
 
   const { data: blocks, error: blocksError } = await admin
     .from('event_room_blocks')
-    .select('id')
+    .select('id, table_id')
     .eq('room_id', table.room_id)
     .gte('date', startDate)
     .lte('date', endDate)
-    .limit(1)
 
   if (blocksError) serviceError('Internal server error', 500)
-  if (blocks && blocks.length > 0) serviceError('SAVED_GAME_EVENT_CONFLICT', 409)
+
+  // OIR-208: a block with a table_id only conflicts with that single table;
+  // NULL (the pre-OIR-208 default) conflicts with every table of the room —
+  // saved games only ever live on a single removable-top table.
+  const hasConflict = ((blocks ?? []) as Array<{ id: string; table_id: string | null }>).some(
+    (block) => block.table_id == null || block.table_id === tableId,
+  )
+  if (hasConflict) serviceError(ERROR_CODES.SAVED_GAME_EVENT_CONFLICT, 409)
 }
 
 function validateDateRange(startDate: string, endDate: string) {
   const today = getCurrentClubDate()
-  if (startDate < today) serviceError('SAVED_GAME_START_IN_PAST', 400)
-  if (endDate < startDate) serviceError('SAVED_GAME_INVALID_RANGE', 400)
-  if (endDate > getMaxEndDate(startDate)) serviceError('SAVED_GAME_MAX_DURATION', 400)
+  if (startDate < today) serviceError(ERROR_CODES.SAVED_GAME_START_IN_PAST, 400)
+  if (endDate < startDate) serviceError(ERROR_CODES.SAVED_GAME_INVALID_RANGE, 400)
+  if (endDate > getMaxEndDate(startDate)) serviceError(ERROR_CODES.SAVED_GAME_MAX_DURATION, 400)
 }
 
 export async function listSavedGamesForSession(session: SessionUser): Promise<SavedGame[]> {
+  // Admin client required: RLS is removed in Phase 2. Member isolation is
+  // enforced by the `user_id = session.id` filter below (non-admin path).
+  // Admins intentionally receive all rows.
   const admin = createSupabaseServerAdminClient()
   const today = getCurrentClubDate()
   let query = admin
@@ -101,7 +130,13 @@ export async function listSavedGamesForSession(session: SessionUser): Promise<Sa
   const { data, error } = await query
   if (error) serviceError('Internal server error', 500)
 
-  return ((data ?? []) as unknown as SavedGameJoinedRow[]).map((row) => mapSavedGame(row, today))
+  // Defense-in-depth: verify the query filter held before mapping rows out.
+  const rawRows = assertMemberRowsScoped(
+    (data ?? []) as unknown as SavedGameJoinedRow[],
+    session,
+  )
+
+  return rawRows.map((row) => mapSavedGame(row, today))
 }
 
 export async function createSavedGameForSession(
@@ -115,6 +150,9 @@ export async function createSavedGameForSession(
   validateDateRange(startDate, endDate)
   await assertTableAndEventAvailability(tableId, startDate, endDate)
 
+  // Admin client required: RLS is removed in Phase 2. Member isolation is
+  // enforced by writing `user_id: session.id` explicitly into the insert
+  // payload — the authenticated user can only create rows for themselves.
   const admin = createSupabaseServerAdminClient()
   const { data, error } = await admin
     .from('saved_games')
@@ -122,13 +160,16 @@ export async function createSavedGameForSession(
     .select(SAVED_GAME_JOINED_COLUMNS)
     .single()
 
-  if (error?.code === '23P01') serviceError('SAVED_GAME_CONFLICT', 409)
+  if (error?.code === '23P01') serviceError(ERROR_CODES.SAVED_GAME_CONFLICT, 409)
   if (error?.code === '23514') serviceError(error.message, 400)
   if (error || !data) serviceError('Internal server error', 500)
   return mapSavedGame(data as unknown as SavedGameJoinedRow)
 }
 
 export async function renewSavedGameForSession(session: SessionUser, id: string): Promise<SavedGame> {
+  // Admin client required: RLS is removed in Phase 2. Member isolation is
+  // enforced by the ownership check below (`current.user_id !== session.id`)
+  // which throws 403 before any mutation occurs for non-admin users.
   const admin = createSupabaseServerAdminClient()
   const { data: current, error: currentError } = await admin
     .from('saved_games')
@@ -139,11 +180,11 @@ export async function renewSavedGameForSession(session: SessionUser, id: string)
   if (currentError) serviceError('Internal server error', 500)
   if (!current) serviceError('Saved Game not found', 404)
   if (session.role !== 'admin' && current.user_id !== session.id) serviceError('Forbidden', 403)
-  if (current.status !== 'active') serviceError('SAVED_GAME_NOT_ACTIVE', 409)
+  if (current.status !== 'active') serviceError(ERROR_CODES.SAVED_GAME_NOT_ACTIVE, 409)
 
   const today = getCurrentClubDate()
   const renewalOpensOn = addDays(current.end_date, -14)
-  if (today < renewalOpensOn || today > current.end_date) serviceError('SAVED_GAME_RENEWAL_NOT_OPEN', 409)
+  if (today < renewalOpensOn || today > current.end_date) serviceError(ERROR_CODES.SAVED_GAME_RENEWAL_NOT_OPEN, 409)
 
   const startDate = addDays(current.end_date, 1)
   const endDate = getMaxEndDate(startDate)
@@ -161,8 +202,8 @@ export async function renewSavedGameForSession(session: SessionUser, id: string)
     .select(SAVED_GAME_JOINED_COLUMNS)
     .single()
 
-  if (error?.code === '23505') serviceError('SAVED_GAME_ALREADY_RENEWED', 409)
-  if (error?.code === '23P01') serviceError('SAVED_GAME_CONFLICT', 409)
+  if (error?.code === '23505') serviceError(ERROR_CODES.SAVED_GAME_ALREADY_RENEWED, 409)
+  if (error?.code === '23P01') serviceError(ERROR_CODES.SAVED_GAME_CONFLICT, 409)
   if (error || !data) serviceError('Internal server error', 500)
   return mapSavedGame(data as unknown as SavedGameJoinedRow, today)
 }
@@ -170,6 +211,9 @@ export async function renewSavedGameForSession(session: SessionUser, id: string)
 export async function recordSavedGameAttendance(playReservation: Tables<'reservations'>): Promise<void> {
   if (playReservation.surface !== 'top' || playReservation.status !== 'active') return
 
+  // Admin client required: this function is called from a system/cron context
+  // (not a user request) and intentionally reads across all users to match a
+  // reservation to its saved game. No per-user scoping is appropriate here.
   const admin = createSupabaseServerAdminClient()
   const { data: savedGame, error } = await admin
     .from('saved_games')

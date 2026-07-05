@@ -9,6 +9,19 @@ export type { AdminEvent, AdminEventRoomBlock, AdminEventSchedule }
 type EventRow = Tables<'events'>
 type EventRoomBlockRow = Tables<'event_room_blocks'>
 
+// ---------------------------------------------------------------------------
+// Shared "is this a club-event (landing) row?" predicate (OIR-203 code
+// review, Finding 3). A row becomes public landing content once BOTH
+// title_es and title_en are populated (see lib/server/club-events-service.ts).
+// Every legacy internal room-booking entry point (updateEvent, deleteEvent,
+// and listEvents' `.or('title_es.is.null,title_en.is.null')` filter) must
+// treat such rows as out of scope for this surface — they are owned
+// exclusively by the "Club events" admin flow.
+// ---------------------------------------------------------------------------
+export function isClubEventRow(row: Pick<EventRow, 'title_es' | 'title_en'>): boolean {
+  return row.title_es != null && row.title_en != null
+}
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 const WHOLE_HOUR_TIME_RE = /^([01]\d|2[0-3]):00$/
@@ -62,6 +75,7 @@ function toAdminEvent(row: EventRow, blocks: EventRoomBlockRow[]): AdminEvent {
   const roomBlocks: AdminEventRoomBlock[] = blocks.map((b) => ({
     id: b.id,
     roomId: b.room_id,
+    tableId: b.table_id ?? null,
     date: b.date,
     startTime: b.start_time.slice(0, 5),
     endTime: b.end_time.slice(0, 5),
@@ -71,6 +85,7 @@ function toAdminEvent(row: EventRow, blocks: EventRoomBlockRow[]): AdminEvent {
   const rawSchedules: AdminEventSchedule[] = blocks.map((b) => ({
     id: b.id,
     roomId: b.room_id,
+    tableId: b.table_id ?? null,
     date: b.date,
     startTime: b.start_time.slice(0, 5),
     endTime: b.end_time.slice(0, 5),
@@ -114,6 +129,7 @@ function jsonBlockToSchedule(b: Record<string, unknown>): AdminEventSchedule {
   return {
     id: b.id != null ? String(b.id) : undefined,
     roomId: b.room_id != null ? String(b.room_id) : null,
+    tableId: b.table_id != null ? String(b.table_id) : null,
     date: String(b.date),
     startTime: String(b.start_time).slice(0, 5),
     endTime: String(b.end_time).slice(0, 5),
@@ -133,6 +149,7 @@ function jsonToAdminEvent(obj: Record<string, unknown>): AdminEvent {
       return {
         id: String(block.id),
         roomId: String(block.room_id),
+        tableId: block.table_id != null ? String(block.table_id) : null,
         date: String(block.date),
         startTime: String(block.start_time).slice(0, 5),
         endTime: String(block.end_time).slice(0, 5),
@@ -188,11 +205,25 @@ function jsonToAdminEvent(obj: Record<string, unknown>): AdminEvent {
 
 // ---------------------------------------------------------------------------
 // Validate a raw schedule payload element and return normalised block
+//
+// Exported so lib/server/club-events-service.ts (OIR-203) can reuse the same
+// validation for the public club-event "blocks rooms" sub-flow instead of
+// duplicating date/time parsing rules.
 // ---------------------------------------------------------------------------
-function validateAndNormaliseSchedule(
+export interface NormalisedEventSchedule {
+  room_id: string | null
+  /** Null blocks the whole room; a table id scopes the block to that single table (OIR-208). */
+  table_id: string | null
+  date: string
+  start_time: string
+  end_time: string
+  all_day: boolean
+}
+
+export function validateAndNormaliseSchedule(
   raw: unknown,
   index: number,
-): { room_id: string | null; date: string; start_time: string; end_time: string; all_day: boolean } {
+): NormalisedEventSchedule {
   if (typeof raw !== 'object' || raw === null) {
     serviceError(`schedules[${index}] must be an object`, 400)
   }
@@ -203,9 +234,14 @@ function validateAndNormaliseSchedule(
   const rawEnd = String(s.endTime ?? '').trim()
   const resolved = resolveBlockTimes(date, rawStart, rawEnd, allDay)
   const roomId = s.roomId ? String(s.roomId).trim() : null
+  // OIR-208: a schedule row may optionally scope its block to a single table
+  // of the room (empty/"Sala entera" = whole room, unchanged behavior).
+  // Ignored when no room is attached — a table without a room makes no sense.
+  const tableId = roomId && s.tableId ? String(s.tableId).trim() || null : null
 
   return {
     room_id: roomId,
+    table_id: tableId,
     date,
     start_time: resolved.startTime,
     end_time: resolved.endTime,
@@ -215,6 +251,22 @@ function validateAndNormaliseSchedule(
 
 // ---------------------------------------------------------------------------
 // Public API
+//
+// OIR-208 review (Finding 2 — legacy /api/events double-write surface):
+// listEvents/createEvent/updateEvent/deleteEvent below back the legacy
+// internal-events dashboard section, which has since been replaced by the
+// unified "Eventos" flow in lib/server/club-events-service.ts. No component
+// or hook consumes app/api/events/route.ts or app/api/events/[id]/route.ts
+// anymore (verified: no references to the use-admin.ts event hooks outside
+// that hook file and its tests). Those routes — and these functions — are
+// intentionally NOT removed here because __tests__/app/api/events.test.ts
+// and __tests__/server/events-service.test.ts (and
+// events-service-multiday.test.ts) exercise them directly and test edits are
+// out of scope for this change. Divergence risk: a unified internal event
+// (both title_es/title_en NULL, created via the unified admin flow) remains
+// writable/deletable through this surface too, with different
+// validation/defaults than the unified service. Do not wire any new
+// consumer to this surface — prefer lib/server/club-events-service.ts.
 // ---------------------------------------------------------------------------
 
 export async function listEvents(): Promise<AdminEvent[]> {
@@ -222,6 +274,12 @@ export async function listEvents(): Promise<AdminEvent[]> {
   const { data: events, error: eventsError } = await supabase
     .from('events')
     .select('id, title, description, date, start_time, end_time, created_by, created_at')
+    // Exclude public "club event" landing rows (OIR-203): a row becomes
+    // landing content once both bilingual titles are populated (see
+    // lib/server/club-events-service.ts). Those are managed exclusively via
+    // the dedicated "Club events" dashboard section, not this legacy
+    // internal room-booking view.
+    .or('title_es.is.null,title_en.is.null')
     .order('date', { ascending: true })
     .order('start_time', { ascending: true })
 
@@ -362,14 +420,22 @@ export async function updateEvent(
   // Load current event to fill in any fields not provided in the body
   const { data: current, error: fetchError } = await admin
     .from('events')
-    .select('title, description, date, start_time, end_time')
+    .select('title, description, date, start_time, end_time, title_es, title_en')
     .eq('id', id)
     .maybeSingle()
 
   if (fetchError) serviceError('Internal server error', 500)
   if (!current) serviceError('Event not found', 404)
 
-  const currentRow = current as Pick<EventRow, 'title' | 'description' | 'date' | 'start_time' | 'end_time'>
+  const currentRow = current as Pick<
+    EventRow,
+    'title' | 'description' | 'date' | 'start_time' | 'end_time' | 'title_es' | 'title_en'
+  >
+
+  // Finding 3: a club-event (landing) row is out of scope for this legacy
+  // internal surface — treat it as not found, same as listEvents' filter.
+  if (isClubEventRow(currentRow)) serviceError('Event not found', 404)
+
   const title = body.title !== undefined ? String(body.title).trim() || currentRow.title : currentRow.title
   const description =
     body.description !== undefined
@@ -460,12 +526,34 @@ export async function deleteEvent(id: string): Promise<void> {
 
   const { data: eventData } = await admin
     .from('events')
-    .select('id')
+    .select('id, title_es, title_en')
     .eq('id', id)
     .maybeSingle()
 
   if (!eventData) serviceError('Event not found', 404)
 
+  // Finding 3: a club-event (landing) row is out of scope for this legacy
+  // internal surface — treat it as not found, same as listEvents' filter.
+  if (isClubEventRow(eventData as Pick<EventRow, 'id' | 'title_es' | 'title_en'>)) {
+    serviceError('Event not found', 404)
+  }
+
+  await deleteEventCascade(admin, id)
+}
+
+/**
+ * Cancel overlapping reservations for every room block attached to `id`,
+ * then delete the event row (blocks cascade via FK). Shared by `deleteEvent`
+ * (legacy internal surface, guarded above) and
+ * `lib/server/club-events-service.ts`'s `deleteClubEvent` (which performs its
+ * own club-event-row validation — the inverse of the guard above — before
+ * calling this directly, so it must NOT go through the `isClubEventRow`
+ * check in `deleteEvent`).
+ */
+export async function deleteEventCascade(
+  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  id: string,
+): Promise<void> {
   const { data: blocks } = await admin
     .from('event_room_blocks')
     .select('room_id, date, start_time, end_time')

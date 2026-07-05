@@ -172,6 +172,7 @@ export type Database = {
           id: string
           room_id: string
           start_time: string
+          table_id: string | null
         }
         Insert: {
           all_day?: boolean
@@ -181,6 +182,7 @@ export type Database = {
           id?: string
           room_id: string
           start_time: string
+          table_id?: string | null
         }
         Update: {
           all_day?: boolean
@@ -190,6 +192,7 @@ export type Database = {
           id?: string
           room_id?: string
           start_time?: string
+          table_id?: string | null
         }
         Relationships: [
           {
@@ -206,38 +209,204 @@ export type Database = {
             referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "event_room_blocks_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_equipment: {
+        Row: {
+          equipment_id: string
+          event_id: string
+          quantity: number
+        }
+        Insert: {
+          equipment_id: string
+          event_id: string
+          quantity?: number
+        }
+        Update: {
+          equipment_id?: string
+          event_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_equipment_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_equipment_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
         ]
       }
       events: {
         Row: {
+          blurb_en: string | null
+          blurb_es: string | null
+          category_en: string | null
+          category_es: string | null
           created_at: string
           created_by: string | null
           date: string
+          date_kind: string
           description: string | null
+          description_en: string | null
+          description_es: string | null
+          end_date: string | null
           end_time: string
           id: string
+          image_url: string | null
+          link_url: string | null
+          recurrence_label_en: string | null
+          recurrence_label_es: string | null
           start_time: string
           title: string
+          title_en: string | null
+          title_es: string | null
         }
         Insert: {
+          blurb_en?: string | null
+          blurb_es?: string | null
+          category_en?: string | null
+          category_es?: string | null
           created_at?: string
           created_by?: string | null
           date: string
+          date_kind?: string
           description?: string | null
+          description_en?: string | null
+          description_es?: string | null
+          end_date?: string | null
           end_time: string
           id?: string
+          image_url?: string | null
+          link_url?: string | null
+          recurrence_label_en?: string | null
+          recurrence_label_es?: string | null
           start_time: string
           title: string
+          title_en?: string | null
+          title_es?: string | null
         }
         Update: {
+          blurb_en?: string | null
+          blurb_es?: string | null
+          category_en?: string | null
+          category_es?: string | null
           created_at?: string
           created_by?: string | null
           date?: string
+          date_kind?: string
           description?: string | null
+          description_en?: string | null
+          description_es?: string | null
+          end_date?: string | null
           end_time?: string
           id?: string
+          image_url?: string | null
+          link_url?: string | null
+          recurrence_label_en?: string | null
+          recurrence_label_es?: string | null
           start_time?: string
           title?: string
+          title_en?: string | null
+          title_es?: string | null
+        }
+        Relationships: []
+      }
+      partners: {
+        Row: {
+          active: boolean
+          created_at: string
+          desc_en: string | null
+          desc_es: string | null
+          id: string
+          img_url: string
+          link_url: string | null
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          desc_en?: string | null
+          desc_es?: string | null
+          id?: string
+          img_url: string
+          link_url?: string | null
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          desc_en?: string | null
+          desc_es?: string | null
+          id?: string
+          img_url?: string
+          link_url?: string | null
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      library_games: {
+        Row: {
+          active: boolean
+          category_en: string
+          category_es: string
+          created_at: string
+          id: string
+          img_url: string | null
+          play_time: string
+          players: string
+          sort_order: number
+          title: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          active?: boolean
+          category_en: string
+          category_es: string
+          created_at?: string
+          id?: string
+          img_url?: string | null
+          play_time: string
+          players: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          weight: number
+        }
+        Update: {
+          active?: boolean
+          category_en?: string
+          category_es?: string
+          created_at?: string
+          id?: string
+          img_url?: string | null
+          play_time?: string
+          players?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          weight?: number
         }
         Relationships: []
       }
@@ -519,6 +688,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_club_event_room_blocks: {
+        Args: {
+          p_event_id: string
+          p_blocks: Json
+          p_materials?: Json
+        }
+        Returns: Json
+      }
       cancel_expired_pending_reservations: {
         Args: {
           club_timezone?: string

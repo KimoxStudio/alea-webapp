@@ -1,7 +1,7 @@
 import createMiddleware from 'next-intl/middleware'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { type NextRequest, type NextResponse } from 'next/server'
-import { ensureCsrfCookie, getSupabaseCookieOptions } from './lib/server/security'
+import { ensureCsrfCookie, getSupabaseCookieOptions } from './lib/server/security-edge'
 import { locales, defaultLocale } from './lib/i18n/config'
 import { getSupabaseUrl, getSupabasePublishableKey } from './lib/supabase/config.client'
 

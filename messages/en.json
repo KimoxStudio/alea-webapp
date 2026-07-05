@@ -187,7 +187,11 @@
       "renewalOpens": "Renewal opens on {date}.",
       "renew": "Renew for three months",
       "renewing": "Renewing...",
-      "status": { "active": "Active", "cancelled": "Cancelled", "completed": "Completed" },
+      "status": {
+        "active": "Active",
+        "cancelled": "Cancelled",
+        "completed": "Completed"
+      },
       "errors": {
         "maxDuration": "A Saved Game can last no more than three months.",
         "eventConflict": "An event blocks this room during the selected dates.",
@@ -341,29 +345,264 @@
       "equipmentCreated": "Equipment created",
       "equipmentUpdated": "Equipment updated",
       "equipmentDeleted": "Equipment deleted"
+    },
+    "clubEvents": {
+      "title": "Events",
+      "sectionDescription": "Manage every club event — published on the public landing page or internal-only.",
+      "upcoming": "Upcoming",
+      "past": "Past",
+      "createEvent": "Create event",
+      "editEvent": "Edit event",
+      "deleteEvent": "Delete event",
+      "deleteEventConfirm": "Are you sure you want to delete the event \"{title}\"? This action cannot be undone.",
+      "deleteWarning": "Deleting this event will also cancel any active or pending member reservations for any rooms or tables it blocks.",
+      "deleteError": "An error occurred while deleting the event. Please try again.",
+      "saveError": "An error occurred while saving the event. Please try again.",
+      "noUpcoming": "No upcoming events",
+      "noPast": "No past events",
+      "visibleOnLanding": "Visible on landing",
+      "visibleOnLandingHelp": "When enabled, this event is published on the public landing page with bilingual copy. When disabled, it's an internal-only event.",
+      "landingBadge": "Landing",
+      "titleEs": "Title (Spanish)",
+      "titleEn": "Title (English)",
+      "blurbEs": "Short description (Spanish)",
+      "blurbEn": "Short description (English)",
+      "descriptionEs": "Long description (Spanish)",
+      "descriptionEn": "Long description (English)",
+      "categoryEs": "Category (Spanish)",
+      "categoryEn": "Category (English)",
+      "dateKind": "Date type",
+      "dateKindSingle": "Single date",
+      "dateKindRange": "Date range",
+      "dateKindRecurring": "Recurring",
+      "date": "Date",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "recurrenceLabelEs": "Recurrence label (Spanish)",
+      "recurrenceLabelEn": "Recurrence label (English)",
+      "imageUrl": "Image URL",
+      "linkUrl": "Link URL",
+      "blocksRooms": "Blocks rooms",
+      "blocksRoomsHelp": "Enable to reserve one or more rooms for this event, like an internal event.",
+      "roomBlocks": "Room blocks",
+      "addSchedule": "Add schedule",
+      "removeSchedule": "Remove schedule",
+      "scheduleDay": "Schedule {n}",
+      "room": "Room",
+      "table": "Table",
+      "wholeRoom": "Whole room",
+      "allDay": "All day",
+      "startTime": "Start time",
+      "endTime": "End time",
+      "materials": "Materials",
+      "materialsHelp": "Equipment needed for this event, with quantities. Never shown on the landing.",
+      "addMaterial": "Add material",
+      "removeMaterial": "Remove material",
+      "selectMaterial": "Select equipment",
+      "materialQuantity": "Quantity",
+      "noMaterials": "No materials added"
+    },
+    "partners": {
+      "title": "Partners",
+      "sectionDescription": "Manage the shops and allies shown on the landing page.",
+      "createPartner": "Create partner",
+      "editPartner": "Edit partner",
+      "deletePartner": "Delete partner",
+      "deletePartnerConfirm": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+      "deleteError": "An error occurred while deleting the partner. Please try again.",
+      "saveError": "An error occurred while saving the partner. Please try again.",
+      "noPartners": "No partners found",
+      "name": "Name",
+      "imageUrl": "Logo URL",
+      "linkUrl": "Link URL",
+      "descriptionEs": "Description (Spanish)",
+      "descriptionEn": "Description (English)",
+      "sortOrder": "Sort order",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "libraryGames": {
+      "title": "Game library",
+      "sectionDescription": "Manage the featured games shown on the landing page.",
+      "createLibraryGame": "Create game",
+      "editLibraryGame": "Edit game",
+      "deleteLibraryGame": "Delete game",
+      "deleteLibraryGameConfirm": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+      "deleteError": "An error occurred while deleting the game. Please try again.",
+      "saveError": "An error occurred while saving the game. Please try again.",
+      "noLibraryGames": "No games found",
+      "titleField": "Title",
+      "categoryEs": "Category (Spanish)",
+      "categoryEn": "Category (English)",
+      "players": "Players",
+      "playTime": "Playtime",
+      "weight": "Complexity (0-5)",
+      "sortOrder": "Sort order",
+      "active": "Active",
+      "inactive": "Inactive",
+      "imageUrl": "Cover image URL"
+    },
+    "englishOptional": {
+      "title": "English (optional)",
+      "hint": "Leave blank to copy the Spanish text automatically."
+    },
+    "imageUpload": {
+      "label": "Upload image from device",
+      "uploadButton": "Choose file",
+      "uploading": "Uploading...",
+      "error": "The image could not be uploaded. Please try again.",
+      "hint": "PNG, JPEG, WebP or GIF, up to 5 MB."
     }
   },
   "home": {
-    "heroTitle": "Your Adventure Starts Here",
-    "heroSubtitle": "Alea Cultural Association — the reference space for tabletop RPGs, board games, and play culture in our city.",
-    "heroCtaRegister": "Join the association",
-    "heroCtaLearnMore": "About the association",
-    "heroCtaExplore": "Explore rooms",
-    "featuresTitle": "What can you do here?",
-    "featuresSubtitle": "This platform is your control center to manage tables, reservations, and more.",
-    "feature1Title": "Book your table",
-    "feature1Desc": "Check real-time availability across all 6 rooms and reserve your table for any gaming session.",
-    "feature2Title": "Scan the QR",
-    "feature2Desc": "Every table has its own QR code. Scan it to activate your booking or check status at any time.",
-    "feature3Title": "Manage your sessions",
-    "feature3Desc": "Access your reservation history, cancel when you can't attend, and organize your gaming sessions easily.",
-    "feature4Title": "6 themed rooms",
-    "feature4Desc": "From small tables for intimate games to removable-top tables for wargames and 3D dungeon maps.",
-    "ctaTitle": "Ready to play?",
-    "ctaSubtitle": "Create your account with your member number and start booking.",
-    "ctaButton": "Register now",
-    "ctaLoginText": "Already a member?",
-    "ctaLoginLink": "Sign in"
+    "nav": {
+      "about": "About",
+      "events": "Events",
+      "culture": "Culture",
+      "partners": "Partners",
+      "contact": "Contact"
+    },
+    "cta": {
+      "join": "Become a member",
+      "members": "Member area",
+      "discover": "See events",
+      "calendar": "Full calendar"
+    },
+    "hero": {
+      "tagline": "Cultural & Social Association",
+      "location": "Las Palmas de Gran Canaria",
+      "titleA": "Roll",
+      "titleB": "play",
+      "titleC": "repeat.",
+      "subtitle": "Lovers of role-playing, board games, wargames and miniatures. A 24/7 members venue, an open library and 60+ events a year.",
+      "badgeOpen": "Open 24/7",
+      "badgeFee": "€20/month · member"
+    },
+    "stats": {
+      "membersNumber": "24/7",
+      "membersLabel": "Member access",
+      "eventsNumber": "60+",
+      "eventsLabel": "Events per year",
+      "gamesNumber": "350+",
+      "gamesLabel": "Games in the library",
+      "partnersNumber": "20+",
+      "partnersLabel": "Partner shops"
+    },
+    "events": {
+      "kicker": "Upcoming events",
+      "title": "What's brewing at Alea",
+      "cta": "Sign me up",
+      "all": "Full calendar",
+      "empty": "No events scheduled right now. Check back soon.",
+      "viewDetails": "Learn more"
+    },
+    "past": {
+      "kicker": "Past events",
+      "title": "What we've left on the table",
+      "subtitle": "A pick of games, tournaments and meet-ups from the last few months.",
+      "empty": "There are no past events to show yet.",
+      "viewDetails": "Learn more"
+    },
+    "about": {
+      "kicker": "About Alea",
+      "title": "A club, not a shop.",
+      "body": "We're a non-profit cultural association in Las Palmas de Gran Canaria. If you love fantasy, strategy or just spending a good evening in good company, this is your place.",
+      "body2": "We run events that nurture creativity, strategic thinking and connection. We believe in the power of play to bring people together, break barriers and build community.",
+      "bullet1": "Venue at C. São Paulo, 55 (Schamann) open 24/7 for members.",
+      "bullet2": "Library of 350+ games to borrow.",
+      "bullet3": "Veteran game masters to onboard newcomers.",
+      "bullet4": "Partnerships with 20+ local shops and bars."
+    },
+    "games": {
+      "kicker": "Game library",
+      "title": "What's rolling most this season",
+      "subtitle": "Hover any tile. Each box is an invitation to a table.",
+      "players": "Players",
+      "time": "Playtime",
+      "weight": "Complexity"
+    },
+    "culture": {
+      "kicker": "Our culture",
+      "title": "Three rolls we never fumble"
+    },
+    "values": {
+      "comunidad": {
+        "title": "Community",
+        "body": "Care and company. Empathy, listening and mutual trust around the table."
+      },
+      "participacion": {
+        "title": "Participation",
+        "body": "Being part of something alive: sharing ideas, time and experience every game."
+      },
+      "diversidad": {
+        "title": "Diversity",
+        "body": "Each person brings something unique. We live together with respect and celebrate difference."
+      }
+    },
+    "partners": {
+      "kicker": "Partners",
+      "title": "Shops and allies that keep the club running"
+    },
+    "footer": {
+      "find": "Find us",
+      "write": "Write us",
+      "follow": "Follow us",
+      "rights": "© 2026 Alea Las Palmas · Non-profit association",
+      "admin": "Board access · Admin"
+    },
+    "register": {
+      "title": "Become an Alea member",
+      "body": "€20/month. 24/7 venue access, full library, all events included and discounts at partner shops.",
+      "benefit1": "24/7 access with digital key",
+      "benefit2": "Unlimited library lending",
+      "benefit3": "Free entry to every event",
+      "benefit4": "Discounts at 20+ partner shops"
+    },
+    "modal": {
+      "when": "When",
+      "where": "Where",
+      "who": "Seats",
+      "price": "Price",
+      "organizer": "Organized by",
+      "what": "What it's about",
+      "bullets": "The essentials",
+      "share": "Share",
+      "signup": "Sign me up",
+      "directions": "Get directions",
+      "close": "Close"
+    },
+    "business": {
+      "address": "C. São Paulo, 55 · 35008 Las Palmas de G.C.",
+      "email": "alealaspalmas@gmail.com",
+      "instagram": "https://www.instagram.com/alealaspalmas",
+      "facebook": "https://www.facebook.com/share/1Cdvz1KnLF/",
+      "mapsUrl": "https://maps.app.goo.gl/p94LY5QWHNeaTaBN7",
+      "publicSite": "https://alealaspalmas.es/"
+    },
+    "eventStatus": {
+      "upcoming": "Upcoming",
+      "past": "Past"
+    },
+    "roll": {
+      "cta": "Roll the dice",
+      "help": "Every roll reveals a club event",
+      "you": "You got"
+    },
+    "egg": {
+      "title": "Natural 20!",
+      "body": "You found the easter egg. Screenshot it to the board and your first coffee's on us.",
+      "close": "Close"
+    },
+    "meeple": {
+      "title": "You caught the lost meeple!",
+      "body": "It had escaped across the landing. Bring it back to the table — and we'll give you one month of membership for free.",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "close": "Close"
+    },
+    "easter": {
+      "hint": "Psst… there's a stray meeple loose around here. Catch it."
+    }
   },
   "checkin": {
     "title": "Check-in",

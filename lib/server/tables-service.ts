@@ -111,7 +111,7 @@ export async function getTableAvailability(tableId: string, date?: string | null
       .in('status', ['active', 'pending']),
     admin
       .from('event_room_blocks')
-      .select('id, event_id, room_id, date, start_time, end_time, all_day')
+      .select('id, event_id, room_id, table_id, date, start_time, end_time, all_day')
       .eq('room_id', table.room_id)
       .eq('date', effectiveDate),
     admin
@@ -140,12 +140,15 @@ export async function getTableAvailability(tableId: string, date?: string | null
     return true
   })
 
-  const eventBlocks = (eventBlocksResult.data ?? []) as EventBlockRow[]
-
   if (eventBlocksResult.error) {
     serviceError('Internal server error', 500)
   }
   if (savedGameResult.error) serviceError('Internal server error', 500)
+
+  // OIR-208: a block with a table_id only blocks that single table; NULL
+  // (the pre-OIR-208 default) blocks every table of the room, unchanged.
+  const eventBlocks = ((eventBlocksResult.data ?? []) as EventBlockRow[])
+    .filter((block) => block.table_id == null || block.table_id === tableId)
 
   let eventTitleById = new Map<string, string>()
   const eventIds = [...new Set(eventBlocks.map((block) => block.event_id))]

@@ -2,16 +2,54 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
+// ---------------------------------------------------------------------------
+// @upstash/redis + @upstash/ratelimit mocks (KIM-401 Redis-backed rate limit)
+//
+// `enforceRateLimit` dynamically imports these packages only when
+// UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN are set. `vi.mock` is
+// hoisted above imports, so it intercepts the dynamic `import()` calls too.
+// ---------------------------------------------------------------------------
+
+const mockLimit = vi.fn()
+const mockRedisConstructor = vi.fn()
+const mockRatelimitConstructor = vi.fn()
+const mockSlidingWindow = vi.fn().mockReturnValue({ type: 'sliding-window-mock' })
+
+vi.mock('@upstash/redis', () => ({
+  Redis: class {
+    constructor(...args: unknown[]) {
+      mockRedisConstructor(...args)
+    }
+  },
+}))
+
+vi.mock('@upstash/ratelimit', () => ({
+  Ratelimit: Object.assign(
+    class {
+      limit: typeof mockLimit
+      constructor(...args: unknown[]) {
+        mockRatelimitConstructor(...args)
+        this.limit = mockLimit
+      }
+    },
+    { slidingWindow: mockSlidingWindow },
+  ),
+}))
+
 describe('server security helpers', () => {
   beforeEach(async () => {
     vi.resetModules()
     vi.unstubAllEnvs()
+    mockLimit.mockReset()
+    mockRedisConstructor.mockReset()
+    mockRatelimitConstructor.mockReset()
+    mockSlidingWindow.mockClear()
     const { resetRateLimitStoreForTests } = await import('@/lib/server/security')
     resetRateLimitStoreForTests()
   })
 
-  it('uses secure:false for Supabase cookies when NEXT_PUBLIC_APP_URL is http (localhost)', async () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'http://localhost:3000')
+  it('uses secure:false when COOKIE_SECURE is explicitly set to false', async () => {
+    vi.stubEnv('COOKIE_SECURE', 'false')
     const security = await import('@/lib/server/security')
 
     expect(security.getSupabaseCookieOptions()).toMatchObject({
@@ -22,8 +60,8 @@ describe('server security helpers', () => {
     })
   })
 
-  it('uses secure:true for Supabase cookies when NEXT_PUBLIC_APP_URL is https', async () => {
-    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://app.alea.club')
+  it('uses secure:true when COOKIE_SECURE is explicitly set to true', async () => {
+    vi.stubEnv('COOKIE_SECURE', 'true')
     const security = await import('@/lib/server/security')
 
     expect(security.getSupabaseCookieOptions()).toMatchObject({
@@ -34,13 +72,39 @@ describe('server security helpers', () => {
     })
   })
 
+  it('uses secure:true when COOKIE_SECURE is unset and NODE_ENV is production', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('COOKIE_SECURE', undefined)
+    const security = await import('@/lib/server/security')
+
+    expect(security.getSupabaseCookieOptions()).toMatchObject({
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      path: '/',
+    })
+  })
+
+  it('uses secure:false when COOKIE_SECURE is unset and NODE_ENV is not production', async () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('COOKIE_SECURE', undefined)
+    const security = await import('@/lib/server/security')
+
+    expect(security.getSupabaseCookieOptions()).toMatchObject({
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/',
+    })
+  })
+
   it('returns 429 when a client exceeds the configured rate limit window', async () => {
     vi.stubEnv('TRUST_PROXY_HEADERS', 'true')
     vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-rate-limit', limit: 2, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -50,7 +114,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -60,7 +124,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const third = enforceRateLimit(
+    const third = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -83,7 +147,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-trusted-forwarded-for', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -93,7 +157,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -114,7 +178,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-untrusted-forwarded-for', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -124,7 +188,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -143,7 +207,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-missing-real-ip', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -152,7 +216,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -172,7 +236,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-forged-platform-header', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -183,7 +247,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -205,7 +269,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-invalid-ipv6-source', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -215,7 +279,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -236,7 +300,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-invalid-ipv6-empty-segment', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -246,7 +310,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -266,7 +330,7 @@ describe('server security helpers', () => {
     const { enforceRateLimit } = await import('@/lib/server/security')
     const policy = { bucket: 'test-proxy-trust-disabled', limit: 1, windowMs: 60_000 }
 
-    const first = enforceRateLimit(
+    const first = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -276,7 +340,7 @@ describe('server security helpers', () => {
       }),
       policy,
     )
-    const second = enforceRateLimit(
+    const second = await enforceRateLimit(
       new NextRequest('http://localhost:3000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -289,5 +353,92 @@ describe('server security helpers', () => {
 
     expect(first).toBeNull()
     expect(second?.status).toBe(429)
+  })
+
+  describe('Redis-backed rate limiting (Upstash)', () => {
+    beforeEach(() => {
+      vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://example.upstash.io')
+      vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'test-token')
+    })
+
+    it('allows the request through when Upstash reports the client is within limits', async () => {
+      mockLimit.mockResolvedValueOnce({
+        success: true,
+        limit: 5,
+        remaining: 4,
+        reset: Date.now() + 60_000,
+      })
+
+      const { enforceRateLimit } = await import('@/lib/server/security')
+      const policy = { bucket: 'test-redis-allowed', limit: 5, windowMs: 60_000 }
+
+      const result = await enforceRateLimit(
+        new NextRequest('http://localhost:3000/api/auth/login', {
+          method: 'POST',
+          headers: { 'x-real-ip': '203.0.113.90' },
+        }),
+        policy,
+      )
+
+      expect(result).toBeNull()
+      expect(mockRedisConstructor).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://example.upstash.io',
+          token: 'test-token',
+        }),
+      )
+      expect(mockSlidingWindow).toHaveBeenCalledWith(policy.limit, `${policy.windowMs}ms`)
+      expect(mockLimit).toHaveBeenCalledWith('203.0.113.90')
+    })
+
+    it('returns 429 with the Upstash-derived Retry-After header when the client is blocked', async () => {
+      const resetAt = Date.now() + 42_000
+      mockLimit.mockResolvedValueOnce({
+        success: false,
+        limit: 5,
+        remaining: 0,
+        reset: resetAt,
+      })
+
+      const { enforceRateLimit } = await import('@/lib/server/security')
+      const policy = { bucket: 'test-redis-blocked', limit: 5, windowMs: 60_000 }
+
+      const result = await enforceRateLimit(
+        new NextRequest('http://localhost:3000/api/auth/login', {
+          method: 'POST',
+          headers: { 'x-real-ip': '203.0.113.91' },
+        }),
+        policy,
+      )
+
+      expect(result?.status).toBe(429)
+      const retryAfter = Number(result?.headers.get('retry-after'))
+      expect(retryAfter).toBeGreaterThan(0)
+      expect(retryAfter).toBeLessThanOrEqual(42)
+    })
+
+    it('reuses a single Redis client and per-bucket Ratelimit instance across requests', async () => {
+      mockLimit.mockResolvedValue({
+        success: true,
+        limit: 5,
+        remaining: 4,
+        reset: Date.now() + 60_000,
+      })
+
+      const { enforceRateLimit } = await import('@/lib/server/security')
+      const policy = { bucket: 'test-redis-singleton', limit: 5, windowMs: 60_000 }
+      const makeRequest = () =>
+        new NextRequest('http://localhost:3000/api/auth/login', {
+          method: 'POST',
+          headers: { 'x-real-ip': '203.0.113.92' },
+        })
+
+      await enforceRateLimit(makeRequest(), policy)
+      await enforceRateLimit(makeRequest(), policy)
+
+      expect(mockRedisConstructor).toHaveBeenCalledTimes(1)
+      expect(mockRatelimitConstructor).toHaveBeenCalledTimes(1)
+      expect(mockLimit).toHaveBeenCalledTimes(2)
+    })
   })
 })

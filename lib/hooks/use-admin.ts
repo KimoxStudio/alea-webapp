@@ -1,7 +1,20 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { User, Room, GameTable, Reservation, PaginatedResponse, AdminEvent, MemberImportResult, Equipment } from '@/lib/types'
+import type {
+  User,
+  Room,
+  GameTable,
+  Reservation,
+  PaginatedResponse,
+  AdminEvent,
+  AdminClubEvent,
+  AdminListClubEventsResult,
+  AdminPartner,
+  AdminLibraryGame,
+  MemberImportResult,
+  Equipment,
+} from '@/lib/types'
 import { apiClient } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
 
@@ -266,6 +279,203 @@ export function useAdminPreviewEventConflicts() {
       }>
     }) =>
       apiClient.post<EventConflictPreview>(endpoints.events.preview, payload),
+  })
+}
+
+// ----- Club events (OIR-203/OIR-208, unified events) -----
+
+/** Room-block entry used in club event create/update payloads. */
+export interface ClubEventSchedulePayload {
+  roomId?: string | null
+  /** Null/absent blocks the whole room; a table id scopes the block to that single table (OIR-208). */
+  tableId?: string | null
+  date: string
+  startTime?: string
+  endTime?: string
+  allDay?: boolean
+}
+
+/** One material (equipment) needed for the event, with quantity (OIR-208). */
+export interface ClubEventMaterialPayload {
+  equipmentId: string
+  quantity: number
+}
+
+export interface ClubEventPayload {
+  titleEs: string
+  /** Optional (OIR-206) — the service falls back to titleEs when absent/empty. */
+  titleEn?: string
+  blurbEs?: string | null
+  blurbEn?: string | null
+  descriptionEs?: string | null
+  descriptionEn?: string | null
+  dateKind: 'single' | 'range' | 'recurring'
+  date: string
+  endDate?: string | null
+  recurrenceLabelEs?: string | null
+  recurrenceLabelEn?: string | null
+  imageUrl?: string | null
+  linkUrl?: string | null
+  categoryEs?: string | null
+  categoryEn?: string | null
+  /** When true, `schedules` is required and creates/replaces room blocks. */
+  blocksRooms?: boolean
+  schedules?: ClubEventSchedulePayload[]
+  /**
+   * OIR-208: ON (default for new events) publishes the event on the public
+   * landing; OFF keeps it internal-only (bilingual columns stay NULL).
+   */
+  visibleOnLanding?: boolean
+  /** Materials (equipment) needed for the event; replace-set on every save. */
+  materials?: ClubEventMaterialPayload[]
+}
+
+export function useAdminClubEvents() {
+  return useQuery<AdminListClubEventsResult>({
+    queryKey: ['admin', 'club-events'],
+    queryFn: () => apiClient.get<AdminListClubEventsResult>(endpoints.clubEvents.list),
+    staleTime: 30_000,
+  })
+}
+
+export function useAdminCreateClubEvent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: ClubEventPayload) => apiClient.post<AdminClubEvent>(endpoints.clubEvents.list, data),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'club-events'] }),
+      queryClient.invalidateQueries({ queryKey: ['availability'] }),
+    ]),
+  })
+}
+
+export function useAdminUpdateClubEvent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<ClubEventPayload> }) =>
+      apiClient.put<AdminClubEvent>(endpoints.clubEvents.byId(id), data),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'club-events'] }),
+      queryClient.invalidateQueries({ queryKey: ['availability'] }),
+    ]),
+  })
+}
+
+export function useAdminDeleteClubEvent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete<void>(endpoints.clubEvents.byId(id)),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'club-events'] }),
+      queryClient.invalidateQueries({ queryKey: ['availability'] }),
+    ]),
+  })
+}
+
+// ----- Partners (OIR-204, public landing content) -----
+
+export interface PartnerPayload {
+  name: string
+  imageUrl?: string
+  linkUrl?: string | null
+  descriptionEs?: string | null
+  descriptionEn?: string | null
+  sortOrder?: number
+  active?: boolean
+}
+
+export function useAdminPartners() {
+  return useQuery<AdminPartner[]>({
+    queryKey: ['admin', 'partners'],
+    queryFn: () => apiClient.get<AdminPartner[]>(endpoints.partners.list),
+    staleTime: 30_000,
+  })
+}
+
+export function useAdminCreatePartner() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: PartnerPayload) => apiClient.post<AdminPartner>(endpoints.partners.list, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'partners'] }),
+  })
+}
+
+export function useAdminUpdatePartner() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<PartnerPayload> }) =>
+      apiClient.put<AdminPartner>(endpoints.partners.byId(id), data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'partners'] }),
+  })
+}
+
+export function useAdminDeletePartner() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete<void>(endpoints.partners.byId(id)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'partners'] }),
+  })
+}
+
+// ----- Library games (OIR-205, public landing content) -----
+
+export interface LibraryGamePayload {
+  title: string
+  categoryEs?: string
+  categoryEn?: string
+  players?: string
+  playTime?: string
+  weight?: number
+  sortOrder?: number
+  active?: boolean
+  imageUrl?: string | null
+}
+
+export function useAdminLibraryGames() {
+  return useQuery<AdminLibraryGame[]>({
+    queryKey: ['admin', 'library-games'],
+    queryFn: () => apiClient.get<AdminLibraryGame[]>(endpoints.libraryGames.list),
+    staleTime: 30_000,
+  })
+}
+
+export function useAdminCreateLibraryGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: LibraryGamePayload) => apiClient.post<AdminLibraryGame>(endpoints.libraryGames.list, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'library-games'] }),
+  })
+}
+
+export function useAdminUpdateLibraryGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<LibraryGamePayload> }) =>
+      apiClient.put<AdminLibraryGame>(endpoints.libraryGames.byId(id), data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'library-games'] }),
+  })
+}
+
+export function useAdminDeleteLibraryGame() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete<void>(endpoints.libraryGames.byId(id)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'library-games'] }),
+  })
+}
+
+// ----- Image uploads (OIR-207, landing content) -----
+
+export type UploadFolder = 'events' | 'partners' | 'library-games'
+
+export function useAdminUploadImage() {
+  return useMutation({
+    mutationFn: ({ file, folder }: { file: File; folder: UploadFolder }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', folder)
+      return apiClient.post<{ url: string }>(endpoints.uploads.create, formData)
+    },
   })
 }
 

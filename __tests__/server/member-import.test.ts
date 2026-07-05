@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { utils, write } from 'xlsx'
+import ExcelJS from 'exceljs'
 
 const createUserMock = vi.fn()
 const deleteUserMock = vi.fn()
@@ -88,7 +88,20 @@ vi.mock('@/lib/supabase/server', () => ({
 
 async function loadService() {
   vi.resetModules()
-  return import('@/lib/server/users-service')
+  const [usersService, memberImport] = await Promise.all([
+    import('@/lib/server/users-service'),
+    import('@/lib/server/member-import'),
+  ])
+  return {
+    ...usersService,
+    // Ensure parsing functions come from member-import module
+    parseMemberImportCsv: memberImport.parseMemberImportCsv,
+    normalizeMemberImportSource: memberImport.normalizeMemberImportSource,
+    extractSpreadsheetCsv: memberImport.extractSpreadsheetCsv,
+    // Keep orchestration functions from users-service
+    importMembersFromCsv: usersService.importMembersFromCsv,
+    importMembersFromSource: usersService.importMembersFromSource,
+  }
 }
 
 describe('parseMemberImportCsv', () => {
@@ -190,15 +203,14 @@ describe('normalizeMemberImportSource', () => {
 
   it('normalizes xlsx spreadsheets into the canonical dataset', async () => {
     const { normalizeMemberImportSource } = await loadService()
-    const workbook = utils.book_new()
-    const sheet = utils.aoa_to_sheet([
-      ['USUARIOS', 'ID', 'email', 'phone'],
-      ['Jane Doe', '100021', 'jane@alea.club', '699123123'],
-    ])
-    utils.book_append_sheet(workbook, sheet, 'Members')
-    const bytes = write(workbook, { type: 'buffer', bookType: 'xlsx' }) as Buffer
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Members')
+    worksheet.addRow(['USUARIOS', 'ID', 'email', 'phone'])
+    worksheet.addRow(['Jane Doe', '100021', 'jane@alea.club', '699123123'])
+    const buffer = await workbook.xlsx.writeBuffer()
+    const bytes = new Uint8Array(buffer as ArrayBuffer)
 
-    const result = normalizeMemberImportSource({
+    const result = await normalizeMemberImportSource({
       fileName: 'members.xlsx',
       contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       bytes: new Uint8Array(bytes),
@@ -218,20 +230,17 @@ describe('normalizeMemberImportSource', () => {
 
   it('uses the first xlsx sheet that matches import headers', async () => {
     const { normalizeMemberImportSource } = await loadService()
-    const workbook = utils.book_new()
-    const coverSheet = utils.aoa_to_sheet([
-      ['Report generated', '2026-04-15'],
-      ['Notes', 'Skip this sheet'],
-    ])
-    const memberSheet = utils.aoa_to_sheet([
-      ['USUARIOS', 'ID', 'email'],
-      ['Second Sheet Member', '100031', 'sheet2@alea.club'],
-    ])
-    utils.book_append_sheet(workbook, coverSheet, 'Cover')
-    utils.book_append_sheet(workbook, memberSheet, 'Members')
-    const bytes = write(workbook, { type: 'buffer', bookType: 'xlsx' }) as Buffer
+    const workbook = new ExcelJS.Workbook()
+    const coverSheet = workbook.addWorksheet('Cover')
+    coverSheet.addRow(['Report generated', '2026-04-15'])
+    coverSheet.addRow(['Notes', 'Skip this sheet'])
+    const memberSheet = workbook.addWorksheet('Members')
+    memberSheet.addRow(['USUARIOS', 'ID', 'email'])
+    memberSheet.addRow(['Second Sheet Member', '100031', 'sheet2@alea.club'])
+    const buffer = await workbook.xlsx.writeBuffer()
+    const bytes = new Uint8Array(buffer as ArrayBuffer)
 
-    const result = normalizeMemberImportSource({
+    const result = await normalizeMemberImportSource({
       fileName: 'members.xlsx',
       contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       bytes: new Uint8Array(bytes),
@@ -255,7 +264,7 @@ describe('normalizeMemberImportSource', () => {
       'base64'
     ))
 
-    const result = normalizeMemberImportSource({
+    const result = await normalizeMemberImportSource({
       fileName: 'members.odt',
       contentType: 'application/vnd.oasis.opendocument.text',
       bytes,
@@ -269,6 +278,50 @@ describe('normalizeMemberImportSource', () => {
       email: 'john@alea.club',
       phone: '600222333',
     })
+  })
+
+  it('parses a valid xlsx when bytes is a Uint8Array view with a non-zero byteOffset', async () => {
+    const { extractSpreadsheetCsv } = await loadService()
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Members')
+    worksheet.addRow(['USUARIOS', 'ID', 'email', 'phone'])
+    worksheet.addRow(['Offset Member', '100041', 'offset@alea.club', '699444555'])
+    const buffer = await workbook.xlsx.writeBuffer()
+    const xlsxBytes = new Uint8Array(buffer as ArrayBuffer)
+
+    // Simulate a sliced view into a larger backing ArrayBuffer, as produced
+    // when reading a multipart/form-data body: the Uint8Array has a non-zero
+    // byteOffset and does not span the whole underlying buffer.
+    //
+    // The trailing bytes are a crafted, zero-record "end of central
+    // directory" record (zip signature PK\x05\x06). If `bytes.buffer` (the
+    // full backing buffer) were passed to ExcelJS instead of the exact byte
+    // range, the zip reader would latch onto this bogus trailing record
+    // (it scans backward from the end of the buffer) and see zero entries,
+    // rejecting a genuinely valid workbook. Slicing to the byte range
+    // excludes this trailing data entirely.
+    const leadingPadding = 16
+    const fakeEmptyEndOfCentralDirectory = new Uint8Array([
+      0x50, 0x4b, 0x05, 0x06, // signature PK\x05\x06
+      0x00, 0x00, // disk number
+      0x00, 0x00, // disk where central directory starts
+      0x00, 0x00, // number of central directory records on this disk
+      0x00, 0x00, // total number of central directory records
+      0x00, 0x00, 0x00, 0x00, // size of central directory
+      0x00, 0x00, 0x00, 0x00, // offset of start of central directory
+      0x00, 0x00, // comment length
+    ])
+    const padded = new Uint8Array(leadingPadding + xlsxBytes.byteLength + fakeEmptyEndOfCentralDirectory.byteLength)
+    padded.set(xlsxBytes, leadingPadding)
+    padded.set(fakeEmptyEndOfCentralDirectory, leadingPadding + xlsxBytes.byteLength)
+    const offsetView = new Uint8Array(padded.buffer, leadingPadding, xlsxBytes.byteLength)
+
+    expect(offsetView.byteOffset).toBe(leadingPadding)
+    expect(offsetView.buffer.byteLength).toBeGreaterThan(offsetView.byteLength)
+
+    const csv = await extractSpreadsheetCsv(offsetView)
+
+    expect(csv).toBe('USUARIOS,ID,email,phone\nOffset Member,100041,offset@alea.club,699444555')
   })
 })
 
@@ -331,11 +384,11 @@ describe('importMembersFromCsv', () => {
       'base64'
     ))
 
-    expect(() => normalizeMemberImportSource({
+    await expect(normalizeMemberImportSource({
       fileName: 'members.xlsx',
       contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       bytes: odtBytes,
-    })).toThrowError()
+    })).rejects.toThrow()
   })
 
   it('creates new imported members as inactive profiles with internal auth email', async () => {
@@ -431,21 +484,21 @@ describe('importMembersFromCsv', () => {
   it('rejects mismatched file extension and MIME type during source normalization', async () => {
     const { normalizeMemberImportSource } = await loadService()
 
-    expect(() => normalizeMemberImportSource({
+    await expect(normalizeMemberImportSource({
       fileName: 'members.csv',
       contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       bytes: new Uint8Array([1, 2, 3]),
-    })).toThrowError()
+    })).rejects.toThrow()
   })
 
   it('rejects malformed odt uploads with a validation error', async () => {
     const { normalizeMemberImportSource } = await loadService()
 
-    expect(() => normalizeMemberImportSource({
+    await expect(normalizeMemberImportSource({
       fileName: 'members.odt',
       contentType: 'application/vnd.oasis.opendocument.text',
       bytes: new Uint8Array([1, 2, 3]),
-    })).toThrowError()
+    })).rejects.toThrow()
   })
 
   it('honors repeated odt rows for row counts and duplicate detection', async () => {
@@ -455,7 +508,7 @@ describe('importMembersFromCsv', () => {
       'base64'
     ))
 
-    const result = normalizeMemberImportSource({
+    const result = await normalizeMemberImportSource({
       fileName: 'members.odt',
       contentType: 'application/vnd.oasis.opendocument.text',
       bytes: repeatedBytes,
@@ -477,7 +530,7 @@ describe('importMembersFromCsv', () => {
       'base64'
     ))
 
-    const result = normalizeMemberImportSource({
+    const result = await normalizeMemberImportSource({
       fileName: 'members.odt',
       contentType: 'application/vnd.oasis.opendocument.text',
       bytes: sparseBytes,
@@ -589,13 +642,12 @@ describe('importMembersFromSource', () => {
 
   it('imports from xlsx source files and returns normalized rows for audit', async () => {
     const { importMembersFromSource } = await loadService()
-    const workbook = utils.book_new()
-    const sheet = utils.aoa_to_sheet([
-      ['USUARIOS', 'ID', 'email'],
-      ['New Spreadsheet Member', '100023', 'sheet@alea.club'],
-    ])
-    utils.book_append_sheet(workbook, sheet, 'Members')
-    const bytes = write(workbook, { type: 'buffer', bookType: 'xlsx' }) as Buffer
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Members')
+    worksheet.addRow(['USUARIOS', 'ID', 'email'])
+    worksheet.addRow(['New Spreadsheet Member', '100023', 'sheet@alea.club'])
+    const buffer = await workbook.xlsx.writeBuffer()
+    const bytes = new Uint8Array(buffer as ArrayBuffer)
 
     const result = await importMembersFromSource({
       fileName: 'members.xlsx',
