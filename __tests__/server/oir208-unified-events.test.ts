@@ -175,10 +175,10 @@ function buildSupabaseMock() {
         }
       }
 
-      if (table === 'rooms') {
-        // PR #149 review: updateClubEvent/createClubEvent validate
-        // referenced room ids exist before writing. Default to "every
-        // referenced id exists" so tests in this file that don't
+      if (table === 'rooms' || table === 'tables' || table === 'equipment') {
+        // PR #149 / PR #154 review: updateClubEvent/createClubEvent validate
+        // referenced room/table/equipment ids exist before writing. Default
+        // to "every referenced id exists" so tests in this file that don't
         // specifically exercise that validation path keep passing unmodified.
         return {
           select: vi.fn(() => ({

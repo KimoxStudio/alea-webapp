@@ -648,6 +648,51 @@ async function validateRoomsExist(
   if (missing.length > 0) serviceError('Invalid room id in schedules', 400)
 }
 
+/**
+ * Validate that every table referenced by an incoming schedules payload
+ * actually exists (PR #154 review — OIR-208 extends the room-only PR #149
+ * fix to also cover the table-scoped blocks the unified event flow allows).
+ * Runs BEFORE any write to the "events" table, same rationale as
+ * validateRoomsExist: rejecting an unknown table id up front avoids
+ * committing the event fields UPDATE before the later block-replace RPC
+ * would otherwise surface the bad reference.
+ */
+async function validateTablesExist(
+  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  schedules: NormalisedEventSchedule[],
+): Promise<void> {
+  const tableIds = Array.from(new Set(schedules.map((s) => s.table_id).filter((id): id is string => !!id)))
+  if (tableIds.length === 0) return
+
+  const { data, error } = await admin.from('tables').select('id').in('id', tableIds)
+  if (error) serviceError('Internal server error', 500)
+
+  const foundIds = new Set((data ?? []).map((r) => (r as { id: string }).id))
+  const missing = tableIds.filter((id) => !foundIds.has(id))
+  if (missing.length > 0) serviceError('Invalid table id in schedules', 400)
+}
+
+/**
+ * Validate that every equipment id referenced by an incoming materials
+ * payload actually exists (PR #154 review), for the same reason
+ * validateRoomsExist/validateTablesExist run before any write — an unknown
+ * equipment id must be rejected before the event fields UPDATE commits.
+ */
+async function validateEquipmentExists(
+  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  materials: NormalisedMaterial[],
+): Promise<void> {
+  const equipmentIds = Array.from(new Set(materials.map((m) => m.equipment_id)))
+  if (equipmentIds.length === 0) return
+
+  const { data, error } = await admin.from('equipment').select('id').in('id', equipmentIds)
+  if (error) serviceError('Internal server error', 500)
+
+  const foundIds = new Set((data ?? []).map((r) => (r as { id: string }).id))
+  const missing = equipmentIds.filter((id) => !foundIds.has(id))
+  if (missing.length > 0) serviceError('Invalid equipment id in materials', 400)
+}
+
 async function fetchEventRoomBlocks(
   admin: ReturnType<typeof createSupabaseServerAdminClient>,
   eventId: string,
@@ -815,20 +860,25 @@ export async function updateClubEvent(session: SessionUser, id: string, body: Cl
   const materialsProvided = body.materials !== undefined
   const validatedMaterials = materialsProvided ? validateMaterialsPayload(body.materials) : null
 
-  // PR #149 review: validate every referenced room exists BEFORE the event
-  // fields UPDATE below, mirroring the createClubEvent fix. Without this, a
-  // bad room id would only surface later from the block-replace RPC — by
-  // which point the event metadata UPDATE has already been committed,
-  // leaving the event in a partially-updated state even though the request
-  // as a whole failed.
+  // PR #149 / PR #154 review: validate every referenced room, table, and
+  // equipment id BEFORE the event fields UPDATE below, mirroring the
+  // createClubEvent fix. Without this, a bad reference (room id, table id,
+  // or equipment id) would only surface later from the block/material-
+  // replace RPC — by which point the event metadata UPDATE has already been
+  // committed, leaving the event in a partially-updated state even though
+  // the request as a whole failed.
   if (validatedSchedules) {
     await validateRoomsExist(admin, validatedSchedules)
+    await validateTablesExist(admin, validatedSchedules)
+  }
+  if (validatedMaterials) {
+    await validateEquipmentExists(admin, validatedMaterials)
   }
 
   // Snapshot of the pre-update field values (reconstructed the same way
   // resolveClubEventFields derives fields from `current`), used to revert
   // the UPDATE below if the block/material-replace RPC still fails for some
-  // other reason (e.g. a transient DB error) after room ids were validated.
+  // other reason (e.g. a transient DB error) after references were validated.
   const originalFields = resolveClubEventFields({}, current)
 
   const { data, error } = await admin
@@ -876,13 +926,13 @@ export async function updateClubEvent(session: SessionUser, id: string, body: Cl
     try {
       blocks = await applyClubEventRoomBlocksAndMaterials(admin, id, blocksParam, materialsParam)
     } catch (err) {
-      // Compensating revert (PR #149 review): the block/material
+      // Compensating revert (PR #149 / PR #154 review): the block/material
       // replacement RPC failed after the event fields UPDATE above had
-      // already committed. Room ids were pre-validated above, so this
-      // covers any other RPC failure (e.g. a transient DB error). Restore
-      // the event's pre-update field values so a failed update never
-      // leaves the event partially changed, then rethrow the original
-      // error (preserves its status code/message).
+      // already committed. Room/table/equipment ids were pre-validated
+      // above, so this covers any other RPC failure (e.g. a transient DB
+      // error). Restore the event's pre-update field values so a failed
+      // update never leaves the event partially changed, then rethrow the
+      // original error (preserves its status code/message).
       const { error: revertError } = await admin.from('events').update(originalFields).eq('id', id)
       if (revertError) {
         // If the compensating revert itself fails, the client still sees

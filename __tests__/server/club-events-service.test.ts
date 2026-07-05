@@ -1747,6 +1747,221 @@ describe('club-events-service', () => {
       consoleErrorSpy.mockRestore()
     })
 
+    it('rejects an unknown table id in schedules with 400 BEFORE updating the event fields (PR #154 review)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError
+        .mockImplementation((msg, code) => {
+          const err = new Error(msg) as ServiceError
+          err.statusCode = code
+          throw err
+        })
+
+      const { updateClubEvent } = await loadClubEventsService()
+
+      const updateSpy = vi.fn(() => ({
+        eq: vi.fn(() => ({
+          select: vi.fn(() => ({
+            maybeSingle: vi.fn(async () => ({ data: null, error: null })),
+          })),
+        })),
+      }))
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({ data: ORIGINAL_ROW, error: null })),
+              })),
+            })),
+            update: updateSpy,
+          }
+        }
+        if (table === 'rooms') {
+          // The room id is valid — only the table id is unknown.
+          return {
+            select: vi.fn(() => ({
+              in: vi.fn(async (_col: string, vals: string[]) => ({
+                data: vals.map((id) => ({ id })),
+                error: null,
+              })),
+            })),
+          }
+        }
+        if (table === 'tables') {
+          // Simulate an unknown table id: the "tables" lookup returns nothing.
+          return {
+            select: vi.fn(() => ({
+              in: vi.fn(async () => ({ data: [], error: null })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      await expect(
+        updateClubEvent(adminSession, 'evt-1', {
+          blocksRooms: true,
+          schedules: [
+            {
+              date: '2026-04-20',
+              startTime: '18:00',
+              endTime: '22:00',
+              allDay: false,
+              roomId: 'room-1',
+              tableId: 'table-unknown',
+            },
+          ],
+        })
+      ).rejects.toMatchObject({ statusCode: 400 })
+
+      // The event fields UPDATE must never run once an unknown table id is
+      // detected — the bad reference is rejected before any write happens.
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    it('rejects an unknown equipment id in materials with 400 BEFORE updating the event fields (PR #154 review)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError
+        .mockImplementation((msg, code) => {
+          const err = new Error(msg) as ServiceError
+          err.statusCode = code
+          throw err
+        })
+
+      const { updateClubEvent } = await loadClubEventsService()
+
+      const updateSpy = vi.fn(() => ({
+        eq: vi.fn(() => ({
+          select: vi.fn(() => ({
+            maybeSingle: vi.fn(async () => ({ data: null, error: null })),
+          })),
+        })),
+      }))
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({ data: ORIGINAL_ROW, error: null })),
+              })),
+            })),
+            update: updateSpy,
+          }
+        }
+        if (table === 'equipment') {
+          // Simulate a missing equipment FK: the "equipment" lookup returns nothing.
+          return {
+            select: vi.fn(() => ({
+              in: vi.fn(async () => ({ data: [], error: null })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      await expect(
+        updateClubEvent(adminSession, 'evt-1', {
+          materials: [{ equipmentId: 'equip-unknown', quantity: 1 }],
+        })
+      ).rejects.toMatchObject({ statusCode: 400 })
+
+      // The event fields UPDATE must never run once a missing equipment id
+      // is detected — the bad reference is rejected before any write happens.
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    it('reverts the event fields UPDATE when the RPC fails during a materials-only change, leaving no partial update (PR #154 review)', async () => {
+      const adminSession = createAdminSession()
+      const mockSupabaseAdmin = buildSupabaseMock()
+
+      // Equipment ids validate fine — the RPC still fails for some other
+      // reason (e.g. a transient DB error), which is the case this fix targets.
+      mockSupabaseAdmin.rpc = vi.fn(async () => ({
+        data: null,
+        error: { message: 'transient failure', code: 'XX000' },
+      }))
+
+      vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
+        .mockReturnValue(mockSupabaseAdmin as any)
+      vi.mocked(await import('@/lib/server/service-error')).serviceError
+        .mockImplementation((msg, code) => {
+          const err = new Error(msg) as ServiceError
+          err.statusCode = code
+          throw err
+        })
+
+      const { updateClubEvent } = await loadClubEventsService()
+
+      const updateCalls: Record<string, unknown>[] = []
+      const revertEq = vi.fn(async () => ({ data: null, error: null }))
+
+      mockSupabaseAdmin.from = vi.fn(function (table: string) {
+        if (table === 'events') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({ data: ORIGINAL_ROW, error: null })),
+              })),
+            })),
+            update: vi.fn(function (data: Record<string, unknown>) {
+              updateCalls.push(data)
+              // First call = the field-update from the request body;
+              // second call = the compensating revert.
+              if (updateCalls.length === 1) {
+                return {
+                  eq: vi.fn(() => ({
+                    select: vi.fn(() => ({
+                      maybeSingle: vi.fn(async () => ({
+                        data: { ...ORIGINAL_ROW, ...data },
+                        error: null,
+                      })),
+                    })),
+                  })),
+                }
+              }
+              return { eq: revertEq }
+            }),
+          }
+        }
+        if (table === 'equipment') {
+          return {
+            select: vi.fn(() => ({
+              in: vi.fn(async (_col: string, vals: string[]) => ({
+                data: vals.map((id) => ({ id })),
+                error: null,
+              })),
+            })),
+          }
+        }
+        return buildSupabaseMock().from(table)
+      }) as any
+
+      await expect(
+        updateClubEvent(adminSession, 'evt-1', {
+          titleEs: 'Nuevo Titulo',
+          materials: [{ equipmentId: 'equip-1', quantity: 2 }],
+        })
+      ).rejects.toMatchObject({ statusCode: 500 })
+
+      // Two updates on "events": the initial (now-reverted) field write,
+      // then the compensating revert restoring the pre-update values — even
+      // though only `materials` changed (no schedules), the event fields
+      // must survive the failed request unchanged.
+      expect(updateCalls.length).toBe(2)
+      expect(updateCalls[0].title_es).toBe('Nuevo Titulo')
+      expect(updateCalls[1].title_es).toBe('Evento Antiguo')
+      expect(revertEq).toHaveBeenCalledWith('id', 'evt-1')
+    })
   })
 
   describe('deleteClubEvent', () => {
