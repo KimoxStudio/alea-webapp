@@ -162,4 +162,28 @@ describe('saved games service', () => {
     await recordSavedGameAttendance(reservation)
     expect(state.attendances).toEqual([{ saved_game_id: 'sg-1', play_reservation_id: 'r-1', attended_on: '2026-06-19' }])
   })
+
+  it('member session cannot access foreign saved games (isolation via assertMemberRowsScoped)', async () => {
+    const { listSavedGamesForSession } = await import('@/lib/server/saved-games-service')
+    const memberSession = { id: 'user-1', role: 'member' } as const
+    const adminSession = { id: 'admin-1', role: 'admin' } as const
+
+    // Create saved games: one for user-1, one for user-2
+    state.savedGames.push(
+      { id: 'sg-1', table_id: 'double', user_id: 'user-1', start_date: '2026-06-01', end_date: '2026-08-31', status: 'active', attendance_count: 1, renewed_from_id: null, created_at: '', updated_at: '' },
+      { id: 'sg-2', table_id: 'regular', user_id: 'user-2', start_date: '2026-07-01', end_date: '2026-09-30', status: 'active', attendance_count: 0, renewed_from_id: null, created_at: '', updated_at: '' }
+    )
+
+    // Member can only see their own saved games
+    const memberResult = await listSavedGamesForSession(memberSession)
+    expect(memberResult).toHaveLength(1)
+    expect(memberResult[0]!.userId).toBe('user-1')
+    expect(memberResult[0]!.id).toBe('sg-1')
+    expect(memberResult.some((sg) => sg.id === 'sg-2')).toBe(false)
+
+    // Admin can see all saved games
+    const adminResult = await listSavedGamesForSession(adminSession)
+    expect(adminResult.some((sg) => sg.id === 'sg-1')).toBe(true)
+    expect(adminResult.some((sg) => sg.id === 'sg-2')).toBe(true)
+  })
 })

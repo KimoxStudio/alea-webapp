@@ -3,6 +3,7 @@ import type { SessionUser } from '@/lib/server/auth'
 import { getCurrentClubDate, isValidDateOnlyString } from '@/lib/club-time'
 import { createSupabaseServerAdminClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
+import { assertMemberRowsScoped } from '@/lib/server/data-scoping'
 import type { Tables } from '@/lib/supabase/types'
 
 type SavedGameRow = Tables<'saved_games'>
@@ -101,7 +102,13 @@ export async function listSavedGamesForSession(session: SessionUser): Promise<Sa
   const { data, error } = await query
   if (error) serviceError('Internal server error', 500)
 
-  return ((data ?? []) as unknown as SavedGameJoinedRow[]).map((row) => mapSavedGame(row, today))
+  // Defense-in-depth: verify the query filter held before mapping rows out.
+  const rawRows = assertMemberRowsScoped(
+    (data ?? []) as unknown as SavedGameJoinedRow[],
+    session,
+  )
+
+  return rawRows.map((row) => mapSavedGame(row, today))
 }
 
 export async function createSavedGameForSession(
