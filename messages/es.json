@@ -348,26 +348,154 @@
     }
   },
   "home": {
-    "heroTitle": "Tu Aventura Comienza Aquí",
-    "heroSubtitle": "La Asociación Cultural Alea — el espacio de referencia para el juego de rol, los juegos de mesa y la cultura lúdica en nuestra ciudad.",
-    "heroCtaRegister": "Únete a la asociación",
-    "heroCtaLearnMore": "Conoce la asociación",
-    "heroCtaExplore": "Explorar salas",
-    "featuresTitle": "¿Qué puedes hacer aquí?",
-    "featuresSubtitle": "Esta plataforma es tu centro de control para gestionar mesas, reservas y más.",
-    "feature1Title": "Reserva tu mesa",
-    "feature1Desc": "Consulta la disponibilidad en tiempo real de las 6 salas y reserva tu mesa para la sesión de juego que prefieras.",
-    "feature2Title": "Escanea el QR",
-    "feature2Desc": "Cada mesa tiene su propio código QR. Escanéalo para activar tu reserva o comprobar el estado en cualquier momento.",
-    "feature3Title": "Gestiona tus partidas",
-    "feature3Desc": "Accede a tu historial de reservas, cancela cuando no puedas asistir y organiza tus sesiones con facilidad.",
-    "feature4Title": "6 salas temáticas",
-    "feature4Desc": "Desde mesas pequeñas para partidas íntimas hasta mesas de tapa removible para wargames y mazmorras en relieve.",
-    "ctaTitle": "¿Listo para jugar?",
-    "ctaSubtitle": "Crea tu cuenta con tu número de socio y empieza a reservar.",
-    "ctaButton": "Registrarse ahora",
-    "ctaLoginText": "¿Ya eres socio?",
-    "ctaLoginLink": "Inicia sesión"
+    "nav": {
+      "about": "Sobre nosotros",
+      "events": "Eventos",
+      "culture": "Cultura",
+      "partners": "Colaboradores",
+      "contact": "Contacto"
+    },
+    "cta": {
+      "join": "Hazte socio",
+      "members": "Entrar al club",
+      "discover": "Ver eventos",
+      "calendar": "Calendario completo"
+    },
+    "hero": {
+      "tagline": "Asociación Cultural y Social",
+      "location": "Las Palmas de Gran Canaria",
+      "titleA": "Tira",
+      "titleB": "juega",
+      "titleC": "repite.",
+      "subtitle": "Apasionados de los juegos de rol, los juegos de mesa, los wargames y las miniaturas. Un local 24/7 para socios, una ludoteca abierta y 60+ eventos al año.",
+      "badgeOpen": "Abierto 24/7",
+      "badgeFee": "20 €/mes · socio"
+    },
+    "stats": {
+      "membersNumber": "24/7",
+      "membersLabel": "Acceso socios",
+      "eventsNumber": "60+",
+      "eventsLabel": "Eventos al año",
+      "gamesNumber": "350+",
+      "gamesLabel": "Juegos en la ludoteca",
+      "partnersNumber": "20+",
+      "partnersLabel": "Tiendas colaboradoras"
+    },
+    "events": {
+      "kicker": "Próximos eventos",
+      "title": "Lo que se cuece en Alea",
+      "cta": "Apuntarme",
+      "all": "Calendario completo",
+      "empty": "No hay eventos programados por ahora. Vuelve pronto.",
+      "viewDetails": "Más información"
+    },
+    "past": {
+      "kicker": "Eventos realizados",
+      "title": "Lo que dejamos en el tapete",
+      "subtitle": "Una selección de partidas, torneos y jornadas de los últimos meses.",
+      "empty": "Todavía no hay eventos pasados que mostrar.",
+      "viewDetails": "Más información"
+    },
+    "about": {
+      "kicker": "Sobre Alea",
+      "title": "Un club, no un comercio.",
+      "body": "Somos una asociación sin ánimo de lucro de Las Palmas de Gran Canaria. Si te apasiona la fantasía, la estrategia o simplemente pasar un buen rato en buena compañía, este es tu sitio.",
+      "body2": "Organizamos eventos que promueven la creatividad, el pensamiento estratégico y la socialización. Creemos en el poder del juego para conectar personas, romper barreras y construir comunidad.",
+      "bullet1": "Local en C. São Paulo, 55 (Schamann) abierto 24/7 para socios.",
+      "bullet2": "Ludoteca con más de 350 juegos en préstamo.",
+      "bullet3": "Maestros de juego veteranos para iniciar a quien venga nuevo.",
+      "bullet4": "Convenios con 20+ tiendas y bares de la isla."
+    },
+    "games": {
+      "kicker": "Ludoteca",
+      "title": "Lo que más rueda esta temporada",
+      "subtitle": "Pasa el ratón sobre cualquier ficha. Cada caja es una invitación a una mesa.",
+      "players": "Jugadores",
+      "time": "Duración",
+      "weight": "Complejidad"
+    },
+    "culture": {
+      "kicker": "Nuestra cultura",
+      "title": "Tres tiradas que nunca fallamos"
+    },
+    "values": {
+      "comunidad": {
+        "title": "Comunidad",
+        "body": "Cuidar y acompañar. Empatía, escucha y confianza mutua entre quienes comparten mesa."
+      },
+      "participacion": {
+        "title": "Participación",
+        "body": "Formar parte de algo vivo: compartir ideas, tiempo y experiencias en cada partida."
+      },
+      "diversidad": {
+        "title": "Diversidad",
+        "body": "Cada persona aporta algo único. Convivimos con respeto y celebramos lo distinto."
+      }
+    },
+    "partners": {
+      "kicker": "Colaboradores",
+      "title": "Tiendas y aliados que hacen posible el club"
+    },
+    "footer": {
+      "find": "Encuéntranos",
+      "write": "Escríbenos",
+      "follow": "Síguenos",
+      "rights": "© 2026 Alea Las Palmas · Asociación sin ánimo de lucro",
+      "admin": "Acceso junta · Panel"
+    },
+    "register": {
+      "title": "Hazte socio de Alea",
+      "body": "20 €/mes. Acceso al local 24/7, ludoteca completa, todos los eventos incluidos y descuentos en tiendas colaboradoras.",
+      "benefit1": "Acceso 24/7 con llave digital",
+      "benefit2": "Préstamo ilimitado de la ludoteca",
+      "benefit3": "Inscripción gratuita a todos los eventos",
+      "benefit4": "Descuentos en 20+ tiendas aliadas"
+    },
+    "modal": {
+      "when": "Cuándo",
+      "where": "Dónde",
+      "who": "Plazas",
+      "price": "Precio",
+      "organizer": "Organiza",
+      "what": "En qué consiste",
+      "bullets": "Lo esencial",
+      "share": "Compartir",
+      "signup": "Apuntarme",
+      "directions": "Cómo llegar",
+      "close": "Cerrar"
+    },
+    "business": {
+      "address": "C. São Paulo, 55 · 35008 Las Palmas de G.C.",
+      "email": "alealaspalmas@gmail.com",
+      "instagram": "https://www.instagram.com/alealaspalmas",
+      "facebook": "https://www.facebook.com/share/1Cdvz1KnLF/",
+      "mapsUrl": "https://maps.app.goo.gl/p94LY5QWHNeaTaBN7",
+      "publicSite": "https://alealaspalmas.es/"
+    },
+    "eventStatus": {
+      "upcoming": "Próximamente",
+      "past": "Finalizado"
+    },
+    "roll": {
+      "cta": "Tira el dado",
+      "help": "Cada tirada revela un evento del club",
+      "you": "Te ha tocado"
+    },
+    "egg": {
+      "title": "¡Has tirado un 20 natural!",
+      "body": "Acabas de descubrir el easter egg. Mándale captura a la junta y te invitamos al primer café.",
+      "close": "Cerrar"
+    },
+    "meeple": {
+      "title": "¡Cazaste al meeple perdido!",
+      "body": "Andaba escapado por la landing. Lo devolvemos a la mesa con un detalle para ti: un mes de cuota gratis al hacerte socio.",
+      "copy": "Copiar",
+      "copied": "¡Copiado!",
+      "close": "Cerrar"
+    },
+    "easter": {
+      "hint": "Pssst… anda un meeple suelto por aquí. Pillalo."
+    }
   },
   "checkin": {
     "title": "Check-in",

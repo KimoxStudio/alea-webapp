@@ -210,34 +210,76 @@ export type Database = {
       }
       events: {
         Row: {
+          blurb_en: string | null
+          blurb_es: string | null
+          category_en: string | null
+          category_es: string | null
           created_at: string
           created_by: string | null
           date: string
+          date_kind: string
           description: string | null
+          description_en: string | null
+          description_es: string | null
+          end_date: string | null
           end_time: string
           id: string
+          image_url: string | null
+          link_url: string | null
+          recurrence_label_en: string | null
+          recurrence_label_es: string | null
           start_time: string
           title: string
+          title_en: string | null
+          title_es: string | null
         }
         Insert: {
+          blurb_en?: string | null
+          blurb_es?: string | null
+          category_en?: string | null
+          category_es?: string | null
           created_at?: string
           created_by?: string | null
           date: string
+          date_kind?: string
           description?: string | null
+          description_en?: string | null
+          description_es?: string | null
+          end_date?: string | null
           end_time: string
           id?: string
+          image_url?: string | null
+          link_url?: string | null
+          recurrence_label_en?: string | null
+          recurrence_label_es?: string | null
           start_time: string
           title: string
+          title_en?: string | null
+          title_es?: string | null
         }
         Update: {
+          blurb_en?: string | null
+          blurb_es?: string | null
+          category_en?: string | null
+          category_es?: string | null
           created_at?: string
           created_by?: string | null
           date?: string
+          date_kind?: string
           description?: string | null
+          description_en?: string | null
+          description_es?: string | null
+          end_date?: string | null
           end_time?: string
           id?: string
+          image_url?: string | null
+          link_url?: string | null
+          recurrence_label_en?: string | null
+          recurrence_label_es?: string | null
           start_time?: string
           title?: string
+          title_en?: string | null
+          title_es?: string | null
         }
         Relationships: []
       }

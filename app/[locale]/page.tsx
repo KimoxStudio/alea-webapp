@@ -1,9 +1,20 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { getSessionFromServerCookies } from '@/lib/server/auth'
 import { getCurrentUser } from '@/lib/server/auth-service'
+import { listClubEvents } from '@/lib/server/club-events-service'
+import { LandingView } from '@/components/landing/landing-view'
 
 interface HomePageProps {
   params: Promise<{ locale: string }>
+}
+
+export async function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: 'home' })
+
+  return { title: `Alea — ${t('hero.titleA')} ${t('hero.titleB')} ${t('hero.titleC')}` }
 }
 
 export default async function HomePage({ params }: HomePageProps) {
@@ -15,9 +26,11 @@ export default async function HomePage({ params }: HomePageProps) {
       await getCurrentUser(session)
       redirect(`/${locale}/rooms`)
     } catch {
-      // Ignore stale/invalid session state and redirect to login.
+      // Ignore stale/invalid session state and fall through to the public landing page.
     }
   }
 
-  redirect(`/${locale}/login`)
+  const { upcoming, past } = await listClubEvents()
+
+  return <LandingView locale={locale} upcomingEvents={upcoming} pastEvents={past} />
 }
