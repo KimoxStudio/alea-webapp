@@ -25,20 +25,47 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      exclude: ['node_modules', '.next'],
+      exclude: ['node_modules', '.next', '**/*.d.ts'],
       include: [
-        'app/api/auth/**/*.ts',
+        'lib/server/**/*.ts',
+        'app/api/**/*.ts',
         'lib/auth/auth-context.tsx',
-        'lib/server/auth.ts',
-        'lib/server/auth-service.ts',
-        'lib/server/http-error.ts',
-        'lib/server/service-error.ts',
       ],
+      // Explicitly measure every file matched by `include`, not just files
+      // touched by an imported test. Without this, an untested route (e.g.
+      // an app/api/**/*.ts handler with zero test imports) is silently
+      // dropped from the report instead of counting as 0% — inflating the
+      // aggregate percentage and hiding real gaps from the thresholds below.
+      all: true,
+      // Global thresholds: baseline floor across all measured files (80.57% actual lines).
+      // Untested API routes (0% coverage) are allowed at global floor; they must be
+      // improved separately as part of KIM-408+. Per-glob overrides below preserve
+      // the high bar for security-critical auth layer so regressions are caught.
       thresholds: {
-        lines: 85,
+        lines: 80,
         functions: 85,
         branches: 75,
-        statements: 85,
+        statements: 80,
+        // Auth layer: measured at 85-100% lines across all routes.
+        // Per-glob overrides hold the strong bar here so regressions trigger alerts.
+        'lib/server/auth-service.ts': {
+          lines: 85,
+          functions: 85,
+          branches: 63,
+          statements: 85,
+        },
+        'lib/server/auth.ts': {
+          lines: 100,
+          functions: 100,
+          branches: 93,
+          statements: 100,
+        },
+        'app/api/auth/**/*.ts': {
+          lines: 87,
+          functions: 85,
+          branches: 75,
+          statements: 87,
+        },
       },
     },
   },
