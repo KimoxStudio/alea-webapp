@@ -820,8 +820,29 @@ describe('uploads-service', () => {
       expect(migrationContent).toContain('ADD COLUMN IF NOT EXISTS "img_url" text')
     })
 
-    it('migration uses ON CONFLICT DO NOTHING for idempotency', () => {
-      expect(migrationContent).toContain('ON CONFLICT ("id") DO NOTHING')
+    it('migration uses ON CONFLICT DO UPDATE to converge bucket config (not DO NOTHING)', () => {
+      // A pre-existing "landing-media" bucket (e.g. created manually with
+      // public=false, a smaller file_size_limit, or a narrower MIME allowlist)
+      // must NOT be left with stale settings — DO NOTHING would silently
+      // succeed while leaving misconfiguration in place, which is a security
+      // concern for a public-read bucket. DO UPDATE forces convergence to the
+      // intended state on every re-run of this migration.
+      expect(migrationContent).not.toContain('ON CONFLICT ("id") DO NOTHING')
+      expect(migrationContent).toContain('ON CONFLICT ("id") DO UPDATE SET')
+    })
+
+    it('migration ON CONFLICT DO UPDATE re-asserts public=true, the 5 MB limit, and the full MIME allowlist', () => {
+      const conflictClauseMatch = migrationContent.match(
+        /ON CONFLICT \("id"\) DO UPDATE SET([\s\S]*?);/
+      )
+      expect(conflictClauseMatch).not.toBeNull()
+
+      const conflictClause = conflictClauseMatch![1]
+      expect(conflictClause).toMatch(/"public"\s*=\s*true/)
+      expect(conflictClause).toMatch(/"file_size_limit"\s*=\s*5242880/)
+      expect(conflictClause).toContain(
+        "\"allowed_mime_types\" = ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/gif']"
+      )
     })
   })
 })
