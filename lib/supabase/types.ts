@@ -172,6 +172,7 @@ export type Database = {
           id: string
           room_id: string
           start_time: string
+          table_id: string | null
         }
         Insert: {
           all_day?: boolean
@@ -181,6 +182,7 @@ export type Database = {
           id?: string
           room_id: string
           start_time: string
+          table_id?: string | null
         }
         Update: {
           all_day?: boolean
@@ -190,6 +192,7 @@ export type Database = {
           id?: string
           room_id?: string
           start_time?: string
+          table_id?: string | null
         }
         Relationships: [
           {
@@ -204,6 +207,46 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_room_blocks_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_equipment: {
+        Row: {
+          equipment_id: string
+          event_id: string
+          quantity: number
+        }
+        Insert: {
+          equipment_id: string
+          event_id: string
+          quantity?: number
+        }
+        Update: {
+          equipment_id?: string
+          event_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_equipment_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_equipment_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -649,6 +692,7 @@ export type Database = {
         Args: {
           p_event_id: string
           p_blocks: Json
+          p_materials?: Json
         }
         Returns: Json
       }

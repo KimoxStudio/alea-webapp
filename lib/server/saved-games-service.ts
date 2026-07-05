@@ -92,14 +92,20 @@ async function assertTableAndEventAvailability(tableId: string, startDate: strin
 
   const { data: blocks, error: blocksError } = await admin
     .from('event_room_blocks')
-    .select('id')
+    .select('id, table_id')
     .eq('room_id', table.room_id)
     .gte('date', startDate)
     .lte('date', endDate)
-    .limit(1)
 
   if (blocksError) serviceError('Internal server error', 500)
-  if (blocks && blocks.length > 0) serviceError(ERROR_CODES.SAVED_GAME_EVENT_CONFLICT, 409)
+
+  // OIR-208: a block with a table_id only conflicts with that single table;
+  // NULL (the pre-OIR-208 default) conflicts with every table of the room —
+  // saved games only ever live on a single removable-top table.
+  const hasConflict = ((blocks ?? []) as Array<{ id: string; table_id: string | null }>).some(
+    (block) => block.table_id == null || block.table_id === tableId,
+  )
+  if (hasConflict) serviceError(ERROR_CODES.SAVED_GAME_EVENT_CONFLICT, 409)
 }
 
 function validateDateRange(startDate: string, endDate: string) {

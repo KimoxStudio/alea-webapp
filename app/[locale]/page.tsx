@@ -1,8 +1,5 @@
 import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { getSessionFromServerCookies } from '@/lib/server/auth'
-import { getCurrentUser } from '@/lib/server/auth-service'
 import { listClubEvents, type ListClubEventsResult } from '@/lib/server/club-events-service'
 import { listPartners } from '@/lib/server/partners-service'
 import { listLibraryGames } from '@/lib/server/library-games-service'
@@ -58,16 +55,11 @@ export async function generateMetadata({ params }: HomePageProps): Promise<Metad
 
 export default async function HomePage({ params }: HomePageProps) {
   const { locale } = await params
-  const session = await getSessionFromServerCookies()
 
-  if (session) {
-    try {
-      await getCurrentUser(session)
-      redirect(`/${locale}/rooms`)
-    } catch {
-      // Ignore stale/invalid session state and fall through to the public landing page.
-    }
-  }
+  // Authenticated users deliberately view this same public landing page —
+  // it doubles as the club's marketing/info entry point. The webapp chrome
+  // (header/footer) is already hidden here via pathname gates, so there is
+  // no redirect to /rooms for signed-in users. Do NOT add one back.
 
   const [{ upcoming, past }, partners, games] = await Promise.all([
     loadClubEvents(),

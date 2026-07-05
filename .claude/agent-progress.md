@@ -697,6 +697,99 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [17:30] npx vitest run: 836/836 passed.
 - [17:35] ✅ Complete — APPROVE. Opened PR #153 (feat/oir-207-image-uploads → develop), stacked-chain final PR note included.
 
+#### [OIR-208] software-engineer — unified events + table blocks + materials
+- [18:00] Started. Explored equipment domain (public.equipment, lib/server/equipment-service.ts),
+  event_room_blocks read paths (tables-service, rooms-service, reservations-service,
+  saved-games-service), tables schema, use-admin.ts hooks (useAdminRoomTables/useAdminEquipment
+  already existed).
+- [18:10] Migration 20260704000006: event_room_blocks.table_id (nullable FK, ON DELETE CASCADE),
+  event_equipment table (service-role only RLS), apply_club_event_room_blocks extended with
+  table_id-per-block + p_materials (both null-leaves-untouched / array-replaces semantics).
+- [18:20] club-events-service.ts unified: dropped AND-not-null filter from listAdminClubEvents,
+  dropped isClubEventRow guard from update/delete, added visibleOnLanding toggle (nulls
+  title_es/title_en when off, legacy title always populated), materials validate+fetch,
+  table-scoped block replace.
+- [18:30] Extended every availability read path for table granularity: tables-service
+  getTableAvailability, rooms-service getRoomTablesAvailability, reservations-service
+  hasEventBlockConflict (both call sites), saved-games-service assertTableAndEventAvailability.
+  Used `== null` (not `=== null`) for table_id checks — treats absent/undefined the same as
+  NULL ("whole room"), consistent with lib/server/availability.ts's existing convention.
+- [18:45] UI: club-events-section.tsx rewritten — Mesa select per schedule row (useAdminRoomTables),
+  materials multi-select with quantity (useAdminEquipment), visibleOnLanding toggle gating
+  landing-only fields, Landing badge on rows. Deleted events-tab.tsx + events-section.tsx
+  (dashboard); admin-dashboard.tsx now renders ClubEventsSection directly under the Eventos tab.
+- [18:50] i18n: messages/en.json + es.json updated (clubEvents.* renamed/added keys,
+  eventsTab.* removed). Key parity verified via script — OK.
+- [19:00] pnpm typecheck / lint / build: all green. npx vitest run: 836/836 passed (no test
+  files touched) — 3 tests initially failed due to `=== null` vs `== null` on table_id in
+  fixture rows lacking the field entirely; fixed by using `== null` (see above), not by
+  editing tests.
+- [19:05] ✅ Complete — migration, service, availability, UI, i18n all done; full suite green.
+
+#### [OIR-208] qa-engineer — availability + visibility coverage
+- [18:06] Started — reviewing commits 8a82aaa..ce3bf99
+- [18:07] Scope verified: availability table-granularity, visibility toggle, materials validation, RPC payload, migration sanity
+- [18:10] Tests written: 28 test cases across all coverage areas
+- [18:10] ✅ Test suite: PASS (864 tests, all green)
+- [18:10] ✅ Typecheck: PASS
+- [18:10] ✅ Lint: PASS
+
+#### [OIR-208] software-engineer — review fixes
+- [Started] Reset worktree to origin/feat/oir-208-unified-events (a8713a6)
+- Fix 1 (CRITICAL): resolveClubEventFields in lib/server/club-events-service.ts now preserves
+  current.description/start_time/end_time on UPDATE (only defaults null/'00:00:00'/'23:59:00' on CREATE) —
+  editing a pre-existing legacy internal event no longer destroys its real anchor times/description.
+- Fix 2: investigated consumers of legacy /api/events routes — no component/hook usage beyond
+  lib/hooks/use-admin.ts itself; BUT __tests__/app/api/events.test.ts (37 tests, imports GET/POST/PUT/DELETE
+  directly from these route files) and __tests__/server/events-service.test.ts /
+  events-service-multiday.test.ts test createEvent/updateEvent/deleteEvent directly. Removing routes/functions
+  would break those suites, and test edits are out of scope. Decision: kept routes + service functions,
+  added divergence-risk comments in app/api/events/route.ts, app/api/events/[id]/route.ts,
+  lib/server/events-service.ts, and lib/api/endpoints.ts documenting the double-write risk and pointing
+  future consumers to the unified club-events service.
+- Fix 3: added explicit "deliberate" comment in resolveClubEventFields documenting that
+  blurb/description/image are intentionally preserved when visibleOnLanding toggles OFF (re-publish support).
+- Validation: pnpm typecheck (green), pnpm lint (green, no warnings), pnpm test (56 files / 864 tests, all green).
+- [Complete] ✅ Commit pushed to feat/oir-208-unified-events.
+
+#### OIR-208 security-reviewer — final gate (unified events, table blocks, materials)
+- [18:20] Started. Pulled origin/feat/oir-208-unified-events (already up to date, no drift).
+- [18:20] Reviewed migration 20260704000006: table_id nullable FK w/ ON DELETE CASCADE, event_equipment RLS service-role-only with quantity>0 CHECK, apply_club_event_room_blocks RPC (drop-2arg/create-3arg) keeps SECURITY DEFINER + pinned search_path + revoke public/anon/authenticated + grant service_role; table-scoped cancellation predicate confirmed scoped to its own table only.
+- [18:20] Reviewed lib/server/club-events-service.ts: admin checks intact on all paths (list/create/update/delete); visibleOnLanding cannot publish without title_es (validated unconditionally); legacy anchor-preservation fix (65485a1) is data-preservation only, doesn't reopen write paths; materials validation rejects quantity<1 and duplicate equipmentId before RPC call.
+- [18:20] Confirmed legacy /api/events routes remain admin-gated + rate-limited + isClubEventRow-guarded (dead surface, documented, not wired to any UI).
+- [18:20] Confirmed availability table-granularity (tables-service, rooms-service, reservations-service, saved-games-service) only narrows blocking (table_id null = whole room unchanged; non-null = single table only) — never widens prior anon/member access.
+- [18:20] No dangerouslySetInnerHTML/innerHTML/eval in diff; en.json/es.json key parity verified (no missing keys either direction); no secrets/hardcoded credentials found; all commit messages in English.
+- [18:20] ✅ Complete — APPROVE. Opened PR #154 (feat/oir-208-unified-events → develop): https://github.com/KimoxStudio/alea-webapp/pull/154
+
+#### [OIR-208] software-engineer — remove duplicate global footer on landing
+- [18:24] Started
+- [18:24] Found mechanism: Header hides itself via `!isAuthenticated` check (auth-based), but Footer has no gate at all, so it always rendered — including under the landing's own LandingFooterSection, on `/[locale]` root. Root path always redirects authenticated users to /rooms (app/[locale]/page.tsx), so locale root is anon-only in practice.
+- [18:24] Fix: added `usePathname()` check in components/layout/footer.tsx; Footer returns null when pathname matches `/^\/[a-z]{2}$/` (locale root only). All other routes unaffected.
+- [18:24] Validation: pnpm typecheck, pnpm lint, pnpm build, pnpm test (868 tests) all green.
+- [18:24] ✅ Complete — single-file diff in components/layout/footer.tsx
+
+#### [OIR-208] software-engineer — hide global header on landing
+- [18:30] Started
+- [18:32] Added pathname gate (isLocaleRoot regex) to components/layout/header.tsx mirroring footer.tsx (commit 8b0ee4c); header now returns null on locale-root landing route regardless of auth state
+- [18:36] Investigated app/[locale]/page.tsx redirect: found the `redirect()` call for authenticated users is wrapped inside a try/catch that also catches the NEXT_REDIRECT throw Next.js uses internally to perform the redirect — the catch block swallows it silently, so the redirect to /rooms never actually fires for a valid session. This is why an authenticated user was seeing the landing page directly (not a caching/hydration artifact). Reported only, not fixed (out of scope per task instructions)
+- [18:38] pnpm typecheck / pnpm lint / pnpm test all green (56 test files, 868 tests)
+- [18:39] ✅ Complete — header.tsx fixed, redirect bug found and reported
+
+#### [OIR-208] software-engineer — make landing public-for-authenticated explicit
+- [18:44] Started
+- [18:44] Read app/[locale]/page.tsx; confirmed `session`/`getCurrentUser` resolution had no other use (LandingView props don't take user/session data) — the whole session lookup existed only to feed the dead try/catch-swallowed redirect(`/${locale}/rooms`)
+- [18:44] Removed getSessionFromServerCookies/getCurrentUser/redirect imports and calls entirely (no other usages remained); replaced with an explicit comment: authenticated users deliberately view the public landing (chrome hidden via header/footer pathname gates), no redirect here
+- [18:44] Searched __tests__ for coverage of app/[locale]/page.tsx directly — none exists. auth-pages.test.tsx's "root page redirects valid sessions directly to rooms" test covers the separate app/page.tsx (RootPage), unaffected by this change
+- [18:44] pnpm typecheck / pnpm lint / pnpm test all green (56 test files, 868 tests, including auth-pages.test.tsx 9/9 passing)
+- [18:44] ✅ Complete — app/[locale]/page.tsx diff minimal, behavior identical (landing renders for everyone)
+
+#### [PR154] software-engineer — room/table FK + fix sham quantity test
+- Started
+- [22:52] Migration: added in-RPC room_id/table_id consistency guard (RAISE EXCEPTION ERRCODE 23514) inside apply_club_event_room_blocks, before INSERT — avoids the broader schema change a composite FK would require (UNIQUE(id, room_id) on tables). Service layer already maps 23514 -> 400.
+- [22:52] Test: fixed sham "rejects materials with quantity 0"/"negative quantity" tests to route through createClubEvent and assert statusCode 400; added regression test for mismatched room_id/table_id block payload (updateClubEvent) rejecting with statusCode 400 (RPC Payload: tableId in blocks describe).
+- [22:52] pnpm test -- __tests__/server/oir208-unified-events.test.ts: 33/33 passing. Full suite: 3 pre-existing unrelated failures (hardcoded absolute paths to main repo checkout in library-games/partners/uploads service tests — reproduced identically on unmodified branch, not caused by this change).
+- [22:53] pnpm build: succeeded.
+- [22:53] ✅ Complete — migration + tests pushed to feat/oir-208-unified-events
 #### [PR153] software-engineer — magic-byte upload validation
 - [23:00] Started: address Oiranca review comment on uploads-service.ts:61 (client MIME trusted alone)
 - [23:00] Added dependency-free magic-byte signature check (PNG/JPEG/WEBP/GIF) run on the actual file body bytes, executed before the Supabase Storage write. Rejects via existing ServiceError (400, same message as MIME-allowlist rejection) when detected signature is missing or doesn't match the client-declared File.type.

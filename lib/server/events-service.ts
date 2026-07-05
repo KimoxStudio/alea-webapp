@@ -75,6 +75,7 @@ function toAdminEvent(row: EventRow, blocks: EventRoomBlockRow[]): AdminEvent {
   const roomBlocks: AdminEventRoomBlock[] = blocks.map((b) => ({
     id: b.id,
     roomId: b.room_id,
+    tableId: b.table_id ?? null,
     date: b.date,
     startTime: b.start_time.slice(0, 5),
     endTime: b.end_time.slice(0, 5),
@@ -84,6 +85,7 @@ function toAdminEvent(row: EventRow, blocks: EventRoomBlockRow[]): AdminEvent {
   const rawSchedules: AdminEventSchedule[] = blocks.map((b) => ({
     id: b.id,
     roomId: b.room_id,
+    tableId: b.table_id ?? null,
     date: b.date,
     startTime: b.start_time.slice(0, 5),
     endTime: b.end_time.slice(0, 5),
@@ -127,6 +129,7 @@ function jsonBlockToSchedule(b: Record<string, unknown>): AdminEventSchedule {
   return {
     id: b.id != null ? String(b.id) : undefined,
     roomId: b.room_id != null ? String(b.room_id) : null,
+    tableId: b.table_id != null ? String(b.table_id) : null,
     date: String(b.date),
     startTime: String(b.start_time).slice(0, 5),
     endTime: String(b.end_time).slice(0, 5),
@@ -146,6 +149,7 @@ function jsonToAdminEvent(obj: Record<string, unknown>): AdminEvent {
       return {
         id: String(block.id),
         roomId: String(block.room_id),
+        tableId: block.table_id != null ? String(block.table_id) : null,
         date: String(block.date),
         startTime: String(block.start_time).slice(0, 5),
         endTime: String(block.end_time).slice(0, 5),
@@ -208,6 +212,8 @@ function jsonToAdminEvent(obj: Record<string, unknown>): AdminEvent {
 // ---------------------------------------------------------------------------
 export interface NormalisedEventSchedule {
   room_id: string | null
+  /** Null blocks the whole room; a table id scopes the block to that single table (OIR-208). */
+  table_id: string | null
   date: string
   start_time: string
   end_time: string
@@ -228,9 +234,14 @@ export function validateAndNormaliseSchedule(
   const rawEnd = String(s.endTime ?? '').trim()
   const resolved = resolveBlockTimes(date, rawStart, rawEnd, allDay)
   const roomId = s.roomId ? String(s.roomId).trim() : null
+  // OIR-208: a schedule row may optionally scope its block to a single table
+  // of the room (empty/"Sala entera" = whole room, unchanged behavior).
+  // Ignored when no room is attached — a table without a room makes no sense.
+  const tableId = roomId && s.tableId ? String(s.tableId).trim() || null : null
 
   return {
     room_id: roomId,
+    table_id: tableId,
     date,
     start_time: resolved.startTime,
     end_time: resolved.endTime,
@@ -240,6 +251,22 @@ export function validateAndNormaliseSchedule(
 
 // ---------------------------------------------------------------------------
 // Public API
+//
+// OIR-208 review (Finding 2 — legacy /api/events double-write surface):
+// listEvents/createEvent/updateEvent/deleteEvent below back the legacy
+// internal-events dashboard section, which has since been replaced by the
+// unified "Eventos" flow in lib/server/club-events-service.ts. No component
+// or hook consumes app/api/events/route.ts or app/api/events/[id]/route.ts
+// anymore (verified: no references to the use-admin.ts event hooks outside
+// that hook file and its tests). Those routes — and these functions — are
+// intentionally NOT removed here because __tests__/app/api/events.test.ts
+// and __tests__/server/events-service.test.ts (and
+// events-service-multiday.test.ts) exercise them directly and test edits are
+// out of scope for this change. Divergence risk: a unified internal event
+// (both title_es/title_en NULL, created via the unified admin flow) remains
+// writable/deletable through this surface too, with different
+// validation/defaults than the unified service. Do not wire any new
+// consumer to this surface — prefer lib/server/club-events-service.ts.
 // ---------------------------------------------------------------------------
 
 export async function listEvents(): Promise<AdminEvent[]> {

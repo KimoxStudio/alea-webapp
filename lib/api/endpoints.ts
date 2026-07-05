@@ -37,6 +37,11 @@ export const endpoints = {
     list: '/saved-games',
     renew: (id: string) => `/saved-games/${id}/renew`,
   },
+  // OIR-208 review (Finding 2): legacy internal-events surface — no
+  // component consumes the hooks built on top of these paths anymore (see
+  // lib/hooks/use-admin.ts). Kept only because existing route/service tests
+  // exercise it directly; see the divergence-risk comments in
+  // app/api/events/route.ts and app/api/events/[id]/route.ts.
   events: {
     list: '/events',
     byId: (id: string) => `/events/${id}`,

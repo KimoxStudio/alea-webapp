@@ -245,11 +245,82 @@ their device. Library games have no image support at all.
 
 ---
 
+## OIR-208 — Unified events: one event type, table-level blocks, materials
+
+**Problem (user feedback 2026-07-04, screenshot).** There is only ONE kind of event in
+the club's reality — the Club/Internos sub-tab split is artificial. The create button
+must say just "Crear evento". Events must be able to block whole rooms OR individual
+tables, and may also need materials (equipment).
+
+**Scope.**
+
+1. **Single event type (UI + service).**
+   - Remove the Club/Internos sub-tabs; the Eventos tab renders ONE unified section
+     (evolved from club-events-section). Heading "Eventos", button label
+     `admin.clubEvents.create` → "Crear evento" / "Create event".
+   - Form gains a **"Visible en landing"** toggle:
+     - ON (default for new): current club-event path — title_es (+EN fallback), blurb,
+       image, category, etc. written; event appears on the landing.
+     - OFF: internal event — bilingual fields stored NULL (paired constraint holds),
+       legacy `title` column receives the Spanish title so existing internal surfaces
+       keep working. Toggling later converts in place (service moves title between
+       columns; landing visibility follows title_es/title_en per existing RLS).
+   - Unified admin list shows ALL events (upcoming/past tabs kept) with a "Landing"
+     badge on published rows: `listAdminClubEvents` drops its AND-not-null filter and
+     derives `visibleOnLanding` per row; legacy `listEvents` internal view stays for API
+     compat but the dashboard no longer renders the legacy events-section (delete the
+     events-tab wrapper; keep events-section component file only if other surfaces use
+     it — if nothing else imports it, delete it and its route usage stays untouched).
+   - Update/delete guards from OIR-203 (`isClubEventRow`) are superseded for the unified
+     service: it now operates on ANY event row; the legacy /api/events/[id] endpoints
+     keep their guard so old clients can't touch landing rows.
+2. **Table-level blocks.** Migration `20260704000006_oir208_table_blocks_and_materials.sql`:
+   - `ALTER TABLE public.event_room_blocks ADD COLUMN IF NOT EXISTS "table_id" uuid
+     REFERENCES public.tables(id) ON DELETE CASCADE;` (NULL = whole room, current
+     behavior).
+   - Extend RPC `apply_club_event_room_blocks`: each jsonb block accepts optional
+     `table_id`; reservation-cancellation predicate scopes to that single table when
+     set, whole room when NULL. (CREATE OR REPLACE in this migration.)
+   - **Availability**: locate every read path that treats `event_room_blocks` as
+     blocking (table availability service/RPC used by the reservation flow) and extend
+     it: a block with `table_id` only blocks that table; NULL blocks all tables of the
+     room. This is reservation-critical — qa-engineer must cover both granularities.
+   - UI: each schedule row gains an optional "Mesa" select (populated from the chosen
+     room's tables; empty = "Sala entera").
+3. **Materials (equipment) per event.** Same migration:
+   - `CREATE TABLE public.event_equipment (event_id uuid NOT NULL REFERENCES
+     public.events(id) ON DELETE CASCADE, equipment_id uuid NOT NULL REFERENCES
+     public.equipment(id) ON DELETE CASCADE, quantity int NOT NULL DEFAULT 1 CHECK
+     (quantity > 0), PRIMARY KEY (event_id, equipment_id));` RLS enabled, no
+     anon/authenticated policies (service-role only — internal logistics; landing never
+     shows materials). Adjust table/column names to the ACTUAL equipment table in the
+     repo (inspect schema first; if the equipment domain uses a different table name,
+     mirror it).
+   - Service: unified event create/update accepts `materials: [{equipmentId, quantity}]`;
+     replace-set semantics inside the same atomic RPC (extend it) or a follow-up
+     admin-client batch (prefer extending the RPC for atomicity).
+   - UI: material multi-select with quantity in the event form; shown in the admin list
+     row detail. i18n parity.
+
+**Acceptance criteria.**
+- Dashboard Eventos: no sub-tabs; one list, one "Crear evento" button; internal and
+  landing events coexist; toggle controls landing visibility both ways.
+- An event can block: nothing, a whole room, specific tables, or a mix across days;
+  reservation availability respects table-level granularity (blocked table unavailable,
+  sibling tables of the same room bookable).
+- An event can attach materials with quantities; editing replaces the set atomically.
+- Legacy /api/events endpoints still guarded; full suite green; qa covers availability
+  both-granularity cases + visibility toggle conversion both directions.
+
+**Branch:** `feat/oir-208-unified-events` from `feat/oir-208-unified-events`.
+
+---
+
 ## Post-merge checklist (user)
 
 1. Merge the LAST branch of the chain → `develop` (`git merge --no-ff`, push).
    All stacked PRs (#148 onward) close automatically. Current chain tail:
-   `feat/oir-207-image-uploads`.
+   `feat/oir-208-unified-events`.
 2. `supabase db push` — applies all pending migrations: OIR-202 set +
    `20260704000001` (repair) + `20260704000002` (partners) + `20260704000003`
    (library_games) + `20260704000004` (club-events RPC) + `20260704000005`
