@@ -36,10 +36,16 @@ export function useShake(onTrigger: () => void, { threshold = 22 }: ShakeOpts = 
     const attach = () => window.addEventListener('devicemotion', handler)
 
     // iOS requires explicit permission; request it on the user's first touch.
+    // Guard against environments without DeviceMotionEvent before referencing the
+    // global at all — casting/reading it beforehand throws a ReferenceError there.
+    if (typeof DeviceMotionEvent === 'undefined') {
+      return () => clearTimeout(resetTimer)
+    }
+
     const DME = DeviceMotionEvent as unknown as {
       requestPermission?: () => Promise<string>
     }
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DME.requestPermission === 'function') {
+    if (typeof DME.requestPermission === 'function') {
       const ask = async () => {
         try {
           const r = await DME.requestPermission!()
@@ -50,7 +56,7 @@ export function useShake(onTrigger: () => void, { threshold = 22 }: ShakeOpts = 
         window.removeEventListener('touchend', ask)
       }
       window.addEventListener('touchend', ask, { once: true })
-    } else if (typeof DeviceMotionEvent !== 'undefined') {
+    } else {
       attach()
     }
 
