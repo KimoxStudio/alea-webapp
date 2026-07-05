@@ -4,7 +4,7 @@ import { createSupabaseServerAdminClient } from '@/lib/supabase/server'
 import { serviceError } from '@/lib/server/service-error'
 import type { TablesUpdate } from '@/lib/supabase/types'
 import { memberNumberSchema } from '@/lib/validations/auth'
-import { read, utils } from 'xlsx'
+import ExcelJS from 'exceljs'
 import { type PublicProfileRow, toPublicUser } from '@/lib/server/profile-mappers'
 
 type ProfilesQuery = {
@@ -250,31 +250,38 @@ function assertSourceArchiveMatchesExtension(extension: 'xlsx' | 'odt', bytes: U
   }
 }
 
-function extractSpreadsheetCsv(bytes: Uint8Array) {
-  let workbook: ReturnType<typeof read>
+async function extractSpreadsheetCsv(bytes: Uint8Array): Promise<string> {
+  const wb = new ExcelJS.Workbook()
 
   try {
-    workbook = read(bytes, { type: 'array', cellText: false, cellDates: false })
+    await wb.xlsx.load(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer)
   } catch {
     serviceError('Spreadsheet file is invalid or corrupted', 400)
   }
 
-  if (workbook.SheetNames.length === 0) {
+  if (wb.worksheets.length === 0) {
     serviceError('Spreadsheet does not contain any sheets', 400)
   }
 
   let firstNonEmptyCsv = ''
 
-  for (const sheetName of workbook.SheetNames) {
-    const sheet = workbook.Sheets[sheetName]
-    const rows = utils.sheet_to_json<(string | number | boolean | null)[]>(sheet, {
-      header: 1,
-      raw: false,
-      defval: '',
-      blankrows: false,
+  for (const worksheet of wb.worksheets) {
+    const rows: string[][] = []
+
+    worksheet.eachRow({ includeEmpty: false }, (row) => {
+      const cells: string[] = []
+      const cellCount = row.cellCount
+
+      for (let col = 1; col <= cellCount; col += 1) {
+        const cell = row.getCell(col)
+        const raw = cell.text ?? ''
+        cells.push(raw.trim())
+      }
+
+      if (cells.some((cell) => cell.length > 0)) {
+        rows.push(cells)
+      }
     })
-      .map((row) => row.map((cell) => String(cell ?? '').trim()))
-      .filter((row) => row.some((cell) => cell.length > 0))
 
     if (rows.length === 0) continue
 
@@ -463,17 +470,17 @@ export function parseMemberImportCsv(input: string): ParsedMemberImportResult {
   }
 }
 
-export function normalizeMemberImportSource(input: {
+export async function normalizeMemberImportSource(input: {
   fileName: string
   contentType?: string | null
   bytes: Uint8Array
-}): {
+}): Promise<{
   totalRows: number
   normalizedRows: MemberImportRow[]
   issues: MemberImportIssue[]
   normalizedCsv: string
   optionalColumnPresence: MemberImportOptionalColumnPresence
-} {
+}> {
   const extension = getSourceExtension(input.fileName)
   const normalizedContentType = input.contentType?.trim() ?? ''
   const allowedContentTypes = ACCEPTED_MEMBER_IMPORT_CONTENT_TYPES_BY_EXTENSION[extension]
@@ -492,7 +499,7 @@ export function normalizeMemberImportSource(input: {
     extractedCsv = new TextDecoder('utf-8').decode(sourceBytes).trim()
   } else if (extension === 'xlsx') {
     assertSourceArchiveMatchesExtension('xlsx', sourceBytes)
-    extractedCsv = extractSpreadsheetCsv(sourceBytes)
+    extractedCsv = await extractSpreadsheetCsv(sourceBytes)
   } else if (extension === 'odt') {
     assertSourceArchiveMatchesExtension('odt', sourceBytes)
     extractedCsv = extractOdtCsv(sourceBytes)
@@ -676,7 +683,7 @@ export async function importMembersFromSource(input: {
   contentType?: string | null
   bytes: Uint8Array
 }): Promise<MemberImportResult> {
-  const normalized = normalizeMemberImportSource(input)
+  const normalized = await normalizeMemberImportSource(input)
   return importMembersFromNormalizedRows(normalized)
 }
 

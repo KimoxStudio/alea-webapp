@@ -258,3 +258,22 @@ Real-time log of all agent work. Agents append entries as work progresses.
 
 #### [loading-spinner] software-engineer — fix spinner load states
 - [13:03] Started — branch fix/loading-spinner-states off develop
+
+#### [PR136] software-engineer — sliced-buffer fix users-service
+- [22:46] Started
+- [22:47] All 22 member-import tests pass incl. new sliced-buffer regression test
+- [22:47] pnpm build succeeded (no type errors)
+- [22:52] ⚠️ BLOCKED — push halted by pre-push hook (scripts/ci-local.sh → pnpm lint). Root cause: this branch's .eslintrc.json lacks "root": true, so ESLint legacy config resolution walks up into the parent worktree (nested under .claude/worktrees/) and loads a second copy of eslint-plugin-next, causing "Plugin @next/next was conflicted". Confirmed pre-existing and unrelated to this diff (reproduces identically without the change); typecheck and targeted tests are green. A sibling agent already fixed the identical issue on kim-401-403-security-hardening (commit ee37057), not yet on develop. Did not touch .eslintrc.json (out of task scope) or use --no-verify (no explicit user permission). Commit 4c2f8a7 is ready locally, not yet pushed.
+- [22:55] Coordinator approved the same one-line .eslintrc.json "root": true fix for this branch (commit d0c2cd2)
+- [22:55] Verified pnpm lint now passes cleanly (No ESLint warnings or errors)
+- [22:56] Pushed both commits via git push (pre-push hook ran: typecheck ✅, lint ✅, --no-verify NOT used)
+- [22:56] ✅ Complete — origin/kim-395-replace-xlsx now at d0c2cd2c23b3451ddceceec9f37b57df8ce7dc1b (169be44..d0c2cd2)
+
+#### [PR136-move] software-engineer — relocate sliced-buffer test to users-service.test.ts
+- [23:05] Started. Checked out kim-395-replace-xlsx (removed stale unlocked worktree agent-a6bc0320e919def79 to free the branch for this worktree).
+- [23:06] Confirmed kim-395's only unique addition to member-import.test.ts (vs shared merge-base 169be44 with kim-407/PR#146) is the "parses xlsx bytes sliced..." test — removed it from member-import.test.ts.
+- [23:07] Diff of member-import.test.ts vs merge-base 169be44 now empty (no unique changes from this branch).
+- [23:12] Added regression test to users-service.test.ts exercising extractSpreadsheetCsv (exported it, was previously private) with a crafted fake zero-record zip EOCD trailing record so the test genuinely fails without the users-service.ts fix (4c2f8a7) and passes with it (verified both ways manually).
+- [23:14] pnpm exec vitest run users-service.test.ts + member-import.test.ts: 54/54 passed. Full suite: 666/670 passed (4 pre-existing unrelated failures in availability.test.ts, date/timezone flakiness, not touched by this change).
+- [23:15] pnpm build: succeeded. pnpm run lint: no warnings/errors.
+- [23:16] ✅ Complete — commit 7ade28a pushed to origin/kim-395-replace-xlsx
