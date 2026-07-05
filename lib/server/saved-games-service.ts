@@ -6,9 +6,11 @@
  * the session-scoped client cannot be relied upon for row-level isolation.
  * Member isolation is instead enforced at the application layer via:
  *   - explicit `user_id = session.id` filters on member-scoped reads/writes
- *   - assertMemberRowsScoped() (KIM-397) called on any multi-row member read
+ *     (see the non-admin branch of `listSavedGamesForSession` below)
  *   - explicit ownership checks (`current.user_id !== session.id`) before
  *     mutations such as renew
+ * NOTE: a stronger multi-row guard (`assertMemberRowsScoped()`, KIM-397) is
+ * planned but not part of this PR — it is not imported or called here today.
  * Cross-user operations (attendance recording, table/event conflict checks)
  * legitimately need to span users and therefore require the admin client.
  */
