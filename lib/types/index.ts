@@ -207,6 +207,40 @@ export interface ClubEvent {
   status: ClubEventStatus
 }
 
+/**
+ * Admin (dashboard) view of a public club event (OIR-203) — same underlying
+ * "events" row as ClubEvent, with the extra fields the board needs to
+ * manage it: category, room-block status, and the raw room blocks for the
+ * edit form's "blocks rooms" sub-flow pre-fill.
+ */
+export interface AdminClubEvent {
+  id: string
+  titleEs: string
+  titleEn: string
+  blurbEs: string
+  blurbEn: string
+  descriptionEs: string | null
+  descriptionEn: string | null
+  dateKind: ClubEventDateKind
+  startDate: string
+  endDate: string | null
+  recurrenceLabelEs: string | null
+  recurrenceLabelEn: string | null
+  imageUrl: string | null
+  linkUrl: string | null
+  categoryEs: string | null
+  categoryEn: string | null
+  status: ClubEventStatus
+  /** True when this event currently has at least one room block attached. */
+  blocksRooms: boolean
+  roomBlocks: AdminEventRoomBlock[]
+}
+
+export interface AdminListClubEventsResult {
+  upcoming: AdminClubEvent[]
+  past: AdminClubEvent[]
+}
+
 export interface Equipment {
   id: string;
   name: string;

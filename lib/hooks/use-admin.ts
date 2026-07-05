@@ -1,7 +1,18 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import type { User, Room, GameTable, Reservation, PaginatedResponse, AdminEvent, MemberImportResult, Equipment } from '@/lib/types'
+import type {
+  User,
+  Room,
+  GameTable,
+  Reservation,
+  PaginatedResponse,
+  AdminEvent,
+  AdminClubEvent,
+  AdminListClubEventsResult,
+  MemberImportResult,
+  Equipment,
+} from '@/lib/types'
 import { apiClient } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
 
@@ -266,6 +277,80 @@ export function useAdminPreviewEventConflicts() {
       }>
     }) =>
       apiClient.post<EventConflictPreview>(endpoints.events.preview, payload),
+  })
+}
+
+// ----- Club events (OIR-203, public landing content) -----
+
+/** Room-block entry used in club event create/update payloads. */
+export interface ClubEventSchedulePayload {
+  roomId?: string | null
+  date: string
+  startTime?: string
+  endTime?: string
+  allDay?: boolean
+}
+
+export interface ClubEventPayload {
+  titleEs: string
+  titleEn: string
+  blurbEs?: string | null
+  blurbEn?: string | null
+  descriptionEs?: string | null
+  descriptionEn?: string | null
+  dateKind: 'single' | 'range' | 'recurring'
+  date: string
+  endDate?: string | null
+  recurrenceLabelEs?: string | null
+  recurrenceLabelEn?: string | null
+  imageUrl?: string | null
+  linkUrl?: string | null
+  categoryEs?: string | null
+  categoryEn?: string | null
+  /** When true, `schedules` is required and creates/replaces room blocks. */
+  blocksRooms?: boolean
+  schedules?: ClubEventSchedulePayload[]
+}
+
+export function useAdminClubEvents() {
+  return useQuery<AdminListClubEventsResult>({
+    queryKey: ['admin', 'club-events'],
+    queryFn: () => apiClient.get<AdminListClubEventsResult>(endpoints.clubEvents.list),
+    staleTime: 30_000,
+  })
+}
+
+export function useAdminCreateClubEvent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: ClubEventPayload) => apiClient.post<AdminClubEvent>(endpoints.clubEvents.list, data),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'club-events'] }),
+      queryClient.invalidateQueries({ queryKey: ['availability'] }),
+    ]),
+  })
+}
+
+export function useAdminUpdateClubEvent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<ClubEventPayload> }) =>
+      apiClient.put<AdminClubEvent>(endpoints.clubEvents.byId(id), data),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'club-events'] }),
+      queryClient.invalidateQueries({ queryKey: ['availability'] }),
+    ]),
+  })
+}
+
+export function useAdminDeleteClubEvent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete<void>(endpoints.clubEvents.byId(id)),
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin', 'club-events'] }),
+      queryClient.invalidateQueries({ queryKey: ['availability'] }),
+    ]),
   })
 }
 

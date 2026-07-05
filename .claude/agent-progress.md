@@ -474,3 +474,55 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [13:31] Added window.dispatchEvent(new CustomEvent('alea:nat20')) in hero-section.tsx on nat20 roll; confirmed landing-nav.tsx logo already had data-egg-tap; added easter.hint paragraph to landing-footer-section.tsx.
 - [13:35] pnpm install (worktree had no node_modules), pnpm run typecheck — clean, pnpm run lint — no warnings/errors, pnpm run build — succeeded (pre-existing unrelated Edge Runtime crypto warning only).
 - [13:36] ✅ Complete — all easter-egg components/hooks/i18n/CSS/Tailwind tokens wired and validated (typecheck/lint/build pass).
+
+#### [OIR-203] software-engineer — admin club events CRUD
+- [14:11] Started. Reset worktree to origin/feat/oir-203-admin-club-events (5747bfb). Read spec doc, existing lib/server/club-events-service.ts (public listClubEvents), lib/server/events-service.ts (internal AdminEvent CRUD + block RPCs), lib/server/auth.ts (requireAdmin, SessionUser), reservations-service.ts (session-passed role check pattern used as the model for service-layer privilege checks).
+- [14:20] events-service.ts: exported validateAndNormaliseSchedule (+ NormalisedEventSchedule type) for reuse; filtered listEvents() with .or('title_es.is.null,title_en.is.null') so internal room-booking view excludes public club-event (bilingual) rows.
+- [14:20] lib/types/index.ts: added AdminClubEvent + AdminListClubEventsResult types (mirrors AdminEvent pattern).
+- [14:20] club-events-service.ts: added listAdminClubEvents/createClubEvent/updateClubEvent/deleteClubEvent with requireAdminSession(session) role check inside the service (not just route-level requireAdmin); http(s)-only protocol allowlist on image_url/link_url (rejects javascript:/data:/relative); date_kind single/range/recurring validation with end_date >= date for range; room blocking fully optional — event_room_blocks rows only created when blocksRooms+schedules provided, reusing validateAndNormaliseSchedule + a small cancelConflictingReservations helper mirroring the existing RPC behavior; deleteClubEvent delegates to events-service's deleteEvent for block cleanup + reservation cancellation.
+- [14:24] Added thin route handlers app/api/club-events/route.ts (GET list, POST create) and app/api/club-events/[id]/route.ts (PUT, DELETE) — requireAdmin + enforceMutationSecurity/enforceRateLimit(adminMutation), no privilege logic in handlers.
+- [14:25] pnpm install (worktree had no node_modules) + pnpm typecheck — clean. Committed chunk 1 (09f4d6b).
+- [14:30] Added lib/api/endpoints.ts clubEvents entry, lib/hooks/use-admin.ts hooks (useAdminClubEvents/useAdminCreateClubEvent/useAdminUpdateClubEvent/useAdminDeleteClubEvent + ClubEventPayload/ClubEventSchedulePayload types).
+- [14:18] Added admin.clubEvents i18n keys to messages/en.json + es.json (verified 515/515 key parity via script).
+- [14:20] Created components/admin/club-events-section.tsx: Upcoming/Past tabs, create/edit dialog (all bilingual fields, category, date-kind-aware date/endDate/recurrence fields, image/link URL inputs, "blocks rooms" toggle revealing a room-block schedule sub-editor mirroring events-section.tsx's ScheduleRow), delete confirm dialog. Wired new "club-events" tab into components/admin/admin-dashboard.tsx.
+- [14:21] pnpm typecheck / pnpm lint / pnpm build all clean (only pre-existing unrelated Edge Runtime crypto warning in security.ts). Committed chunk 2 (aaa08e9).
+- [14:22] git push origin HEAD:feat/oir-203-admin-club-events — pre-push hook ran typecheck+lint again, both passed ("CI local pasado ✓"); push succeeded (5747bfb..aaa08e9).
+- [14:22] ✅ Complete — service/routes/UI/i18n all pushed; no test files touched (qa-engineer owns tests next).
+- [14:46] Migration 20260704000004: apply_club_event_room_blocks SECURITY DEFINER RPC + events_bilingual_titles_paired CHECK constraint (Findings 1, 6) — file only, never executed
+- [14:46] lib/validations/url.ts: extracted shared validateOptionalUrl (Finding 7)
+- [14:46] lib/server/events-service.ts: isClubEventRow predicate + deleteEventCascade extraction; updateEvent/deleteEvent 404 on club-event rows (Finding 3)
+- [14:46] lib/server/club-events-service.ts: validate-before-write reorder (Finding 2), RPC-based applyClubEventRoomBlocks (Finding 1), blocksMatchSchedules dedupe (Finding 4), optionalString typeof guard (Finding 5)
+- [14:46] pnpm typecheck / lint / build all pass; pnpm test: 52/52 files, 686/686 tests passed (no club-events test regressions)
+- [14:46] Pushed 4 commits (5db03b7, 1862b12, ec6b34a, 83e5645) to feat/oir-203-admin-club-events
+- [14:46] ✅ Complete — all 7 findings fixed, full suite green, pushed
+
+#### [OIR-203] qa-engineer — round 2 coverage (extended test suite)
+- [14:54] Started QA round 2 for code-review fixes (commits 5db03b7..4988a23)
+- [14:54] Extended club-events-service.test.ts with 9 new tests:
+  - Finding 1: Atomic RPC call with normalized blocks payload
+  - Finding 2: Validate-before-write ordering (reject malformed schedules)
+  - Finding 5: optionalString rejection of non-string types (objects, arrays)
+  - Finding 4: blocksMatchSchedules skip optimization (order-insensitive)
+- [14:54] Extended events-service.test.ts with 4 new tests:
+  - Finding 3: isClubEventRow guard rejects club events in updateEvent/deleteEvent
+  - Verify legacy rows (missing one of title_es/title_en) are allowed
+- [14:54] Full test suite: 698 tests PASS
+- [14:54] Typecheck: PASS
+- [14:54] Lint: PASS
+- [14:54] ✅ Complete — All validation gates pass
+
+
+#### [PR149] software-engineer — atomic club-event insert+blocks
+- [22:51] Started: reviewer inline comment on club-events-service.ts:467 — createClubEvent could leave an orphan "events" row if apply_club_event_room_blocks RPC fails after the insert.
+- [22:51] Chose smallest-diff fallback (reviewer-approved alternative to a full transactional RPC): (1) validateRoomsExist() checks all referenced room ids against the `rooms` table BEFORE the event insert, rejecting bad ids with 400 up front; (2) wrapped applyClubEventRoomBlocks() in try/catch — on any RPC failure (including transient ones after valid room ids), the just-inserted event row is compensating-deleted before rethrowing, so no orphan row survives.
+- [22:51] Did not touch updateClubEvent — reviewer comment scoped to the create flow only; update doesn't create a new row on RPC failure so the orphan-row risk doesn't apply there.
+- [22:51] No new migration needed — apply_club_event_room_blocks RPC (20260704000004) unchanged.
+- [22:51] Added 2 regression tests to __tests__/server/club-events-service.test.ts: (a) forces the block RPC to fail and asserts the event row is deleted via events.delete().eq('id', 'evt-new-1'); (b) forces the room-existence check to fail and asserts 400 + zero calls to from('events') (no insert at all). Also updated the shared mock's `rooms` `.in()` handler to default to "room exists" so pre-existing tests using roomId fixtures keep passing.
+- [22:51] pnpm test (full suite): 52 files / 700 tests passed. pnpm build: succeeded, no new type errors.
+- [22:51] ✅ Complete — pushed to feat/oir-203-admin-club-events
+
+#### [PR149-v2] software-engineer — log compensating-delete failure
+- [23:42] Started — fixing HIGH security finding: compensating delete result discarded/unlogged in createClubEvent
+- [23:43] Captured compensating delete `{ error }` in lib/server/club-events-service.ts createClubEvent; logs console.error with orphaned event id on failure, then still rethrows original RPC error (matches uploads-service.ts logging style)
+- [23:44] Added regression test in __tests__/server/club-events-service.test.ts forcing both block RPC and compensating delete to fail; verified it fails without the fix (0 console.error calls) and passes with it
+- [23:44] ✅ Complete — vitest 27/27 passed, pnpm build green, pushed to feat/oir-203-admin-club-events
