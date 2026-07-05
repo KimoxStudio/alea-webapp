@@ -50,6 +50,10 @@ export const endpoints = {
     list: '/partners',
     byId: (id: string) => `/partners/${id}`,
   },
+  libraryGames: {
+    list: '/library-games',
+    byId: (id: string) => `/library-games/${id}`,
+  },
   equipment: {
     list: '/equipment',
     byId: (id: string) => `/equipment/${id}`,

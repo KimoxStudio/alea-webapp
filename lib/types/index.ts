@@ -265,6 +265,31 @@ export interface AdminPartner extends Partner {
   active: boolean
 }
 
+/**
+ * Featured game from the club's physical game library (ludoteca), shown on
+ * the landing page carousel. Admin-managed (OIR-205); anon/authenticated
+ * visitors only ever see active games via RLS.
+ */
+export interface LibraryGame {
+  id: string
+  title: string
+  categoryEs: string
+  categoryEn: string
+  players: string
+  playTime: string
+  weight: number
+  sortOrder: number
+}
+
+/**
+ * Admin (dashboard) view of a library game — same underlying row as
+ * `LibraryGame`, plus the `active` flag the board toggles to show/hide it
+ * from the landing without deleting it.
+ */
+export interface AdminLibraryGame extends LibraryGame {
+  active: boolean
+}
+
 export interface Equipment {
   id: string;
   name: string;

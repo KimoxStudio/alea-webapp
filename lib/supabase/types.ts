@@ -322,6 +322,48 @@ export type Database = {
         }
         Relationships: []
       }
+      library_games: {
+        Row: {
+          active: boolean
+          category_en: string
+          category_es: string
+          created_at: string
+          id: string
+          play_time: string
+          players: string
+          sort_order: number
+          title: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          active?: boolean
+          category_en: string
+          category_es: string
+          created_at?: string
+          id?: string
+          play_time: string
+          players: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          weight: number
+        }
+        Update: {
+          active?: boolean
+          category_en?: string
+          category_es?: string
+          created_at?: string
+          id?: string
+          play_time?: string
+          players?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active_from: string | null

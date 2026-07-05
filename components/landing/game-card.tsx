@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import type { GameLibraryEntry } from './game-library-data'
+import type { LibraryGame } from '@/lib/types'
 
 const PALETTES: [string, string][] = [
   ['#7a1f1f', '#d97757'],
@@ -15,7 +15,7 @@ const PALETTES: [string, string][] = [
 ]
 
 interface GameCardProps {
-  game: GameLibraryEntry
+  game: LibraryGame
   locale: string
   idx: number
   playersLabel: string
@@ -61,7 +61,7 @@ export function GameCard({ game, locale, idx, playersLabel, timeLabel, weightLab
           </span>
           <span>·</span>
           <span>
-            {timeLabel}: {game.time}
+            {timeLabel}: {game.playTime}
           </span>
           <span>·</span>
           <span>

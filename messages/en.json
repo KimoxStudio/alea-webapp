@@ -408,6 +408,26 @@
       "sortOrder": "Sort order",
       "active": "Active",
       "inactive": "Inactive"
+    },
+    "libraryGames": {
+      "title": "Game library",
+      "sectionDescription": "Manage the featured games shown on the landing page.",
+      "createLibraryGame": "Create game",
+      "editLibraryGame": "Edit game",
+      "deleteLibraryGame": "Delete game",
+      "deleteLibraryGameConfirm": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+      "deleteError": "An error occurred while deleting the game. Please try again.",
+      "saveError": "An error occurred while saving the game. Please try again.",
+      "noLibraryGames": "No games found",
+      "titleField": "Title",
+      "categoryEs": "Category (Spanish)",
+      "categoryEn": "Category (English)",
+      "players": "Players",
+      "playTime": "Playtime",
+      "weight": "Complexity (0-5)",
+      "sortOrder": "Sort order",
+      "active": "Active",
+      "inactive": "Inactive"
     }
   },
   "home": {

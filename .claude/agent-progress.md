@@ -549,6 +549,23 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [15:21] Validation: typecheck clean, lint clean, tests 729/733 passed — 4 failures are pre-existing partners-service.test.ts mock limitation (single .order() chain), not edited per instructions
 - [15:21] ✅ Complete — 5 files modified, committed and pushed
 
+#### [OIR-205] software-engineer — game library management
+- [15:40] Started — mirrored OIR-204 (partners) final patterns for the game library
+- [15:40] Migration: supabase/migrations/20260704000003_oir205_library_games_table.sql — table library_games (title, category_es/en, players, play_time, weight numeric(2,1), sort_order, active), RLS SELECT-only where active=true for anon+authenticated, GRANT SELECT only, seeded 8 games from the former game-library-data.ts with bilingual category pairs
+- [15:40] Service: lib/server/library-games-service.ts — listLibraryGames (public), listAdminLibraryGames/create/update/delete (admin-only), requireAdminSession, validate-before-write, typeof guards, weight validated as number 0-5, secondary .order('title') tie-break in both list functions
+- [15:40] Routes: app/api/library-games/route.ts + [id]/route.ts — requireAdmin, enforceMutationSecurity, enforceRateLimit(adminMutation), thin handlers
+- [15:40] Dashboard: components/admin/library-games-section.tsx + tab wired into admin-dashboard.tsx — mirrors partners-section.tsx incl. try/catch on every mutateAsync, dialog stays open + error rendered on failure, toggle-active error feedback
+- [15:40] Landing: app/[locale]/page.tsx adds loadLibraryGames() degradation wrapper (failure -> [] + console.error); game-library-section.tsx now takes games prop and returns null when empty; game-card.tsx localizes category via LibraryGame type; deleted components/landing/game-library-data.ts (no remaining references)
+- [15:40] Types: lib/types/index.ts (LibraryGame/AdminLibraryGame), lib/supabase/types.ts (library_games table Row/Insert/Update), lib/api/endpoints.ts, lib/hooks/use-admin.ts (useAdminLibraryGames/Create/Update/Delete, cache scoped to ['admin','library-games'])
+- [15:40] i18n: admin.libraryGames.* full ES/EN parity added to messages/en.json + es.json
+- [15:41] ✅ Validation: pnpm typecheck green, pnpm lint green (no warnings), pnpm build green, pnpm test green — 735/735 tests passed (53 files), no regressions
+- [15:41] ✅ Complete — committing and pushing to feat/oir-205-game-library-management
+
+#### [OIR-205] security-reviewer — final gate + PR
+- [15:46] Started: audited diff origin/feat/oir-204-partners-management...HEAD (migration, service layer, routes, admin UI, landing wiring, i18n)
+- [15:46] Checked: RLS/grants on library_games (SELECT-only active=true, no write policies), requireAdmin+enforceMutationSecurity+rate-limit on routes, no URL fields/no unvalidated URL rendering, no dangerouslySetInnerHTML, i18n parity confirmed (libraryGames.* en/es), no secrets in diff, landing degradation wrapper catches fetch failures server-side
+- [15:46] ✅ Complete — APPROVED, no blocking findings. Opened PR #151 (final PR of the #148→#149→#150→#151 stacked chain) targeting develop.
+
 #### [PR149] software-engineer — atomic club-event insert+blocks
 - [22:51] Started: reviewer inline comment on club-events-service.ts:467 — createClubEvent could leave an orphan "events" row if apply_club_event_room_blocks RPC fails after the insert.
 - [22:51] Chose smallest-diff fallback (reviewer-approved alternative to a full transactional RPC): (1) validateRoomsExist() checks all referenced room ids against the `rooms` table BEFORE the event insert, rejecting bad ids with 400 up front; (2) wrapped applyClubEventRoomBlocks() in try/catch — on any RPC failure (including transient ones after valid room ids), the just-inserted event row is compensating-deleted before rethrowing, so no orphan row survives.

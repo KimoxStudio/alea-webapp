@@ -408,6 +408,26 @@
       "sortOrder": "Orden",
       "active": "Activo",
       "inactive": "Inactivo"
+    },
+    "libraryGames": {
+      "title": "Ludoteca",
+      "sectionDescription": "Gestiona los juegos destacados mostrados en la página pública.",
+      "createLibraryGame": "Crear juego",
+      "editLibraryGame": "Editar juego",
+      "deleteLibraryGame": "Eliminar juego",
+      "deleteLibraryGameConfirm": "¿Seguro que quieres eliminar \"{title}\"? Esta acción no se puede deshacer.",
+      "deleteError": "Ocurrió un error al eliminar el juego. Inténtalo de nuevo.",
+      "saveError": "Ocurrió un error al guardar el juego. Inténtalo de nuevo.",
+      "noLibraryGames": "No se encontraron juegos",
+      "titleField": "Título",
+      "categoryEs": "Categoría (Español)",
+      "categoryEn": "Categoría (Inglés)",
+      "players": "Jugadores",
+      "playTime": "Duración",
+      "weight": "Complejidad (0-5)",
+      "sortOrder": "Orden",
+      "active": "Activo",
+      "inactive": "Inactivo"
     }
   },
   "home": {
