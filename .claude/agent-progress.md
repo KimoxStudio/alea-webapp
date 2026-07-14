@@ -833,3 +833,66 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [11:26] Security Status: APPROVE — 0 CRITICAL/HIGH/MEDIUM, 0 LOW findings
 - [11:26] ✅ Complete — opening PR chore/pre-push-full-validation -> main
 - [11:26] PR opened: https://github.com/KimoxStudio/alea-webapp/pull/157 (chore/pre-push-full-validation -> main)
+
+#### [f8e91ebe] team-lead — Pre-01 crypto edge middleware
+- [16:46] Started — verification-first pipeline; branch fix/migration-pre-01-crypto-edge-middleware off main
+
+#### [4fdba807] team-lead — Pre-02 serverless rate limiter verify
+- [16:47] Started — claimed task, spawning software-engineer for independent verification
+
+#### [8802a71f] team-lead — Pre-04 secret rotation checklist (docs-only)
+- [16:47] Started orchestration pipeline
+
+#### [f8e91ebe] qa-engineer — validate verification branch
+- [HH:MM] Starting validation in isolated worktree
+- [16:50] SE verified: build/typecheck/tests pass (15/15), enforceRateLimit signature unchanged, spec committed beb4160. Existing "reuses single Redis client" test only proves object memoization, not cross-invocation counter persistence — routing to qa-engineer to strengthen.
+
+- [16:51] Build validation: pnpm build PASS
+- [16:51] Test suite: 961 tests PASS (64 files, incl. security.test.ts: 15 PASS)
+- [16:51] Docs-only validation: git diff --stat confirms only 3 files changed (.claude/agent-progress.md, 2 docs files)
+- [16:51] Middleware import spot-check: middleware.ts imports from ./lib/server/security-edge NOT ./lib/server/security
+- [16:51] Security-edge imports: only next/server and @supabase/ssr (Web Crypto API, no Node-only modules)
+- [16:51] ✅ Complete — PASS. Branch docs-only. Build passes. All tests pass. Core claim verified.
+
+#### [8802a71f] security-reviewer — mandatory secret-leak gate
+- [16:52] Started. Pulled full diff of chore/migration-pre-04-secret-rotation-checklist vs main (168 lines, 3 files) via git -C worktree diff main...HEAD, read-only.
+- [16:52] Scanned diff character-by-character: zero real secret values found. Only placeholder/example values (already pre-existing in .env.example, not touched by this diff) and one test-fixture string 'test-secret' in an existing unit test (unchanged by this diff).
+- [16:52] Confirmed change is docs-only: .claude/agent-progress.md, docs/SECRET-ROTATION-CHECKLIST.md (new), docs/issues/migration-pre-04-rotate-p0-secrets.md (new). No functional code, .env.local, or .env.example modified.
+- [16:52] Cross-checked AUTH_SESSION_SECRET claim via independent grep of main repo: confirmed zero code consumers, confirmed absent from .env.example, confirmed only referenced in docs/ROLLBACK.md (lines 122,127,141,151) — doc's dead-config finding is accurate, not overstated/understated.
+- [16:52] Cross-verified all file:line citations in the checklist doc against actual repo (CRON_SECRET at app/api/cron/mark-no-show/route.ts:7-8, tokensMatch import at :3; SUPABASE_SECRET_DEFAULT_KEY at lib/supabase/config.ts:18-19 and lib/supabase/server.ts:67-68; QA creds in qa/e2e/README.md:27-36) — all accurate.
+- [16:52] Drafted secret-free PR description for team-lead.
+- [16:52] ✅ Complete — APPROVED. Zero secret values in diff. Docs-only change confirmed. Checklist doc is accurate and names-only.
+
+#### [f8e91ebe] security-reviewer — review + open PR
+- [17:05] Started: read-only review of docs-only diff (git diff origin/main...fix/migration-pre-01-crypto-edge-middleware)
+- [17:05] Confirmed diff touches only 2 new docs files + agent-progress.md entry (67 insertions, 0 deletions), no code/test/config changes
+- [17:05] Independently verified claims against origin/main: middleware.ts imports only lib/server/security-edge (line 4); security-edge.ts leaf deps (i18n/config.ts, supabase/config.client.ts) have zero Node built-in imports; lib/server/security.ts (Node crypto) not reachable from middleware
+- [17:06] Checked new docs for secrets/env values/credentials — none found; env vars referenced by name only (NEXT_PUBLIC_SUPABASE_URL etc.), no values
+- [17:06] Security Status: APPROVE — 0 CRITICAL/HIGH/MEDIUM findings, 0 LOW findings
+- [17:06] Pushed branch, opened PR #160 (fix/migration-pre-01-crypto-edge-middleware -> main)
+- [17:06] ✅ Complete — PR #160 https://github.com/KimoxStudio/alea-webapp/pull/160 (NOT merged, targets main, awaiting user merge)
+- [16:53] ✅ Complete — PR #160 opened (verification-only, targets main, not merged); Pre-01 confirmed already resolved
+
+#### [4fdba807] qa-engineer — Pre-02 strengthen persistence test
+- [16:54] Started: Add test validating rate-limit counter persistence across multiple requests
+- [16:54] Test design: Stateful mock with counter map simulating Upstash Redis persistence
+- [16:54] Test added: `shares rate-limit counter state across multiple requests (stateful persistence)` at __tests__/server/security.test.ts:444-495
+- [16:54] Test validates: 4 sequential requests to same client IP with limit=3 correctly blocks on 4th request
+- [16:54] Proof of persistence: sharedCounter.get(clientIp) == 4 after 4 calls, proving counter incremented across all requests
+- [16:54] Full test suite: 16 tests passed (NEW test included)
+- [16:54] Typecheck: OK (no regressions)
+- [16:54] Build: OK (no TypeScript errors in app tsconfig)
+- [16:54] Commit: 05313df "test(security): prove rate-limit counter shared across multiple requests"
+- [16:54] ✅ Complete — Test validates shared counter state validates Pre-02 serverless design
+- [16:55] ✅ Complete — PR #161 opened targeting main. QA + security APPROVED, zero secret values. NOTE: pre-04 worktree was pruned mid-session; branch ref survived and was pushed directly without touching shared checkout.
+- [16:55] QA added stateful persistence test (05313df), 16/16 pass, typecheck+build clean. Handing off to security-reviewer for review + push + PR.
+
+#### [4fdba807] security-reviewer — Pre-02 review + PR
+- [16:57] Started: reviewed diff main...fix/migration-pre-02-serverless-rate-limiter (read-only, no checkout performed by this agent)
+- [16:57] Confirmed only __tests__/server/security.test.ts and docs/issues/migration-pre-02-serverless-rate-limiter.md changed; no source file (lib/server/security.ts) modified; no package.json change; Upstash deps already on main
+- [16:57] New persistence test reviewed: sound, uses only dummy Upstash values (https://example.upstash.io / test-token, pre-existing pattern), does not weaken existing tests
+- [16:57] Sanity-checked lib/server/security.ts (git show, read-only): Redis path has no local try/catch around ratelimit.limit() (fail behavior depends on caller); client identifier derivation via x-real-ip / trusted-proxy-gated x-forwarded-for is reasonable — both noted as non-blocking observations in PR body
+- [16:57] pnpm vitest run __tests__/server/security.test.ts — 16/16 pass
+- [16:57] git push -u origin fix/migration-pre-02-serverless-rate-limiter — pre-push hook (typecheck+lint) passed
+- [16:57] ✅ Complete — APPROVE; PR #162 opened: https://github.com/KimoxStudio/alea-webapp/pull/162
+- [16:58] ✅ Complete — security APPROVED, PR #162 opened targeting main (docs spec + strengthened persistence test, no source change). https://github.com/KimoxStudio/alea-webapp/pull/162
