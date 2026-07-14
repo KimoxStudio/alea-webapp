@@ -896,3 +896,25 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [16:57] git push -u origin fix/migration-pre-02-serverless-rate-limiter — pre-push hook (typecheck+lint) passed
 - [16:57] ✅ Complete — APPROVE; PR #162 opened: https://github.com/KimoxStudio/alea-webapp/pull/162
 - [16:58] ✅ Complete — security APPROVED, PR #162 opened targeting main (docs spec + strengthened persistence test, no source change). https://github.com/KimoxStudio/alea-webapp/pull/162
+
+#### [PR #159] qa-engineer — Add GET test coverage for mark-no-show cron route
+- [13:45] Started: Adding test coverage for new GET handler on /api/cron/mark-no-show
+- [13:47] Checked out branch temp-test-coverage tracking origin/fix/migration-pre-03-register-cron-vercel-json
+- [13:48] Added 6 new GET test cases mirroring POST suite structure:
+  - GET with missing Authorization → 401
+  - GET with wrong bearer token → 401
+  - GET with correct token → 200, service function invoked
+  - GET with no CRON_SECRET env → 401
+  - GET when service throws → 500
+  - GET with zero count → 200
+- [13:50] Validation passed:
+  - pnpm typecheck ✅
+  - pnpm build ✅
+  - __tests__/app/api/cron/mark-no-show.test.ts: 12 tests passed (6 POST + 6 GET)
+- [13:51] Committed: acd3b44 - test(cron/mark-no-show): add GET method test coverage
+- [13:52] Pushed to origin/fix/migration-pre-03-register-cron-vercel-json
+- [13:52] Pre-push validation: typecheck ✅, lint ✅
+- [13:52] ✅ Complete — GET test coverage added, all tests passing
+  - Ready for security-reviewer handoff on PR #159
+  - pr-comment-responder to notify: commit SHA acd3b44
+  - PR comments to update: #3580783193 (original), #3580943665 (follow-up)
