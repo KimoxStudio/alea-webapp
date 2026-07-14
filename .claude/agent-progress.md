@@ -1000,3 +1000,15 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [19:35] Added docs/issues/migration-f0-05-lib-db-seam.md spec
 - [19:40] pnpm typecheck ✅, pnpm build ✅ (exit 0), pnpm test ✅ (64 files / 968 tests passed unchanged), pnpm lint ✅
 - [19:41] ✅ Complete — lib/db seam introduced, zero behavior change, all validations green
+
+#### [F0-05] qa-engineer — Validate lib/db seam
+- [20:00] Started — reviewed diff against main in isolated worktree (/tmp/qa-f0-05-28494), no shared checkout touched
+- [20:05] Confirmed pure indirection: all 14 lib/server/*.ts call sites (plus lib/db/index.ts itself) verified — no function signatures, exported names, or behavior changed
+- [20:10] Cross-checked user-scoped vs admin client call-site counts per file against origin/main (git show) — exact parity confirmed for all 14 files (getDb() count == createSupabaseServerClient() count, getAdminDb() count == createSupabaseServerAdminClient() count)
+- [20:12] Confirmed acceptance criteria: no file outside lib/supabase/server.ts and lib/db/index.ts imports createSupabaseServerClient/createSupabaseServerAdminClient directly (test files mock @/lib/supabase/server transitively, which lib/db wraps — mocks remain valid)
+- [20:15] pnpm install --frozen-lockfile ✅, pnpm typecheck ✅, pnpm build ✅, pnpm lint ✅
+- [20:16] pnpm test: 64 files / 968 tests passed unchanged (no regressions)
+- [20:20] Added __tests__/lib/db.test.ts — minimal smoke test for the new lib/db seam itself (getDb/getAdminDb route to correct factory, return distinct clients); 3 new tests, all passing
+- [20:22] Full suite re-run: 65 files / 971 tests passed
+- [20:23] Committed test(db): add smoke test for lib/db seam (F0-05) and pushed to origin/migration-f0-05-lib-db-seam
+- [20:23] ✅ Complete — APPROVE, ready for security-reviewer
