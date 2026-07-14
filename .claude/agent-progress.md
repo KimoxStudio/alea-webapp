@@ -861,6 +861,15 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [19:25] Wrote docs/issues/migration-pre-04-rotate-p0-secrets.md and docs/SECRET-ROTATION-CHECKLIST.md.
 - [19:30] Ran pnpm build inside worktree to validate docs-only change.
 - [19:32] ✅ Complete — Investigation + rotation checklist committed on branch chore/migration-pre-04-secret-rotation-checklist. No functional code changed, no secret values printed/committed.
+#### [f8e91ebe] software-engineer — verify + commit docs
+- [16:49] Started: independent verification of Pre-01 Edge middleware crypto blocker
+- [16:49] Confirmed middleware.ts imports only from lib/server/security-edge (line 4), not lib/server/security
+- [16:49] Traced full import chain (security-edge.ts, i18n/config.ts, supabase/config.client.ts); grep for Node crypto/fs/net APIs found zero matches
+- [16:49] Confirmed lib/server/security.ts (Node crypto, timingSafeEqual/createHash, import 'server-only') is not reachable from middleware.ts
+- [16:49] Confirmed regression test coverage in __tests__/server/security.test.ts lines 51,62,74,87 for the edge-safe cookie-secure-flag split
+- [16:49] pnpm build succeeded (exit 0, Compiled successfully in 2.7s)
+- [16:49] Verified prior fix commits exist on origin/main: 2541044, 2423dff
+- [16:49] Complete — blocker already resolved, no code changes needed; committed docs/issues/migration-pre-01-crypto-edge-middleware.md and -STATUS.md
 #### [fe9fedd6] software-engineer -- register mark-no-show cron
 - [16:48] Started; confirmed CRON_SECRET auth already present in app/api/cron/mark-no-show/route.ts (untouched)
 - [16:48] Verified mark_no_show_reservations DB function is a passive cleanup query (marks reservations no_show once end_time has passed); no strict timing docs found, chose */15 * * * * cadence
