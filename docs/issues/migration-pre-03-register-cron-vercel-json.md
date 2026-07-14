@@ -1,0 +1,6 @@
+# Pre-03: Register mark-no-show cron in vercel.json
+Phase: Pre (Supabase to Neon migration blockers). Depends on: none.
+Problem: the mark-no-show cron job currently runs via an external scheduler (cron-job.org) rather than Vercel Cron. It is not registered in vercel.json, so it will not run once the project deploys to Vercel and the external scheduler is retired.
+Scope: Find the existing mark-no-show route handler (app/api/cron/mark-no-show/route.ts). Add a crons entry to vercel.json pointing at that route with the correct schedule (match cron-job.org cadence if documented, else infer from route logic/comments). Verify the route already validates CRON_SECRET so it cannot be triggered unauthenticated -- Vercel Cron sends a bearer token that must be checked; add the check if missing.
+Acceptance criteria: vercel.json contains a valid crons entry for mark-no-show. The route rejects requests without a valid cron auth header/secret. pnpm build passes; vercel.json is valid JSON matching Vercel's cron schema.
+Out of scope: do not migrate other cron jobs not currently on cron-job.org. Actual cutover from cron-job.org to Vercel Cron happens at deploy time (user-controlled) -- this issue only prepares config.

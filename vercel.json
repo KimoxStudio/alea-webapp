@@ -1,7 +1,13 @@
 {
   "functions": {
-    "app/api/cron/cancel-pending/route.ts": {
-      "maxDuration": 10
+    "app/api/cron/mark-no-show/route.ts": {
+      "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/mark-no-show",
+      "schedule": "*/15 * * * *"
+    }
+  ]
 }

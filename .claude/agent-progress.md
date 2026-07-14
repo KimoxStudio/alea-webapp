@@ -852,6 +852,36 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [11:26] ✅ Complete — opening PR chore/pre-push-full-validation -> main
 - [11:26] PR opened: https://github.com/KimoxStudio/alea-webapp/pull/157 (chore/pre-push-full-validation -> main)
 
+#### [fe9fedd6] software-engineer -- register mark-no-show cron
+- [16:48] Started; confirmed CRON_SECRET auth already present in app/api/cron/mark-no-show/route.ts (untouched)
+- [16:48] Verified mark_no_show_reservations DB function is a passive cleanup query (marks reservations no_show once end_time has passed); no strict timing docs found, chose */15 * * * * cadence
+- [16:48] Updated vercel.json: added crons entry for /api/cron/mark-no-show (schedule */15 * * * *), functions maxDuration 60; removed stale cancel-pending functions entry (route is dead code returning 410 Gone)
+- [16:48] Created docs/issues/migration-pre-03-register-cron-vercel-json.md
+- [16:49] pnpm build passed (pnpm install run in worktree only)
+- [16:49] Complete -- committed bc70bfb on fix/migration-pre-03-register-cron-vercel-json (not pushed, no PR opened)
+
+#### [fe9fedd6] qa-engineer -- validate vercel.json cron + build
+- [starting] Task claimed. Validating vercel.json JSON syntax, cron schema, build, and route manifest.
+- [complete] JSON validity: PASS - vercel.json is valid JSON
+- [complete] Cron schema: PASS - `crons` array with valid path `/api/cron/mark-no-show`, valid 5-field schedule `*/15 * * * *`
+- [complete] Route file: PASS - app/api/cron/mark-no-show/route.ts exists
+- [complete] Build: PASS - `pnpm build` completed with no errors
+- [complete] Route manifest: PASS - /api/cron/mark-no-show found in build route manifest as dynamic route (ƒ)
+- [complete] Test suite: PASS - 961 tests passed across 64 files (including mark-no-show 6-test file)
+- [complete] Documentation: PRESENT - docs/issues/migration-pre-03-register-cron-vercel-json.md exists
+- [HH:MM] ✅ Complete -- All validations passed. vercel.json config is correct, build succeeds, route registered in manifest, tests green.
+
+#### [fe9fedd6] security-reviewer -- auth review + open PR
+- [16:52] Started: reviewed vercel.json diff (bc70bfb, bc0100d), route.ts auth, tokensMatch, docs file
+- [16:52] Confirmed route.ts untouched by diff; CRON_SECRET bearer check + constant-time tokensMatch() intact; no secrets in vercel.json or docs; cancel-pending functions entry removal confirmed inert (dead 410 route)
+- [16:52] Pushed branch, opened PR #159 (base: main, state: OPEN)
+- [16:52] Complete -- APPROVE. PR #159 opened, not merged.
+
+#### PR#159-review-3580783193 software-engineer — fix GET missing on cron mark-no-show route
+- [00:00] Started — checked out fix/migration-pre-03-register-cron-vercel-json (75d0334) in isolated worktree; original diagnosis worktree agent-afa5a6cd69864a515 was still present but locked to the branch, so worked on local branch swe/cron-get-fix tracking the same remote ref
+- [00:00] Read app/api/cron/mark-no-show/route.ts and __tests__/app/api/cron/mark-no-show.test.ts to verify diagnosis: confirmed shared handleCronRequest() (CRON_SECRET bearer + tokensMatch auth) already existed and POST called it
+- [00:00] Added `export async function GET(request: NextRequest) { return handleCronRequest(request) }` reusing the exact same validated handler; POST left intact for manual/local triggering
+- [00:00] Per project convention, test file changes (GET test block mirroring POST suite) left to qa-engineer — software-engineer does not modify test files
 #### [f8e91ebe] team-lead — Pre-01 crypto edge middleware
 - [16:46] Started — verification-first pipeline; branch fix/migration-pre-01-crypto-edge-middleware off main
 
