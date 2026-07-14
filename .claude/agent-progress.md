@@ -1012,3 +1012,12 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [20:22] Full suite re-run: 65 files / 971 tests passed
 - [20:23] Committed test(db): add smoke test for lib/db seam (F0-05) and pushed to origin/migration-f0-05-lib-db-seam
 - [20:23] ✅ Complete — APPROVE, ready for security-reviewer
+
+#### [F0-05] security-reviewer — Review lib/db seam + open PR
+- [20:35] Started — reviewed develop...migration-f0-05-lib-db-seam diff in isolated worktree, no shared checkout touched
+- [20:40] Confirmed strict 1:1 mapping across all 14 lib/server/*.ts call sites (createSupabaseServerClient→getDb(), createSupabaseServerAdminClient→getAdminDb()) — no admin/user-scoped swap, programmatically verified
+- [20:42] Confirmed lib/supabase/server.ts unchanged; no production file outside lib/supabase/server.ts / lib/db/index.ts imports the raw factories (only __tests__/** mocks remain, expected)
+- [20:44] Confirmed lib/server/data-scoping.ts (assertMemberRowsScoped) untouched
+- [20:45] Noted: branch history includes already-merged migration-pre-01..04 commits from main not yet absorbed by develop — flagged in PR body as a separate develop<-main sync item (user-only merge decision), not a defect in this change
+- [20:48] Opened PR #163 (migration-f0-05-lib-db-seam -> develop)
+- [20:48] ✅ Complete — APPROVE, PR #163 opened
