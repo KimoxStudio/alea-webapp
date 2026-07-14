@@ -4,7 +4,13 @@
 
 set -euo pipefail
 
-HOOKS_DIR="$(git rev-parse --git-dir)/hooks"
+
+# `--git-path hooks` resolves the shared hooks directory correctly, both in a
+# normal checkout and inside a `git worktree` (where `.git` is a file that
+# points at a per-worktree git dir under `.git/worktrees/<name>`, which does
+# NOT have a `hooks/` folder git actually reads). `--git-dir` would resolve to
+# that per-worktree dir and silently install a hook Git never runs.
+HOOKS_DIR="$(git rev-parse --git-path hooks)"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 MANAGED_MARKER="# alea-webapp-managed-hook"
 
