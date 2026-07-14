@@ -852,6 +852,15 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [11:26] ✅ Complete — opening PR chore/pre-push-full-validation -> main
 - [11:26] PR opened: https://github.com/KimoxStudio/alea-webapp/pull/157 (chore/pre-push-full-validation -> main)
 
+#### [8802a71f] software-engineer — investigate + write rotation checklist
+- [19:05] Started. Branch chore/migration-pre-04-secret-rotation-checklist created off main (e7fb6da).
+- [19:10] Re-verified AUTH_SESSION_SECRET: zero code consumers (.ts/.tsx/.js/.mjs/.cjs), not in .env.example, only referenced in docs/ROLLBACK.md (lines 122,127,141,151).
+- [19:15] Traced CRON_SECRET consumer to app/api/cron/mark-no-show/route.ts:7-8 (via tokensMatch from lib/server/security).
+- [19:18] Traced SUPABASE_SECRET_DEFAULT_KEY chain: lib/supabase/config.ts:18-19 -> lib/supabase/server.ts:67-68 (createSupabaseServerAdminClient).
+- [19:20] Found QA creds (PLAYWRIGHT_QA_USER/PASSWORD + secondary + E2E_ALLOW_DESTRUCTIVE) documented in qa/e2e/README.md, set via .env.e2e.local, not in .env.example.
+- [19:25] Wrote docs/issues/migration-pre-04-rotate-p0-secrets.md and docs/SECRET-ROTATION-CHECKLIST.md.
+- [19:30] Ran pnpm build inside worktree to validate docs-only change.
+- [19:32] ✅ Complete — Investigation + rotation checklist committed on branch chore/migration-pre-04-secret-rotation-checklist. No functional code changed, no secret values printed/committed.
 #### [f8e91ebe] software-engineer — verify + commit docs
 - [16:49] Started: independent verification of Pre-01 Edge middleware crypto blocker
 - [16:49] Confirmed middleware.ts imports only from lib/server/security-edge (line 4), not lib/server/security
