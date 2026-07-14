@@ -841,3 +841,20 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [16:48] Created docs/issues/migration-pre-03-register-cron-vercel-json.md
 - [16:49] pnpm build passed (pnpm install run in worktree only)
 - [16:49] Complete -- committed bc70bfb on fix/migration-pre-03-register-cron-vercel-json (not pushed, no PR opened)
+
+#### [fe9fedd6] qa-engineer -- validate vercel.json cron + build
+- [starting] Task claimed. Validating vercel.json JSON syntax, cron schema, build, and route manifest.
+- [complete] JSON validity: PASS - vercel.json is valid JSON
+- [complete] Cron schema: PASS - `crons` array with valid path `/api/cron/mark-no-show`, valid 5-field schedule `*/15 * * * *`
+- [complete] Route file: PASS - app/api/cron/mark-no-show/route.ts exists
+- [complete] Build: PASS - `pnpm build` completed with no errors
+- [complete] Route manifest: PASS - /api/cron/mark-no-show found in build route manifest as dynamic route (ƒ)
+- [complete] Test suite: PASS - 961 tests passed across 64 files (including mark-no-show 6-test file)
+- [complete] Documentation: PRESENT - docs/issues/migration-pre-03-register-cron-vercel-json.md exists
+- [HH:MM] ✅ Complete -- All validations passed. vercel.json config is correct, build succeeds, route registered in manifest, tests green.
+
+#### [fe9fedd6] security-reviewer -- auth review + open PR
+- [16:52] Started: reviewed vercel.json diff (bc70bfb, bc0100d), route.ts auth, tokensMatch, docs file
+- [16:52] Confirmed route.ts untouched by diff; CRON_SECRET bearer check + constant-time tokensMatch() intact; no secrets in vercel.json or docs; cancel-pending functions entry removal confirmed inert (dead 410 route)
+- [16:52] Pushed branch, opened PR #159 (base: main, state: OPEN)
+- [16:52] Complete -- APPROVE. PR #159 opened, not merged.
