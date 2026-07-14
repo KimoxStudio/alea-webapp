@@ -33,6 +33,10 @@ async function handleCronRequest(request: NextRequest) {
   }
 }
 
+export async function GET(request: NextRequest) {
+  return handleCronRequest(request)
+}
+
 export async function POST(request: NextRequest) {
   return handleCronRequest(request)
 }
