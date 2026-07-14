@@ -46,3 +46,11 @@
 - [2026-06-19 08:10] QA: validation passed.
 - [2026-06-19 08:21] QA: validation passed.
 - [2026-06-19 08:40] QA: validation passed.
+
+## 2026-06-20
+
+- Security/quality audit conducted by parallel agents covering security, code quality, tests, and scalability.
+- Findings tracked as KIM-393..412 and remediated across 13 pull requests (#135–147), which were merged to develop and released to main via PR #155.
+- Exceptions: KIM-404 (Vercel cron task, PR #142) closed without merge; KIM-411 and KIM-412 deferred for future work.
+- The original audit report (`docs/AUDIT-2026-06-20.md`) was not committed to git to avoid snapshot lock-in.
+- Forward-looking items (3 Vercel deployment blockers, P0 secret rotation, `lib/server` reorganization) are tracked in `docs/MIGRATION-supabase-to-neon.md`.
