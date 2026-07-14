@@ -839,3 +839,5 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [16:48] Verified mark_no_show_reservations DB function is a passive cleanup query (marks reservations no_show once end_time has passed); no strict timing docs found, chose */15 * * * * cadence
 - [16:48] Updated vercel.json: added crons entry for /api/cron/mark-no-show (schedule */15 * * * *), functions maxDuration 60; removed stale cancel-pending functions entry (route is dead code returning 410 Gone)
 - [16:48] Created docs/issues/migration-pre-03-register-cron-vercel-json.md
+- [16:49] pnpm build passed (pnpm install run in worktree only)
+- [16:49] Complete -- committed bc70bfb on fix/migration-pre-03-register-cron-vercel-json (not pushed, no PR opened)
