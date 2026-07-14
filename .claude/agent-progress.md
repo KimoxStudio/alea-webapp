@@ -833,3 +833,9 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [11:26] Security Status: APPROVE — 0 CRITICAL/HIGH/MEDIUM, 0 LOW findings
 - [11:26] ✅ Complete — opening PR chore/pre-push-full-validation -> main
 - [11:26] PR opened: https://github.com/KimoxStudio/alea-webapp/pull/157 (chore/pre-push-full-validation -> main)
+
+#### [fe9fedd6] software-engineer -- register mark-no-show cron
+- [16:48] Started; confirmed CRON_SECRET auth already present in app/api/cron/mark-no-show/route.ts (untouched)
+- [16:48] Verified mark_no_show_reservations DB function is a passive cleanup query (marks reservations no_show once end_time has passed); no strict timing docs found, chose */15 * * * * cadence
+- [16:48] Updated vercel.json: added crons entry for /api/cron/mark-no-show (schedule */15 * * * *), functions maxDuration 60; removed stale cancel-pending functions entry (route is dead code returning 410 Gone)
+- [16:48] Created docs/issues/migration-pre-03-register-cron-vercel-json.md
