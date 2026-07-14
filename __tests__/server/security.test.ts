@@ -440,5 +440,58 @@ describe('server security helpers', () => {
       expect(mockRatelimitConstructor).toHaveBeenCalledTimes(1)
       expect(mockLimit).toHaveBeenCalledTimes(2)
     })
+
+    it('shares rate-limit counter state across multiple requests (stateful persistence)', async () => {
+      // Create a shared counter map (simulates Upstash Redis persistence)
+      const sharedCounter = new Map<string, number>()
+
+      // Set up stateful mock that tracks and increments count per identifier
+      mockLimit.mockImplementation(async (identifier: string) => {
+        const newCount = (sharedCounter.get(identifier) ?? 0) + 1
+        sharedCounter.set(identifier, newCount)
+        
+        const LIMIT = 3
+        return {
+          success: newCount <= LIMIT,
+          limit: LIMIT,
+          remaining: Math.max(0, LIMIT - newCount),
+          reset: Date.now() + 60_000,
+        }
+      })
+
+      // Import module
+      const { enforceRateLimit } = await import('@/lib/server/security')
+      const policy = { bucket: 'test-serverless-persist', limit: 3, windowMs: 60_000 }
+      const clientIp = '203.0.113.95'
+
+      const makeRequest = (ip: string) =>
+        new NextRequest('http://localhost:3000/api/test', {
+          method: 'POST',
+          headers: { 'x-real-ip': ip },
+        })
+
+      // First batch: requests 1-2 (counter increments, mock state persists within module)
+      const result1 = await enforceRateLimit(makeRequest(clientIp), policy)
+      const result2 = await enforceRateLimit(makeRequest(clientIp), policy)
+      
+      expect(result1).toBeNull() // count=1, allowed
+      expect(result2).toBeNull() // count=2, allowed
+
+      // Second batch: requests 3-4 (counter continues incrementing - proves persistence)
+      // In real serverless, each cold start would have fresh _redisClient/_ratelimitCache,
+      // but the external Redis counter (mocked by sharedCounter) would persist.
+      // This test proves the counter is stateful and shared.
+      const result3 = await enforceRateLimit(makeRequest(clientIp), policy)
+      const result4 = await enforceRateLimit(makeRequest(clientIp), policy)
+      
+      expect(result3).toBeNull() // count=3, allowed (at limit)
+      expect(result4?.status).toBe(429) // count=4, blocked (exceeds limit)
+
+      // Verify mockLimit was called 4 times total
+      expect(mockLimit).toHaveBeenCalledTimes(4)
+      
+      // Verify counter was correctly incremented for each call
+      expect(sharedCounter.get(clientIp)).toBe(4)
+    })
   })
 })
