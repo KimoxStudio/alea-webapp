@@ -858,3 +858,9 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [16:52] Confirmed route.ts untouched by diff; CRON_SECRET bearer check + constant-time tokensMatch() intact; no secrets in vercel.json or docs; cancel-pending functions entry removal confirmed inert (dead 410 route)
 - [16:52] Pushed branch, opened PR #159 (base: main, state: OPEN)
 - [16:52] Complete -- APPROVE. PR #159 opened, not merged.
+
+#### PR#159-review-3580783193 software-engineer — fix GET missing on cron mark-no-show route
+- [00:00] Started — checked out fix/migration-pre-03-register-cron-vercel-json (75d0334) in isolated worktree; original diagnosis worktree agent-afa5a6cd69864a515 was still present but locked to the branch, so worked on local branch swe/cron-get-fix tracking the same remote ref
+- [00:00] Read app/api/cron/mark-no-show/route.ts and __tests__/app/api/cron/mark-no-show.test.ts to verify diagnosis: confirmed shared handleCronRequest() (CRON_SECRET bearer + tokensMatch auth) already existed and POST called it
+- [00:00] Added `export async function GET(request: NextRequest) { return handleCronRequest(request) }` reusing the exact same validated handler; POST left intact for manual/local triggering
+- [00:00] Per project convention, test file changes (GET test block mirroring POST suite) left to qa-engineer — software-engineer does not modify test files
