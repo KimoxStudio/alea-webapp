@@ -992,3 +992,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
   - Ready for security-reviewer handoff on PR #159
   - pr-comment-responder to notify: commit SHA acd3b44
   - PR comments to update: #3580783193 (original), #3580943665 (follow-up)
+
+#### [F0-05] software-engineer — Introduce lib/db seam
+- [19:15] Started — branch created from origin/main (local branch name `f0-05-lib-db-seam-work` due to a pre-existing locked worktree already holding `migration-f0-05-lib-db-seam`; pushed to origin under the correct branch name)
+- [19:25] Created lib/db/index.ts (getDb / getAdminDb thin wrapper around lib/supabase/server.ts)
+- [19:30] Migrated all 15 call sites (14 lib/server/*.ts service files) from createSupabaseServerClient/createSupabaseServerAdminClient to lib/db seam; lib/supabase/server.ts left unchanged as underlying factory; auth.ts session-cookie logic (createSupabaseRouteHandlerClient) left untouched, out of scope for this issue
+- [19:35] Added docs/issues/migration-f0-05-lib-db-seam.md spec
+- [19:40] pnpm typecheck ✅, pnpm build ✅ (exit 0), pnpm test ✅ (64 files / 968 tests passed unchanged), pnpm lint ✅
+- [19:41] ✅ Complete — lib/db seam introduced, zero behavior change, all validations green
