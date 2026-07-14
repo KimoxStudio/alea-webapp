@@ -441,16 +441,18 @@ describe('server security helpers', () => {
       expect(mockLimit).toHaveBeenCalledTimes(2)
     })
 
-    it('shares rate-limit counter state across multiple requests (stateful persistence)', async () => {
-      // Create a shared counter map (simulates Upstash Redis persistence)
+    it('persists rate-limit counter state across a simulated serverless cold start', async () => {
+      // `sharedCounter` stands in for the real Upstash Redis server: it lives
+      // in the *test file's* module scope, which `vi.resetModules()` does not
+      // clear. This is what a real cold start's persistent Redis store would
+      // be relative to two independent Lambda/Edge instances.
       const sharedCounter = new Map<string, number>()
+      const LIMIT = 2
 
-      // Set up stateful mock that tracks and increments count per identifier
       mockLimit.mockImplementation(async (identifier: string) => {
         const newCount = (sharedCounter.get(identifier) ?? 0) + 1
         sharedCounter.set(identifier, newCount)
-        
-        const LIMIT = 3
+
         return {
           success: newCount <= LIMIT,
           limit: LIMIT,
@@ -459,39 +461,50 @@ describe('server security helpers', () => {
         }
       })
 
-      // Import module
-      const { enforceRateLimit } = await import('@/lib/server/security')
-      const policy = { bucket: 'test-serverless-persist', limit: 3, windowMs: 60_000 }
+      const policy = { bucket: 'test-cold-start-persist', limit: LIMIT, windowMs: 60_000 }
       const clientIp = '203.0.113.95'
-
-      const makeRequest = (ip: string) =>
+      const makeRequest = () =>
         new NextRequest('http://localhost:3000/api/test', {
           method: 'POST',
-          headers: { 'x-real-ip': ip },
+          headers: { 'x-real-ip': clientIp },
         })
 
-      // First batch: requests 1-2 (counter increments, mock state persists within module)
-      const result1 = await enforceRateLimit(makeRequest(clientIp), policy)
-      const result2 = await enforceRateLimit(makeRequest(clientIp), policy)
-      
-      expect(result1).toBeNull() // count=1, allowed
-      expect(result2).toBeNull() // count=2, allowed
+      // --- "Instance A": first serverless invocation ---
+      // vi.resetModules() clears the module registry, exactly like a fresh
+      // cold start discards the previous instance's module-level
+      // `_redisClient` / `_ratelimitCache` singletons. Re-importing gives us
+      // a brand-new module instance to exercise.
+      vi.resetModules()
+      const instanceA = await import('@/lib/server/security')
 
-      // Second batch: requests 3-4 (counter continues incrementing - proves persistence)
-      // In real serverless, each cold start would have fresh _redisClient/_ratelimitCache,
-      // but the external Redis counter (mocked by sharedCounter) would persist.
-      // This test proves the counter is stateful and shared.
-      const result3 = await enforceRateLimit(makeRequest(clientIp), policy)
-      const result4 = await enforceRateLimit(makeRequest(clientIp), policy)
-      
-      expect(result3).toBeNull() // count=3, allowed (at limit)
-      expect(result4?.status).toBe(429) // count=4, blocked (exceeds limit)
+      const resultA1 = await instanceA.enforceRateLimit(makeRequest(), policy)
+      const resultA2 = await instanceA.enforceRateLimit(makeRequest(), policy)
 
-      // Verify mockLimit was called 4 times total
-      expect(mockLimit).toHaveBeenCalledTimes(4)
-      
-      // Verify counter was correctly incremented for each call
-      expect(sharedCounter.get(clientIp)).toBe(4)
+      expect(resultA1).toBeNull() // count=1, allowed
+      expect(resultA2).toBeNull() // count=2, allowed (at limit)
+
+      // --- "Instance B": second serverless invocation (new cold start) ---
+      // Reset the module registry again and re-import. `instanceB` has its
+      // own fresh `_redisClient` / `_ratelimitCache` module-level bindings —
+      // if `enforceRateLimit` regressed to counting requests in local module
+      // memory instead of delegating to the (mocked) Upstash-backed
+      // `ratelimit.limit()` call, this fresh instance would start back at
+      // zero and wrongly allow the next request.
+      vi.resetModules()
+      const instanceB = await import('@/lib/server/security')
+
+      // Sanity check that this really is a distinct module instance and not
+      // the same cached export object.
+      expect(instanceB.enforceRateLimit).not.toBe(instanceA.enforceRateLimit)
+
+      const resultB1 = await instanceB.enforceRateLimit(makeRequest(), policy)
+
+      // The externally persisted (mocked Upstash) counter is already at the
+      // limit from Instance A, so Instance B — despite being a fresh module
+      // with no local memory of prior requests — must still reject.
+      expect(resultB1?.status).toBe(429)
+      expect(sharedCounter.get(clientIp)).toBe(3)
+      expect(mockLimit).toHaveBeenCalledTimes(3)
     })
   })
 })
