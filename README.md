@@ -176,7 +176,7 @@ The hook currently runs:
 - `pnpm test`
 - `pnpm build`
 
-It does not replace the checks that used to run only in GitHub Actions, such as coverage, dependency audit, SAST, or integration validation. Treat it as the local fast-fail gate for the main development path, not as a full CI substitute.
+This repository has no `.github/workflows/` CI pipeline — there is no automated coverage report, dependency audit, or SAST check on push or PR. The local `pre-push` hook (`scripts/ci-local.sh`) is the only automated gate today. Treat it as the local fast-fail gate for the main development path, not as a full CI substitute.
 
 ## Available Scripts
 
