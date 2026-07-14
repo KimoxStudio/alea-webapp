@@ -15,6 +15,19 @@ Eliminate Supabase entirely. Migrate data, auth, storage, and cron to the Vercel
 3. **Vercel Cron** (drop cron-job.org).
 4. **Auth + data migrate together in a single atomic cutover** — Supabase Auth (GoTrue) needs its `auth.users` table inside the Supabase Postgres; if data leaves, GoTrue loses its DB. "Migrate auth last" is rejected.
 
+## RLS → service-layer parity gate (blocks F2 cutover)
+
+Decision 2 removes the database authorization layer entirely, so it must not be able to happen silently. This project's existing convention already puts privilege checks (ownership + role) in the service layer, never in route handlers (root `CLAUDE.md`) — F1 extends that same pattern to cover what RLS currently does. Before any RLS policy is dropped, F1 (issue #11) must produce and attach the following parity artifact to that issue:
+
+| Requirement | Detail |
+|---|---|
+| Enumerate | List all 30 existing RLS policies (table, policy name, command, `USING`/`WITH CHECK` expression). Producing this list is in scope of issue #11 itself, not this plan. |
+| Map | A 1:1 mapping from each RLS policy to the exact service-layer function/file that replaces it. |
+| Test | Per replaced policy, tests covering: owner-access allow, admin-access allow, and cross-tenant/other-user denial. |
+| Sign-off | Parity artifact (list + mapping + passing tests) reviewed before F2 cutover starts — "audit later" is not acceptable. |
+
+This gate must be **fully satisfied**, not merely started, before RLS is dropped during the F2 cutover. F2 (issues #12/#13) is blocked on this artifact, in addition to its existing dependency on F1.
+
 ## Current Supabase surface (measured 2026-07-09)
 
 | Metric | Count |
@@ -41,7 +54,7 @@ Rotate all `.env.local` secrets: service-role key, `CRON_SECRET`, `AUTH_SESSION_
 ## Phases
 
 - **F0 — Abstraction seams + reorg** (no downtime): introduce `lib/db`, `lib/auth/session`, `lib/storage/qr`; regroup flat `lib/server/` (24 files) by domain.
-- **F1 — Build target in parallel** (no cutover): Auth.js (Credentials + bcrypt) + Drizzle schema against Neon. Translate the 85 migrations to the final Drizzle schema; the 30 RLS policies become service-layer authorization checks.
+- **F1 — Build target in parallel** (no cutover): Auth.js (Credentials + bcrypt) + Drizzle schema against Neon. Translate the 85 migrations to the final Drizzle schema; the 30 RLS policies become service-layer authorization checks, subject to the [RLS → service-layer parity gate](#rls--service-layer-parity-gate-blocks-f2-cutover).
 - **F2 — Atomic cutover**: `pg_dump` → restore data; activate Auth.js + Drizzle; copy bcrypt hashes from `auth.users.encrypted_password` → `profiles.password_hash` (bcryptjs-compatible, no re-hash); invalidate sessions (users re-login once).
 - **F3 — Vercel Blob**: migrate QR codes (2 files) + backfill dead URLs.
 - **F4 — Cleanup**: remove Supabase deps/dirs.
@@ -84,8 +97,8 @@ Each row below becomes one Linear issue.
 | 8 | Regroup `lib/server` by domain | F0 | 1–4 |
 | 9 | Build Auth.js (Credentials + bcrypt) | F1 | F0 |
 | 10 | Build Drizzle schema vs Neon (translate 85 migrations) | F1 | F0 |
-| 11 | Migrate 30 RLS policies to service-layer checks + audit coverage | F1 | 10 |
-| 12 | Atomic cutover runbook + rehearsal | F2 | F1 |
+| 11 | Migrate 30 RLS policies to service-layer checks + audit coverage — must satisfy the [RLS → service-layer parity gate](#rls--service-layer-parity-gate-blocks-f2-cutover) | F1 | 10 |
+| 12 | Atomic cutover runbook + rehearsal | F2 | F1, parity gate sign-off |
 | 13 | Execute cutover (user-only) | F2 | 12 |
 | 14 | Migrate QR to Vercel Blob + backfill URLs | F3 | F2 |
 | 15 | Remove Supabase deps/dirs | F4 | F3, F4 |
