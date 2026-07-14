@@ -820,6 +820,24 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [00:00] pnpm typecheck — pass; pnpm lint — pass (no ESLint warnings/errors)
 - [00:00] ✅ Complete — 3 files modified (.gitignore, README.md, scripts/ci-local.sh), 1 file added (docs/issues/admin-sections-refactor.md), committed and pushed
 
+#### PR-157-conflict software-engineer — resolve PR #157 conflict with #156, verify pre-push hook end-to-end
+- [11:48] Started — checked out chore/pre-push-full-validation in isolated worktree (pruned two stale worktree entries first)
+- [11:49] Merged origin/main into chore/pre-push-full-validation; conflict in scripts/ci-local.sh resolved by keeping Typecheck→Lint→Test→Build (dropped obsolete "no CI pipeline, run manually" comment); .gitignore and agent-progress.md auto-merged cleanly; manually fixed README.md's "Local CI Hook" section (auto-merge had kept #156's now-stale "only typecheck/lint" wording) to list all 4 steps — merge commit 144260e
+- [11:51] pnpm install in worktree (deps were missing, isolated node_modules); copied local .env.local into worktree (not committed, gitignored) so build could run
+- [11:51] Ran `pnpm hooks:install` in worktree: FAILED — script computes hooks dir via `git rev-parse --git-dir`, which in a worktree resolves to the private `.git/worktrees/<name>` dir (no `hooks/` subfolder there), not the shared `.git/hooks` that git actually reads (confirmed via `git rev-parse --git-path hooks`). Did not modify the pre-existing shared `.git/hooks/pre-push` (already installed from the primary checkout, unrelated to this task)
+- [11:51] Verified real push-triggered hook end-to-end without touching the shared hook: used `git -c core.hooksPath=<scratch temp dir>` (hook file replicating install-hooks.sh output, pointed at this worktree's scripts/ci-local.sh) to do a real `git push origin HEAD:refs/heads/chore/pre-push-full-validation` — all 4 steps (Typecheck, Lint, Test 64 files/961 passed, Build 43/43 pages) ran in order and passed; push succeeded (35278d0..144260e)
+- [11:52] Verified blocking + --no-verify bypass on a disposable ref (tmp-hook-verify-test, deleted after): temporarily broke Lint step locally (uncommitted) → push without --no-verify blocked (exit 1, hook printed ✗ lint falló); same push with --no-verify succeeded and skipped the hook entirely. Reverted the local edit, deleted the disposable remote branch
+- [11:53] Confirmed via `gh pr view 157 --json mergeable,mergeStateStatus`: MERGEABLE / CLEAN
+
+#### PR157-comment-3580785336 pr-comment-responder — fix install-hooks.sh worktree bug + smoke test
+- [12:05] Started — reviewer Oiranca flagged that `pnpm hooks:install` silently fails to install a working pre-push hook when run from inside a `git worktree`, because `scripts/install-hooks.sh` locates the hooks dir via `git rev-parse --git-dir` (resolves to the private per-worktree git dir with no `hooks/` folder Git reads) instead of `git rev-parse --git-path hooks` (resolves the shared hooks dir correctly in both a normal checkout and a worktree)
+- [12:06] Fixed `scripts/install-hooks.sh`: `HOOKS_DIR="$(git rev-parse --git-path hooks)"` replacing `"$(git rev-parse --git-dir)/hooks"`, with an inline comment explaining why
+- [12:10] Added `scripts/verify-hooks-worktree.sh`: self-contained smoke test that builds a throwaway scratch git repo + worktree in a temp dir (never touches this project's real `.git`), runs `install-hooks.sh` inside the worktree, and asserts the `pre-push` hook lands at `git rev-parse --git-path hooks` with the managed marker + executable bit, plus a negative sanity check that the per-worktree private git-dir has no `hooks/pre-push` (proving the old `--git-dir` behavior would have been silently broken)
+- [12:11] Wired `pnpm hooks:verify:worktree` in package.json (same Windows-skip pattern as `hooks:install`) and documented both the fix and the verification command in README.md's "Local CI Hook" section + Available Scripts table
+- [12:15] Validation: `pnpm hooks:verify:worktree` passes; `pnpm hooks:install` re-run against the real repo correctly resolves the shared `.git/hooks` and safely no-ops (pre-existing unmanaged hook, unchanged); `pnpm lint` — no warnings/errors; `pnpm typecheck` — pass
+- [12:16] Note: no Task/SendMessage tool available in this session to delegate to a separate software-engineer/qa-engineer/security-reviewer per the standard pipeline — implemented directly per pr-comment-responder's own role definition (delegation table lists pr-comment-responder as the worktree-isolated implementer for "PR comment fixes"); flagged to coordinator
+- [12:17] ✅ Complete — 3 files modified (scripts/install-hooks.sh, package.json, README.md), 1 file added (scripts/verify-hooks-worktree.sh), committed and pushed to chore/pre-push-full-validation; replied to review comment 3580785336
+- [11:53] ✅ Complete — merge pushed to origin/chore/pre-push-full-validation (144260e), PR #157 now CLEAN
 #### repo-audit-cleanup-2026-07-14 security-reviewer — security review + PR open
 - [11:10] Started — reviewed diff on chore/repo-audit-cleanup-2026-07-14 (develop..branch): .gitignore, README.md, scripts/ci-local.sh, docs/issues/admin-sections-refactor.md
 - [11:10] Findings: 0 CRITICAL/HIGH/MEDIUM/LOW. Confirmed .env/.env.* ignore rules untouched, no .github/workflows/ or turbo.json exist (matches corrected doc claims), no secrets in new markdown file, scripts/ci-local.sh logic unchanged (comment only)
@@ -842,6 +860,36 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [17:42] Validation: pnpm typecheck ✅, pnpm test (full suite) 64 files / 962 tests ✅, pnpm build ✅
 - [17:43] ⚠️ Note: no Task/agent-spawning tool available in this session to hand off to software-engineer/qa-engineer/security-reviewer as the coordinator's mid-task correction requested; implemented directly per pr-comment-responder's role definition and self-validated (typecheck/build/full test suite + manual regression-injection proof) instead — flagging this limitation for coordinator visibility
 - [17:43] ✅ Complete — committed + pushed test-only fix to fix/migration-pre-02-serverless-rate-limiter, replied to review comment 3580783185
+#### [fe9fedd6] software-engineer -- register mark-no-show cron
+- [16:48] Started; confirmed CRON_SECRET auth already present in app/api/cron/mark-no-show/route.ts (untouched)
+- [16:48] Verified mark_no_show_reservations DB function is a passive cleanup query (marks reservations no_show once end_time has passed); no strict timing docs found, chose */15 * * * * cadence
+- [16:48] Updated vercel.json: added crons entry for /api/cron/mark-no-show (schedule */15 * * * *), functions maxDuration 60; removed stale cancel-pending functions entry (route is dead code returning 410 Gone)
+- [16:48] Created docs/issues/migration-pre-03-register-cron-vercel-json.md
+- [16:49] pnpm build passed (pnpm install run in worktree only)
+- [16:49] Complete -- committed bc70bfb on fix/migration-pre-03-register-cron-vercel-json (not pushed, no PR opened)
+
+#### [fe9fedd6] qa-engineer -- validate vercel.json cron + build
+- [starting] Task claimed. Validating vercel.json JSON syntax, cron schema, build, and route manifest.
+- [complete] JSON validity: PASS - vercel.json is valid JSON
+- [complete] Cron schema: PASS - `crons` array with valid path `/api/cron/mark-no-show`, valid 5-field schedule `*/15 * * * *`
+- [complete] Route file: PASS - app/api/cron/mark-no-show/route.ts exists
+- [complete] Build: PASS - `pnpm build` completed with no errors
+- [complete] Route manifest: PASS - /api/cron/mark-no-show found in build route manifest as dynamic route (ƒ)
+- [complete] Test suite: PASS - 961 tests passed across 64 files (including mark-no-show 6-test file)
+- [complete] Documentation: PRESENT - docs/issues/migration-pre-03-register-cron-vercel-json.md exists
+- [HH:MM] ✅ Complete -- All validations passed. vercel.json config is correct, build succeeds, route registered in manifest, tests green.
+
+#### [fe9fedd6] security-reviewer -- auth review + open PR
+- [16:52] Started: reviewed vercel.json diff (bc70bfb, bc0100d), route.ts auth, tokensMatch, docs file
+- [16:52] Confirmed route.ts untouched by diff; CRON_SECRET bearer check + constant-time tokensMatch() intact; no secrets in vercel.json or docs; cancel-pending functions entry removal confirmed inert (dead 410 route)
+- [16:52] Pushed branch, opened PR #159 (base: main, state: OPEN)
+- [16:52] Complete -- APPROVE. PR #159 opened, not merged.
+
+#### PR#159-review-3580783193 software-engineer — fix GET missing on cron mark-no-show route
+- [00:00] Started — checked out fix/migration-pre-03-register-cron-vercel-json (75d0334) in isolated worktree; original diagnosis worktree agent-afa5a6cd69864a515 was still present but locked to the branch, so worked on local branch swe/cron-get-fix tracking the same remote ref
+- [00:00] Read app/api/cron/mark-no-show/route.ts and __tests__/app/api/cron/mark-no-show.test.ts to verify diagnosis: confirmed shared handleCronRequest() (CRON_SECRET bearer + tokensMatch auth) already existed and POST called it
+- [00:00] Added `export async function GET(request: NextRequest) { return handleCronRequest(request) }` reusing the exact same validated handler; POST left intact for manual/local triggering
+- [00:00] Per project convention, test file changes (GET test block mirroring POST suite) left to qa-engineer — software-engineer does not modify test files
 #### [f8e91ebe] team-lead — Pre-01 crypto edge middleware
 - [16:46] Started — verification-first pipeline; branch fix/migration-pre-01-crypto-edge-middleware off main
 

@@ -161,6 +161,14 @@ The repository uses a local `pre-push` hook to run the core validation checks be
 
    On Windows, this command requires Bash or WSL. If Bash is not available, the script exits without modifying your environment.
 
+   `scripts/install-hooks.sh` resolves the hooks directory with `git rev-parse --git-path hooks`, so it installs correctly both in a normal checkout and inside a `git worktree` (where `.git` is a file, not the real hooks directory). You can verify the hook actually gets installed in a worktree with:
+
+   ```bash
+   pnpm hooks:verify:worktree
+   ```
+
+   This creates a temporary detached worktree, runs `install-hooks.sh` inside it, and asserts the `pre-push` hook landed at the path Git will actually read for that worktree.
+
 2. Push as usual:
 
    ```bash
@@ -173,8 +181,10 @@ The hook currently runs:
 
 - `pnpm typecheck`
 - `pnpm lint`
+- `pnpm test`
+- `pnpm build`
 
-This repository has no `.github/workflows/` CI pipeline — there is no automated test run, coverage report, dependency audit, or SAST check on push or PR. The local `pre-push` hook (`scripts/ci-local.sh`) is the only automated gate today, and it only covers typecheck and lint. Run `pnpm test` and `pnpm build` manually before pushing to catch what the hook does not.
+This repository has no `.github/workflows/` CI pipeline — there is no automated coverage report, dependency audit, or SAST check on push or PR. The local `pre-push` hook (`scripts/ci-local.sh`) is the only automated gate today. Treat it as the local fast-fail gate for the main development path, not as a full CI substitute.
 
 ## Available Scripts
 
@@ -189,6 +199,7 @@ This repository has no `.github/workflows/` CI pipeline — there is no automate
 | `pnpm typecheck` | TypeScript type-check (no emit) |
 | `pnpm security:deps` | Audit production dependencies |
 | `pnpm hooks:install` | Install the local `pre-push` hook |
+| `pnpm hooks:verify:worktree` | Smoke test: confirms `hooks:install` installs the hook correctly inside a `git worktree` |
 
 ## Developer Checklist
 
