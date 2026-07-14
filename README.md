@@ -173,10 +173,8 @@ The hook currently runs:
 
 - `pnpm typecheck`
 - `pnpm lint`
-- `pnpm test`
-- `pnpm build`
 
-It does not replace the checks that used to run only in GitHub Actions, such as coverage, dependency audit, SAST, or integration validation. Treat it as the local fast-fail gate for the main development path, not as a full CI substitute.
+This repository has no `.github/workflows/` CI pipeline — there is no automated test run, coverage report, dependency audit, or SAST check on push or PR. The local `pre-push` hook (`scripts/ci-local.sh`) is the only automated gate today, and it only covers typecheck and lint. Run `pnpm test` and `pnpm build` manually before pushing to catch what the hook does not.
 
 ## Available Scripts
 

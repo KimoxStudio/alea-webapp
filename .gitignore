@@ -8,9 +8,6 @@ coverage
 .env.*
 !.env.example
 
-# Turbo cache
-.turbo/
-
 # Agent coordination cache
 .agent-cache/
 .claude/worktrees/

@@ -811,3 +811,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [23:43] Captured compensating delete `{ error }` in lib/server/club-events-service.ts createClubEvent; logs console.error with orphaned event id on failure, then still rethrows original RPC error (matches uploads-service.ts logging style)
 - [23:44] Added regression test in __tests__/server/club-events-service.test.ts forcing both block RPC and compensating delete to fail; verified it fails without the fix (0 console.error calls) and passes with it
 - [23:44] ✅ Complete — vitest 27/27 passed, pnpm build green, pushed to feat/oir-203-admin-club-events
+
+#### repo-audit-cleanup-2026-07-14 software-engineer — CI docs cleanup, dead gitignore entry, admin refactor issue spec
+- [00:00] Started — branch chore/repo-audit-cleanup-2026-07-14 created from develop
+- [00:00] Task A: fixed stale GitHub Actions references in README.md (hook description, "used to run" claim) and scripts/ci-local.sh (comment) — no .github/workflows exists in repo; script logic itself did not depend on GH Actions context, only comments were stale
+- [00:00] Task B: removed dead "# Turbo cache" / ".turbo/" block from .gitignore — no turbo.json anywhere in repo
+- [00:00] Task C: created docs/issues/admin-sections-refactor.md documenting future refactor scope for 10 monolithic admin files (verified current line counts match audit exactly)
+- [00:00] pnpm typecheck — pass; pnpm lint — pass (no ESLint warnings/errors)
+- [00:00] ✅ Complete — 3 files modified (.gitignore, README.md, scripts/ci-local.sh), 1 file added (docs/issues/admin-sections-refactor.md), committed and pushed

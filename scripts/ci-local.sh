@@ -22,7 +22,8 @@ pnpm typecheck && pass "typecheck" || fail "typecheck falló"
 step "Lint"
 pnpm lint && pass "lint" || fail "lint falló"
 
-# Full test suite and build run in CI (GitHub Actions), not locally on push.
-# Run manually: pnpm test && pnpm build
+# This repo has no GitHub Actions / CI pipeline. The full test suite and
+# build are not run automatically anywhere — run them manually before
+# pushing: pnpm test && pnpm build
 
 echo -e "\n${GREEN}━━━ CI local pasado ✓ ━━━${NC}\n"
