@@ -992,3 +992,13 @@ Real-time log of all agent work. Agents append entries as work progresses.
   - Ready for security-reviewer handoff on PR #159
   - pr-comment-responder to notify: commit SHA acd3b44
   - PR comments to update: #3580783193 (original), #3580943665 (follow-up)
+
+#### [F0-07] software-engineer — Introduce lib/storage/qr seam
+- [18:36] Started. Verified worktree branch resolved to migration-f0-07-storage-qr-seam, up to date with origin/develop (1ec91e8), no main-only commits.
+- [18:36] Inspected reference PR #163 (migration-f0-05-lib-db-seam) read-only via `git show`/`git diff` — matched its thin-wrapper convention (docstring explaining F0 seam intent, wraps existing lib/supabase/server.ts factories, no redesign).
+- [18:36] Created lib/storage/qr/index.ts exporting: uploadToStorage(bucket, path, body, options), getPublicStorageUrl(bucket, path), removeFromStorage(bucket, paths) (delete primitive included for API completeness per acceptance criteria, not currently called by any service). All wrap the admin (RLS-bypassing) Supabase Storage client from lib/supabase/server.ts.
+- [18:36] Migrated lib/server/tables-service.ts (uploadQrCodeToStorage helper, bucket table-qr-codes) and lib/server/uploads-service.ts (uploadLandingMediaImage, bucket landing-media) to call the new seam instead of admin.storage.* directly. Preserved tables-service.ts's manual public-URL string construction unchanged (zero behavior change) rather than swapping to the SDK's getPublicUrl, since that has different error semantics. uploads-service.ts's getPublicUrl call was a direct behavior-preserving swap onto getPublicStorageUrl().
+- [18:36] Did not touch lib/server/auth-service.ts or lib/server/auth.ts (F0-06 sibling scope). No test files created/modified.
+- [18:36] Confirmed via grep: zero remaining `.storage.` client usage in lib/ or app/ outside lib/storage/qr/index.ts.
+- [18:36] pnpm install (worktree had no node_modules) → pnpm typecheck: PASS. pnpm build: PASS (exit 0, all routes generated). pnpm lint: PASS (no warnings/errors).
+- [18:36] ✅ Complete — Committed on migration-f0-07-storage-qr-seam. 3 files changed (1 new: lib/storage/qr/index.ts; 2 modified: lib/server/tables-service.ts, lib/server/uploads-service.ts). Not pushed — handing off to qa-engineer/security-reviewer.

@@ -1,5 +1,5 @@
 import 'server-only'
-import { createSupabaseServerAdminClient } from '@/lib/supabase/server'
+import { uploadToStorage, getPublicStorageUrl } from '@/lib/storage/qr'
 import { serviceError } from '@/lib/server/service-error'
 import type { SessionUser } from '@/lib/server/auth'
 
@@ -159,10 +159,10 @@ export async function uploadLandingMediaImage(session: SessionUser, input: Uploa
 
   const objectPath = `${folder}/${crypto.randomUUID()}.${extension}`
 
-  const admin = createSupabaseServerAdminClient()
-  const { error } = await admin.storage
-    .from(LANDING_MEDIA_BUCKET)
-    .upload(objectPath, bytes, { contentType: file.type, upsert: false })
+  const { error } = await uploadToStorage(LANDING_MEDIA_BUCKET, objectPath, bytes, {
+    contentType: file.type,
+    upsert: false,
+  })
 
   if (error) {
     // Do NOT swallow the underlying storage error — log it server-side so
@@ -172,11 +172,11 @@ export async function uploadLandingMediaImage(session: SessionUser, input: Uploa
     serviceError('Internal server error', 500)
   }
 
-  const { data: publicUrlData } = admin.storage.from(LANDING_MEDIA_BUCKET).getPublicUrl(objectPath)
-  if (!publicUrlData?.publicUrl) {
+  const { publicUrl } = getPublicStorageUrl(LANDING_MEDIA_BUCKET, objectPath)
+  if (!publicUrl) {
     console.error('[uploads-service] getPublicUrl returned no publicUrl for', objectPath)
     serviceError('Internal server error', 500)
   }
 
-  return { url: publicUrlData.publicUrl }
+  return { url: publicUrl }
 }
