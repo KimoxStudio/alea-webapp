@@ -1000,6 +1000,22 @@ Real-time log of all agent work. Agents append entries as work progresses.
   - pr-comment-responder to notify: commit SHA acd3b44
   - PR comments to update: #3580783193 (original), #3580943665 (follow-up)
 
+#### [remove-migrated-issue-docs] software-engineer — Delete docs/issues/ (superseded by Linear)
+- [21:05] Started — branched chore/remove-migrated-issue-docs from origin/develop (develop==main at 1ec91e8, verified via git merge-base before branching)
+- [21:06] Deleted all 7 files in docs/issues/ (migration-pre-01 + STATUS, migration-pre-02, migration-pre-03, migration-pre-04, oir-202, oir-203-204-205) — content migrated to Linear KIM-402/401/404/393/423/424-429; empty docs/issues/ dir auto-removed by git rm
+- [21:06] Confirmed docs/MIGRATION-supabase-to-neon.md untouched (referenced by KIM-413..422, out of scope for this task)
+- [21:07] Grepped repo for dangling references: found docs/SECRET-ROTATION-CHECKLIST.md:8 pointing at deleted migration-pre-04-rotate-p0-secrets.md — fixed (one-line path swap to "Linear KIM-393"). Remaining hits are only historical entries in this log file (.claude/agent-progress.md, append-only, left untouched) and a self-reference inside oir-203-204-205 pointing at oir-202 (both files deleted together, moot)
+- [21:07] No code/config references these markdown files (docs-only change) — typecheck/build skipped as not applicable
+- [21:08] ✅ Complete — 7 files deleted, 1 file (docs/SECRET-ROTATION-CHECKLIST.md) updated, committed and pushed. Handing off to qa-engineer then security-reviewer (PR target: develop)
+
+#### [PR-166-conflict] software-engineer — resolve merge conflict with develop (PR #163 merged)
+- [19:26] Started — checked out chore/remove-migrated-issue-docs, merging origin/develop
+- [19:27] git merge origin/develop: single conflict in .claude/agent-progress.md (as expected — append-only log). Resolved as union of both sides (kept all entries from both branches, no picking). All other incoming changes from develop's F0-05 merge (lib/db/index.ts, lib/server/*.ts, __tests__/lib/db.test.ts, docs/issues/migration-f0-05-lib-db-seam.md) applied cleanly with zero manual conflicts
+- [19:27] Verified: all 7 originally-deleted docs/issues/*.md files remain deleted after merge; only migration-f0-05-lib-db-seam.md present (newly added by develop's F0-05 merge, unrelated to this branch's deletions)
+- [19:28] Committed merge (062e6e0) and validated: pnpm typecheck ✅, pnpm lint ✅, pnpm test ✅ (65 files / 971 tests passed), pnpm build ✅
+- [19:29] Pushed to origin/chore/remove-migrated-issue-docs — pre-push hook re-ran full local CI (typecheck/lint/test/build), all green
+- [19:29] ✅ Complete — PR #166 now MERGEABLE/CLEAN against develop. Did not merge the PR (user will merge manually)
+
 #### [F0-05] software-engineer — Introduce lib/db seam
 - [19:15] Started — branch created from origin/main (local branch name `f0-05-lib-db-seam-work` due to a pre-existing locked worktree already holding `migration-f0-05-lib-db-seam`; pushed to origin under the correct branch name)
 - [19:25] Created lib/db/index.ts (getDb / getAdminDb thin wrapper around lib/supabase/server.ts)

@@ -5,7 +5,7 @@ Rotation is a manual, user-executed action in the Vercel and Supabase dashboards
 Variable **names** only are referenced below — no actual secret values appear in this
 document or were printed/logged while producing it.
 
-Related issue spec: `docs/issues/migration-pre-04-rotate-p0-secrets.md`
+Related issue spec: Linear KIM-393
 
 ---
 
