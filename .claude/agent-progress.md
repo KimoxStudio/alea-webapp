@@ -992,3 +992,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
   - Ready for security-reviewer handoff on PR #159
   - pr-comment-responder to notify: commit SHA acd3b44
   - PR comments to update: #3580783193 (original), #3580943665 (follow-up)
+
+#### [remove-migrated-issue-docs] software-engineer — Delete docs/issues/ (superseded by Linear)
+- [21:05] Started — branched chore/remove-migrated-issue-docs from origin/develop (develop==main at 1ec91e8, verified via git merge-base before branching)
+- [21:06] Deleted all 7 files in docs/issues/ (migration-pre-01 + STATUS, migration-pre-02, migration-pre-03, migration-pre-04, oir-202, oir-203-204-205) — content migrated to Linear KIM-402/401/404/393/423/424-429; empty docs/issues/ dir auto-removed by git rm
+- [21:06] Confirmed docs/MIGRATION-supabase-to-neon.md untouched (referenced by KIM-413..422, out of scope for this task)
+- [21:07] Grepped repo for dangling references: found docs/SECRET-ROTATION-CHECKLIST.md:8 pointing at deleted migration-pre-04-rotate-p0-secrets.md — fixed (one-line path swap to "Linear KIM-393"). Remaining hits are only historical entries in this log file (.claude/agent-progress.md, append-only, left untouched) and a self-reference inside oir-203-204-205 pointing at oir-202 (both files deleted together, moot)
+- [21:07] No code/config references these markdown files (docs-only change) — typecheck/build skipped as not applicable
+- [21:08] ✅ Complete — 7 files deleted, 1 file (docs/SECRET-ROTATION-CHECKLIST.md) updated, committed and pushed. Handing off to qa-engineer then security-reviewer (PR target: develop)
