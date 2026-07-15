@@ -1,5 +1,5 @@
 import type { GameTable, Room, TableAvailability } from '@/lib/types'
-import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
+import { getAdminDb, getDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/service-error'
 import { resolveDate, buildAvailability } from '@/lib/server/availability'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
@@ -66,7 +66,7 @@ function toRoom(row: RoomRow): Room {
 }
 
 async function listTablesByRoom(roomId: string) {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const tables = supabase.from('tables') as unknown as TablesByRoomClient
   const { data, error } = await tables
     .select(TABLE_COLUMNS)
@@ -81,7 +81,7 @@ async function listTablesByRoom(roomId: string) {
 }
 
 export async function listAllRooms() {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const rooms = supabase.from('rooms') as unknown as RoomsTableClient
   const { data, error } = await rooms
     .select(ROOM_COLUMNS)
@@ -106,7 +106,7 @@ export async function createRoomEntry(body: { name?: unknown; tableCount?: unkno
     serviceError('tableCount must be a non-negative integer', 400)
   }
 
-  const supabase = createSupabaseServerAdminClient()
+  const supabase = getAdminDb()
   const insert: TablesInsert<'rooms'> = {
     name,
     table_count: tableCount,
@@ -138,7 +138,7 @@ export async function updateRoom(id: string, body: { name?: unknown; description
     tableCount = raw
   }
 
-  const supabase = createSupabaseServerAdminClient()
+  const supabase = getAdminDb()
   const updates: TablesUpdate<'rooms'> = {
     name: body.name ? String(body.name) : undefined,
     description:
@@ -177,7 +177,7 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
     return {}
   }
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const reservations = admin.from('reservations') as unknown as ReservationsByTableClient
 
   const [reservationsResult, eventBlocksResult, savedGamesResult, nowUtc] = await Promise.all([
@@ -283,7 +283,7 @@ export async function createTableEntry(
   }
   const type = rawType as ValidType
 
-  const supabase = createSupabaseServerAdminClient()
+  const supabase = getAdminDb()
   const insert: TablesInsert<'tables'> = {
     room_id: roomId,
     name,

@@ -1,5 +1,5 @@
 import type { MemberImportIssue, MemberImportResult, MemberImportRow, PaginatedResponse, User } from '@/lib/types'
-import { createSupabaseServerAdminClient } from '@/lib/supabase/server'
+import { getAdminDb } from '@/lib/db'
 import { createAuthUser, deleteAuthUser, updateAuthUserById } from '@/lib/auth/session'
 import { serviceError } from '@/lib/server/service-error'
 import type { TablesUpdate } from '@/lib/supabase/types'
@@ -101,7 +101,7 @@ async function importMembersFromNormalizedRows(input: {
   const { totalRows, normalizedRows } = input
   const issues = [...input.issues]
   const auditedRows: MemberImportRow[] = []
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const profiles = admin.from('profiles') as unknown as ProfilesImportTableClient
   const concurrencyLimit = 10
 
@@ -268,7 +268,7 @@ export async function listPaginatedUsers(input: {
   const page = normalizePage(input.page)
   const limit = normalizeLimit(input.limit)
   const search = input.search?.trim() ?? ''
-  const supabase = createSupabaseServerAdminClient()
+  const supabase = getAdminDb()
   const profiles = supabase.from('profiles') as unknown as ProfilesTableClient
   let query = profiles.select(PROFILE_COLUMNS, { count: 'exact' })
 
@@ -333,7 +333,7 @@ export async function updateUser(
     serviceError('No updatable fields provided', 400)
   }
 
-  const supabase = createSupabaseServerAdminClient()
+  const supabase = getAdminDb()
   const profiles = supabase.from('profiles') as unknown as ProfilesTableClient
   const { data: existingProfile, error: existingProfileError } = await profiles
     .select(PROFILE_COLUMNS)
@@ -389,7 +389,7 @@ export async function updateUser(
 }
 
 export async function resetNoShows(id: string) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const profiles = admin.from('profiles') as unknown as AdminProfilesTableClient
   const { data: existing, error: selectError } = await profiles
     .select('id')
@@ -406,7 +406,7 @@ export async function resetNoShows(id: string) {
 }
 
 export async function unblockUser(id: string) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const profiles = admin.from('profiles') as unknown as AdminProfilesTableClient
   const { data: existing, error: selectError } = await profiles
     .select('id')
@@ -423,7 +423,7 @@ export async function unblockUser(id: string) {
 }
 
 export async function deleteUser(id: string) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const profiles = admin.from('profiles') as unknown as AdminProfilesTableClient
   const { data, error } = await profiles
     .select('id')

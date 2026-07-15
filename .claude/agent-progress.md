@@ -818,3 +818,221 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [19:06] Added __tests__/lib/auth/session.test.ts — 11 tests covering getAuthUser (user resolved / error / no user), signInWithPassword (success + error-semantics preserved), signOut (success + error propagated), createAuthUser, deleteAuthUser, updateAuthUserById (success + error propagated), each asserting the wrapper calls the correct underlying `.auth`/`.auth.admin` method with the right args and returns the result unchanged.
 - [19:07] Validation: pnpm exec vitest run __tests__/lib/auth/session.test.ts → 11/11 passed. Full pnpm test → 65 files / 972 tests passed. pnpm typecheck → clean. pnpm build → succeeded. pnpm lint → no warnings/errors.
 - [19:10] ✅ Complete — pushed to migration-f0-06-auth-session-seam, replying to Oiranca's inline comment on PR #164.
+
+#### repo-audit-cleanup-2026-07-14 software-engineer — CI docs cleanup, dead gitignore entry, admin refactor issue spec
+- [00:00] Started — branch chore/repo-audit-cleanup-2026-07-14 created from develop
+- [00:00] Task A: fixed stale GitHub Actions references in README.md (hook description, "used to run" claim) and scripts/ci-local.sh (comment) — no .github/workflows exists in repo; script logic itself did not depend on GH Actions context, only comments were stale
+- [00:00] Task B: removed dead "# Turbo cache" / ".turbo/" block from .gitignore — no turbo.json anywhere in repo
+- [00:00] Task C: created docs/issues/admin-sections-refactor.md documenting future refactor scope for 10 monolithic admin files (verified current line counts match audit exactly)
+- [00:00] pnpm typecheck — pass; pnpm lint — pass (no ESLint warnings/errors)
+- [00:00] ✅ Complete — 3 files modified (.gitignore, README.md, scripts/ci-local.sh), 1 file added (docs/issues/admin-sections-refactor.md), committed and pushed
+
+#### PR-157-conflict software-engineer — resolve PR #157 conflict with #156, verify pre-push hook end-to-end
+- [11:48] Started — checked out chore/pre-push-full-validation in isolated worktree (pruned two stale worktree entries first)
+- [11:49] Merged origin/main into chore/pre-push-full-validation; conflict in scripts/ci-local.sh resolved by keeping Typecheck→Lint→Test→Build (dropped obsolete "no CI pipeline, run manually" comment); .gitignore and agent-progress.md auto-merged cleanly; manually fixed README.md's "Local CI Hook" section (auto-merge had kept #156's now-stale "only typecheck/lint" wording) to list all 4 steps — merge commit 144260e
+- [11:51] pnpm install in worktree (deps were missing, isolated node_modules); copied local .env.local into worktree (not committed, gitignored) so build could run
+- [11:51] Ran `pnpm hooks:install` in worktree: FAILED — script computes hooks dir via `git rev-parse --git-dir`, which in a worktree resolves to the private `.git/worktrees/<name>` dir (no `hooks/` subfolder there), not the shared `.git/hooks` that git actually reads (confirmed via `git rev-parse --git-path hooks`). Did not modify the pre-existing shared `.git/hooks/pre-push` (already installed from the primary checkout, unrelated to this task)
+- [11:51] Verified real push-triggered hook end-to-end without touching the shared hook: used `git -c core.hooksPath=<scratch temp dir>` (hook file replicating install-hooks.sh output, pointed at this worktree's scripts/ci-local.sh) to do a real `git push origin HEAD:refs/heads/chore/pre-push-full-validation` — all 4 steps (Typecheck, Lint, Test 64 files/961 passed, Build 43/43 pages) ran in order and passed; push succeeded (35278d0..144260e)
+- [11:52] Verified blocking + --no-verify bypass on a disposable ref (tmp-hook-verify-test, deleted after): temporarily broke Lint step locally (uncommitted) → push without --no-verify blocked (exit 1, hook printed ✗ lint falló); same push with --no-verify succeeded and skipped the hook entirely. Reverted the local edit, deleted the disposable remote branch
+- [11:53] Confirmed via `gh pr view 157 --json mergeable,mergeStateStatus`: MERGEABLE / CLEAN
+
+#### PR157-comment-3580785336 pr-comment-responder — fix install-hooks.sh worktree bug + smoke test
+- [12:05] Started — reviewer Oiranca flagged that `pnpm hooks:install` silently fails to install a working pre-push hook when run from inside a `git worktree`, because `scripts/install-hooks.sh` locates the hooks dir via `git rev-parse --git-dir` (resolves to the private per-worktree git dir with no `hooks/` folder Git reads) instead of `git rev-parse --git-path hooks` (resolves the shared hooks dir correctly in both a normal checkout and a worktree)
+- [12:06] Fixed `scripts/install-hooks.sh`: `HOOKS_DIR="$(git rev-parse --git-path hooks)"` replacing `"$(git rev-parse --git-dir)/hooks"`, with an inline comment explaining why
+- [12:10] Added `scripts/verify-hooks-worktree.sh`: self-contained smoke test that builds a throwaway scratch git repo + worktree in a temp dir (never touches this project's real `.git`), runs `install-hooks.sh` inside the worktree, and asserts the `pre-push` hook lands at `git rev-parse --git-path hooks` with the managed marker + executable bit, plus a negative sanity check that the per-worktree private git-dir has no `hooks/pre-push` (proving the old `--git-dir` behavior would have been silently broken)
+- [12:11] Wired `pnpm hooks:verify:worktree` in package.json (same Windows-skip pattern as `hooks:install`) and documented both the fix and the verification command in README.md's "Local CI Hook" section + Available Scripts table
+- [12:15] Validation: `pnpm hooks:verify:worktree` passes; `pnpm hooks:install` re-run against the real repo correctly resolves the shared `.git/hooks` and safely no-ops (pre-existing unmanaged hook, unchanged); `pnpm lint` — no warnings/errors; `pnpm typecheck` — pass
+- [12:16] Note: no Task/SendMessage tool available in this session to delegate to a separate software-engineer/qa-engineer/security-reviewer per the standard pipeline — implemented directly per pr-comment-responder's own role definition (delegation table lists pr-comment-responder as the worktree-isolated implementer for "PR comment fixes"); flagged to coordinator
+- [12:17] ✅ Complete — 3 files modified (scripts/install-hooks.sh, package.json, README.md), 1 file added (scripts/verify-hooks-worktree.sh), committed and pushed to chore/pre-push-full-validation; replied to review comment 3580785336
+- [11:53] ✅ Complete — merge pushed to origin/chore/pre-push-full-validation (144260e), PR #157 now CLEAN
+#### repo-audit-cleanup-2026-07-14 security-reviewer — security review + PR open
+- [11:10] Started — reviewed diff on chore/repo-audit-cleanup-2026-07-14 (develop..branch): .gitignore, README.md, scripts/ci-local.sh, docs/issues/admin-sections-refactor.md
+- [11:10] Findings: 0 CRITICAL/HIGH/MEDIUM/LOW. Confirmed .env/.env.* ignore rules untouched, no .github/workflows/ or turbo.json exist (matches corrected doc claims), no secrets in new markdown file, scripts/ci-local.sh logic unchanged (comment only)
+- [11:10] Security Status: APPROVE
+- [11:10] ⚠️ BLOCKED — cannot open PR: remote origin (KimoxStudio/alea-webapp) has no `develop` branch (only `main` + feature branches; `git ls-remote --heads origin` confirms). Local `develop` is an ancestor of `origin/main` but was never pushed as its own ref. Did not push/create `develop` on remote — that requires explicit user instruction per global CLAUDE.md develop-push exception. Reporting to user for branch-topology decision before PR can be opened.
+
+#### security-reviewer — chore/pre-push-full-validation review + PR
+- [11:26] Started — reviewed diff main..chore/pre-push-full-validation in fresh isolated worktree
+- [11:26] Verified scripts/ci-local.sh diff: only file changed, adds Test + Build steps (5 insertions, 2 deletions), no secrets/config/auth/input-validation surface
+- [11:26] Confirmed README.md 4-step doc already matched intended behavior on main; this branch fixes a pre-existing script/doc mismatch (script only had 2 steps before)
+- [11:26] Security Status: APPROVE — 0 CRITICAL/HIGH/MEDIUM, 0 LOW findings
+- [11:26] ✅ Complete — opening PR chore/pre-push-full-validation -> main
+- [11:26] PR opened: https://github.com/KimoxStudio/alea-webapp/pull/157 (chore/pre-push-full-validation -> main)
+
+#### [PR-162] pr-comment-responder — Fix cold-start rate-limit test coverage gap (comment 3580783185)
+- [17:35] Started — checked out fix/migration-pre-02-serverless-rate-limiter into isolated worktree
+- [17:35] Root cause confirmed: existing "shares rate-limit counter state across multiple requests" test only proved a local sharedCounter Map persists within one Vitest run/module import; never exercised a fresh module instance (cold start), so it could pass even if enforceRateLimit regressed to process-local memory
+- [17:36] Rewrote the test as "persists rate-limit counter state across a simulated serverless cold start": uses vi.resetModules() + fresh dynamic import twice (Instance A, Instance B) against the same shared mockLimit-backed counter (standing in for Upstash Redis), asserting Instance B (fresh module, no local memory) still observes Instance A's counter state
+- [17:36] Verified regression-catching power: temporarily patched enforceRateLimitRedis to count in a local Map instead of calling ratelimit.limit() — new test correctly failed (expected 429, got undefined); reverted immediately, confirmed lib/server/security.ts diff is clean (only __tests__/server/security.test.ts changed)
+- [17:42] Validation: pnpm typecheck ✅, pnpm test (full suite) 64 files / 962 tests ✅, pnpm build ✅
+- [17:43] ⚠️ Note: no Task/agent-spawning tool available in this session to hand off to software-engineer/qa-engineer/security-reviewer as the coordinator's mid-task correction requested; implemented directly per pr-comment-responder's role definition and self-validated (typecheck/build/full test suite + manual regression-injection proof) instead — flagging this limitation for coordinator visibility
+- [17:43] ✅ Complete — committed + pushed test-only fix to fix/migration-pre-02-serverless-rate-limiter, replied to review comment 3580783185
+#### [8802a71f] software-engineer — investigate + write rotation checklist
+- [19:05] Started. Branch chore/migration-pre-04-secret-rotation-checklist created off main (e7fb6da).
+- [19:10] Re-verified AUTH_SESSION_SECRET: zero code consumers (.ts/.tsx/.js/.mjs/.cjs), not in .env.example, only referenced in docs/ROLLBACK.md (lines 122,127,141,151).
+- [19:15] Traced CRON_SECRET consumer to app/api/cron/mark-no-show/route.ts:7-8 (via tokensMatch from lib/server/security).
+- [19:18] Traced SUPABASE_SECRET_DEFAULT_KEY chain: lib/supabase/config.ts:18-19 -> lib/supabase/server.ts:67-68 (createSupabaseServerAdminClient).
+- [19:20] Found QA creds (PLAYWRIGHT_QA_USER/PASSWORD + secondary + E2E_ALLOW_DESTRUCTIVE) documented in qa/e2e/README.md, set via .env.e2e.local, not in .env.example.
+- [19:25] Wrote docs/issues/migration-pre-04-rotate-p0-secrets.md and docs/SECRET-ROTATION-CHECKLIST.md.
+- [19:30] Ran pnpm build inside worktree to validate docs-only change.
+- [19:32] ✅ Complete — Investigation + rotation checklist committed on branch chore/migration-pre-04-secret-rotation-checklist. No functional code changed, no secret values printed/committed.
+#### [f8e91ebe] software-engineer — verify + commit docs
+- [16:49] Started: independent verification of Pre-01 Edge middleware crypto blocker
+- [16:49] Confirmed middleware.ts imports only from lib/server/security-edge (line 4), not lib/server/security
+- [16:49] Traced full import chain (security-edge.ts, i18n/config.ts, supabase/config.client.ts); grep for Node crypto/fs/net APIs found zero matches
+- [16:49] Confirmed lib/server/security.ts (Node crypto, timingSafeEqual/createHash, import 'server-only') is not reachable from middleware.ts
+- [16:49] Confirmed regression test coverage in __tests__/server/security.test.ts lines 51,62,74,87 for the edge-safe cookie-secure-flag split
+- [16:49] pnpm build succeeded (exit 0, Compiled successfully in 2.7s)
+- [16:49] Verified prior fix commits exist on origin/main: 2541044, 2423dff
+- [16:49] Complete — blocker already resolved, no code changes needed; committed docs/issues/migration-pre-01-crypto-edge-middleware.md and -STATUS.md
+#### [fe9fedd6] software-engineer -- register mark-no-show cron
+- [16:48] Started; confirmed CRON_SECRET auth already present in app/api/cron/mark-no-show/route.ts (untouched)
+- [16:48] Verified mark_no_show_reservations DB function is a passive cleanup query (marks reservations no_show once end_time has passed); no strict timing docs found, chose */15 * * * * cadence
+- [16:48] Updated vercel.json: added crons entry for /api/cron/mark-no-show (schedule */15 * * * *), functions maxDuration 60; removed stale cancel-pending functions entry (route is dead code returning 410 Gone)
+- [16:48] Created docs/issues/migration-pre-03-register-cron-vercel-json.md
+- [16:49] pnpm build passed (pnpm install run in worktree only)
+- [16:49] Complete -- committed bc70bfb on fix/migration-pre-03-register-cron-vercel-json (not pushed, no PR opened)
+
+#### [fe9fedd6] qa-engineer -- validate vercel.json cron + build
+- [starting] Task claimed. Validating vercel.json JSON syntax, cron schema, build, and route manifest.
+- [complete] JSON validity: PASS - vercel.json is valid JSON
+- [complete] Cron schema: PASS - `crons` array with valid path `/api/cron/mark-no-show`, valid 5-field schedule `*/15 * * * *`
+- [complete] Route file: PASS - app/api/cron/mark-no-show/route.ts exists
+- [complete] Build: PASS - `pnpm build` completed with no errors
+- [complete] Route manifest: PASS - /api/cron/mark-no-show found in build route manifest as dynamic route (ƒ)
+- [complete] Test suite: PASS - 961 tests passed across 64 files (including mark-no-show 6-test file)
+- [complete] Documentation: PRESENT - docs/issues/migration-pre-03-register-cron-vercel-json.md exists
+- [HH:MM] ✅ Complete -- All validations passed. vercel.json config is correct, build succeeds, route registered in manifest, tests green.
+
+#### [fe9fedd6] security-reviewer -- auth review + open PR
+- [16:52] Started: reviewed vercel.json diff (bc70bfb, bc0100d), route.ts auth, tokensMatch, docs file
+- [16:52] Confirmed route.ts untouched by diff; CRON_SECRET bearer check + constant-time tokensMatch() intact; no secrets in vercel.json or docs; cancel-pending functions entry removal confirmed inert (dead 410 route)
+- [16:52] Pushed branch, opened PR #159 (base: main, state: OPEN)
+- [16:52] Complete -- APPROVE. PR #159 opened, not merged.
+
+#### PR#159-review-3580783193 software-engineer — fix GET missing on cron mark-no-show route
+- [00:00] Started — checked out fix/migration-pre-03-register-cron-vercel-json (75d0334) in isolated worktree; original diagnosis worktree agent-afa5a6cd69864a515 was still present but locked to the branch, so worked on local branch swe/cron-get-fix tracking the same remote ref
+- [00:00] Read app/api/cron/mark-no-show/route.ts and __tests__/app/api/cron/mark-no-show.test.ts to verify diagnosis: confirmed shared handleCronRequest() (CRON_SECRET bearer + tokensMatch auth) already existed and POST called it
+- [00:00] Added `export async function GET(request: NextRequest) { return handleCronRequest(request) }` reusing the exact same validated handler; POST left intact for manual/local triggering
+- [00:00] Per project convention, test file changes (GET test block mirroring POST suite) left to qa-engineer — software-engineer does not modify test files
+#### [f8e91ebe] team-lead — Pre-01 crypto edge middleware
+- [16:46] Started — verification-first pipeline; branch fix/migration-pre-01-crypto-edge-middleware off main
+
+#### [4fdba807] team-lead — Pre-02 serverless rate limiter verify
+- [16:47] Started — claimed task, spawning software-engineer for independent verification
+
+#### [8802a71f] team-lead — Pre-04 secret rotation checklist (docs-only)
+- [16:47] Started orchestration pipeline
+
+#### [f8e91ebe] qa-engineer — validate verification branch
+- [HH:MM] Starting validation in isolated worktree
+- [16:50] SE verified: build/typecheck/tests pass (15/15), enforceRateLimit signature unchanged, spec committed beb4160. Existing "reuses single Redis client" test only proves object memoization, not cross-invocation counter persistence — routing to qa-engineer to strengthen.
+
+- [16:51] Build validation: pnpm build PASS
+- [16:51] Test suite: 961 tests PASS (64 files, incl. security.test.ts: 15 PASS)
+- [16:51] Docs-only validation: git diff --stat confirms only 3 files changed (.claude/agent-progress.md, 2 docs files)
+- [16:51] Middleware import spot-check: middleware.ts imports from ./lib/server/security-edge NOT ./lib/server/security
+- [16:51] Security-edge imports: only next/server and @supabase/ssr (Web Crypto API, no Node-only modules)
+- [16:51] ✅ Complete — PASS. Branch docs-only. Build passes. All tests pass. Core claim verified.
+
+#### [8802a71f] security-reviewer — mandatory secret-leak gate
+- [16:52] Started. Pulled full diff of chore/migration-pre-04-secret-rotation-checklist vs main (168 lines, 3 files) via git -C worktree diff main...HEAD, read-only.
+- [16:52] Scanned diff character-by-character: zero real secret values found. Only placeholder/example values (already pre-existing in .env.example, not touched by this diff) and one test-fixture string 'test-secret' in an existing unit test (unchanged by this diff).
+- [16:52] Confirmed change is docs-only: .claude/agent-progress.md, docs/SECRET-ROTATION-CHECKLIST.md (new), docs/issues/migration-pre-04-rotate-p0-secrets.md (new). No functional code, .env.local, or .env.example modified.
+- [16:52] Cross-checked AUTH_SESSION_SECRET claim via independent grep of main repo: confirmed zero code consumers, confirmed absent from .env.example, confirmed only referenced in docs/ROLLBACK.md (lines 122,127,141,151) — doc's dead-config finding is accurate, not overstated/understated.
+- [16:52] Cross-verified all file:line citations in the checklist doc against actual repo (CRON_SECRET at app/api/cron/mark-no-show/route.ts:7-8, tokensMatch import at :3; SUPABASE_SECRET_DEFAULT_KEY at lib/supabase/config.ts:18-19 and lib/supabase/server.ts:67-68; QA creds in qa/e2e/README.md:27-36) — all accurate.
+- [16:52] Drafted secret-free PR description for team-lead.
+- [16:52] ✅ Complete — APPROVED. Zero secret values in diff. Docs-only change confirmed. Checklist doc is accurate and names-only.
+
+#### [f8e91ebe] security-reviewer — review + open PR
+- [17:05] Started: read-only review of docs-only diff (git diff origin/main...fix/migration-pre-01-crypto-edge-middleware)
+- [17:05] Confirmed diff touches only 2 new docs files + agent-progress.md entry (67 insertions, 0 deletions), no code/test/config changes
+- [17:05] Independently verified claims against origin/main: middleware.ts imports only lib/server/security-edge (line 4); security-edge.ts leaf deps (i18n/config.ts, supabase/config.client.ts) have zero Node built-in imports; lib/server/security.ts (Node crypto) not reachable from middleware
+- [17:06] Checked new docs for secrets/env values/credentials — none found; env vars referenced by name only (NEXT_PUBLIC_SUPABASE_URL etc.), no values
+- [17:06] Security Status: APPROVE — 0 CRITICAL/HIGH/MEDIUM findings, 0 LOW findings
+- [17:06] Pushed branch, opened PR #160 (fix/migration-pre-01-crypto-edge-middleware -> main)
+- [17:06] ✅ Complete — PR #160 https://github.com/KimoxStudio/alea-webapp/pull/160 (NOT merged, targets main, awaiting user merge)
+- [16:53] ✅ Complete — PR #160 opened (verification-only, targets main, not merged); Pre-01 confirmed already resolved
+
+#### [4fdba807] qa-engineer — Pre-02 strengthen persistence test
+- [16:54] Started: Add test validating rate-limit counter persistence across multiple requests
+- [16:54] Test design: Stateful mock with counter map simulating Upstash Redis persistence
+- [16:54] Test added: `shares rate-limit counter state across multiple requests (stateful persistence)` at __tests__/server/security.test.ts:444-495
+- [16:54] Test validates: 4 sequential requests to same client IP with limit=3 correctly blocks on 4th request
+- [16:54] Proof of persistence: sharedCounter.get(clientIp) == 4 after 4 calls, proving counter incremented across all requests
+- [16:54] Full test suite: 16 tests passed (NEW test included)
+- [16:54] Typecheck: OK (no regressions)
+- [16:54] Build: OK (no TypeScript errors in app tsconfig)
+- [16:54] Commit: 05313df "test(security): prove rate-limit counter shared across multiple requests"
+- [16:54] ✅ Complete — Test validates shared counter state validates Pre-02 serverless design
+- [16:55] ✅ Complete — PR #161 opened targeting main. QA + security APPROVED, zero secret values. NOTE: pre-04 worktree was pruned mid-session; branch ref survived and was pushed directly without touching shared checkout.
+- [16:55] QA added stateful persistence test (05313df), 16/16 pass, typecheck+build clean. Handing off to security-reviewer for review + push + PR.
+
+#### [4fdba807] security-reviewer — Pre-02 review + PR
+- [16:57] Started: reviewed diff main...fix/migration-pre-02-serverless-rate-limiter (read-only, no checkout performed by this agent)
+- [16:57] Confirmed only __tests__/server/security.test.ts and docs/issues/migration-pre-02-serverless-rate-limiter.md changed; no source file (lib/server/security.ts) modified; no package.json change; Upstash deps already on main
+- [16:57] New persistence test reviewed: sound, uses only dummy Upstash values (https://example.upstash.io / test-token, pre-existing pattern), does not weaken existing tests
+- [16:57] Sanity-checked lib/server/security.ts (git show, read-only): Redis path has no local try/catch around ratelimit.limit() (fail behavior depends on caller); client identifier derivation via x-real-ip / trusted-proxy-gated x-forwarded-for is reasonable — both noted as non-blocking observations in PR body
+- [16:57] pnpm vitest run __tests__/server/security.test.ts — 16/16 pass
+- [16:57] git push -u origin fix/migration-pre-02-serverless-rate-limiter — pre-push hook (typecheck+lint) passed
+- [16:57] ✅ Complete — APPROVE; PR #162 opened: https://github.com/KimoxStudio/alea-webapp/pull/162
+- [16:58] ✅ Complete — security APPROVED, PR #162 opened targeting main (docs spec + strengthened persistence test, no source change). https://github.com/KimoxStudio/alea-webapp/pull/162
+
+#### [PR #159] qa-engineer — Add GET test coverage for mark-no-show cron route
+- [13:45] Started: Adding test coverage for new GET handler on /api/cron/mark-no-show
+- [13:47] Checked out branch temp-test-coverage tracking origin/fix/migration-pre-03-register-cron-vercel-json
+- [13:48] Added 6 new GET test cases mirroring POST suite structure:
+  - GET with missing Authorization → 401
+  - GET with wrong bearer token → 401
+  - GET with correct token → 200, service function invoked
+  - GET with no CRON_SECRET env → 401
+  - GET when service throws → 500
+  - GET with zero count → 200
+- [13:50] Validation passed:
+  - pnpm typecheck ✅
+  - pnpm build ✅
+  - __tests__/app/api/cron/mark-no-show.test.ts: 12 tests passed (6 POST + 6 GET)
+- [13:51] Committed: acd3b44 - test(cron/mark-no-show): add GET method test coverage
+- [13:52] Pushed to origin/fix/migration-pre-03-register-cron-vercel-json
+- [13:52] Pre-push validation: typecheck ✅, lint ✅
+- [13:52] ✅ Complete — GET test coverage added, all tests passing
+  - Ready for security-reviewer handoff on PR #159
+  - pr-comment-responder to notify: commit SHA acd3b44
+  - PR comments to update: #3580783193 (original), #3580943665 (follow-up)
+
+#### [F0-05] software-engineer — Introduce lib/db seam
+- [19:15] Started — branch created from origin/main (local branch name `f0-05-lib-db-seam-work` due to a pre-existing locked worktree already holding `migration-f0-05-lib-db-seam`; pushed to origin under the correct branch name)
+- [19:25] Created lib/db/index.ts (getDb / getAdminDb thin wrapper around lib/supabase/server.ts)
+- [19:30] Migrated all 15 call sites (14 lib/server/*.ts service files) from createSupabaseServerClient/createSupabaseServerAdminClient to lib/db seam; lib/supabase/server.ts left unchanged as underlying factory; auth.ts session-cookie logic (createSupabaseRouteHandlerClient) left untouched, out of scope for this issue
+- [19:35] Added docs/issues/migration-f0-05-lib-db-seam.md spec
+- [19:40] pnpm typecheck ✅, pnpm build ✅ (exit 0), pnpm test ✅ (64 files / 968 tests passed unchanged), pnpm lint ✅
+- [19:41] ✅ Complete — lib/db seam introduced, zero behavior change, all validations green
+
+#### [F0-05] qa-engineer — Validate lib/db seam
+- [20:00] Started — reviewed diff against main in isolated worktree (/tmp/qa-f0-05-28494), no shared checkout touched
+- [20:05] Confirmed pure indirection: all 14 lib/server/*.ts call sites (plus lib/db/index.ts itself) verified — no function signatures, exported names, or behavior changed
+- [20:10] Cross-checked user-scoped vs admin client call-site counts per file against origin/main (git show) — exact parity confirmed for all 14 files (getDb() count == createSupabaseServerClient() count, getAdminDb() count == createSupabaseServerAdminClient() count)
+- [20:12] Confirmed acceptance criteria: no file outside lib/supabase/server.ts and lib/db/index.ts imports createSupabaseServerClient/createSupabaseServerAdminClient directly (test files mock @/lib/supabase/server transitively, which lib/db wraps — mocks remain valid)
+- [20:15] pnpm install --frozen-lockfile ✅, pnpm typecheck ✅, pnpm build ✅, pnpm lint ✅
+- [20:16] pnpm test: 64 files / 968 tests passed unchanged (no regressions)
+- [20:20] Added __tests__/lib/db.test.ts — minimal smoke test for the new lib/db seam itself (getDb/getAdminDb route to correct factory, return distinct clients); 3 new tests, all passing
+- [20:22] Full suite re-run: 65 files / 971 tests passed
+- [20:23] Committed test(db): add smoke test for lib/db seam (F0-05) and pushed to origin/migration-f0-05-lib-db-seam
+- [20:23] ✅ Complete — APPROVE, ready for security-reviewer
+
+#### [F0-05] security-reviewer — Review lib/db seam + open PR
+- [20:35] Started — reviewed develop...migration-f0-05-lib-db-seam diff in isolated worktree, no shared checkout touched
+- [20:40] Confirmed strict 1:1 mapping across all 14 lib/server/*.ts call sites (createSupabaseServerClient→getDb(), createSupabaseServerAdminClient→getAdminDb()) — no admin/user-scoped swap, programmatically verified
+- [20:42] Confirmed lib/supabase/server.ts unchanged; no production file outside lib/supabase/server.ts / lib/db/index.ts imports the raw factories (only __tests__/** mocks remain, expected)
+- [20:44] Confirmed lib/server/data-scoping.ts (assertMemberRowsScoped) untouched
+- [20:45] Noted: branch history includes already-merged migration-pre-01..04 commits from main not yet absorbed by develop — flagged in PR body as a separate develop<-main sync item (user-only merge decision), not a defect in this change
+- [20:48] Opened PR #163 (migration-f0-05-lib-db-seam -> develop)
+- [20:48] ✅ Complete — APPROVE, PR #163 opened
+
+#### [PR164] software-engineer — resolve merge conflict with develop (F0-05 lib/db seam)
+- [19:30] Started — PR #164 (migration-f0-06-auth-session-seam) went CONFLICTING after PR #163 (F0-05 lib/db seam) merged into develop. Checked out branch in isolated worktree, fetched origin, ran `git merge origin/develop`.
+- [19:32] Conflicts in 4 files: lib/server/auth.ts, lib/server/auth-service.ts, lib/server/users-service.ts (import blocks + a few call sites), and .claude/agent-progress.md (append-only log).
+- [19:35] Reconciled service files so both seams coexist: DB client access goes through `getDb()`/`getAdminDb()` (lib/db, from F0-05), while Supabase Auth operations go through the `lib/auth/session` wrappers (getAuthUser, signInWithPassword, signOut, createAuthUser, deleteAuthUser, updateAuthUserById, from F0-06). Replaced remaining `createSupabaseServerClient()` + raw `supabase.auth.*` calls in auth-service.ts (login, register, logout) with `getDb()` + the auth/session wrapper functions.
+- [19:38] Resolved .claude/agent-progress.md conflict as a union of both sides (kept every entry from HEAD and origin/develop, dropped only the conflict markers).
+- [19:45] Validation: pnpm install --frozen-lockfile ✅, pnpm typecheck ✅, pnpm lint ✅ (no warnings/errors), pnpm test → 66 files / 982 tests passed, pnpm build ✅ (all routes compiled).
+- [19:46] ✅ Complete — merge commit created and pushed to migration-f0-06-auth-session-seam; PR #164 expected to show CLEAN against develop.
