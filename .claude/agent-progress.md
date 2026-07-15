@@ -1003,6 +1003,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
 
 #### [PR-166-conflict] software-engineer — resolve merge conflict with develop (PR #163 merged)
 - [19:26] Started — checked out chore/remove-migrated-issue-docs, merging origin/develop
+- [19:27] git merge origin/develop: single conflict in .claude/agent-progress.md (as expected — append-only log). Resolved as union of both sides (kept all entries from both branches, no picking). All other incoming changes from develop's F0-05 merge (lib/db/index.ts, lib/server/*.ts, __tests__/lib/db.test.ts, docs/issues/migration-f0-05-lib-db-seam.md) applied cleanly with zero manual conflicts
+- [19:27] Verified: all 7 originally-deleted docs/issues/*.md files remain deleted after merge; only migration-f0-05-lib-db-seam.md present (newly added by develop's F0-05 merge, unrelated to this branch's deletions)
+- [19:28] Committed merge (062e6e0) and validated: pnpm typecheck ✅, pnpm lint ✅, pnpm test ✅ (65 files / 971 tests passed), pnpm build ✅
+- [19:29] Pushed to origin/chore/remove-migrated-issue-docs — pre-push hook re-ran full local CI (typecheck/lint/test/build), all green
+- [19:29] ✅ Complete — PR #166 now MERGEABLE/CLEAN against develop. Did not merge the PR (user will merge manually)
 
 #### [F0-05] software-engineer — Introduce lib/db seam
 - [19:15] Started — branch created from origin/main (local branch name `f0-05-lib-db-seam-work` due to a pre-existing locked worktree already holding `migration-f0-05-lib-db-seam`; pushed to origin under the correct branch name)
