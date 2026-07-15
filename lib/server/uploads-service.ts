@@ -1,5 +1,5 @@
 import 'server-only'
-import { getAdminDb } from '@/lib/db'
+import { uploadToStorage, getPublicStorageUrl } from '@/lib/storage/qr'
 import { serviceError } from '@/lib/server/service-error'
 import type { SessionUser } from '@/lib/server/auth'
 
@@ -159,24 +159,26 @@ export async function uploadLandingMediaImage(session: SessionUser, input: Uploa
 
   const objectPath = `${folder}/${crypto.randomUUID()}.${extension}`
 
-  const admin = getAdminDb()
-  const { error } = await admin.storage
-    .from(LANDING_MEDIA_BUCKET)
-    .upload(objectPath, bytes, { contentType: file.type, upsert: false })
+  const { error } = await uploadToStorage(LANDING_MEDIA_BUCKET, objectPath, bytes, {
+    contentType: file.type,
+    upsert: false,
+  })
 
   if (error) {
-    // Do NOT swallow the underlying storage error — log it server-side so
-    // failures (misconfigured bucket, storage outage, etc.) are diagnosable.
-    // Only a generic message is ever returned to the client.
-    console.error('[uploads-service] Supabase Storage upload failed:', error.message)
+    // Do NOT swallow the underlying storage error — log the full structured
+    // detail (name, message, status, statusCode) server-side so failures
+    // (misconfigured bucket, permissions, quota, storage outage, etc.) stay
+    // distinguishable in logs. Only a generic message is ever returned to
+    // the client.
+    console.error('[uploads-service] Supabase Storage upload failed:', error)
     serviceError('Internal server error', 500)
   }
 
-  const { data: publicUrlData } = admin.storage.from(LANDING_MEDIA_BUCKET).getPublicUrl(objectPath)
-  if (!publicUrlData?.publicUrl) {
+  const { publicUrl } = getPublicStorageUrl(LANDING_MEDIA_BUCKET, objectPath)
+  if (!publicUrl) {
     console.error('[uploads-service] getPublicUrl returned no publicUrl for', objectPath)
     serviceError('Internal server error', 500)
   }
 
-  return { url: publicUrlData.publicUrl }
+  return { url: publicUrl }
 }

@@ -1,5 +1,6 @@
 import qrcode from 'qrcode'
 import type { GameTable } from '@/lib/types'
+import { uploadToStorage } from '@/lib/storage/qr'
 import { getAdminDb, getDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/service-error'
 import { resolveDate, buildAvailability } from '@/lib/server/availability'
@@ -14,19 +15,16 @@ type EventBlockRow = Tables<'event_room_blocks'>
 
 const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, qr_code_inf, pos_x, pos_y'
 
-async function uploadQrCodeToStorage(
-  admin: ReturnType<typeof getAdminDb>,
-  url: string,
-  storagePath: string,
-): Promise<string> {
+async function uploadQrCodeToStorage(url: string, storagePath: string): Promise<string> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   if (!supabaseUrl) serviceError('NEXT_PUBLIC_SUPABASE_URL is not set — cannot build QR code storage URL', 500)
 
   const buffer = await qrcode.toBuffer(url, { errorCorrectionLevel: 'M', width: 400, type: 'png' })
 
-  const { error: uploadError } = await admin.storage
-    .from('table-qr-codes')
-    .upload(storagePath, buffer, { contentType: 'image/png', upsert: true })
+  const { error: uploadError } = await uploadToStorage('table-qr-codes', storagePath, buffer, {
+    contentType: 'image/png',
+    upsert: true,
+  })
 
   if (uploadError) {
     serviceError('Failed to upload QR code to storage', 500)
@@ -42,8 +40,7 @@ export async function generateTableQrCode(tableId: string): Promise<string> {
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
   if (!appUrl) serviceError('NEXT_PUBLIC_APP_URL is not set — cannot generate QR code URL', 500)
   const url = `${appUrl}/check-in/${tableId}`
-  const admin = getAdminDb()
-  return uploadQrCodeToStorage(admin, url, `${tableId}.png`)
+  return uploadQrCodeToStorage(url, `${tableId}.png`)
 }
 
 export async function regenerateQrCodes(tableId: string): Promise<{ qr_code: string; qr_code_inf: string | null }> {
@@ -68,7 +65,7 @@ export async function regenerateQrCodes(tableId: string): Promise<{ qr_code: str
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
   if (!appUrl) serviceError('NEXT_PUBLIC_APP_URL is not set — cannot generate QR code URL', 500)
 
-  const qr_code = await uploadQrCodeToStorage(admin, `${appUrl}/check-in/${tableId}`, `${tableId}.png`)
+  const qr_code = await uploadQrCodeToStorage(`${appUrl}/check-in/${tableId}`, `${tableId}.png`)
 
   const { error: updateError } = await admin
     .from('tables')
