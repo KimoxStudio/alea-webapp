@@ -811,3 +811,10 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [23:43] Captured compensating delete `{ error }` in lib/server/club-events-service.ts createClubEvent; logs console.error with orphaned event id on failure, then still rethrows original RPC error (matches uploads-service.ts logging style)
 - [23:44] Added regression test in __tests__/server/club-events-service.test.ts forcing both block RPC and compensating delete to fail; verified it fails without the fix (0 console.error calls) and passes with it
 - [23:44] ✅ Complete — vitest 27/27 passed, pnpm build green, pushed to feat/oir-203-admin-club-events
+
+#### [PR164] qa-engineer — add unit test coverage for lib/auth/session seam
+- [19:00] Started — Oiranca review comment on lib/auth/session/index.ts:152 requesting a focused unit test for the new F0-06 auth seam (session reads, password sign-in/sign-out, admin user management) before merging.
+- [19:03] Reviewed sibling seam test conventions: __tests__/lib/db.test.ts (F0-05, origin/migration-f0-05-lib-db-seam) and __tests__/lib/storage/qr.test.ts (F0-07, origin/migration-f0-07-storage-qr-seam). Unlike those, lib/auth/session does not wrap client factories — call sites pass their own client in — so tests build minimal mock clients per function instead of mocking lib/supabase/server.
+- [19:06] Added __tests__/lib/auth/session.test.ts — 11 tests covering getAuthUser (user resolved / error / no user), signInWithPassword (success + error-semantics preserved), signOut (success + error propagated), createAuthUser, deleteAuthUser, updateAuthUserById (success + error propagated), each asserting the wrapper calls the correct underlying `.auth`/`.auth.admin` method with the right args and returns the result unchanged.
+- [19:07] Validation: pnpm exec vitest run __tests__/lib/auth/session.test.ts → 11/11 passed. Full pnpm test → 65 files / 972 tests passed. pnpm typecheck → clean. pnpm build → succeeded. pnpm lint → no warnings/errors.
+- [19:10] ✅ Complete — pushed to migration-f0-06-auth-session-seam, replying to Oiranca's inline comment on PR #164.
