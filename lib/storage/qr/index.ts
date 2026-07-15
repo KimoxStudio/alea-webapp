@@ -32,8 +32,23 @@ export interface StorageUploadOptions {
   upsert?: boolean
 }
 
+/**
+ * Structured diagnostic detail preserved from a Supabase Storage error.
+ * Mirrors the fields exposed by `StorageError`/`StorageApiError` in
+ * @supabase/storage-js (`name`, `message`, `status`, `statusCode`) so
+ * server-side logs can distinguish bucket misconfiguration, permissions,
+ * quota, and backend-outage failures instead of collapsing every failure
+ * down to a bare message string.
+ */
+export interface StorageErrorDetail {
+  message: string
+  name?: string
+  status?: number
+  statusCode?: string
+}
+
 export interface StorageOperationResult {
-  error: { message: string } | null
+  error: StorageErrorDetail | null
 }
 
 export interface StoragePublicUrlResult {
@@ -42,6 +57,29 @@ export interface StoragePublicUrlResult {
 
 function getAdminStorage(): StorageClient {
   return createSupabaseServerAdminClient().storage
+}
+
+/**
+ * Extracts structured diagnostic fields from a Supabase Storage error
+ * without leaking a non-serializable error instance across the seam
+ * boundary. Keeps `name`/`status`/`statusCode` when present (as on
+ * `StorageError`/`StorageApiError`) so callers can log a fuller diagnostic
+ * picture than just `.message`.
+ */
+function toStorageErrorDetail(error: unknown): StorageErrorDetail | null {
+  if (!error) return null
+
+  if (typeof error === 'object') {
+    const candidate = error as { message?: unknown; name?: unknown; status?: unknown; statusCode?: unknown }
+    return {
+      message: typeof candidate.message === 'string' ? candidate.message : String(error),
+      name: typeof candidate.name === 'string' ? candidate.name : undefined,
+      status: typeof candidate.status === 'number' ? candidate.status : undefined,
+      statusCode: typeof candidate.statusCode === 'string' ? candidate.statusCode : undefined,
+    }
+  }
+
+  return { message: String(error) }
 }
 
 /**
@@ -60,7 +98,7 @@ export async function uploadToStorage(
     upsert: options.upsert ?? false,
   })
 
-  return { error: error ? { message: error.message } : null }
+  return { error: toStorageErrorDetail(error) }
 }
 
 /**
@@ -84,5 +122,5 @@ export async function removeFromStorage(bucket: string, paths: string[]): Promis
   const storage = getAdminStorage()
   const { error } = await storage.from(bucket).remove(paths)
 
-  return { error: error ? { message: error.message } : null }
+  return { error: toStorageErrorDetail(error) }
 }

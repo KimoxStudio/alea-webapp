@@ -75,6 +75,35 @@ describe('lib/storage/qr seam', () => {
     expect(result.error).toEqual({ message: 'Upload failed' })
   })
 
+  it('uploadToStorage() preserves structured diagnostic fields (name, status, statusCode) from a StorageApiError-like error, not just message', async () => {
+    const { uploadToStorage } = await import('@/lib/storage/qr')
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+
+    const mockError = {
+      name: 'StorageApiError',
+      message: 'The resource already exists',
+      status: 409,
+      statusCode: '409',
+    }
+    const mockUpload = vi.fn().mockResolvedValue({ error: mockError })
+    const mockFrom = vi.fn(() => ({ upload: mockUpload }))
+    const mockStorage = { from: mockFrom }
+
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue({
+      storage: mockStorage,
+    } as never)
+
+    const testBuffer = new Uint8Array([1, 2, 3])
+    const result = await uploadToStorage('test-bucket', 'test/path.png', testBuffer)
+
+    expect(result.error).toEqual({
+      name: 'StorageApiError',
+      message: 'The resource already exists',
+      status: 409,
+      statusCode: '409',
+    })
+  })
+
   it('uploadToStorage() defaults upsert to false', async () => {
     const { uploadToStorage } = await import('@/lib/storage/qr')
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')

@@ -1069,3 +1069,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [19:05] Scope discipline verified: no auth files touched (lib/server/auth.ts, auth-service.ts untouched, confirmed via empty diff), no test files added by non-qa agents, no unrelated reorg — diff is limited to the seam module, its two call sites, qa's test file, and this log.
 - [19:05] Reconciled .claude/agent-progress.md: merged main repo's current copy (includes F0-06 entries + F0-07 team-lead/security-reviewer-summary entries) with the two worktree-only literal entries (F0-07 software-engineer, F0-07 qa-engineer) that hadn't propagated to the main copy yet. No content lost or duplicated.
 - [19:05] ✅ Complete — APPROVE. No security concerns found. Pushing branch and opening PR against develop.
+
+#### [PR-165] pr-comment-responder — Preserve full Storage error detail in lib/storage/qr seam
+- [19:00] Started — reviewer Oiranca flagged lib/storage/qr/index.ts:63 for narrowing Supabase Storage errors down to `{ message }`, losing diagnostic fields
+- [19:05] Widened `StorageOperationResult.error` to `StorageErrorDetail { message, name?, status?, statusCode? }`, added `toStorageErrorDetail()` mapper in lib/storage/qr/index.ts
+- [19:06] Updated lib/server/uploads-service.ts to log the full structured error object instead of just `error.message`
+- [19:08] Added test case in __tests__/lib/storage/qr.test.ts covering preserved name/status/statusCode fields
+- [19:10] Validation: vitest full suite 976/976 passed, typecheck clean, lint clean, build succeeded
+- [19:12] ✅ Complete — pushed to migration-f0-07-storage-qr-seam, replied to inline comment thread

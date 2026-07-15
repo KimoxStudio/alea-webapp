@@ -165,10 +165,12 @@ export async function uploadLandingMediaImage(session: SessionUser, input: Uploa
   })
 
   if (error) {
-    // Do NOT swallow the underlying storage error — log it server-side so
-    // failures (misconfigured bucket, storage outage, etc.) are diagnosable.
-    // Only a generic message is ever returned to the client.
-    console.error('[uploads-service] Supabase Storage upload failed:', error.message)
+    // Do NOT swallow the underlying storage error — log the full structured
+    // detail (name, message, status, statusCode) server-side so failures
+    // (misconfigured bucket, permissions, quota, storage outage, etc.) stay
+    // distinguishable in logs. Only a generic message is ever returned to
+    // the client.
+    console.error('[uploads-service] Supabase Storage upload failed:', error)
     serviceError('Internal server error', 500)
   }
 
