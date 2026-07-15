@@ -8,7 +8,7 @@ import type {
   ClubEventDateKind,
   ClubEventStatus,
 } from '@/lib/types'
-import { createSupabaseServerClient, createSupabaseServerAdminClient } from '@/lib/supabase/server'
+import { getDb, getAdminDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/service-error'
 import { getCurrentClubDate } from '@/lib/club-time'
 import type { Tables } from '@/lib/supabase/types'
@@ -90,7 +90,7 @@ export async function listClubEvents(options: ListClubEventsOptions = {}): Promi
   const pastLimit = options.pastLimit ?? DEFAULT_PAST_LIMIT
   const today = getCurrentClubDate()
 
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const { data, error } = await supabase
     .from('events')
     .select(CLUB_EVENT_COLUMNS)
@@ -467,7 +467,7 @@ function toAdminClubEvent(
  * the other axis. An array (including `[]`) fully replaces it.
  */
 async function applyClubEventRoomBlocksAndMaterials(
-  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  admin: ReturnType<typeof getAdminDb>,
   eventId: string,
   blocks: NormalisedEventSchedule[] | null,
   materials: NormalisedMaterial[] | null,
@@ -572,7 +572,7 @@ type EventEquipmentJoinRow = {
 }
 
 async function fetchEventMaterials(
-  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  admin: ReturnType<typeof getAdminDb>,
   eventId: string,
 ): Promise<AdminEventMaterial[]> {
   const { data, error } = await admin
@@ -592,7 +592,7 @@ async function fetchEventMaterials(
 }
 
 async function fetchEventMaterialsForMany(
-  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  admin: ReturnType<typeof getAdminDb>,
   eventIds: string[],
 ): Promise<Map<string, AdminEventMaterial[]>> {
   const byEvent = new Map<string, AdminEventMaterial[]>()
@@ -634,7 +634,7 @@ function validateSchedulesPayload(raw: unknown): NormalisedEventSchedule[] {
  * invariant holds unconditionally, not just for bad-room-id cases.
  */
 async function validateRoomsExist(
-  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  admin: ReturnType<typeof getAdminDb>,
   schedules: NormalisedEventSchedule[],
 ): Promise<void> {
   const roomIds = Array.from(new Set(schedules.map((s) => s.room_id).filter((id): id is string => !!id)))
@@ -658,7 +658,7 @@ async function validateRoomsExist(
  * would otherwise surface the bad reference.
  */
 async function validateTablesExist(
-  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  admin: ReturnType<typeof getAdminDb>,
   schedules: NormalisedEventSchedule[],
 ): Promise<void> {
   const tableIds = Array.from(new Set(schedules.map((s) => s.table_id).filter((id): id is string => !!id)))
@@ -679,7 +679,7 @@ async function validateTablesExist(
  * equipment id must be rejected before the event fields UPDATE commits.
  */
 async function validateEquipmentExists(
-  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  admin: ReturnType<typeof getAdminDb>,
   materials: NormalisedMaterial[],
 ): Promise<void> {
   const equipmentIds = Array.from(new Set(materials.map((m) => m.equipment_id)))
@@ -694,7 +694,7 @@ async function validateEquipmentExists(
 }
 
 async function fetchEventRoomBlocks(
-  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  admin: ReturnType<typeof getAdminDb>,
   eventId: string,
 ): Promise<EventRoomBlockRow[]> {
   const { data, error } = await admin
@@ -716,7 +716,7 @@ export async function listAdminClubEvents(session: SessionUser): Promise<AdminLi
   requireAdminSession(session)
   const today = getCurrentClubDate()
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('events')
     .select(ADMIN_CLUB_EVENT_COLUMNS)
@@ -769,7 +769,7 @@ export async function createClubEvent(session: SessionUser, body: ClubEventInput
   const schedules = wantsBlocks ? validateSchedulesPayload(body.schedules) : null
   const materials = validateMaterialsPayload(body.materials)
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
 
   // PR #149 review: validate every referenced room exists BEFORE the event
   // insert, so the most common cause of a post-insert block-RPC failure
@@ -829,7 +829,7 @@ export async function createClubEvent(session: SessionUser, body: ClubEventInput
 export async function updateClubEvent(session: SessionUser, id: string, body: ClubEventInput): Promise<AdminClubEvent> {
   requireAdminSession(session)
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data: currentData, error: fetchError } = await admin
     .from('events')
     .select(ADMIN_CLUB_EVENT_COLUMNS)
@@ -959,7 +959,7 @@ export async function updateClubEvent(session: SessionUser, id: string, body: Cl
 export async function deleteClubEvent(session: SessionUser, id: string): Promise<void> {
   requireAdminSession(session)
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('events')
     .select('id, title_es, title_en')

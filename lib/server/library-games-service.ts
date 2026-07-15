@@ -1,6 +1,6 @@
 import 'server-only'
 import type { AdminLibraryGame, LibraryGame } from '@/lib/types'
-import { createSupabaseServerClient, createSupabaseServerAdminClient } from '@/lib/supabase/server'
+import { getDb, getAdminDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/service-error'
 import type { Tables } from '@/lib/supabase/types'
 import type { SessionUser } from '@/lib/server/auth'
@@ -37,7 +37,7 @@ function toAdminLibraryGame(row: LibraryGameRow): AdminLibraryGame {
  * restricts anon/authenticated visibility to active rows.
  */
 export async function listLibraryGames(): Promise<LibraryGame[]> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const { data, error } = await supabase
     .from('library_games')
     .select(PUBLIC_LIBRARY_GAME_COLUMNS)
@@ -220,7 +220,7 @@ function resolveLibraryGameFields(body: LibraryGameInput, current: LibraryGameRo
 export async function listAdminLibraryGames(session: SessionUser): Promise<AdminLibraryGame[]> {
   requireAdminSession(session)
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('library_games')
     .select(ADMIN_LIBRARY_GAME_COLUMNS)
@@ -239,7 +239,7 @@ export async function createLibraryGame(session: SessionUser, body: LibraryGameI
   // Validate EVERYTHING before any DB write.
   const fields = resolveLibraryGameFields(body, null)
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('library_games')
     .insert(fields)
@@ -261,7 +261,7 @@ export async function createLibraryGame(session: SessionUser, body: LibraryGameI
 export async function updateLibraryGame(session: SessionUser, id: string, body: LibraryGameInput): Promise<AdminLibraryGame> {
   requireAdminSession(session)
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data: currentData, error: fetchError } = await admin
     .from('library_games')
     .select(ADMIN_LIBRARY_GAME_COLUMNS)
@@ -297,7 +297,7 @@ export async function updateLibraryGame(session: SessionUser, id: string, body: 
 export async function deleteLibraryGame(session: SessionUser, id: string): Promise<void> {
   requireAdminSession(session)
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('library_games')
     .select('id')

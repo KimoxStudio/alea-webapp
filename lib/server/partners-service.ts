@@ -1,6 +1,6 @@
 import 'server-only'
 import type { AdminPartner, Partner } from '@/lib/types'
-import { createSupabaseServerClient, createSupabaseServerAdminClient } from '@/lib/supabase/server'
+import { getDb, getAdminDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/service-error'
 import type { Tables } from '@/lib/supabase/types'
 import type { SessionUser } from '@/lib/server/auth'
@@ -35,7 +35,7 @@ function toAdminPartner(row: PartnerRow): AdminPartner {
  * anon/authenticated visibility to active rows.
  */
 export async function listPartners(): Promise<Partner[]> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const { data, error } = await supabase
     .from('partners')
     .select(PUBLIC_PARTNER_COLUMNS)
@@ -201,7 +201,7 @@ function resolvePartnerFields(body: PartnerInput, current: PartnerRow | null): P
 export async function listAdminPartners(session: SessionUser): Promise<AdminPartner[]> {
   requireAdminSession(session)
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('partners')
     .select(ADMIN_PARTNER_COLUMNS)
@@ -220,7 +220,7 @@ export async function createPartner(session: SessionUser, body: PartnerInput): P
   // Validate EVERYTHING — fields and the URL allowlist — before any DB write.
   const fields = resolvePartnerFields(body, null)
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('partners')
     .insert(fields)
@@ -242,7 +242,7 @@ export async function createPartner(session: SessionUser, body: PartnerInput): P
 export async function updatePartner(session: SessionUser, id: string, body: PartnerInput): Promise<AdminPartner> {
   requireAdminSession(session)
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data: currentData, error: fetchError } = await admin
     .from('partners')
     .select(ADMIN_PARTNER_COLUMNS)
@@ -278,7 +278,7 @@ export async function updatePartner(session: SessionUser, id: string, body: Part
 export async function deletePartner(session: SessionUser, id: string): Promise<void> {
   requireAdminSession(session)
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('partners')
     .select('id')

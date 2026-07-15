@@ -1,9 +1,9 @@
 import 'server-only'
-import { createSupabaseServerAdminClient } from '@/lib/supabase/server'
+import { getAdminDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/service-error'
 
 export async function getDatabaseNow(client?: unknown) {
-  const admin = (client ?? createSupabaseServerAdminClient()) as {
+  const admin = (client ?? getAdminDb()) as {
     rpc?: (fn: string, args?: unknown) => Promise<{ data?: unknown; error?: unknown } | undefined>
   }
 
