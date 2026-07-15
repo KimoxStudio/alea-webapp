@@ -4,6 +4,13 @@ import { createHash, randomBytes } from 'node:crypto'
 import { getDatabaseNow } from '@/lib/server/database-time'
 import { serviceError } from '@/lib/server/service-error'
 import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
+import {
+  createAuthUser,
+  deleteAuthUser,
+  signInWithPassword as authSignInWithPassword,
+  signOut as authSignOut,
+  updateAuthUserById,
+} from '@/lib/auth/session'
 import type { Tables, TablesInsert } from '@/lib/supabase/types'
 import { activationServerSchema, recoveryServerSchema, registerServerSchema } from '@/lib/validations/auth'
 import { type PublicProfileRow, toPublicUser } from '@/lib/server/profile-mappers'
@@ -392,7 +399,7 @@ export async function activateAccount(input: { token: unknown; password: unknown
     serviceError('Activation link is invalid or has expired', 400)
   }
 
-  const { error: updateAuthError } = await admin.auth.admin.updateUserById(profile.id, {
+  const { error: updateAuthError } = await updateAuthUserById(admin, profile.id, {
     password: parsed.data.password,
     email_confirm: true,
   })
@@ -485,7 +492,7 @@ export async function recoverAccount(input: { token: unknown; password: unknown 
     serviceError('Recovery link is invalid or has expired', 400)
   }
 
-  const { error: updateAuthError } = await admin.auth.admin.updateUserById(profile.id, {
+  const { error: updateAuthError } = await updateAuthUserById(admin, profile.id, {
     password: parsed.data.password,
     email_confirm: true,
   })
@@ -544,7 +551,7 @@ export async function login(
   }
 
   const supabase = client ?? await createSupabaseServerClient()
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await authSignInWithPassword(supabase, {
     email: authEmail,
     password,
   })
@@ -590,7 +597,7 @@ export async function register(
 
   // Create the Supabase Auth user. The on_auth_user_created trigger will immediately
   // INSERT a profiles row with a placeholder member_number.
-  const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+  const { data: authData, error: authError } = await createAuthUser(adminClient, {
     email,
     password,
     email_confirm: true,
@@ -616,22 +623,22 @@ export async function register(
     // Unique constraint violation on member_number — concurrent registration with the
     // same member number; clean up the orphaned auth user.
     if ((profileError as { code?: string }).code === '23505') {
-      await adminClient.auth.admin.deleteUser(userId)
+      await deleteAuthUser(adminClient, userId)
       serviceError('Invalid registration details', 400)
     }
-    await adminClient.auth.admin.deleteUser(userId)
+    await deleteAuthUser(adminClient, userId)
     serviceError('Failed to create user profile', 500)
   }
 
   if (!profileData) {
-    await adminClient.auth.admin.deleteUser(userId)
+    await deleteAuthUser(adminClient, userId)
     serviceError('Failed to create user profile', 500)
   }
 
   // Sign the user in to establish a session. Registration succeeded regardless of
   // whether auto-login works — the user can always log in manually.
   const supabase = sessionClient ?? await createSupabaseServerClient()
-  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+  const { error: signInError } = await authSignInWithPassword(supabase, { email, password })
   if (signInError) {
     // Non-fatal: profile was created successfully. User can log in separately.
   }
@@ -662,7 +669,7 @@ export async function getCurrentUser(
 
 export async function logout() {
   const supabase = await createSupabaseServerClient()
-  const { error } = await supabase.auth.signOut()
+  const { error } = await authSignOut(supabase)
 
   if (error) {
     serviceError('Internal server error', 500)
@@ -672,7 +679,7 @@ export async function logout() {
 }
 
 export async function logoutWithClient(client: AuthClient) {
-  const { error } = await client.auth.signOut()
+  const { error } = await authSignOut(client)
 
   if (error) {
     serviceError('Internal server error', 500)
