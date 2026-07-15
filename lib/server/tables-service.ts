@@ -1,6 +1,6 @@
 import qrcode from 'qrcode'
 import type { GameTable } from '@/lib/types'
-import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
+import { getAdminDb, getDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/service-error'
 import { resolveDate, buildAvailability } from '@/lib/server/availability'
 import type { Tables } from '@/lib/supabase/types'
@@ -15,7 +15,7 @@ type EventBlockRow = Tables<'event_room_blocks'>
 const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, qr_code_inf, pos_x, pos_y'
 
 async function uploadQrCodeToStorage(
-  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  admin: ReturnType<typeof getAdminDb>,
   url: string,
   storagePath: string,
 ): Promise<string> {
@@ -42,7 +42,7 @@ export async function generateTableQrCode(tableId: string): Promise<string> {
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
   if (!appUrl) serviceError('NEXT_PUBLIC_APP_URL is not set — cannot generate QR code URL', 500)
   const url = `${appUrl}/check-in/${tableId}`
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   return uploadQrCodeToStorage(admin, url, `${tableId}.png`)
 }
 
@@ -50,7 +50,7 @@ export async function regenerateQrCodes(tableId: string): Promise<{ qr_code: str
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tableId)) {
     serviceError('Invalid table ID', 400)
   }
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
 
   const { data: table, error: fetchError } = await admin
     .from('tables')
@@ -83,7 +83,7 @@ export async function regenerateQrCodes(tableId: string): Promise<{ qr_code: str
 }
 
 export async function getTableAvailability(tableId: string, date?: string | null) {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const tableResult = await supabase
     .from('tables')
     .select(TABLE_COLUMNS)
@@ -100,7 +100,7 @@ export async function getTableAvailability(tableId: string, date?: string | null
   }
 
   const effectiveDate = resolveDate(date)
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
 
   const [reservationsResult, eventBlocksResult, savedGameResult, nowUtc] = await Promise.all([
     admin

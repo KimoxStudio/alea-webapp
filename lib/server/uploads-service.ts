@@ -1,5 +1,5 @@
 import 'server-only'
-import { createSupabaseServerAdminClient } from '@/lib/supabase/server'
+import { getAdminDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/service-error'
 import type { SessionUser } from '@/lib/server/auth'
 
@@ -159,7 +159,7 @@ export async function uploadLandingMediaImage(session: SessionUser, input: Uploa
 
   const objectPath = `${folder}/${crypto.randomUUID()}.${extension}`
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { error } = await admin.storage
     .from(LANDING_MEDIA_BUCKET)
     .upload(objectPath, bytes, { contentType: file.type, upsert: false })

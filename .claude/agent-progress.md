@@ -1003,3 +1003,32 @@ Real-time log of all agent work. Agents append entries as work progresses.
 
 #### [PR-166-conflict] software-engineer — resolve merge conflict with develop (PR #163 merged)
 - [19:26] Started — checked out chore/remove-migrated-issue-docs, merging origin/develop
+
+#### [F0-05] software-engineer — Introduce lib/db seam
+- [19:15] Started — branch created from origin/main (local branch name `f0-05-lib-db-seam-work` due to a pre-existing locked worktree already holding `migration-f0-05-lib-db-seam`; pushed to origin under the correct branch name)
+- [19:25] Created lib/db/index.ts (getDb / getAdminDb thin wrapper around lib/supabase/server.ts)
+- [19:30] Migrated all 15 call sites (14 lib/server/*.ts service files) from createSupabaseServerClient/createSupabaseServerAdminClient to lib/db seam; lib/supabase/server.ts left unchanged as underlying factory; auth.ts session-cookie logic (createSupabaseRouteHandlerClient) left untouched, out of scope for this issue
+- [19:35] Added docs/issues/migration-f0-05-lib-db-seam.md spec
+- [19:40] pnpm typecheck ✅, pnpm build ✅ (exit 0), pnpm test ✅ (64 files / 968 tests passed unchanged), pnpm lint ✅
+- [19:41] ✅ Complete — lib/db seam introduced, zero behavior change, all validations green
+
+#### [F0-05] qa-engineer — Validate lib/db seam
+- [20:00] Started — reviewed diff against main in isolated worktree (/tmp/qa-f0-05-28494), no shared checkout touched
+- [20:05] Confirmed pure indirection: all 14 lib/server/*.ts call sites (plus lib/db/index.ts itself) verified — no function signatures, exported names, or behavior changed
+- [20:10] Cross-checked user-scoped vs admin client call-site counts per file against origin/main (git show) — exact parity confirmed for all 14 files (getDb() count == createSupabaseServerClient() count, getAdminDb() count == createSupabaseServerAdminClient() count)
+- [20:12] Confirmed acceptance criteria: no file outside lib/supabase/server.ts and lib/db/index.ts imports createSupabaseServerClient/createSupabaseServerAdminClient directly (test files mock @/lib/supabase/server transitively, which lib/db wraps — mocks remain valid)
+- [20:15] pnpm install --frozen-lockfile ✅, pnpm typecheck ✅, pnpm build ✅, pnpm lint ✅
+- [20:16] pnpm test: 64 files / 968 tests passed unchanged (no regressions)
+- [20:20] Added __tests__/lib/db.test.ts — minimal smoke test for the new lib/db seam itself (getDb/getAdminDb route to correct factory, return distinct clients); 3 new tests, all passing
+- [20:22] Full suite re-run: 65 files / 971 tests passed
+- [20:23] Committed test(db): add smoke test for lib/db seam (F0-05) and pushed to origin/migration-f0-05-lib-db-seam
+- [20:23] ✅ Complete — APPROVE, ready for security-reviewer
+
+#### [F0-05] security-reviewer — Review lib/db seam + open PR
+- [20:35] Started — reviewed develop...migration-f0-05-lib-db-seam diff in isolated worktree, no shared checkout touched
+- [20:40] Confirmed strict 1:1 mapping across all 14 lib/server/*.ts call sites (createSupabaseServerClient→getDb(), createSupabaseServerAdminClient→getAdminDb()) — no admin/user-scoped swap, programmatically verified
+- [20:42] Confirmed lib/supabase/server.ts unchanged; no production file outside lib/supabase/server.ts / lib/db/index.ts imports the raw factories (only __tests__/** mocks remain, expected)
+- [20:44] Confirmed lib/server/data-scoping.ts (assertMemberRowsScoped) untouched
+- [20:45] Noted: branch history includes already-merged migration-pre-01..04 commits from main not yet absorbed by develop — flagged in PR body as a separate develop<-main sync item (user-only merge decision), not a defect in this change
+- [20:48] Opened PR #163 (migration-f0-05-lib-db-seam -> develop)
+- [20:48] ✅ Complete — APPROVE, PR #163 opened

@@ -5,7 +5,7 @@ import { CLUB_TIMEZONE, getCurrentClubDate, isValidDateOnlyString, zonedDateTime
 import { getDatabaseNow } from '@/lib/server/database-time'
 import { serviceError } from '@/lib/server/service-error'
 import { assertMemberRowsScoped } from '@/lib/server/data-scoping'
-import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
+import { getAdminDb, getDb } from '@/lib/db'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
 import { normalizeTime } from '@/lib/server/availability'
 import {
@@ -200,7 +200,7 @@ function mapEnrichedReservation(row: EnrichedReservationRow): Reservation {
 }
 
 async function getTable(tableId: string) {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const tables = supabase.from('tables') as unknown as TablesLookupClient
   const { data, error } = await tables
     .select('id, type, room_id')
@@ -221,7 +221,7 @@ async function hasEventBlockConflict(input: {
   startTime: string
   endTime: string
 }) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('event_room_blocks')
     .select('id, table_id')
@@ -247,7 +247,7 @@ async function hasSavedGameBottomConflict(input: {
   surface?: TableSurface
 }) {
   if (input.surface !== 'bottom') return false
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('saved_games')
     .select('id')
@@ -262,7 +262,7 @@ async function hasSavedGameBottomConflict(input: {
 }
 
 async function getReservationForAccess(reservationId: string) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const reservations = admin.from('reservations') as unknown as AdminReservationsTableClient
   const { data, error } = await reservations
     .select(RESERVATION_COLUMNS)
@@ -281,7 +281,7 @@ async function listActiveReservationsForConflict(input: {
   date: string
   ignoreReservationId?: string
 }) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const query = (admin.from('reservations') as unknown as AdminReservationsTableClient)
     .select(RESERVATION_COLUMNS)
     .eq('table_id', input.tableId)
@@ -308,7 +308,7 @@ async function listActiveReservationsForConflict(input: {
 }
 
 async function expireStalePendingReservations(tableId: string, date: string) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const nowUtc = await getDatabaseNow(admin)
   const { data, error } = await admin
     .from('reservations')
@@ -347,7 +347,7 @@ async function listOverlappingReservationIds(input: {
   endTime: string
   ignoreReservationId?: string
 }) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const pageSize = 1000
   const reservationIds: string[] = []
   let from = 0
@@ -394,7 +394,7 @@ async function listOverlappingReservationIds(input: {
 }
 
 async function listRoomDefaultEquipment(roomId: string) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('room_default_equipment')
     .select('equipment(id, name, description, created_at)')
@@ -410,7 +410,7 @@ async function listRoomDefaultEquipment(roomId: string) {
 }
 
 async function listAllEquipment() {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('equipment')
     .select('id, name, description, created_at')
@@ -424,7 +424,7 @@ async function listAllEquipment() {
 }
 
 async function listEquipmentLockedToOtherRooms(roomId: string): Promise<Set<string>> {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('room_default_equipment')
     .select('equipment_id, room_id')
@@ -492,7 +492,7 @@ async function listConflictingEquipmentIds(input: {
     return new Set<string>()
   }
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('reservation_equipment')
     .select('equipment_id')
@@ -545,7 +545,7 @@ async function assertEquipmentSelectionAllowed(input: {
 }
 
 async function saveReservationEquipment(reservationId: string, equipmentIds: string[]) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { error: deleteError } = await admin
     .from('reservation_equipment')
     .delete()
@@ -573,7 +573,7 @@ async function saveReservationEquipment(reservationId: string, equipmentIds: str
 }
 
 async function getReservationEquipmentIds(reservationId: string) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await admin
     .from('reservation_equipment')
     .select('equipment_id')
@@ -634,7 +634,7 @@ export async function listVisibleReservations(input: {
   // Admin client required: RLS is removed in Phase 2. Member isolation is
   // enforced by deriving effectiveUserId from session.id for non-admin callers
   // (see line below), ensuring members can only query their own reservations.
-  const supabase = createSupabaseServerAdminClient()
+  const supabase = getAdminDb()
   const effectiveUserId = input.session.role === 'admin' ? input.userId ?? undefined : input.session.id
   const effectiveDate = input.date != null && input.date !== '' ? parseDate(input.date) : undefined
 
@@ -715,7 +715,7 @@ async function checkUserSlotOverlap(
   date: string,
   startTime: string,
   endTime: string,
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  supabase: Awaited<ReturnType<typeof getDb>>,
   ignoreReservationId?: string,
 ) {
   let query = (supabase.from('reservations') as unknown as UserSlotOverlapTableClient)
@@ -785,7 +785,7 @@ export async function createReservationForSession(
   assertReservationNotInPast(date, startTime)
   assertReservationWithinBookingWindow(date)
 
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
 
   await expireStalePendingReservations(tableId, date)
   await checkUserSlotOverlap(session.id, date, startTime, endTime, supabase)
@@ -834,7 +834,7 @@ export async function createReservationForSession(
     // Compensating delete: remove the just-created reservation to avoid a ghost
     // row with no equipment association. Ignore errors from the delete itself —
     // the original equipment error is what the caller needs to act on.
-    const adminForRollback = createSupabaseServerAdminClient()
+    const adminForRollback = getAdminDb()
     await adminForRollback.from('reservations').delete().eq('id', data.id)
     serviceError('Failed to save equipment. Reservation was cancelled. Please try again.', 500)
   }
@@ -943,7 +943,7 @@ export async function updateReservationForSession(
     serviceError(ERROR_CODES.SAVED_GAME_BOTTOM_RESERVED, 409)
   }
 
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   if (needsUserOverlapCheck) {
     await checkUserSlotOverlap(
       existingReservation.user_id,
@@ -990,7 +990,7 @@ export async function updateReservationForSession(
 }
 
 export async function markNoShowReservations(): Promise<number> {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data, error } = await (admin as unknown as {
     rpc: (fn: string, args?: unknown) => Promise<{ data: number | null; error: unknown }>
   }).rpc('mark_no_show_reservations', {
@@ -1026,7 +1026,7 @@ export async function activateReservationByTable(
   if (!table) {
     serviceError('Table not found', 404)
   }
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
 
   let pendingQuery = (admin.from('reservations') as unknown as { select: (c: string) => ActivationAdminQuery })
     .select(RESERVATION_COLUMNS)

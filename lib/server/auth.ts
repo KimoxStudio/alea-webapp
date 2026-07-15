@@ -1,6 +1,7 @@
 import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseRouteHandlerClient, createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseRouteHandlerClient } from '@/lib/supabase/server'
+import { getDb } from '@/lib/db'
 export { enforceSameOriginForMutation } from '@/lib/server/security'
 
 export type SessionUser = {
@@ -63,7 +64,7 @@ export async function getSessionFromRequest(request: NextRequest): Promise<Route
 }
 
 export async function getSessionFromServerCookies(): Promise<SessionUser | null> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   return getSessionUser(supabase as unknown as SessionClient)
 }
 
