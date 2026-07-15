@@ -993,6 +993,47 @@ Real-time log of all agent work. Agents append entries as work progresses.
   - pr-comment-responder to notify: commit SHA acd3b44
   - PR comments to update: #3580783193 (original), #3580943665 (follow-up)
 
+#### [F0-06] team-lead — Introduce lib/auth/session seam
+- [10:05] Started. Branch migration-f0-06-auth-session-seam created from develop (verified ancestor). Confirmed no open PR overlap (PR #163 touches lib/db, not lib/server/auth*). Candidate call sites found via grep: lib/server/auth.ts, lib/server/auth-service.ts, lib/server/users-service.ts. Note: lib/auth/auth-context.tsx already exists (client-side React context) — do not confuse with new lib/auth/session seam.
+
+#### [F0-07] team-lead — Introduce lib/storage/qr seam
+- [18:25] Started. Branch migration-f0-07-storage-qr-seam created from origin/develop (verified: git branch -vv shows tracking origin/develop at 1ec91e8). Confirmed no open PR overlap (PR #163 touches lib/db only). Reference pattern: PR #163 (migration-f0-05-lib-db-seam).
+- [18:25] Grep confirmed 2 call sites: lib/server/tables-service.ts (bucket table-qr-codes, actual QR upload) and lib/server/uploads-service.ts (bucket landing-media, general admin image uploads for events/partners/library-games — NOT QR-specific despite migration doc's "Storage/QR" umbrella label). Both files import createSupabaseServerAdminClient from lib/supabase/server.ts and call admin.storage directly.
+- [18:25] Spawning software-engineer (isolation: worktree) to implement the seam.
+
+#### [F0-06] software-engineer — Implement lib/auth/session seam
+- [18:26] Started
+- [18:34] Created lib/auth/session/index.ts exporting: getAuthUser, signInWithPassword, signOut, createAuthUser, deleteAuthUser, updateAuthUserById. Migrated call sites in lib/server/auth.ts, lib/server/auth-service.ts, lib/server/users-service.ts (removed now-unused local AuthAdminClient duck type + authAdmin var in users-service.ts). Zero remaining direct .auth.getUser/.signInWithPassword/.signOut/.admin.* calls outside the seam.
+- [18:34] pnpm typecheck: PASS. pnpm build: PASS (43/43 routes generated).
+- [18:34] ✅ Complete — Committed on migration-f0-06-auth-session-seam (08ee22e). 4 files changed (1 new). Not pushed — handing off to qa-engineer.
+
+#### [F0-06] qa-engineer — Validate lib/auth/session seam
+- [14:22] Started QA validation
+- [14:23] Behavior parity verified: all seam functions are faithful pass-through wrappers
+- [14:23] Completeness verified: no remaining direct .auth. calls in auth.ts, auth-service.ts, or users-service.ts
+- [14:23] Scope discipline verified: tables-service.ts and uploads-service.ts not touched
+- [14:23] Convention verified: no test files created by software-engineer
+- [14:23] lib/auth/auth-context.tsx verified untouched (client-side context)
+- [14:23] Typecheck: ✓ passed
+- [14:23] Build: ✓ passed
+- [14:24] Completeness verified: no remaining wrappable .auth. operations in lib/server/
+- [14:24] Verified lib/auth/auth-context.tsx is client-side (unrelated to seam)
+- [14:24] Verified route handlers use different auth flows (exchangeCodeForSession) - not in scope
+- [14:24] ✅ Complete — APPROVE - All validation gates passed
+
+#### [F0-06] security-reviewer — Review + PR for lib/auth/session seam
+- [18:37] Started
+- [18:38] software-engineer complete. Commit 68ed118 on migration-f0-07-storage-qr-seam (based on origin/develop, verified ancestor). New module lib/storage/qr/index.ts (uploadToStorage, getPublicStorageUrl, removeFromStorage). Migrated lib/server/tables-service.ts and lib/server/uploads-service.ts off direct admin.storage.* calls. auth-service.ts/auth.ts untouched (F0-06 sibling scope). No test files touched. typecheck/build/lint all PASS in worktree. Not pushed yet.
+- [18:38] Note: F0-05 (PR #163, open, not yet merged to develop) also touches lib/server/tables-service.ts and lib/server/uploads-service.ts (different concern — lib/db seam). Expect a merge conflict between the two PRs when the user merges them to develop; flagged for user awareness, not a blocker for this PR.
+- [18:38] agent-progress.md log conflict: software-engineer appended its entry to a stale worktree copy of this file (missing later main-repo entries). Delegating reconciliation to security-reviewer at push time, matching established repo precedent ("chore: merge into branch, resolve agent-progress.md log conflict").
+- [18:38] Spawning qa-engineer to review, reusing software-engineer's worktree (.claude/worktrees/agent-a7e0f1cb98bb59109, branch migration-f0-07-storage-qr-seam, node_modules already installed) rather than the shared main checkout.
+- [18:39] Reviewed diff (4 files: lib/auth/session/index.ts new, lib/server/auth.ts, auth-service.ts, users-service.ts). All admin-only functions require explicit admin client param; wrappers preserve original error semantics; no secrets/logging issues; scope clean (tables-service.ts, uploads-service.ts untouched, no test files added).
+- [18:39] Pushed branch, opened PR #164 (base develop <- migration-f0-06-auth-session-seam)
+- [18:39] ✅ Complete — APPROVE, PR #164 opened targeting develop: https://github.com/KimoxStudio/alea-webapp/pull/164
+- [11:45] ✅ Complete — PR #164 opened (migration-f0-06-auth-session-seam → develop), QA approved, security approved, worktree cleaned up.
+- [18:44] qa-engineer complete. APPROVED. Added __tests__/lib/storage/qr.test.ts (7 tests) covering uploadToStorage/getPublicStorageUrl/removeFromStorage against mocked admin client, following __tests__/lib/db.test.ts pattern. Full suite: 975/975 tests pass (65 files). typecheck/build PASS. Confirmed zero remaining direct .storage. usage outside seam; auth-service.ts/auth.ts untouched. Committed in worktree agent-a7e0f1cb98bb59109.
+- [18:44] Spawning security-reviewer.
+
 #### [F0-07] software-engineer — Introduce lib/storage/qr seam
 - [18:36] Started. Verified worktree branch resolved to migration-f0-07-storage-qr-seam, up to date with origin/develop (1ec91e8), no main-only commits.
 - [18:36] Inspected reference PR #163 (migration-f0-05-lib-db-seam) read-only via `git show`/`git diff` — matched its thin-wrapper convention (docstring explaining F0 seam intent, wraps existing lib/supabase/server.ts factories, no redesign).
@@ -1002,3 +1043,29 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [18:36] Confirmed via grep: zero remaining `.storage.` client usage in lib/ or app/ outside lib/storage/qr/index.ts.
 - [18:36] pnpm install (worktree had no node_modules) → pnpm typecheck: PASS. pnpm build: PASS (exit 0, all routes generated). pnpm lint: PASS (no warnings/errors).
 - [18:36] ✅ Complete — Committed on migration-f0-07-storage-qr-seam. 3 files changed (1 new: lib/storage/qr/index.ts; 2 modified: lib/server/tables-service.ts, lib/server/uploads-service.ts). Not pushed — handing off to qa-engineer/security-reviewer.
+
+#### [F0-07] qa-engineer — Review lib/storage/qr seam
+- [17:40] Started QA review of migration-f0-07-storage-qr-seam branch
+- [17:40] Verified diff: new lib/storage/qr/index.ts seam (88 lines) wraps uploadToStorage, getPublicStorageUrl, removeFromStorage with preserved Supabase Storage call signatures
+- [17:40] Confirmed call sites refactored correctly: lib/server/tables-service.ts and lib/server/uploads-service.ts use new seam functions
+- [17:40] Verified zero remaining .storage. calls outside seam module (grep clean in lib/ and app/)
+- [17:40] Confirmed auth files untouched (lib/server/auth-service.ts, lib/server/auth.ts out of scope)
+- [17:40] Verified tsconfig.json excludes test files correctly (exclude: ["node_modules", "**/*.test.ts", "**/*.test.tsx", "__tests__"])
+- [17:40] Created __tests__/lib/storage/qr.test.ts with 7 tests following db.test.ts pattern
+  - uploadToStorage() calls, option preservation, error wrapping (3 tests)
+  - getPublicStorageUrl() calls, null handling (2 tests)
+  - removeFromStorage() calls, error wrapping (2 tests)
+- [17:40] pnpm test: 975/975 tests pass (65 test files, new qr.test.ts all green)
+- [17:40] pnpm typecheck: PASS (Next.js route types generated)
+- [17:40] pnpm build: PASS (all routes built, no errors)
+- [17:40] Committed: __tests__/lib/storage/qr.test.ts
+- [17:40] ✅ Complete — APPROVED. Seam correctly wraps Supabase Storage, call sites refactored cleanly, comprehensive test coverage added, build/test/typecheck all pass.
+
+#### [F0-07] security-reviewer — Review lib/storage/qr seam
+- [19:05] Started. Reviewed diff origin/develop...migration-f0-07-storage-qr-seam (5 files: lib/storage/qr/index.ts new, lib/server/tables-service.ts, lib/server/uploads-service.ts, __tests__/lib/storage/qr.test.ts, .claude/agent-progress.md).
+- [19:05] Bucket/scope check: both call sites still target the same bucket names as before (table-qr-codes, landing-media via LANDING_MEDIA_BUCKET constant, untouched). Seam only wraps createSupabaseServerAdminClient().storage — no client/RLS-bypass boundary change, no bucket name typos, no broadening of public vs admin-only access. uploads-service.ts privilege check (requireAdminSession) and path construction (UUID + MIME-derived extension, folder allowlist) untouched by this diff.
+- [19:05] Secrets/logging check: no tokens/keys/credentials in new module or test file; error objects only expose `.message` string, never raw Supabase error objects or client instances.
+- [19:05] Verified "zero remaining direct storage usage outside seam" claim via `grep -rn "\.storage\." lib/ app/` — only matches are doc comments inside lib/storage/qr/index.ts itself.
+- [19:05] Scope discipline verified: no auth files touched (lib/server/auth.ts, auth-service.ts untouched, confirmed via empty diff), no test files added by non-qa agents, no unrelated reorg — diff is limited to the seam module, its two call sites, qa's test file, and this log.
+- [19:05] Reconciled .claude/agent-progress.md: merged main repo's current copy (includes F0-06 entries + F0-07 team-lead/security-reviewer-summary entries) with the two worktree-only literal entries (F0-07 software-engineer, F0-07 qa-engineer) that hadn't propagated to the main copy yet. No content lost or duplicated.
+- [19:05] ✅ Complete — APPROVE. No security concerns found. Pushing branch and opening PR against develop.
