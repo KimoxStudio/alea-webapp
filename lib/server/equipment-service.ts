@@ -1,4 +1,4 @@
-import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
+import { getAdminDb, getDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/service-error'
 import { ERROR_CODES } from '@/lib/types/error-codes'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
@@ -19,7 +19,7 @@ function toEquipment(row: EquipmentRow): Equipment {
 }
 
 export async function listEquipment(): Promise<Equipment[]> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const { data, error } = await supabase
     .from('equipment')
     .select('id, name, description, created_at')
@@ -38,7 +38,7 @@ export async function createEquipment(body: { name?: unknown; description?: unkn
     serviceError('Equipment name is required', 400)
   }
 
-  const supabase = createSupabaseServerAdminClient()
+  const supabase = getAdminDb()
   const insert: TablesInsert<'equipment'> = {
     name,
     description: body.description ? String(body.description) : null,
@@ -80,7 +80,7 @@ export async function updateEquipment(
     serviceError('No updatable fields provided', 400)
   }
 
-  const supabase = createSupabaseServerAdminClient()
+  const supabase = getAdminDb()
   const { data, error } = await supabase
     .from('equipment')
     .update(updates)
@@ -99,7 +99,7 @@ export async function updateEquipment(
 }
 
 export async function deleteEquipment(id: string): Promise<void> {
-  const supabase = createSupabaseServerAdminClient()
+  const supabase = getAdminDb()
   const { data, error } = await supabase
     .from('equipment')
     .delete()
@@ -116,7 +116,7 @@ export async function deleteEquipment(id: string): Promise<void> {
 }
 
 export async function getRoomDefaultEquipment(roomId: string): Promise<Equipment[]> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const { data, error } = await supabase
     .from('room_default_equipment')
     .select('equipment_id, equipment(id, name, description, created_at)')
@@ -133,7 +133,7 @@ export async function getRoomDefaultEquipment(roomId: string): Promise<Equipment
 }
 
 export async function setRoomDefaultEquipment(roomId: string, equipmentIds: string[]): Promise<void> {
-  const supabase = createSupabaseServerAdminClient()
+  const supabase = getAdminDb()
 
   if (equipmentIds.length > 0) {
     // Enforce exclusivity: reject any equipment already locked to a different room

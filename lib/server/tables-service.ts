@@ -1,7 +1,7 @@
 import qrcode from 'qrcode'
 import type { GameTable } from '@/lib/types'
-import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
 import { uploadToStorage } from '@/lib/storage/qr'
+import { getAdminDb, getDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/service-error'
 import { resolveDate, buildAvailability } from '@/lib/server/availability'
 import type { Tables } from '@/lib/supabase/types'
@@ -47,7 +47,7 @@ export async function regenerateQrCodes(tableId: string): Promise<{ qr_code: str
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tableId)) {
     serviceError('Invalid table ID', 400)
   }
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
 
   const { data: table, error: fetchError } = await admin
     .from('tables')
@@ -80,7 +80,7 @@ export async function regenerateQrCodes(tableId: string): Promise<{ qr_code: str
 }
 
 export async function getTableAvailability(tableId: string, date?: string | null) {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const tableResult = await supabase
     .from('tables')
     .select(TABLE_COLUMNS)
@@ -97,7 +97,7 @@ export async function getTableAvailability(tableId: string, date?: string | null
   }
 
   const effectiveDate = resolveDate(date)
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
 
   const [reservationsResult, eventBlocksResult, savedGameResult, nowUtc] = await Promise.all([
     admin

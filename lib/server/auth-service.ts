@@ -3,7 +3,7 @@ import type { SessionUser } from '@/lib/server/auth'
 import { createHash, randomBytes } from 'node:crypto'
 import { getDatabaseNow } from '@/lib/server/database-time'
 import { serviceError } from '@/lib/server/service-error'
-import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
+import { getAdminDb, getDb } from '@/lib/db'
 import type { Tables, TablesInsert } from '@/lib/supabase/types'
 import { activationServerSchema, recoveryServerSchema, registerServerSchema } from '@/lib/validations/auth'
 import { type PublicProfileRow, toPublicUser } from '@/lib/server/profile-mappers'
@@ -138,7 +138,7 @@ async function getAuthCredentialProfileBy(
 }
 
 async function getAuthCredentialByMemberNumber(memberNumber: string) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   return getAuthCredentialProfileBy(admin, 'member_number', memberNumber)
 }
 
@@ -171,7 +171,7 @@ export async function getActivationLinkState(token: string): Promise<ActivationL
     return { status: 'invalid', memberNumber: null, fullName: null }
   }
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const activationTokens = getActivationTokenTable(admin)
   const tokenHash = hashActivationToken(token)
   const { data: activationToken, error: activationTokenError } = await activationTokens
@@ -211,7 +211,7 @@ export async function generateActivationLink(input: {
   baseUrl: string
   createdBy: string
 }) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const profile = await getAuthCredentialProfileBy(admin, 'id', input.userId)
 
   if (!profile) {
@@ -251,7 +251,7 @@ export async function getRecoveryLinkState(token: string): Promise<RecoveryLinkS
     return { status: 'invalid', memberNumber: null, fullName: null }
   }
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const activationTokens = getActivationTokenTable(admin)
   const tokenHash = hashActivationToken(token)
   const { data: recoveryToken, error: recoveryTokenError } = await activationTokens
@@ -291,7 +291,7 @@ export async function generateRecoveryLink(input: {
   baseUrl: string
   createdBy: string
 }) {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const profile = await getAuthCredentialProfileBy(admin, 'id', input.userId)
 
   if (!profile) {
@@ -332,7 +332,7 @@ export async function activateAccount(input: { token: unknown; password: unknown
     serviceError('Invalid activation link', 400)
   }
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const activationTokens = getActivationTokenTable(admin)
   const tokenHash = hashActivationToken(parsed.data.token)
   const { data: existingToken, error: activationTokenError } = await activationTokens
@@ -428,7 +428,7 @@ export async function recoverAccount(input: { token: unknown; password: unknown 
     serviceError('Invalid recovery link', 400)
   }
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const activationTokens = getActivationTokenTable(admin)
   const tokenHash = hashActivationToken(parsed.data.token)
   const { data: existingToken, error: recoveryTokenError } = await activationTokens
@@ -543,7 +543,7 @@ export async function login(
     serviceError('Invalid credentials', 401)
   }
 
-  const supabase = client ?? await createSupabaseServerClient()
+  const supabase = client ?? await getDb()
   const { data, error } = await supabase.auth.signInWithPassword({
     email: authEmail,
     password,
@@ -573,9 +573,9 @@ export async function register(
 
   const { memberNumber, password } = parsed.data
 
-  // Use the full admin client (ReturnType<typeof createSupabaseServerAdminClient>) so
+  // Use the full admin client (ReturnType<typeof getAdminDb>) so
   // both auth.admin and .from('profiles') are available without unsafe casts.
-  const adminClient = createSupabaseServerAdminClient()
+  const adminClient = getAdminDb()
 
   // Check whether the member number is already taken by an existing profile.
   // Generic message to avoid user enumeration (do not confirm whether the number exists).
@@ -630,7 +630,7 @@ export async function register(
 
   // Sign the user in to establish a session. Registration succeeded regardless of
   // whether auto-login works — the user can always log in manually.
-  const supabase = sessionClient ?? await createSupabaseServerClient()
+  const supabase = sessionClient ?? await getDb()
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
   if (signInError) {
     // Non-fatal: profile was created successfully. User can log in separately.
@@ -640,7 +640,7 @@ export async function register(
 }
 
 async function getSessionScopedProfile(id: string, client?: ProfileLookupClient) {
-  const supabase = client ?? await createSupabaseServerClient()
+  const supabase = client ?? await getDb()
   return getPublicProfileBy(supabase, 'id', id)
 }
 
@@ -661,7 +661,7 @@ export async function getCurrentUser(
 }
 
 export async function logout() {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const { error } = await supabase.auth.signOut()
 
   if (error) {

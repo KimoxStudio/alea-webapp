@@ -1,5 +1,5 @@
 import 'server-only'
-import { createSupabaseServerAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
+import { getAdminDb, getDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/service-error'
 import type { Tables } from '@/lib/supabase/types'
 import type { AdminEvent, AdminEventRoomBlock, AdminEventSchedule } from '@/lib/types'
@@ -270,7 +270,7 @@ export function validateAndNormaliseSchedule(
 // ---------------------------------------------------------------------------
 
 export async function listEvents(): Promise<AdminEvent[]> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const { data: events, error: eventsError } = await supabase
     .from('events')
     .select('id, title, description, date, start_time, end_time, created_by, created_at')
@@ -288,7 +288,7 @@ export async function listEvents(): Promise<AdminEvent[]> {
   const rows = (events ?? []) as EventRow[]
   if (rows.length === 0) return []
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data: blocks, error: blocksError } = await admin
     .from('event_room_blocks')
     .select('id, event_id, room_id, date, start_time, end_time, all_day')
@@ -307,7 +307,7 @@ export async function listEvents(): Promise<AdminEvent[]> {
 }
 
 export async function getEvent(id: string): Promise<AdminEvent> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = await getDb()
   const { data: event, error: eventError } = await supabase
     .from('events')
     .select('id, title, description, date, start_time, end_time, created_by, created_at')
@@ -317,7 +317,7 @@ export async function getEvent(id: string): Promise<AdminEvent> {
   if (eventError) serviceError('Internal server error', 500)
   if (!event) serviceError('Event not found', 404)
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
   const { data: blocks, error: blocksError } = await admin
     .from('event_room_blocks')
     .select('id, event_id, room_id, date, start_time, end_time, all_day')
@@ -360,7 +360,7 @@ export async function createEvent(body: {
       all_day: b.all_day,
     }))
 
-    const admin = createSupabaseServerAdminClient()
+    const admin = getAdminDb()
     const { data: result, error: rpcError } = await admin.rpc('create_event_with_blocks', {
       p_title: title,
       p_description: description,
@@ -384,7 +384,7 @@ export async function createEvent(body: {
   const resolvedTimes = resolveBlockTimes(date, String(body.startTime ?? '').trim(), String(body.endTime ?? '').trim(), allDay)
   const roomId = body.roomId ? String(body.roomId).trim() : null
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
 
   const { data: result, error: rpcError } = await admin.rpc('create_event_atomic', {
     p_title: title,
@@ -415,7 +415,7 @@ export async function updateEvent(
     allDay?: unknown
   },
 ): Promise<AdminEvent> {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
 
   // Load current event to fill in any fields not provided in the body
   const { data: current, error: fetchError } = await admin
@@ -522,7 +522,7 @@ export async function updateEvent(
 }
 
 export async function deleteEvent(id: string): Promise<void> {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
 
   const { data: eventData } = await admin
     .from('events')
@@ -551,7 +551,7 @@ export async function deleteEvent(id: string): Promise<void> {
  * check in `deleteEvent`).
  */
 export async function deleteEventCascade(
-  admin: ReturnType<typeof createSupabaseServerAdminClient>,
+  admin: ReturnType<typeof getAdminDb>,
   id: string,
 ): Promise<void> {
   const { data: blocks } = await admin
@@ -631,7 +631,7 @@ export async function previewEventConflicts(body: {
     return { total: 0, blocks: [] }
   }
 
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
 
   // Pre-fetch table ids for all distinct rooms in one round-trip (avoids N+1)
   const distinctRoomIds = [...new Set(roomedBlocks.map((b) => b.room_id))]
@@ -686,7 +686,7 @@ export async function listEventsBlockingRoom(
   start: string,
   end: string,
 ): Promise<AdminEvent[]> {
-  const admin = createSupabaseServerAdminClient()
+  const admin = getAdminDb()
 
   const { data: blocks, error } = await admin
     .from('event_room_blocks')
