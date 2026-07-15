@@ -812,6 +812,13 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [23:44] Added regression test in __tests__/server/club-events-service.test.ts forcing both block RPC and compensating delete to fail; verified it fails without the fix (0 console.error calls) and passes with it
 - [23:44] ✅ Complete — vitest 27/27 passed, pnpm build green, pushed to feat/oir-203-admin-club-events
 
+#### [PR164] qa-engineer — add unit test coverage for lib/auth/session seam
+- [19:00] Started — Oiranca review comment on lib/auth/session/index.ts:152 requesting a focused unit test for the new F0-06 auth seam (session reads, password sign-in/sign-out, admin user management) before merging.
+- [19:03] Reviewed sibling seam test conventions: __tests__/lib/db.test.ts (F0-05, origin/migration-f0-05-lib-db-seam) and __tests__/lib/storage/qr.test.ts (F0-07, origin/migration-f0-07-storage-qr-seam). Unlike those, lib/auth/session does not wrap client factories — call sites pass their own client in — so tests build minimal mock clients per function instead of mocking lib/supabase/server.
+- [19:06] Added __tests__/lib/auth/session.test.ts — 11 tests covering getAuthUser (user resolved / error / no user), signInWithPassword (success + error-semantics preserved), signOut (success + error propagated), createAuthUser, deleteAuthUser, updateAuthUserById (success + error propagated), each asserting the wrapper calls the correct underlying `.auth`/`.auth.admin` method with the right args and returns the result unchanged.
+- [19:07] Validation: pnpm exec vitest run __tests__/lib/auth/session.test.ts → 11/11 passed. Full pnpm test → 65 files / 972 tests passed. pnpm typecheck → clean. pnpm build → succeeded. pnpm lint → no warnings/errors.
+- [19:10] ✅ Complete — pushed to migration-f0-06-auth-session-seam, replying to Oiranca's inline comment on PR #164.
+
 #### repo-audit-cleanup-2026-07-14 software-engineer — CI docs cleanup, dead gitignore entry, admin refactor issue spec
 - [00:00] Started — branch chore/repo-audit-cleanup-2026-07-14 created from develop
 - [00:00] Task A: fixed stale GitHub Actions references in README.md (hook description, "used to run" claim) and scripts/ci-local.sh (comment) — no .github/workflows exists in repo; script logic itself did not depend on GH Actions context, only comments were stale
@@ -1021,3 +1028,11 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [20:45] Noted: branch history includes already-merged migration-pre-01..04 commits from main not yet absorbed by develop — flagged in PR body as a separate develop<-main sync item (user-only merge decision), not a defect in this change
 - [20:48] Opened PR #163 (migration-f0-05-lib-db-seam -> develop)
 - [20:48] ✅ Complete — APPROVE, PR #163 opened
+
+#### [PR164] software-engineer — resolve merge conflict with develop (F0-05 lib/db seam)
+- [19:30] Started — PR #164 (migration-f0-06-auth-session-seam) went CONFLICTING after PR #163 (F0-05 lib/db seam) merged into develop. Checked out branch in isolated worktree, fetched origin, ran `git merge origin/develop`.
+- [19:32] Conflicts in 4 files: lib/server/auth.ts, lib/server/auth-service.ts, lib/server/users-service.ts (import blocks + a few call sites), and .claude/agent-progress.md (append-only log).
+- [19:35] Reconciled service files so both seams coexist: DB client access goes through `getDb()`/`getAdminDb()` (lib/db, from F0-05), while Supabase Auth operations go through the `lib/auth/session` wrappers (getAuthUser, signInWithPassword, signOut, createAuthUser, deleteAuthUser, updateAuthUserById, from F0-06). Replaced remaining `createSupabaseServerClient()` + raw `supabase.auth.*` calls in auth-service.ts (login, register, logout) with `getDb()` + the auth/session wrapper functions.
+- [19:38] Resolved .claude/agent-progress.md conflict as a union of both sides (kept every entry from HEAD and origin/develop, dropped only the conflict markers).
+- [19:45] Validation: pnpm install --frozen-lockfile ✅, pnpm typecheck ✅, pnpm lint ✅ (no warnings/errors), pnpm test → 66 files / 982 tests passed, pnpm build ✅ (all routes compiled).
+- [19:46] ✅ Complete — merge commit created and pushed to migration-f0-06-auth-session-seam; PR #164 expected to show CLEAN against develop.

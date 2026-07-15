@@ -1,5 +1,6 @@
 import type { MemberImportIssue, MemberImportResult, MemberImportRow, PaginatedResponse, User } from '@/lib/types'
 import { getAdminDb } from '@/lib/db'
+import { createAuthUser, deleteAuthUser, updateAuthUserById } from '@/lib/auth/session'
 import { serviceError } from '@/lib/server/service-error'
 import type { TablesUpdate } from '@/lib/supabase/types'
 import { memberNumberSchema } from '@/lib/validations/auth'
@@ -57,10 +58,6 @@ type ProfilesImportTableClient = {
     }
   }
 }
-type AuthAdminClient = {
-  updateUserById: (id: string, attributes: { email: string }) => Promise<{ error: unknown | null }>
-}
-
 const PROFILE_COLUMNS = 'id, member_number, full_name, auth_email, email, phone, role, is_active, active_from, no_show_count, blocked_until, created_at, updated_at'
 
 function normalizePage(page: number) {
@@ -106,7 +103,6 @@ async function importMembersFromNormalizedRows(input: {
   const auditedRows: MemberImportRow[] = []
   const admin = getAdminDb()
   const profiles = admin.from('profiles') as unknown as ProfilesImportTableClient
-  const authAdmin = admin.auth.admin as AuthAdminClient
   const concurrencyLimit = 10
 
   async function processImportRow(row: MemberImportRow) {
@@ -169,7 +165,7 @@ async function importMembersFromNormalizedRows(input: {
     const authEmail = createInternalAuthEmail(row.memberNumber)
     const contactEmail = row.email ?? authEmail
     const temporaryPassword = `Temp${crypto.randomUUID().replace(/-/g, '')}Aa1`
-    const { data: authData, error: createAuthError } = await admin.auth.admin.createUser({
+    const { data: authData, error: createAuthError } = await createAuthUser(admin, {
       email: authEmail,
       password: temporaryPassword,
       email_confirm: true,
@@ -201,7 +197,7 @@ async function importMembersFromNormalizedRows(input: {
       .maybeSingle()
 
     if (updateProfileError || !persistedProfile) {
-      await admin.auth.admin.deleteUser(authData.user.id)
+      await deleteAuthUser(admin, authData.user.id)
       return {
         created: 0,
         updated: 0,
@@ -339,7 +335,6 @@ export async function updateUser(
 
   const supabase = getAdminDb()
   const profiles = supabase.from('profiles') as unknown as ProfilesTableClient
-  const authAdmin = supabase.auth.admin as AuthAdminClient
   const { data: existingProfile, error: existingProfileError } = await profiles
     .select(PROFILE_COLUMNS)
     .eq('id', id)
@@ -377,7 +372,7 @@ export async function updateUser(
   }
 
   if (typeof updates.auth_email === 'string') {
-    const { error: authUpdateError } = await authAdmin.updateUserById(id, { email: updates.auth_email })
+    const { error: authUpdateError } = await updateAuthUserById(supabase, id, { email: updates.auth_email })
 
     if (authUpdateError) {
       await profiles
@@ -442,7 +437,7 @@ export async function deleteUser(id: string) {
     serviceError('User not found', 404)
   }
 
-  const { error: deleteError } = await admin.auth.admin.deleteUser(id)
+  const { error: deleteError } = await deleteAuthUser(admin, id)
   if (deleteError) {
     serviceError('Internal server error', 500)
   }

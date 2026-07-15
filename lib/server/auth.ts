@@ -1,6 +1,7 @@
 import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseRouteHandlerClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth/session'
 import { getDb } from '@/lib/db'
 export { enforceSameOriginForMutation } from '@/lib/server/security'
 
@@ -33,16 +34,16 @@ type AuthContext = {
 }
 
 async function getSessionUser(client: SessionClient) {
-  const { data: authData, error: authError } = await client.auth.getUser()
+  const authUser = await getAuthUser(client)
 
-  if (authError || !authData.user) {
+  if (!authUser) {
     return null
   }
 
   const { data: profile, error: profileError } = await client
     .from('profiles')
     .select('id, role, is_active')
-    .eq('id', authData.user.id)
+    .eq('id', authUser.id)
     .maybeSingle()
 
   if (profileError || !profile || !profile.is_active) {
