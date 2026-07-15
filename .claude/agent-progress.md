@@ -1000,3 +1000,6 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [21:07] Grepped repo for dangling references: found docs/SECRET-ROTATION-CHECKLIST.md:8 pointing at deleted migration-pre-04-rotate-p0-secrets.md — fixed (one-line path swap to "Linear KIM-393"). Remaining hits are only historical entries in this log file (.claude/agent-progress.md, append-only, left untouched) and a self-reference inside oir-203-204-205 pointing at oir-202 (both files deleted together, moot)
 - [21:07] No code/config references these markdown files (docs-only change) — typecheck/build skipped as not applicable
 - [21:08] ✅ Complete — 7 files deleted, 1 file (docs/SECRET-ROTATION-CHECKLIST.md) updated, committed and pushed. Handing off to qa-engineer then security-reviewer (PR target: develop)
+
+#### [PR-166-conflict] software-engineer — resolve merge conflict with develop (PR #163 merged)
+- [19:26] Started — checked out chore/remove-migrated-issue-docs, merging origin/develop
