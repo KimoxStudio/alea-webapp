@@ -1573,3 +1573,8 @@ No blocking issues. No modifications needed. Code is ready for security-reviewer
 - [00:07] Validation: pnpm install --frozen-lockfile ✅, pnpm typecheck ✅, pnpm lint ✅ (no warnings), pnpm test → 74 files/1105 tests passed (1 skipped file, 21 skipped tests, pre-existing), pnpm build ✅ (all routes generated).
 - [00:08] Pushed --force-with-lease to origin/docs/KIM-430-fix-stale-test-paths (030ac87...8007e52). Pre-push hook ran full local CI and passed — no --no-verify needed.
 - [00:09] ✅ Complete — PR #173 confirmed mergeable=MERGEABLE, mergeStateStatus=CLEAN against develop via `gh pr view`.
+
+#### [KIM-421] qa-engineer — Add focused tests for Vercel Blob adapter + document call-site gap
+- [00:00] Started
+- [00:00] Reading implementation (vercel-blob.ts, tables-service.ts call site, existing tests)
+- [00:00] Writing comprehensive Vercel Blob adapter unit tests

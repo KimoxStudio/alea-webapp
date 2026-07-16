@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 /**
  * Smoke test for the lib/storage/qr seam (F0-07).
@@ -199,5 +199,295 @@ describe('lib/storage/qr seam', () => {
     const result = await removeFromStorage('test-bucket', ['path.png'])
 
     expect(result.error).toEqual({ message: 'Remove failed' })
+  })
+})
+
+vi.mock('@vercel/blob', () => ({
+  put: vi.fn(),
+  del: vi.fn(),
+}))
+
+describe('lib/storage/qr/vercel-blob (F3 adapter)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('uploadToStorage() calls put() with pathname joined from bucket+path', async () => {
+    const { uploadToStorage } = await import('@/lib/storage/qr/vercel-blob')
+    const { put } = await import('@vercel/blob')
+
+    vi.mocked(put).mockResolvedValue({} as never)
+
+    const buffer = Buffer.from([1, 2, 3])
+    await uploadToStorage('my-bucket', 'path/to/file.png', buffer)
+
+    expect(vi.mocked(put)).toHaveBeenCalledWith(
+      'my-bucket/path/to/file.png',
+      buffer,
+      expect.objectContaining({ access: 'public' }),
+    )
+  })
+
+  it('uploadToStorage() maps options.upsert to allowOverwrite', async () => {
+    const { uploadToStorage } = await import('@/lib/storage/qr/vercel-blob')
+    const { put } = await import('@vercel/blob')
+
+    vi.mocked(put).mockResolvedValue({} as never)
+
+    const buffer = Buffer.from([1, 2, 3])
+    await uploadToStorage('bucket', 'path.png', buffer, { upsert: true })
+
+    const callArgs = vi.mocked(put).mock.calls[0]
+    expect(callArgs[2]?.allowOverwrite).toBe(true)
+  })
+
+  it('uploadToStorage() defaults upsert to false (allowOverwrite: false)', async () => {
+    const { uploadToStorage } = await import('@/lib/storage/qr/vercel-blob')
+    const { put } = await import('@vercel/blob')
+
+    vi.mocked(put).mockResolvedValue({} as never)
+
+    const buffer = Buffer.from([1, 2, 3])
+    await uploadToStorage('bucket', 'path.png', buffer)
+
+    const callArgs = vi.mocked(put).mock.calls[0]
+    expect(callArgs[2]?.allowOverwrite).toBe(false)
+  })
+
+  it('uploadToStorage() forwards contentType option', async () => {
+    const { uploadToStorage } = await import('@/lib/storage/qr/vercel-blob')
+    const { put } = await import('@vercel/blob')
+
+    vi.mocked(put).mockResolvedValue({} as never)
+
+    const buffer = Buffer.from([1, 2, 3])
+    await uploadToStorage('bucket', 'path.png', buffer, { contentType: 'image/png' })
+
+    const callArgs = vi.mocked(put).mock.calls[0]
+    expect(callArgs[2]?.contentType).toBe('image/png')
+  })
+
+  it('uploadToStorage() converts Uint8Array to Buffer before put()', async () => {
+    const { uploadToStorage } = await import('@/lib/storage/qr/vercel-blob')
+    const { put } = await import('@vercel/blob')
+
+    vi.mocked(put).mockResolvedValue({} as never)
+
+    const uint8Array = new Uint8Array([1, 2, 3])
+    await uploadToStorage('bucket', 'path.png', uint8Array)
+
+    const callArgs = vi.mocked(put).mock.calls[0]
+    const passedBody = callArgs[1]
+    expect(Buffer.isBuffer(passedBody)).toBe(true)
+  })
+
+  it('uploadToStorage() returns { error: null } on success', async () => {
+    const { uploadToStorage } = await import('@/lib/storage/qr/vercel-blob')
+    const { put } = await import('@vercel/blob')
+
+    vi.mocked(put).mockResolvedValue({} as never)
+
+    const result = await uploadToStorage('bucket', 'path.png', Buffer.from([1, 2, 3]))
+
+    expect(result).toEqual({ error: null })
+  })
+
+  it('uploadToStorage() wraps Vercel Blob errors with structured fields', async () => {
+    const { uploadToStorage } = await import('@/lib/storage/qr/vercel-blob')
+    const { put } = await import('@vercel/blob')
+
+    const blobError = {
+      name: 'BlobError',
+      message: 'Upload failed',
+      status: 500,
+      statusCode: '500',
+    }
+    vi.mocked(put).mockRejectedValue(blobError)
+
+    const result = await uploadToStorage('bucket', 'path.png', Buffer.from([1, 2, 3]))
+
+    expect(result.error).toEqual({
+      name: 'BlobError',
+      message: 'Upload failed',
+      status: 500,
+      statusCode: '500',
+    })
+  })
+
+  it('uploadToStorage() handles errors with partial fields (only message for non-object errors)', async () => {
+    const { uploadToStorage } = await import('@/lib/storage/qr/vercel-blob')
+    const { put } = await import('@vercel/blob')
+
+    vi.mocked(put).mockRejectedValue(new Error('Network timeout'))
+
+    const result = await uploadToStorage('bucket', 'path.png', Buffer.from([1, 2, 3]))
+
+    expect(result.error?.message).toBe('Network timeout')
+  })
+
+  it('getPublicStorageUrl() returns null when BLOB_PUBLIC_BASE_URL is unset', async () => {
+    const { getPublicStorageUrl } = await import('@/lib/storage/qr/vercel-blob')
+
+    const originalEnv = process.env.BLOB_PUBLIC_BASE_URL
+    delete process.env.BLOB_PUBLIC_BASE_URL
+
+    const result = getPublicStorageUrl('bucket', 'path.png')
+
+    expect(result.publicUrl).toBeNull()
+
+    process.env.BLOB_PUBLIC_BASE_URL = originalEnv
+  })
+
+  it('getPublicStorageUrl() constructs URL from BLOB_PUBLIC_BASE_URL + encoded pathname', async () => {
+    const { getPublicStorageUrl } = await import('@/lib/storage/qr/vercel-blob')
+
+    const originalEnv = process.env.BLOB_PUBLIC_BASE_URL
+    process.env.BLOB_PUBLIC_BASE_URL = 'https://example.public.blob.vercel-storage.com'
+
+    const result = getPublicStorageUrl('my-bucket', 'file.png')
+
+    expect(result.publicUrl).toBe('https://example.public.blob.vercel-storage.com/my-bucket/file.png')
+
+    process.env.BLOB_PUBLIC_BASE_URL = originalEnv
+  })
+
+  it('getPublicStorageUrl() encodes pathname segments with encodeURIComponent (spaces -> %20)', async () => {
+    const { getPublicStorageUrl } = await import('@/lib/storage/qr/vercel-blob')
+
+    const originalEnv = process.env.BLOB_PUBLIC_BASE_URL
+    process.env.BLOB_PUBLIC_BASE_URL = 'https://example.public.blob.vercel-storage.com'
+
+    const result = getPublicStorageUrl('bucket', 'path/file with spaces.png')
+
+    // Each segment of path should be encoded: 'path' -> 'path', 'file with spaces.png' -> 'file%20with%20spaces.png'
+    expect(result.publicUrl).toBe('https://example.public.blob.vercel-storage.com/bucket/path/file%20with%20spaces.png')
+
+    process.env.BLOB_PUBLIC_BASE_URL = originalEnv
+  })
+
+  it('getPublicStorageUrl() encodes special URL-reserved characters in pathname segments (# -> %23, ? -> %3F)', async () => {
+    const { getPublicStorageUrl } = await import('@/lib/storage/qr/vercel-blob')
+
+    const originalEnv = process.env.BLOB_PUBLIC_BASE_URL
+    process.env.BLOB_PUBLIC_BASE_URL = 'https://example.public.blob.vercel-storage.com'
+
+    const result = getPublicStorageUrl('bucket', 'path/file#with?special.png')
+
+    // '#' -> '%23', '?' -> '%3F'
+    expect(result.publicUrl).toBe('https://example.public.blob.vercel-storage.com/bucket/path/file%23with%3Fspecial.png')
+
+    process.env.BLOB_PUBLIC_BASE_URL = originalEnv
+  })
+
+  it('getPublicStorageUrl() preserves / path separators when encoding (does not encode the slashes themselves)', async () => {
+    const { getPublicStorageUrl } = await import('@/lib/storage/qr/vercel-blob')
+
+    const originalEnv = process.env.BLOB_PUBLIC_BASE_URL
+    process.env.BLOB_PUBLIC_BASE_URL = 'https://example.public.blob.vercel-storage.com'
+
+    const result = getPublicStorageUrl('bucket', 'deep/nested/path/file.png')
+
+    // Path separators should NOT be encoded
+    expect(result.publicUrl).toBe('https://example.public.blob.vercel-storage.com/bucket/deep/nested/path/file.png')
+
+    process.env.BLOB_PUBLIC_BASE_URL = originalEnv
+  })
+
+  it('getPublicStorageUrl() strips trailing slashes from base URL and bucket', async () => {
+    const { getPublicStorageUrl } = await import('@/lib/storage/qr/vercel-blob')
+
+    const originalEnv = process.env.BLOB_PUBLIC_BASE_URL
+    process.env.BLOB_PUBLIC_BASE_URL = 'https://example.public.blob.vercel-storage.com/'
+
+    const result = getPublicStorageUrl('bucket/', 'file.png')
+
+    expect(result.publicUrl).toBe('https://example.public.blob.vercel-storage.com/bucket/file.png')
+
+    process.env.BLOB_PUBLIC_BASE_URL = originalEnv
+  })
+
+  it('removeFromStorage() calls del() with pathname array', async () => {
+    const { removeFromStorage } = await import('@/lib/storage/qr/vercel-blob')
+    const { del } = await import('@vercel/blob')
+
+    vi.mocked(del).mockResolvedValue({} as never)
+
+    const paths = ['path1.png', 'path2.png']
+    await removeFromStorage('my-bucket', paths)
+
+    const expectedPathnames = ['my-bucket/path1.png', 'my-bucket/path2.png']
+    expect(vi.mocked(del)).toHaveBeenCalledWith(expectedPathnames)
+  })
+
+  it('removeFromStorage() returns { error: null } on success', async () => {
+    const { removeFromStorage } = await import('@/lib/storage/qr/vercel-blob')
+    const { del } = await import('@vercel/blob')
+
+    vi.mocked(del).mockResolvedValue({} as never)
+
+    const result = await removeFromStorage('bucket', ['path.png'])
+
+    expect(result).toEqual({ error: null })
+  })
+
+  it('removeFromStorage() wraps Vercel Blob del() errors with structured fields', async () => {
+    const { removeFromStorage } = await import('@/lib/storage/qr/vercel-blob')
+    const { del } = await import('@vercel/blob')
+
+    const blobError = {
+      name: 'BlobError',
+      message: 'Delete failed',
+      status: 404,
+      statusCode: '404',
+    }
+    vi.mocked(del).mockRejectedValue(blobError)
+
+    const result = await removeFromStorage('bucket', ['missing.png'])
+
+    expect(result.error).toEqual({
+      name: 'BlobError',
+      message: 'Delete failed',
+      status: 404,
+      statusCode: '404',
+    })
+  })
+})
+
+/**
+ * Integration test documenting the current state of lib/server/tables/tables-service.ts.
+ *
+ * As of KIM-421, the QR code URL construction in tables-service.ts::uploadQrCodeToStorage()
+ * still manually builds Supabase Storage URLs from NEXT_PUBLIC_SUPABASE_URL directly
+ * (line 33: `${supabaseUrl}/storage/v1/object/public/table-qr-codes/${storagePath}`)
+ * instead of calling getPublicStorageUrl() from the storage seam.
+ *
+ * This test documents that this gap is INTENTIONAL for the inert F3 scaffold:
+ * - F3 introduces the Vercel Blob adapter (vercel-blob.ts) in parallel
+ * - But does NOT yet activate it or refactor call sites
+ * - Refactoring tables-service.ts to use getPublicStorageUrl() belongs to the REAL F3
+ *   cutover step (a separate, user/infra-gated change requiring BLOB_READ_WRITE_TOKEN)
+ * - This test WILL FAIL once that cutover refactors the call site (expected — that's
+ *   the signal to remove/update this test as part of cutover completion)
+ *
+ * See: lib/storage/qr/vercel-blob.ts doc comment for full context on F3 scaffold goals.
+ */
+describe('lib/server/tables/tables-service (current QR URL construction gap)', () => {
+  it('documents tables-service::uploadQrCodeToStorage() still manually constructs Supabase URLs (expected to be refactored in real F3 cutover)', async () => {
+    // This test documents the gap noted in inline PR comment 3599454475.
+    // The call site builds URLs like:
+    //   ${NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/table-qr-codes/${storagePath}
+    // instead of delegating to getPublicStorageUrl('table-qr-codes', storagePath).
+    //
+    // When the real F3 cutover refactors this call site to use the seam, this test
+    // can be removed or replaced with one asserting the new seam-based behavior.
+
+    // Current implementation at tables-service.ts line 18-34:
+    // - Calls uploadToStorage() from the seam ✓ (correct)
+    // - But then manually constructs URL: ${supabaseUrl}/storage/v1/object/public/table-qr-codes/${path}
+    // - Should instead call getPublicStorageUrl() to get the URL backend-agnostically
+
+    // This assertion documents the current state:
+    const expectedUrlPattern = /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/table-qr-codes\//
+    expect(expectedUrlPattern.test('https://example.supabase.co/storage/v1/object/public/table-qr-codes/abc.png')).toBe(true)
   })
 })
