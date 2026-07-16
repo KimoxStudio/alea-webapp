@@ -9,8 +9,11 @@
  * graph free of Node-only modules.
  *
  * Node-only helpers (`tokensMatch`, `enforceMutationSecurity`, rate limiting)
- * stay in `security.ts`, which re-exports everything from this file so that
- * existing route-handler imports from `@/lib/server/shared/security` are unaffected.
+ * stay in `security.ts`, which re-exports everything from this file. The
+ * boundary is explicit: route handlers should import the Node-only helpers
+ * from `@/lib/server/shared/security`, while middleware and other Edge
+ * runtime code must import `@/lib/server/shared/security-edge` directly —
+ * `security.ts` is intentionally Node-only and is not Edge-safe.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import type { CookieOptionsWithName } from '@supabase/ssr'

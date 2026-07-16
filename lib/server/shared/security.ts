@@ -4,8 +4,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { Redis } from '@upstash/redis'
 import type { Ratelimit } from '@upstash/ratelimit'
 
-// Re-export all Edge-safe helpers so that existing route-handler imports from
-// `@/lib/server/shared/security` continue to work without any call-site changes.
+// Re-export all Edge-safe helpers to keep the Node-only vs Edge-safe boundary
+// explicit: route handlers should import the Node-only helpers below from
+// `@/lib/server/shared/security`, while middleware and other Edge runtime
+// code must import `@/lib/server/shared/security-edge` directly, which is
+// Node `crypto`-free.
 export {
   CSRF_COOKIE_NAME,
   CSRF_HEADER_NAME,
