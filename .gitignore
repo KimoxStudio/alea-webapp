@@ -45,9 +45,9 @@ AGENTS.md
 .claude/*.lock
 
 # E2E runner artifacts (screenshots, videos)
-qa/e2e/*.png
-qa/e2e/*.webm
-qa/e2e/*.pdf
+tests/e2e/*.png
+tests/e2e/*.webm
+tests/e2e/*.pdf
 
 # Loose tooling artifacts (repo root)
 /*.png

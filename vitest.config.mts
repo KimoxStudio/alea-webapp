@@ -20,7 +20,7 @@ export default defineConfig({
       // test helpers fall back to 'Europe/Madrid' — pinning here keeps them in sync.
       CLUB_TIMEZONE: 'Europe/Madrid',
     },
-    include: ['__tests__/**/*.{test,spec}.{ts,tsx}'],
+    include: ['tests/unit/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', '.next'],
     coverage: {
       provider: 'v8',

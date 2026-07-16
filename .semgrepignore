@@ -1,3 +1,3 @@
 # Supabase CLI demo tokens in example env file are not real credentials
 .env.local.example
-__tests__/
+tests/
