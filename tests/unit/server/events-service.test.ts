@@ -54,6 +54,17 @@ type EventRoomBlockRow = {
   end_time: string
 }
 
+type SessionUser = { id: string; role: 'admin' | 'member'; email?: string }
+
+function createAdminSession(): SessionUser {
+  return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
+}
+
+function createMemberSession(): SessionUser {
+  return { id: 'member-1', role: 'member', email: 'member@example.com' }
+}
+
+
 // Helper to build a mock Supabase client with RPC support
 function buildSupabaseMock() {
   return {
@@ -362,7 +373,7 @@ describe('events-service — createEvent with roomId cancellation', () => {
 
     const { createEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await createEvent({
+    const result = await createEvent(createAdminSession(), {
       title: 'Test Event',
       date: '2026-04-20',
       startTime: '18:00',
@@ -411,7 +422,7 @@ describe('events-service — createEvent with roomId cancellation', () => {
 
     const { createEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await createEvent({
+    const result = await createEvent(createAdminSession(), {
       title: 'No Room Event',
       date: '2026-04-20',
       startTime: '18:00',
@@ -452,7 +463,7 @@ describe('events-service — createEvent with roomId cancellation', () => {
 
     const { createEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await createEvent({
+    const result = await createEvent(createAdminSession(), {
       title: 'Event With Description',
       description: 'Test description',
       date: '2026-04-20',
@@ -485,7 +496,7 @@ describe('events-service — createEvent with roomId cancellation', () => {
 
     let caught: ServiceError | undefined
     try {
-      await createEvent({
+      await createEvent(createAdminSession(), {
         title: 'Test Event',
         date: '2026-04-20',
         startTime: '18:00',
@@ -538,7 +549,7 @@ describe('events-service — updateEvent with cancellation', () => {
 
     const { updateEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await updateEvent('evt-update-1', {
+    const result = await updateEvent(createAdminSession(), 'evt-update-1', {
       startTime: '16:00',
       endTime: '20:00',
     })
@@ -589,7 +600,7 @@ describe('events-service — updateEvent with cancellation', () => {
 
     const { updateEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await updateEvent('evt-update-1', {
+    const result = await updateEvent(createAdminSession(), 'evt-update-1', {
       title: 'Updated Title',
     })
 
@@ -640,7 +651,7 @@ describe('events-service — updateEvent with cancellation', () => {
 
     const { updateEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await updateEvent('evt-update-1', {
+    const result = await updateEvent(createAdminSession(), 'evt-update-1', {
       allDay: true,
     })
 
@@ -686,7 +697,7 @@ describe('events-service — updateEvent with cancellation', () => {
 
     const { updateEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await updateEvent('evt-update-1', {
+    const result = await updateEvent(createAdminSession(), 'evt-update-1', {
       roomId: 'room-2',
     })
 
@@ -724,7 +735,7 @@ describe('events-service — updateEvent with cancellation', () => {
 
     const { updateEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await updateEvent('evt-update-1', {
+    const result = await updateEvent(createAdminSession(), 'evt-update-1', {
       roomId: null,
     })
 
@@ -767,7 +778,7 @@ describe('events-service — updateEvent with cancellation', () => {
 
     let caught: ServiceError | undefined
     try {
-      await updateEvent('evt-nonexistent', {
+      await updateEvent(createAdminSession(), 'evt-nonexistent', {
         title: 'Updated',
       })
     } catch (err) {
@@ -792,7 +803,7 @@ describe('events-service — updateEvent with cancellation', () => {
 
     let caught: ServiceError | undefined
     try {
-      await updateEvent('evt-update-1', {
+      await updateEvent(createAdminSession(), 'evt-update-1', {
         startTime: '16:00',
         endTime: '20:00',
       })
@@ -814,7 +825,7 @@ describe('events-service — updateEvent with cancellation', () => {
 
     let caught: ServiceError | undefined
     try {
-      await createEvent({
+      await createEvent(createAdminSession(), {
         title: 'Test Event',
         date: '2026-04-20',
         startTime: '18:30',
@@ -867,7 +878,7 @@ describe('events-service — updateEvent with cancellation', () => {
 
       let caught: ServiceError | undefined
       try {
-        await updateEvent('evt-club-1', {
+        await updateEvent(createAdminSession(), 'evt-club-1', {
           title: 'Updated',
         })
       } catch (err) {
@@ -916,7 +927,7 @@ describe('events-service — updateEvent with cancellation', () => {
 
       let caught: ServiceError | undefined
       try {
-        await deleteEvent('evt-club-2')
+        await deleteEvent(createAdminSession(), 'evt-club-2')
       } catch (err) {
         caught = err as ServiceError
       }
@@ -973,7 +984,7 @@ describe('events-service — updateEvent with cancellation', () => {
 
       const { updateEvent } = await import('@/lib/server/events/events-service')
 
-      const result = await updateEvent('evt-legacy-1', { title: 'Updated Legacy Event' })
+      const result = await updateEvent(createAdminSession(), 'evt-legacy-1', { title: 'Updated Legacy Event' })
       expect(result.id).toBe('evt-legacy-1')
       expect(result.title).toBe('Updated Legacy Event')
     })
@@ -1014,7 +1025,85 @@ describe('events-service — updateEvent with cancellation', () => {
       const { deleteEvent } = await import('@/lib/server/events/events-service')
 
       // Should not throw
-      await deleteEvent('evt-legacy-2')
+      await deleteEvent(createAdminSession(), 'evt-legacy-2')
     })
   })
+
+  // ============================================================
+  // Member-role 403 Denial Tests (requireAdminSession guard)
+  // ============================================================
+
+  describe('Member-role session denial (requireAdminSession)', () => {
+    it('createEvent throws 403 when session role is member', async () => {
+      const mock = buildSupabaseMock()
+
+      const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+      vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+      const { createEvent } = await import('@/lib/server/events-service')
+
+      let caught: ServiceError | undefined
+      try {
+        await createEvent(createMemberSession(), {
+          title: 'Test Event',
+          date: '2026-04-20',
+          startTime: '18:00',
+          endTime: '22:00',
+          roomId: 'room-1',
+        })
+      } catch (err) {
+        caught = err as ServiceError
+      }
+
+      expect(caught).toBeDefined()
+      expect(caught?.statusCode).toBe(403)
+      expect(caught?.message).toBe('Forbidden')
+      expect(mock.rpc).not.toHaveBeenCalled()
+    })
+
+    it('updateEvent throws 403 when session role is member', async () => {
+      const mock = buildSupabaseMock()
+
+      const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+      vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+      const { updateEvent } = await import('@/lib/server/events-service')
+
+      let caught: ServiceError | undefined
+      try {
+        await updateEvent(createMemberSession(), 'evt-1', {
+          title: 'Updated',
+        })
+      } catch (err) {
+        caught = err as ServiceError
+      }
+
+      expect(caught).toBeDefined()
+      expect(caught?.statusCode).toBe(403)
+      expect(caught?.message).toBe('Forbidden')
+      expect(mock.rpc).not.toHaveBeenCalled()
+    })
+
+    it('deleteEvent throws 403 when session role is member', async () => {
+      const mock = buildSupabaseMock()
+
+      const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+      vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
+
+      const { deleteEvent } = await import('@/lib/server/events-service')
+
+      let caught: ServiceError | undefined
+      try {
+        await deleteEvent(createMemberSession(), 'evt-1')
+      } catch (err) {
+        caught = err as ServiceError
+      }
+
+      expect(caught).toBeDefined()
+      expect(caught?.statusCode).toBe(403)
+      expect(caught?.message).toBe('Forbidden')
+      expect(mock.from).not.toHaveBeenCalled()
+    })
+  })
+
 })

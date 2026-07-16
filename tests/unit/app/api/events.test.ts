@@ -32,6 +32,16 @@ vi.mock('@/lib/server/shared/security', () => ({
   },
 }))
 
+type SessionUser = { id: string; role: 'admin' | 'member'; email?: string }
+
+function createAdminSession(): SessionUser {
+  return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
+}
+
+function createMemberSession(): SessionUser {
+  return { id: 'member-1', role: 'member', email: 'member@example.com' }
+}
+
 // --- Helpers ---
 
 function makeAuthContext(userId = 'user-abc', role: 'member' | 'admin' = 'member') {
@@ -171,6 +181,7 @@ describe('Events API routes', () => {
       expect(response.status).toBe(201)
       await expect(response.json()).resolves.toEqual(mockEvent)
       expect(createEventMock).toHaveBeenCalledWith(
+        expect.objectContaining({id: 'user-admin', role: 'admin'}),
         expect.objectContaining({
           title: 'Game Night',
           description: 'RPG session',
@@ -429,6 +440,7 @@ describe('Events API routes', () => {
 
       expect(response.status).toBe(201)
       expect(createEventMock).toHaveBeenCalledWith(
+        expect.objectContaining({id: 'user-admin', role: 'admin'}),
         expect.objectContaining({
           title: 'Game Night',
           description: 'A fun RPG session',
@@ -474,6 +486,7 @@ describe('Events API routes', () => {
 
       expect(response.status).toBe(201)
       expect(createEventMock).toHaveBeenCalledWith(
+        expect.objectContaining({id: 'user-admin', role: 'admin'}),
         expect.objectContaining({
           roomId: 'room-123',
         }),
@@ -509,7 +522,7 @@ describe('Events API routes', () => {
 
       expect(response.status).toBe(200)
       await expect(response.json()).resolves.toEqual(mockEvent)
-      expect(updateEventMock).toHaveBeenCalledWith('event-1', expect.objectContaining({
+      expect(updateEventMock).toHaveBeenCalledWith(expect.objectContaining({id: 'user-admin', role: 'admin'}), 'event-1', expect.objectContaining({
         title: 'Updated Game Night',
         description: 'Updated description',
       }))
@@ -607,7 +620,7 @@ describe('Events API routes', () => {
       )
 
       expect(response.status).toBe(200)
-      expect(updateEventMock).toHaveBeenCalledWith('event-1', expect.objectContaining({
+      expect(updateEventMock).toHaveBeenCalledWith(expect.objectContaining({id: 'user-admin', role: 'admin'}), 'event-1', expect.objectContaining({
         title: 'Updated Title Only',
       }))
     })
@@ -658,7 +671,7 @@ describe('Events API routes', () => {
       )
 
       expect(response.status).toBe(204)
-      expect(deleteEventMock).toHaveBeenCalledWith('event-1')
+      expect(deleteEventMock).toHaveBeenCalledWith(expect.objectContaining({id: 'user-admin', role: 'admin'}), 'event-1')
     })
 
     it('returns 404 when event is not found', async () => {
@@ -683,7 +696,7 @@ describe('Events API routes', () => {
       )
 
       expect(response.status).toBe(204)
-      expect(deleteEventMock).toHaveBeenCalledWith('event-1')
+      expect(deleteEventMock).toHaveBeenCalledWith(expect.objectContaining({id: 'user-admin', role: 'admin'}), 'event-1')
     })
 
 
