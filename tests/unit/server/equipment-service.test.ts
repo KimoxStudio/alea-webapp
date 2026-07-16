@@ -1,6 +1,13 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+type SessionUser = { id: string; role: 'admin' | 'member'; email?: string }
+
+function createAdminSession(): SessionUser {
+  return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
+}
+
+
 // ── Mock state ─────────────────────────────────────────────────────────────────
 const maybeSingleMock = vi.fn()
 const selectOrderMock = vi.fn()
@@ -150,16 +157,18 @@ describe('createEquipment', () => {
 
   it('returns created equipment on success', async () => {
     const { createEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    const result = await createEquipment({ name: 'Projector', description: 'HD projector' })
+    const result = await createEquipment(adminSession, { name: 'Projector', description: 'HD projector' })
 
     expect(result).toMatchObject({ id: 'eq-1', name: 'Projector' })
   })
 
   it('throws 400 when name is empty string', async () => {
     const { createEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(createEquipment({ name: '' })).rejects.toMatchObject({
+    await expect(createEquipment(adminSession, { name: '' })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
@@ -167,8 +176,9 @@ describe('createEquipment', () => {
 
   it('throws 400 when name is missing (undefined)', async () => {
     const { createEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(createEquipment({})).rejects.toMatchObject({
+    await expect(createEquipment(adminSession, {})).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
@@ -177,30 +187,34 @@ describe('createEquipment', () => {
   it('trims whitespace from name', async () => {
     maybeSingleMock.mockResolvedValue({ data: { ...equipmentRow, name: 'Projector' }, error: null })
     const { createEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
     // Should not throw — whitespace-only is actually empty after trim
-    await expect(createEquipment({ name: '   ' })).rejects.toMatchObject({ statusCode: 400 })
+    await expect(createEquipment(adminSession, { name: '   ' })).rejects.toMatchObject({ statusCode: 400 })
   })
 
   it('throws 500 when insert returns DB error', async () => {
     maybeSingleMock.mockResolvedValue({ data: null, error: { message: 'insert failed' } })
     const { createEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(createEquipment({ name: 'Projector' })).rejects.toMatchObject({ statusCode: 500 })
+    await expect(createEquipment(adminSession, { name: 'Projector' })).rejects.toMatchObject({ statusCode: 500 })
   })
 
   it('throws 500 when insert returns null data (unexpected)', async () => {
     maybeSingleMock.mockResolvedValue({ data: null, error: null })
     const { createEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(createEquipment({ name: 'Projector' })).rejects.toMatchObject({ statusCode: 500 })
+    await expect(createEquipment(adminSession, { name: 'Projector' })).rejects.toMatchObject({ statusCode: 500 })
   })
 
   it('stores null description when description is falsy', async () => {
     maybeSingleMock.mockResolvedValue({ data: { ...equipmentRow, description: null }, error: null })
     const { createEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    const result = await createEquipment({ name: 'Projector', description: '' })
+    const result = await createEquipment(adminSession, { name: 'Projector', description: '' })
 
     expect(result.description).toBeNull()
   })
@@ -216,43 +230,49 @@ describe('updateEquipment', () => {
 
   it('returns updated equipment on success', async () => {
     const { updateEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    const result = await updateEquipment('eq-1', { name: 'Updated' })
+    const result = await updateEquipment(adminSession, 'eq-1', { name: 'Updated' })
 
     expect(result).toMatchObject({ name: 'Updated' })
   })
 
   it('throws 400 when name is explicitly set to empty string', async () => {
     const { updateEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(updateEquipment('eq-1', { name: '' })).rejects.toMatchObject({ statusCode: 400 })
+    await expect(updateEquipment(adminSession, 'eq-1', { name: '' })).rejects.toMatchObject({ statusCode: 400 })
   })
 
   it('throws 400 when no updatable fields are provided', async () => {
     const { updateEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(updateEquipment('eq-1', {})).rejects.toMatchObject({ statusCode: 400 })
+    await expect(updateEquipment(adminSession, 'eq-1', {})).rejects.toMatchObject({ statusCode: 400 })
   })
 
   it('throws 404 when equipment not found (null data)', async () => {
     maybeSingleMock.mockResolvedValue({ data: null, error: null })
     const { updateEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(updateEquipment('nonexistent', { name: 'X' })).rejects.toMatchObject({ statusCode: 404 })
+    await expect(updateEquipment(adminSession, 'nonexistent', { name: 'X' })).rejects.toMatchObject({ statusCode: 404 })
   })
 
   it('throws 500 when DB returns error', async () => {
     maybeSingleMock.mockResolvedValue({ data: null, error: { message: 'DB error' } })
     const { updateEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(updateEquipment('eq-1', { name: 'X' })).rejects.toMatchObject({ statusCode: 500 })
+    await expect(updateEquipment(adminSession, 'eq-1', { name: 'X' })).rejects.toMatchObject({ statusCode: 500 })
   })
 
   it('sets description to null when passed null', async () => {
     maybeSingleMock.mockResolvedValue({ data: { ...equipmentRow, description: null }, error: null })
     const { updateEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    const result = await updateEquipment('eq-1', { description: null })
+    const result = await updateEquipment(adminSession, 'eq-1', { description: null })
 
     expect(result.description).toBeNull()
   })
@@ -268,22 +288,25 @@ describe('deleteEquipment', () => {
 
   it('resolves without error when deletion succeeds', async () => {
     const { deleteEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(deleteEquipment('eq-1')).resolves.toBeUndefined()
+    await expect(deleteEquipment(adminSession, 'eq-1')).resolves.toBeUndefined()
   })
 
   it('throws 404 when no row was deleted (equipment not found)', async () => {
     maybeSingleMock.mockResolvedValue({ data: null, error: null })
     const { deleteEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(deleteEquipment('nonexistent')).rejects.toMatchObject({ statusCode: 404 })
+    await expect(deleteEquipment(adminSession, 'nonexistent')).rejects.toMatchObject({ statusCode: 404 })
   })
 
   it('throws 500 when DB returns error', async () => {
     maybeSingleMock.mockResolvedValue({ data: null, error: { message: 'constraint violation' } })
     const { deleteEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(deleteEquipment('eq-1')).rejects.toMatchObject({ statusCode: 500 })
+    await expect(deleteEquipment(adminSession, 'eq-1')).rejects.toMatchObject({ statusCode: 500 })
   })
 })
 
@@ -342,8 +365,9 @@ describe('setRoomDefaultEquipment', () => {
 
   it('clears defaults when equipmentIds is empty', async () => {
     const { setRoomDefaultEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(setRoomDefaultEquipment('room-1', [])).resolves.toBeUndefined()
+    await expect(setRoomDefaultEquipment(adminSession, 'room-1', [])).resolves.toBeUndefined()
     // fetchExistingDefaults should NOT be called when list is empty
     expect(fetchExistingDefaultsMock).not.toHaveBeenCalled()
   })
@@ -351,8 +375,9 @@ describe('setRoomDefaultEquipment', () => {
   it('inserts new defaults when no conflicts exist', async () => {
     fetchExistingDefaultsMock.mockResolvedValue({ data: [], error: null })
     const { setRoomDefaultEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(setRoomDefaultEquipment('room-1', ['eq-1', 'eq-2'])).resolves.toBeUndefined()
+    await expect(setRoomDefaultEquipment(adminSession, 'room-1', ['eq-1', 'eq-2'])).resolves.toBeUndefined()
     expect(insertRoomDefaultMock).toHaveBeenCalled()
   })
 
@@ -362,8 +387,9 @@ describe('setRoomDefaultEquipment', () => {
       error: null,
     })
     const { setRoomDefaultEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(setRoomDefaultEquipment('room-1', ['eq-1'])).rejects.toMatchObject({
+    await expect(setRoomDefaultEquipment(adminSession, 'room-1', ['eq-1'])).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
       message: 'EQUIPMENT_LOCKED_TO_ANOTHER_ROOM',
@@ -376,31 +402,35 @@ describe('setRoomDefaultEquipment', () => {
       error: null,
     })
     const { setRoomDefaultEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
     // Same room — should not be treated as a conflict
-    await expect(setRoomDefaultEquipment('room-1', ['eq-1'])).resolves.toBeUndefined()
+    await expect(setRoomDefaultEquipment(adminSession, 'room-1', ['eq-1'])).resolves.toBeUndefined()
   })
 
   it('throws 500 when the conflict-check query fails', async () => {
     fetchExistingDefaultsMock.mockResolvedValue({ data: null, error: { message: 'DB failure' } })
     const { setRoomDefaultEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(setRoomDefaultEquipment('room-1', ['eq-1'])).rejects.toMatchObject({ statusCode: 500 })
+    await expect(setRoomDefaultEquipment(adminSession, 'room-1', ['eq-1'])).rejects.toMatchObject({ statusCode: 500 })
   })
 
   it('throws 500 when the delete step fails', async () => {
     fetchExistingDefaultsMock.mockResolvedValue({ data: [], error: null })
     deleteRoomDefaultMock.mockReturnValue(Promise.resolve({ error: { message: 'delete failed' } }))
     const { setRoomDefaultEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(setRoomDefaultEquipment('room-1', ['eq-1'])).rejects.toMatchObject({ statusCode: 500 })
+    await expect(setRoomDefaultEquipment(adminSession, 'room-1', ['eq-1'])).rejects.toMatchObject({ statusCode: 500 })
   })
 
   it('throws 500 when the insert step fails', async () => {
     fetchExistingDefaultsMock.mockResolvedValue({ data: [], error: null })
     insertRoomDefaultMock.mockResolvedValue({ error: { message: 'insert failed' } })
     const { setRoomDefaultEquipment } = await loadModule()
+    const adminSession = createAdminSession()
 
-    await expect(setRoomDefaultEquipment('room-1', ['eq-1'])).rejects.toMatchObject({ statusCode: 500 })
+    await expect(setRoomDefaultEquipment(adminSession, 'room-1', ['eq-1'])).rejects.toMatchObject({ statusCode: 500 })
   })
 })

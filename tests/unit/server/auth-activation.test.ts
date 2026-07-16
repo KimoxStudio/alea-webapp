@@ -278,6 +278,7 @@ describe('auth activation helpers', () => {
       locale: 'es',
       baseUrl: 'http://localhost:3000',
       createdBy: 'admin-1',
+      session: { id: 'admin-1', role: 'admin' },
     })
 
     expect(result.activationLink).toContain('http://localhost:3000/es/activate?token=')
@@ -298,6 +299,7 @@ describe('auth activation helpers', () => {
       locale: 'es',
       baseUrl: 'http://localhost:3000',
       createdBy: 'admin-1',
+      session: { id: 'admin-1', role: 'admin' },
     })
 
     expect(activationTokenUpsertMock).toHaveBeenCalledWith(expect.objectContaining({

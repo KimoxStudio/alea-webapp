@@ -280,6 +280,7 @@ describe('auth recovery helpers', () => {
       locale: 'es',
       baseUrl: 'http://localhost:3000',
       createdBy: 'admin-1',
+      session: { id: 'admin-1', role: 'admin' },
     })
 
     expect(result.recoveryLink).toContain('http://localhost:3000/es/recover?token=')

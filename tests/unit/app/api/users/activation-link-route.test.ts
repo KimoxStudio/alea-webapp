@@ -79,6 +79,7 @@ describe('POST /api/users/[id]/activation-link', () => {
       locale: 'en',
       baseUrl: 'http://localhost:3000',
       createdBy: 'admin-1',
+      session: { id: 'admin-1', role: 'admin' },
     })
   })
 
