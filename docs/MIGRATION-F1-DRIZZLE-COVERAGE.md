@@ -61,7 +61,10 @@ for completeness/audit only.
   (varchar(20), unique), `email`, `role` (enum, default `member`), `created_at`,
   `updated_at`, `is_active` (default false), `no_show_count` (default 0),
   `blocked_until`, `auth_email` (unique index `profiles_auth_email_key`), `full_name`,
-  `active_from`, `psw_changed`, `phone`.
+  `active_from`, `psw_changed`, `phone`, `password_hash` (nullable — **not** present
+  in the Supabase source; added here as forward schema for the target Auth.js
+  stack, since PR #170 (KIM-416)'s credentials provider and the KIM-419 cutover
+  runbook both already depend on `profiles.password_hash` existing — see §7.1/§8).
 - RLS (final state): `profiles_admin_delete` (DELETE, `internal.is_admin()`),
   `profiles_admin_insert` (INSERT, `internal.is_admin()`), `profiles_admin_update`
   (UPDATE, `internal.is_admin()`), `profiles_member_select` (SELECT,
@@ -412,12 +415,15 @@ not part of this issue).
    into a dedicated `extensions` schema (security hardening specific to Supabase's
    multi-tenant Postgres model) and used a schema-qualified operator class
    (`extensions.gist_uuid_ops`) in the exclusion constraints. This schema installs
-   both extensions into `public` instead (see `0001_exclusion_constraints.sql`) since
+   `btree_gist` into `public` instead (see `0001_exclusion_constraints.sql`) since
    Neon has no equivalent pre-existing `extensions`-schema convention. **Reviewer
    should double-check** this against whatever Neon/Vercel Postgres project
    conventions exist at cutover time — if a dedicated schema is preferred, the
    `CREATE EXTENSION ... WITH SCHEMA` clause and the operator-class references need
-   updating together.
+   updating together. `pgcrypto` itself is created in `0000_fine_magma.sql` (moved
+   there from `0001` — see note below) since it's needed by `gen_random_uuid()`
+   defaults from the very first `CREATE TABLE`, not just by the exclusion
+   constraints in `0001`.
 4. **`saved_games.status` is `text`, not an enum**, faithfully matching the source
    (`CHECK (status IN ('active','cancelled','completed'))` rather than a Postgres
    enum type, unlike `reservations.status`/`role`/etc.). Kept as-is for fidelity,

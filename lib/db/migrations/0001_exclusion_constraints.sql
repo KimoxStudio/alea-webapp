@@ -9,16 +9,20 @@
 -- lib/db/schema/*.ts. See docs/MIGRATION-F1-DRIZZLE-COVERAGE.md for details.
 --
 -- Requires the "btree_gist" extension (for the uuid equality operator class
--- used alongside the range "&&" operator in a GIST index) and the "pgcrypto"
--- extension (gen_random_uuid(), used throughout lib/db/schema). Supabase
--- installed btree_gist in the "extensions" schema
+-- used alongside the range "&&" operator in a GIST index). Supabase installed
+-- btree_gist in the "extensions" schema
 -- (supabase/migrations/20260527120003_move_btree_gist_to_postgres_schema.sql)
 -- with search_path including that schema; on Neon, install directly into
 -- "public" (or whatever schema is on the connection's search_path) so
 -- "gist_uuid_ops" resolves without a schema-qualified operator class name.
+--
+-- "pgcrypto" (gen_random_uuid(), used throughout lib/db/schema) is now
+-- created in 0000_fine_magma.sql instead of here -- it must exist before the
+-- first CREATE TABLE with a gen_random_uuid() default, not just before this
+-- migration's EXCLUDE constraints. See docs/MIGRATION-F1-DRIZZLE-COVERAGE.md
+-- §7.3.
 
 CREATE EXTENSION IF NOT EXISTS "btree_gist";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- reservations: no two pending/active reservations may overlap in time for
 -- the same table + matching surface (NULL surface = whole table, so it

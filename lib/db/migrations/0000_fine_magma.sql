@@ -1,3 +1,11 @@
+-- F1 (KIM-417): pgcrypto must be installed before any table default calls
+-- gen_random_uuid() below. Originally this extension was only created in
+-- 0001_exclusion_constraints.sql (needed there for btree_gist), which left a
+-- window where applying this migration to a fresh database with no pgcrypto
+-- pre-installed would fail on the very first CREATE TABLE. Moved here so it
+-- runs before any gen_random_uuid() usage. See
+-- docs/MIGRATION-F1-DRIZZLE-COVERAGE.md §7.3.
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";--> statement-breakpoint
 CREATE TYPE "public"."reservation_status" AS ENUM('active', 'cancelled', 'completed', 'pending', 'no_show');--> statement-breakpoint
 CREATE TYPE "public"."role" AS ENUM('member', 'admin');--> statement-breakpoint
 CREATE TYPE "public"."table_surface" AS ENUM('top', 'bottom');--> statement-breakpoint
@@ -17,6 +25,7 @@ CREATE TABLE "profiles" (
 	"active_from" timestamp with time zone,
 	"psw_changed" timestamp with time zone,
 	"phone" text,
+	"password_hash" text,
 	CONSTRAINT "profiles_member_number_unique" UNIQUE("member_number")
 );
 --> statement-breakpoint
