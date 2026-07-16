@@ -44,6 +44,12 @@ Real-time log of all agent work. Agents append entries as work progresses.
 #### QA — Test arithmetic fix
 - [12:08] Fixed futureTime math: baseTime + 55min → baseTime + 5min (elapsed now 55min < 60min grace period)
 - [12:08] Lazy eval tests: 72/72 PASSED ✓
+
+#### [KIM-421] pr-comment-responder — Fix PR #174 inline comment 3599454479
+- [00:00] Started — reviewer flagged manual URL concatenation in getPublicStorageUrl() (lib/storage/qr/vercel-blob.ts:106) diverging from Vercel Blob's canonical URL for paths with spaces/#/?/reserved chars
+- [00:00] Checked lib/storage/qr/index.ts — seam interface's getPublicStorageUrl is synchronous, takes only (bucket, path); cannot persist/return the put() response's canonical url without changing the seam interface (out of scope per task, would require touching index.ts too)
+- [00:00] Applied fix: added encodePathnameForUrl() helper that percent-encodes each path segment via encodeURIComponent (splitting on '/' to avoid encoding separators), applied it in getPublicStorageUrl() before appending to BLOB_PUBLIC_BASE_URL
+- [00:00] File changed: lib/storage/qr/vercel-blob.ts (added ~19 lines: 1 helper function + doc comments, 1-line change to getPublicStorageUrl body)
 - [12:08] Build: PASSED ✓
 - [12:08] ✅ Commit 7f58767 — fix(test): correct futureTime arithmetic in lazy eval test 2 (KIM-366)
 

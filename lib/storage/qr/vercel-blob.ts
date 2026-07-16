@@ -38,6 +38,28 @@ function toPathname(bucket: string, path: string): string {
 }
 
 /**
+ * Percent-encodes a Blob pathname for safe inclusion in a URL, without
+ * encoding the `/` path separators. Splits on `/` and runs each segment
+ * through `encodeURIComponent` individually rather than encoding the whole
+ * pathname at once, since a naive full-string encode would also escape the
+ * separators and break the path structure.
+ *
+ * This is needed because `getPublicStorageUrl()` below reconstructs the
+ * public URL from `BLOB_PUBLIC_BASE_URL` + pathname rather than reading it
+ * from a `put()`/`head()` response (see that function's doc comment for why
+ * it can't do the latter while keeping this seam method synchronous).
+ * Without per-segment encoding, a pathname containing spaces, `#`, `?`, or
+ * other reserved/reserved-adjacent characters would produce a URL that
+ * diverges from the canonical one Vercel Blob would actually serve.
+ */
+function encodePathnameForUrl(pathname: string): string {
+  return pathname
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+}
+
+/**
  * Extracts structured diagnostic fields from a Vercel Blob error without
  * leaking a non-serializable error instance across the seam boundary.
  * Mirrors `toStorageErrorDetail()` in lib/storage/qr/index.ts so both
@@ -97,12 +119,17 @@ export async function uploadToStorage(
  * cutover step is expected to configure. Returns `publicUrl: null` when that
  * env var is unset, matching the Supabase implementation's null-safe return
  * shape.
+ *
+ * The pathname is percent-encoded per segment (see `encodePathnameForUrl()`)
+ * before being appended to the base URL, so paths containing spaces, `#`,
+ * `?`, or other reserved characters still produce a URL that matches the one
+ * Vercel Blob's own `put()`/`head()` response would return for that object.
  */
 export function getPublicStorageUrl(bucket: string, path: string): StoragePublicUrlResult {
   const baseUrl = process.env.BLOB_PUBLIC_BASE_URL
   if (!baseUrl) return { publicUrl: null }
 
-  const pathname = toPathname(bucket, path)
+  const pathname = encodePathnameForUrl(toPathname(bucket, path))
   return { publicUrl: `${baseUrl.replace(/\/+$/, '')}/${pathname}` }
 }
 
