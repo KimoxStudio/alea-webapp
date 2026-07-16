@@ -1,26 +1,17 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-// Mock bcryptjs before importing the module under test
-vi.mock('bcryptjs', () => ({
-  default: {
-    compare: vi.fn(),
-  },
-}))
+vi.mock('bcryptjs')
+vi.mock('@/lib/authjs/db')
 
-// Mock pg Pool
+import { getAuthDbPool } from '@/lib/authjs/db'
+import { verifyCredentials } from '@/lib/authjs/credentials-user'
+import bcrypt from 'bcryptjs'
+
 const mockQuery = vi.fn()
 const mockPool = {
   query: mockQuery,
 }
-
-vi.mock('@/lib/authjs/db', () => ({
-  getAuthDbPool: vi.fn(),
-}))
-
-import bcryptjs from 'bcryptjs'
-import { getAuthDbPool } from '@/lib/authjs/db'
-import { verifyCredentials } from '@/lib/authjs/credentials-user'
 
 describe('verifyCredentials', () => {
   beforeEach(() => {
@@ -137,15 +128,12 @@ describe('verifyCredentials', () => {
           },
         ],
       })
-      vi.mocked(bcryptjs.default.compare).mockResolvedValue(false as any)
+      vi.mocked(bcrypt.compare).mockResolvedValue(false as any)
 
       const result = await verifyCredentials('test@example.com', 'wrongpassword')
 
       expect(result).toBeNull()
-      expect(vi.mocked(bcryptjs.default.compare)).toHaveBeenCalledWith(
-        'wrongpassword',
-        bcryptHash
-      )
+      expect(vi.mocked(bcrypt.compare)).toHaveBeenCalledWith('wrongpassword', bcryptHash)
     })
 
     it('does not leak timing information between "no such user" and "wrong password"', async () => {
@@ -168,7 +156,7 @@ describe('verifyCredentials', () => {
           },
         ],
       })
-      vi.mocked(bcryptjs.default.compare).mockResolvedValue(false as any)
+      vi.mocked(bcrypt.compare).mockResolvedValue(false as any)
 
       const wrongPasswordResult = await verifyCredentials('test@example.com', 'wrongpassword')
 
@@ -192,7 +180,7 @@ describe('verifyCredentials', () => {
           },
         ],
       })
-      vi.mocked(bcryptjs.default.compare).mockResolvedValue(true as any)
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as any)
 
       const result = await verifyCredentials('test@example.com', 'correctpassword')
 
@@ -216,7 +204,7 @@ describe('verifyCredentials', () => {
           },
         ],
       })
-      vi.mocked(bcryptjs.default.compare).mockResolvedValue(true as any)
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as any)
 
       const result = await verifyCredentials('another@example.com', 'correctpassword')
 
@@ -240,7 +228,7 @@ describe('verifyCredentials', () => {
           },
         ],
       })
-      vi.mocked(bcryptjs.default.compare).mockResolvedValue(true as any)
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as any)
 
       const result = await verifyCredentials('secure@example.com', 'correctpassword')
 
@@ -266,12 +254,12 @@ describe('verifyCredentials', () => {
           },
         ],
       })
-      vi.mocked(bcryptjs.default.compare).mockResolvedValue(true as any)
+      vi.mocked(bcrypt.compare).mockResolvedValue(true as any)
 
       await verifyCredentials('compare@example.com', plainPassword)
 
-      expect(vi.mocked(bcryptjs.default.compare)).toHaveBeenCalledWith(plainPassword, bcryptHash)
-      expect(vi.mocked(bcryptjs.default.compare)).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(bcrypt.compare)).toHaveBeenCalledWith(plainPassword, bcryptHash)
+      expect(vi.mocked(bcrypt.compare)).toHaveBeenCalledTimes(1)
     })
   })
 

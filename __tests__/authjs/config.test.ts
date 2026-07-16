@@ -1,9 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/lib/authjs/credentials-user', () => ({
-  verifyCredentials: vi.fn(),
-}))
+vi.mock('@/lib/authjs/credentials-user')
 
 import { authConfig } from '@/lib/authjs/config'
 
@@ -27,23 +25,50 @@ describe('authConfig', () => {
       expect(provider.id).toBe('credentials')
     })
 
-    it('Credentials provider has email and password fields', () => {
+    it('Credentials provider has authorize function', () => {
       const provider = authConfig.providers[0] as any
-      expect(provider.credentials).toBeDefined()
-      expect(provider.credentials.email).toBeDefined()
-      expect(provider.credentials.password).toBeDefined()
+      expect(provider.authorize).toBeDefined()
+      expect(typeof provider.authorize).toBe('function')
     })
 
-    it('Credentials provider has email and password labels', () => {
+    it('authorize returns null when email is missing', async () => {
       const provider = authConfig.providers[0] as any
-      expect(provider.credentials.email.label).toBe('Email')
-      expect(provider.credentials.password.label).toBe('Password')
+      const result = await provider.authorize({
+        password: 'password123',
+      })
+      expect(result).toBeNull()
     })
 
-    it('Credentials provider has email and password types', () => {
+    it('authorize returns null when password is missing', async () => {
       const provider = authConfig.providers[0] as any
-      expect(provider.credentials.email.type).toBe('email')
-      expect(provider.credentials.password.type).toBe('password')
+      const result = await provider.authorize({
+        email: 'test@example.com',
+      })
+      expect(result).toBeNull()
+    })
+
+    it('authorize returns null when both email and password are missing', async () => {
+      const provider = authConfig.providers[0] as any
+      const result = await provider.authorize({})
+      expect(result).toBeNull()
+    })
+
+    it('authorize returns null when email is not a string', async () => {
+      const provider = authConfig.providers[0] as any
+      const result = await provider.authorize({
+        email: 123,
+        password: 'password123',
+      })
+      expect(result).toBeNull()
+    })
+
+    it('authorize returns null when password is not a string', async () => {
+      const provider = authConfig.providers[0] as any
+      const result = await provider.authorize({
+        email: 'test@example.com',
+        password: 123,
+      })
+      expect(result).toBeNull()
     })
   })
 })
