@@ -1463,3 +1463,11 @@ No blocking issues. No modifications needed. Code is ready for security-reviewer
 - [14:55] Full validation: typecheck clean, lint clean, test 1013/1013 passed (69 files), build succeeded
 - [14:56] `git push --force-with-lease origin migration-f1-auth-js` — pre-push hook re-ran full CI (typecheck/lint/test/build), all green; push succeeded
 - [14:57] ✅ Complete — PR #170 opened: https://github.com/KimoxStudio/alea-webapp/pull/170 (migration-f1-auth-js -> develop)
+
+#### [KIM-419] software-engineer — Write CUTOVER-RUNBOOK-F2.md + rehearsal script
+- [22:00] Started. Working on branch worktree-agent-acc4d0ba2f5aa3cbb (worktree base; final content targets migration-f2-cutover-runbook per task instructions).
+- [22:08] Read F1 scaffolding read-only via git show (origin/migration-f1-auth-js: lib/authjs/*, origin/migration-f1-drizzle-schema: lib/db/schema/*) to reference real shapes without depending on unmerged PRs.
+- [22:08] Wrote docs/CUTOVER-RUNBOOK-F2.md (dump/restore, Auth.js+Drizzle activation flag, bcrypt hash verbatim-copy, session invalidation, rollback plan; KIM-420 explicitly marked user-only).
+- [22:08] Added lib/cutover/{dump-integrity,hash-copy,session-invalidation,index}.mjs — pure, dependency-free logic (no new npm deps) backing the rehearsal, plus scripts/cutover-rehearsal-runner.mjs and scripts/cutover-rehearsal.sh (synthetic fixtures only, no real infra/credentials). Added pnpm script `cutover:rehearsal`.
+- [22:08] Validation: pnpm typecheck ✅, pnpm lint ✅ (no warnings/errors), pnpm build ✅ (all routes generated, exit 0), pnpm cutover:rehearsal ✅ (all synthetic checks pass).
+- [22:08] ✅ Complete — docs/CUTOVER-RUNBOOK-F2.md + scripts/cutover-rehearsal.sh + lib/cutover/ committed on the current worktree branch (base migration-f2-cutover-runbook, HEAD 6ac6fde); no test files touched, no supabase/migrations/ touched, no frontend-domain files touched.
