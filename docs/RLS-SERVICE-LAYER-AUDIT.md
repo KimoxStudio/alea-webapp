@@ -246,16 +246,20 @@ All corresponding route handlers (`app/api/equipment/**`,
 were updated to pass `admin.session` (already available from the existing
 `requireAdmin(request)` call) into the service function.
 
-**Breaking change for tests:** the functions above changed signatures (added
-a leading/new `session` parameter). Existing test files that call these
-functions directly (`__tests__/server/equipment-service.test.ts`,
+**Breaking change for tests (resolved):** the functions above changed
+signatures (added a leading/new `session` parameter). This broke every test
+file that called them directly; those files have since been updated (test
+files are qa-engineer's exclusively, per repo convention) by adding a
+`createAdminSession()`-style helper and passing the session as the new
+required parameter: `__tests__/server/equipment-service.test.ts`,
 `__tests__/server/rooms-service.test.ts`, `__tests__/server/tables-service.test.ts`,
 `__tests__/server/users-service.test.ts`, `__tests__/server/member-import.test.ts`,
-`__tests__/app/api/users/patch-route.test.ts`) will need updating —
-this is qa-engineer's responsibility per repo convention (test files are
-qa-engineer's exclusively). `pnpm typecheck` and `pnpm build` both pass
-because test files are excluded from the app tsconfig; `pnpm test` will need
-qa-engineer's follow-up.
+`__tests__/server/auth-activation.test.ts`, `__tests__/server/auth-recovery.test.ts`,
+`__tests__/app/api/users/patch-route.test.ts`,
+`__tests__/app/api/users/activation-link-route.test.ts`,
+`__tests__/app/api/users/recovery-link-route.test.ts`, and
+`__tests__/app/api/users/import-route.test.ts`. `pnpm typecheck`, `pnpm lint`,
+`pnpm test`, and `pnpm build` all pass at the current PR head.
 
 ## Gaps found and left open (needs human review)
 
