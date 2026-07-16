@@ -1499,3 +1499,14 @@ No blocking issues. No modifications needed. Code is ready for security-reviewer
   - Tested that truncation/extension is detected ✓
 - [QA-07] Commit f1b6aa6: test(cutover): add comprehensive test suite for F2 cutover rehearsal logic
 - [QA-COMPLETE] ✅ Complete — APPROVE. All validation gates passed.
+
+#### [KIM-419] security-reviewer — Security review + open PR for cutover runbook
+- [22:05] Started. Created isolated worktree (detached at 4219038) to avoid touching shared checkout on migration-f2-cutover-runbook.
+- [22:10] Reviewed full diff (git diff origin/develop...migration-f2-cutover-runbook, 12 files, +1477): no real credentials/.env values/hostnames/project refs found; no changes under supabase/migrations/.
+- [22:12] Confirmed scripts/cutover-rehearsal* never shell out to pg_dump/psql/pg_restore and never touch real infra — synthetic in-memory fixtures only.
+- [22:14] Confirmed lib/cutover/hash-copy.mjs is genuinely copy-only: no bcrypt.hash() call, no re-hashing, assertByteForByteCopy enforces verbatim equality.
+- [22:15] Confirmed docs/CUTOVER-RUNBOOK-F2.md rollback plan is sound (per-step stop/rollback triggers, partial-failure states addressed in section 4) and explicitly states KIM-420 real execution is USER-ONLY (section 0 table).
+- [22:16] Confirmed test files (__tests__/lib/cutover/*) were added in a single separate commit (be4910e), not touched by the software-engineer commit (225e1de) — QA/impl separation intact.
+- [22:20] Ran pnpm typecheck (clean), pnpm lint (clean), pnpm test --run (1065/1065 passed, incl. 75 new cutover tests), pnpm build (clean, exit 0).
+- [22:22] Pushed branch to origin (pre-push hook re-ran full local CI, all green) and opened PR #171 targeting develop.
+- [22:23] ✅ Complete — APPROVE. PR opened: https://github.com/KimoxStudio/alea-webapp/pull/171
