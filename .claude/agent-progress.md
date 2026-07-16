@@ -1336,3 +1336,10 @@ No blocking issues. No modifications needed. Code is ready for security-reviewer
 - [14:56] ✅ Complete — APPROVE. No CRITICAL/HIGH findings. LOW: next-auth pinned to a beta release (5.0.0-beta.31) — acceptable since this code is inert/unwired per docstrings, but should be revisited before any real cutover (KIM-419/420).
 - [15:05] QA approved: 1013/1013 tests passing, 23 Auth.js/credentials tests meaningful and comprehensive
 - [15:10] Security review approved: no CRITICAL/HIGH findings, 1 LOW note (next-auth pinned to beta, acceptable at scaffolding stage)
+
+#### [KIM-416] pr-comment-responder — PR #170 round-2 comment response
+- [22:56] Started — 2 new inline comments from Oiranca on PR #170 (migration-f1-auth-js)
+- [22:56] Comment 3599393772 (lib/authjs/credentials-user.ts): verified against origin/migration-f1-drizzle-schema (PR #169) that `profiles.password_hash` now exists in lib/db/schema/profiles.ts and lib/db/migrations/0000_fine_magma.sql — confirmed stale JSDoc, updated wording from "column does not exist" to "column exists but unpopulated until F2 cutover"
+- [22:56] Comment 3599394020 (app/api/authjs/[...nextauth]/route.ts): requests AUTH_JS_ENABLED route tests — NOT implemented here per repo convention (test files are qa-engineer's exclusive domain); flagged for qa-engineer follow-up and replied accordingly
+- [22:57] Validation: pnpm run typecheck (pass), pnpm run lint (pass, no warnings/errors), pnpm run build (pass)
+- [22:57] ✅ Complete — doc fix committed + pushed to migration-f1-auth-js; both comments replied to individually; route-test work handed off to qa-engineer
