@@ -1471,3 +1471,31 @@ No blocking issues. No modifications needed. Code is ready for security-reviewer
 - [22:08] Added lib/cutover/{dump-integrity,hash-copy,session-invalidation,index}.mjs — pure, dependency-free logic (no new npm deps) backing the rehearsal, plus scripts/cutover-rehearsal-runner.mjs and scripts/cutover-rehearsal.sh (synthetic fixtures only, no real infra/credentials). Added pnpm script `cutover:rehearsal`.
 - [22:08] Validation: pnpm typecheck ✅, pnpm lint ✅ (no warnings/errors), pnpm build ✅ (all routes generated, exit 0), pnpm cutover:rehearsal ✅ (all synthetic checks pass).
 - [22:08] ✅ Complete — docs/CUTOVER-RUNBOOK-F2.md + scripts/cutover-rehearsal.sh + lib/cutover/ committed on the current worktree branch (base migration-f2-cutover-runbook, HEAD 6ac6fde); no test files touched, no supabase/migrations/ touched, no frontend-domain files touched.
+
+---
+
+#### [KIM-419] qa-engineer — Task #2: Test validation of cutover runbook + rehearsal script
+- [QA-START] Worktree created at .claude/worktrees/qa-engineer-kim419 (commit 225e1de)
+- [QA-00] Test files created: hash-copy.test.ts, session-invalidation.test.ts, dump-integrity.test.ts
+- [QA-00] Running pnpm typecheck to validate test syntax
+- [QA-01] Test files created: 3 files, 680 LOC, 75 test cases
+  - __tests__/lib/cutover/hash-copy.test.ts (25 tests) — bcrypt validation, verbatim copy, format rejection
+  - __tests__/lib/cutover/session-invalidation.test.ts (25 tests) — boundary classification, forced re-login
+  - __tests__/lib/cutover/dump-integrity.test.ts (25 tests) — pg_dump parsing, table/row validation
+- [QA-02] Test execution: pnpm test --run __tests__/lib/cutover/ → 75 tests PASSED ✓
+- [QA-03] Full test suite validation: pnpm test --run → 1065 tests PASSED (70 test files) ✓
+- [QA-04] Code quality validation:
+  - pnpm typecheck → PASSED ✓
+  - pnpm lint → PASSED ✓ (0 warnings/errors)
+  - pnpm build → PASSED ✓
+- [QA-05] Constraint verification:
+  - No migrations created ✓
+  - No files modified in (app/, components/, messages/, lib/hooks/, lib/authjs/, lib/db/schema/) ✓
+  - All tests use synthetic fixtures only (no real DB/credentials) ✓
+  - Software-engineer created NO test files (correct) ✓
+- [QA-06] Hard safety-critical test case passed:
+  - hash-copy verbatim copy (byte-for-byte) with NO re-hashing validated ✓
+  - Tested that single character change is detected ✓
+  - Tested that truncation/extension is detected ✓
+- [QA-07] Commit f1b6aa6: test(cutover): add comprehensive test suite for F2 cutover rehearsal logic
+- [QA-COMPLETE] ✅ Complete — APPROVE. All validation gates passed.
