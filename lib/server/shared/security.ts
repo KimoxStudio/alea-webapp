@@ -5,7 +5,7 @@ import type { Redis } from '@upstash/redis'
 import type { Ratelimit } from '@upstash/ratelimit'
 
 // Re-export all Edge-safe helpers so that existing route-handler imports from
-// `@/lib/server/security` continue to work without any call-site changes.
+// `@/lib/server/shared/security` continue to work without any call-site changes.
 export {
   CSRF_COOKIE_NAME,
   CSRF_HEADER_NAME,

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin, requireAuth } from '@/lib/server/auth'
-import { listEquipment, createEquipment } from '@/lib/server/equipment-service'
-import { toServiceErrorResponse } from '@/lib/server/http-error'
-import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
+import { requireAdmin, requireAuth } from '@/lib/server/auth/auth'
+import { listEquipment, createEquipment } from '@/lib/server/equipment/equipment-service'
+import { toServiceErrorResponse } from '@/lib/server/shared/http-error'
+import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/shared/security'
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request)

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ServiceError } from '@/lib/server/service-error'
+import type { ServiceError } from '@/lib/server/shared/service-error'
 
 const maybeSingleMock = vi.fn()
 const listRoomsMock = vi.fn()
@@ -168,14 +168,14 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
-vi.mock('@/lib/server/tables-service', () => ({
+vi.mock('@/lib/server/tables/tables-service', () => ({
   regenerateQrCodes: regenerateQrCodesMock,
 }))
 
 async function loadRoomsModules() {
   vi.resetModules()
 
-  const service = await import('@/lib/server/rooms-service')
+  const service = await import('@/lib/server/rooms/rooms-service')
 
   return { ...service }
 }

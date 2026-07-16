@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import type { GameTable } from '@/lib/types'
 import type { Tables } from '@/lib/supabase/types'
-import { resolveDate, normalizeTime, generateDaySlots, buildAvailability } from '@/lib/server/availability'
+import { resolveDate, normalizeTime, generateDaySlots, buildAvailability } from '@/lib/server/reservations/availability'
 
 type ReservationRow = Tables<'reservations'>
 

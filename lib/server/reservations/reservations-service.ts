@@ -1,18 +1,18 @@
 import type { AvailableEquipment, Equipment, Reservation, TableSurface } from '@/lib/types'
 import { ERROR_CODES } from '@/lib/types/error-codes'
-import type { SessionUser } from '@/lib/server/auth'
+import type { SessionUser } from '@/lib/server/auth/auth'
 import { CLUB_TIMEZONE, getCurrentClubDate, isValidDateOnlyString, zonedDateTimeToUtc } from '@/lib/club-time'
-import { getDatabaseNow } from '@/lib/server/database-time'
-import { serviceError } from '@/lib/server/service-error'
-import { assertMemberRowsScoped } from '@/lib/server/data-scoping'
+import { getDatabaseNow } from '@/lib/server/shared/database-time'
+import { serviceError } from '@/lib/server/shared/service-error'
+import { assertMemberRowsScoped } from '@/lib/server/shared/data-scoping'
 import { getAdminDb, getDb } from '@/lib/db'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
-import { normalizeTime } from '@/lib/server/availability'
+import { normalizeTime } from '@/lib/server/reservations/availability'
 import {
   CHECK_IN_LATE_MINUTES,
   getPendingCheckInDeadline,
   isPendingReservationExpired,
-} from '@/lib/server/pending-reservation-expiry'
+} from '@/lib/server/reservations/pending-reservation-expiry'
 
 type ReservationRow = Tables<'reservations'>
 type TableRow = Tables<'tables'>

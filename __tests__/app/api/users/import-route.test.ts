@@ -7,16 +7,16 @@ const importMembersFromSourceMock = vi.fn()
 const enforceMutationSecurityMock = vi.fn()
 const enforceRateLimitMock = vi.fn()
 
-vi.mock('@/lib/server/auth', () => ({
+vi.mock('@/lib/server/auth/auth', () => ({
   requireAdmin: requireAdminMock,
 }))
 
-vi.mock('@/lib/server/users-service', () => ({
+vi.mock('@/lib/server/users/users-service', () => ({
   importMembersFromSource: importMembersFromSourceMock,
 }))
 
-vi.mock('@/lib/server/security', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/server/security')>()
+vi.mock('@/lib/server/shared/security', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/server/shared/security')>()
   return {
     ...actual,
     enforceMutationSecurity: enforceMutationSecurityMock,
@@ -187,7 +187,7 @@ describe('POST /api/users/import', () => {
 
   it('returns 400 when source normalization rejects malformed odt input', async () => {
     const { POST } = await import('@/app/api/users/import/route')
-    const { ServiceError } = await import('@/lib/server/service-error')
+    const { ServiceError } = await import('@/lib/server/shared/service-error')
     importMembersFromSourceMock.mockRejectedValue(new ServiceError('ODT file is invalid or corrupted', 400))
 
     const response = await POST(createImportRequest({

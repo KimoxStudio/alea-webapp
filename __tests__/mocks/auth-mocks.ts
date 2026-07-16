@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 import { NextResponse } from 'next/server'
-import type { SessionUser } from '@/lib/server/auth'
+import type { SessionUser } from '@/lib/server/auth/auth'
 
 /**
  * Shared mock builders for route tests
@@ -41,7 +41,7 @@ function createMockContext(session: SessionUser) {
  * Usage:
  * ```
  * const requireAuthMock = mockRequireAuth({ id: 'user-123', role: 'member' })
- * vi.mock('@/lib/server/auth', () => ({ requireAuth: requireAuthMock }))
+ * vi.mock('@/lib/server/auth/auth', () => ({ requireAuth: requireAuthMock }))
  * ```
  */
 export function mockRequireAuth(session?: Partial<SessionUser>) {
@@ -55,7 +55,7 @@ export function mockRequireAuth(session?: Partial<SessionUser>) {
  * Usage:
  * ```
  * const requireAdminMock = mockRequireAdmin({ id: 'admin-456' })
- * vi.mock('@/lib/server/auth', () => ({ requireAdmin: requireAdminMock }))
+ * vi.mock('@/lib/server/auth/auth', () => ({ requireAdmin: requireAdminMock }))
  * ```
  */
 export function mockRequireAdmin(session?: Partial<SessionUser>) {
@@ -69,7 +69,7 @@ export function mockRequireAdmin(session?: Partial<SessionUser>) {
  * Usage:
  * ```
  * const enforceMutationSecurityMock = mockEnforceMutationSecurity()
- * vi.mock('@/lib/server/security', () => ({
+ * vi.mock('@/lib/server/shared/security', () => ({
  *   enforceMutationSecurity: enforceMutationSecurityMock
  * }))
  * ```
@@ -84,7 +84,7 @@ export function mockEnforceMutationSecurity() {
  * Usage:
  * ```
  * const enforceRateLimitMock = mockEnforceRateLimit()
- * vi.mock('@/lib/server/security', () => ({
+ * vi.mock('@/lib/server/shared/security', () => ({
  *   enforceRateLimit: enforceRateLimitMock
  * }))
  * ```

@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
-import type { SessionUser } from '@/lib/server/auth'
-import { ServiceError } from '@/lib/server/service-error'
+import type { SessionUser } from '@/lib/server/auth/auth'
+import { ServiceError } from '@/lib/server/shared/service-error'
 
 // --- Top-level mock functions ---
 
@@ -11,11 +11,11 @@ const enforceMutationSecurityMock = vi.fn()
 const enforceRateLimitMock = vi.fn()
 const requireAuthMock = vi.fn()
 
-vi.mock('@/lib/server/saved-games-service', () => ({
+vi.mock('@/lib/server/games/saved-games-service', () => ({
   renewSavedGameForSession: renewSavedGameForSessionMock,
 }))
 
-vi.mock('@/lib/server/security', () => ({
+vi.mock('@/lib/server/shared/security', () => ({
   enforceMutationSecurity: enforceMutationSecurityMock,
   enforceRateLimit: enforceRateLimitMock,
   RATE_LIMIT_POLICIES: {
@@ -23,7 +23,7 @@ vi.mock('@/lib/server/security', () => ({
   },
 }))
 
-vi.mock('@/lib/server/auth', () => ({
+vi.mock('@/lib/server/auth/auth', () => ({
   requireAuth: requireAuthMock,
 }))
 

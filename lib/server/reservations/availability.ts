@@ -2,7 +2,7 @@ import 'server-only'
 import type { GameTable, TableAvailability, TimeSlot } from '@/lib/types'
 import type { Tables } from '@/lib/supabase/types'
 import { getCurrentClubDate, isValidDateOnlyString } from '@/lib/club-time'
-import { serviceError } from '@/lib/server/service-error'
+import { serviceError } from '@/lib/server/shared/service-error'
 
 type ReservationRow = Tables<'reservations'>
 type ReservedSlot = {

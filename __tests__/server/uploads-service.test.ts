@@ -2,13 +2,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import type { ServiceError } from '@/lib/server/service-error'
+import type { ServiceError } from '@/lib/server/shared/service-error'
 
 /**
  * UPLOADS SERVICE TEST COVERAGE (OIR-207)
  *
  * Tests for image uploads to Supabase Storage for landing content (club events,
- * partners, library games). Implementation: lib/server/uploads-service.ts
+ * partners, library games). Implementation: lib/server/uploads/uploads-service.ts
  *
  * Key scenarios tested:
  * - Happy path: admin + valid PNG file → storage upload called with path matching /^events\/[0-9a-f-]+\.png$/, contentType set, returns { url }
@@ -29,7 +29,7 @@ vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerAdminClient: vi.fn(),
 }))
 
-vi.mock('@/lib/server/service-error', () => ({
+vi.mock('@/lib/server/shared/service-error', () => ({
   serviceError: vi.fn((message: string, statusCode: number) => {
     const err = new Error(message) as ServiceError
     err.name = 'ServiceError'
@@ -129,7 +129,7 @@ function createMemberSession(): SessionUser {
 
 async function loadUploadsService() {
   vi.resetModules()
-  const mod = await import('@/lib/server/uploads-service')
+  const mod = await import('@/lib/server/uploads/uploads-service')
   return {
     uploadLandingMediaImage: mod.uploadLandingMediaImage,
   }
@@ -238,7 +238,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -265,7 +265,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -293,7 +293,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -319,7 +319,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -345,7 +345,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -373,7 +373,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -399,7 +399,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -425,7 +425,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -454,7 +454,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -480,7 +480,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -554,7 +554,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -581,7 +581,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -607,7 +607,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -633,7 +633,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -715,7 +715,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -757,7 +757,7 @@ describe('uploads-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err

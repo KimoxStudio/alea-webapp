@@ -9,16 +9,16 @@ import type {
   ClubEventStatus,
 } from '@/lib/types'
 import { getDb, getAdminDb } from '@/lib/db'
-import { serviceError } from '@/lib/server/service-error'
+import { serviceError } from '@/lib/server/shared/service-error'
 import { getCurrentClubDate } from '@/lib/club-time'
 import type { Tables } from '@/lib/supabase/types'
-import type { SessionUser } from '@/lib/server/auth'
+import type { SessionUser } from '@/lib/server/auth/auth'
 import {
   deleteEventCascade,
   isClubEventRow,
   validateAndNormaliseSchedule,
   type NormalisedEventSchedule,
-} from '@/lib/server/events-service'
+} from '@/lib/server/events/events-service'
 import { validateOptionalUrl } from '@/lib/validations/url'
 
 export type { AdminClubEvent, AdminListClubEventsResult }
@@ -80,7 +80,7 @@ export interface ListClubEventsResult {
 /**
  * Public read of club marketing events (tournaments, game nights, club
  * history) for the landing page. These live in the same "events" table used
- * for internal room-reservation blocking (lib/server/events-service.ts) —
+ * for internal room-reservation blocking (lib/server/events/events-service.ts) —
  * a row is landing-eligible once it carries bilingual copy (title_es/title_en).
  * Uses the RLS-respecting client since this is unauthenticated, publicly
  * readable content; the "events_select_public" RLS policy additionally
@@ -840,7 +840,7 @@ export async function updateClubEvent(session: SessionUser, id: string, body: Cl
   const current = currentData as EventRow | null
   // OIR-208: the unified service operates on ANY event row (landing or
   // internal) — the isClubEventRow guard from OIR-203 is superseded here.
-  // The legacy /api/events/[id] endpoints (lib/server/events-service.ts)
+  // The legacy /api/events/[id] endpoints (lib/server/events/events-service.ts)
   // keep their own isClubEventRow guard so old clients can't touch these rows.
   if (!current) serviceError('Club event not found', 404)
 

@@ -7,16 +7,16 @@ const enforceMutationSecurityMock = vi.fn()
 const enforceRateLimitMock = vi.fn()
 const generateRecoveryLinkMock = vi.fn()
 
-vi.mock('@/lib/server/auth', () => ({
+vi.mock('@/lib/server/auth/auth', () => ({
   requireAdmin: requireAdminMock,
 }))
 
-vi.mock('@/lib/server/auth-service', () => ({
+vi.mock('@/lib/server/auth/auth-service', () => ({
   generateRecoveryLink: generateRecoveryLinkMock,
 }))
 
-vi.mock('@/lib/server/security', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/server/security')>()
+vi.mock('@/lib/server/shared/security', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/server/shared/security')>()
   return {
     ...actual,
     enforceMutationSecurity: enforceMutationSecurityMock,
@@ -83,7 +83,7 @@ describe('POST /api/users/[id]/recovery-link', () => {
   })
 
   it('maps service failures to HTTP errors', async () => {
-    const { ServiceError } = await import('@/lib/server/service-error')
+    const { ServiceError } = await import('@/lib/server/shared/service-error')
     generateRecoveryLinkMock.mockRejectedValueOnce(new ServiceError('This member must activate the account before using recovery', 400))
 
     const { POST } = await import('@/app/api/users/[id]/recovery-link/route')

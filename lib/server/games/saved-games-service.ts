@@ -16,11 +16,11 @@
  */
 import type { SavedGame, SavedGameStatus } from '@/lib/types'
 import { ERROR_CODES } from '@/lib/types/error-codes'
-import type { SessionUser } from '@/lib/server/auth'
+import type { SessionUser } from '@/lib/server/auth/auth'
 import { getCurrentClubDate, isValidDateOnlyString } from '@/lib/club-time'
 import { getAdminDb } from '@/lib/db'
-import { serviceError } from '@/lib/server/service-error'
-import { assertMemberRowsScoped } from '@/lib/server/data-scoping'
+import { serviceError } from '@/lib/server/shared/service-error'
+import { assertMemberRowsScoped } from '@/lib/server/shared/data-scoping'
 import type { Tables } from '@/lib/supabase/types'
 
 type SavedGameRow = Tables<'saved_games'>

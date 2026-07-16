@@ -10,7 +10,7 @@
  *
  * Node-only helpers (`tokensMatch`, `enforceMutationSecurity`, rate limiting)
  * stay in `security.ts`, which re-exports everything from this file so that
- * existing route-handler imports from `@/lib/server/security` are unaffected.
+ * existing route-handler imports from `@/lib/server/shared/security` are unaffected.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import type { CookieOptionsWithName } from '@supabase/ssr'

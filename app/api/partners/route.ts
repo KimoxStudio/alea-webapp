@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/server/auth'
-import { createPartner, listAdminPartners } from '@/lib/server/partners-service'
-import { toServiceErrorResponse } from '@/lib/server/http-error'
-import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
+import { requireAdmin } from '@/lib/server/auth/auth'
+import { createPartner, listAdminPartners } from '@/lib/server/partners/partners-service'
+import { toServiceErrorResponse } from '@/lib/server/shared/http-error'
+import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/shared/security'
 
 export async function GET(request: NextRequest) {
   const admin = await requireAdmin(request)

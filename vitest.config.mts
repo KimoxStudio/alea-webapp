@@ -48,13 +48,13 @@ export default defineConfig({
         statements: 80,
         // Auth layer: measured at 85-100% lines across all routes.
         // Per-glob overrides hold the strong bar here so regressions trigger alerts.
-        'lib/server/auth-service.ts': {
+        'lib/server/auth/auth-service.ts': {
           lines: 85,
           functions: 85,
           branches: 63,
           statements: 85,
         },
-        'lib/server/auth.ts': {
+        'lib/server/auth/auth.ts': {
           lines: 100,
           functions: 100,
           branches: 93,

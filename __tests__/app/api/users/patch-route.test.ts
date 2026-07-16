@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
-import { ServiceError } from '@/lib/server/service-error'
+import { ServiceError } from '@/lib/server/shared/service-error'
 
 let requestCounter = 0
 
@@ -11,17 +11,17 @@ const unblockUserMock = vi.fn()
 const enforceMutationSecurityMock = vi.fn()
 const enforceRateLimitMock = vi.fn()
 
-vi.mock('@/lib/server/auth', () => ({
+vi.mock('@/lib/server/auth/auth', () => ({
   requireAdmin: requireAdminMock,
 }))
 
-vi.mock('@/lib/server/users-service', () => ({
+vi.mock('@/lib/server/users/users-service', () => ({
   resetNoShows: resetNoShowsMock,
   unblockUser: unblockUserMock,
 }))
 
-vi.mock('@/lib/server/security', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/server/security')>()
+vi.mock('@/lib/server/shared/security', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/server/shared/security')>()
   return {
     ...actual,
     enforceMutationSecurity: enforceMutationSecurityMock,
@@ -62,7 +62,7 @@ describe('PATCH /api/users/[id]', () => {
     vi.resetModules()
     vi.clearAllMocks()
     vi.unstubAllEnvs()
-    const { resetRateLimitStoreForTests } = await import('@/lib/server/security')
+    const { resetRateLimitStoreForTests } = await import('@/lib/server/shared/security')
     resetRateLimitStoreForTests()
     vi.stubEnv('TRUST_PROXY_HEADERS', 'true')
     vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')

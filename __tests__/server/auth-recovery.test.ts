@@ -224,7 +224,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 async function loadService() {
-  return import('@/lib/server/auth-service')
+  return import('@/lib/server/auth/auth-service')
 }
 
 describe('auth recovery helpers', () => {

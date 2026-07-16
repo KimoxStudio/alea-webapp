@@ -83,7 +83,7 @@ vi.mock('@/lib/supabase/server', () => ({
 // ── Re-import helper (reset module cache between tests) ────────────────────────
 async function loadModule() {
   vi.resetModules()
-  return import('@/lib/server/equipment-service')
+  return import('@/lib/server/equipment/equipment-service')
 }
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────

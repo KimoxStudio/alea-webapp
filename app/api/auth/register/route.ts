@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
+import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/shared/security'
 
 export async function POST(request: NextRequest) {
   const securityError = enforceMutationSecurity(request)

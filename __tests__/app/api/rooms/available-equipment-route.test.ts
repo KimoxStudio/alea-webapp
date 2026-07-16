@@ -1,16 +1,16 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
-import { ServiceError } from '@/lib/server/service-error'
+import { ServiceError } from '@/lib/server/shared/service-error'
 
 const requireAuthMock = vi.fn()
 const listAvailableEquipmentForReservationMock = vi.fn()
 
-vi.mock('@/lib/server/auth', () => ({
+vi.mock('@/lib/server/auth/auth', () => ({
   requireAuth: requireAuthMock,
 }))
 
-vi.mock('@/lib/server/reservations-service', () => ({
+vi.mock('@/lib/server/reservations/reservations-service', () => ({
   listAvailableEquipmentForReservation: listAvailableEquipmentForReservationMock,
 }))
 

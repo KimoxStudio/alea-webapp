@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/server/auth'
-import { toServiceErrorResponse } from '@/lib/server/http-error'
-import { listPaginatedUsers } from '@/lib/server/users-service'
+import { requireAdmin } from '@/lib/server/auth/auth'
+import { toServiceErrorResponse } from '@/lib/server/shared/http-error'
+import { listPaginatedUsers } from '@/lib/server/users/users-service'
 
 export async function GET(request: NextRequest) {
   const admin = await requireAdmin(request)

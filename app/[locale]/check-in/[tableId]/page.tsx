@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
-import { getSessionFromServerCookies } from '@/lib/server/auth'
+import { getSessionFromServerCookies } from '@/lib/server/auth/auth'
 import { CheckInActivator } from '@/components/check-in/check-in-activator'
 import { locales } from '@/lib/i18n/config'
 

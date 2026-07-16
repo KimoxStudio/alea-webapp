@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
-import { getSessionFromServerCookies } from '@/lib/server/auth'
+import { getSessionFromServerCookies } from '@/lib/server/auth/auth'
 import { AdminDashboard } from '@/components/admin/admin-dashboard'
 
 export async function generateMetadata(): Promise<Metadata> {

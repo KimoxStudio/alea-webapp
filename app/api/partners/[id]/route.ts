@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/server/auth'
-import { deletePartner, updatePartner } from '@/lib/server/partners-service'
-import { toServiceErrorResponse } from '@/lib/server/http-error'
-import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
+import { requireAdmin } from '@/lib/server/auth/auth'
+import { deletePartner, updatePartner } from '@/lib/server/partners/partners-service'
+import { toServiceErrorResponse } from '@/lib/server/shared/http-error'
+import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/shared/security'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const securityError = enforceMutationSecurity(request)

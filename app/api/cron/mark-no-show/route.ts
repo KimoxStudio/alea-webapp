@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { markNoShowReservations } from '@/lib/server/reservations-service'
-import { tokensMatch } from '@/lib/server/security'
+import { markNoShowReservations } from '@/lib/server/reservations/reservations-service'
+import { tokensMatch } from '@/lib/server/shared/security'
 
 async function handleCronRequest(request: NextRequest) {
   const authHeader = request.headers.get('Authorization')

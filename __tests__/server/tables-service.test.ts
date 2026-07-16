@@ -92,7 +92,7 @@ vi.mock('qrcode', () => ({
 
 async function loadTablesModules() {
   vi.resetModules()
-  return import('@/lib/server/tables-service')
+  return import('@/lib/server/tables/tables-service')
 }
 
 describe('getTableAvailability', () => {

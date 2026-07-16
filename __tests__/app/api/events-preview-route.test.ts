@@ -16,15 +16,15 @@ const previewEventConflictsMock = vi.fn()
 const enforceMutationSecurityMock = vi.fn()
 const enforceRateLimitMock = vi.fn()
 
-vi.mock('@/lib/server/auth', () => ({
+vi.mock('@/lib/server/auth/auth', () => ({
   requireAdmin: requireAdminMock,
 }))
 
-vi.mock('@/lib/server/events-service', () => ({
+vi.mock('@/lib/server/events/events-service', () => ({
   previewEventConflicts: previewEventConflictsMock,
 }))
 
-vi.mock('@/lib/server/security', () => ({
+vi.mock('@/lib/server/shared/security', () => ({
   enforceMutationSecurity: enforceMutationSecurityMock,
   enforceRateLimit: enforceRateLimitMock,
   RATE_LIMIT_POLICIES: {
@@ -172,7 +172,7 @@ describe('POST /api/events/preview', () => {
   // -------------------------------------------------------------------------
 
   it('returns 400 when the service throws a validation error (e.g. > 366 schedules)', async () => {
-    const { ServiceError } = await import('@/lib/server/service-error')
+    const { ServiceError } = await import('@/lib/server/shared/service-error')
     previewEventConflictsMock.mockRejectedValue(new ServiceError('Too many schedule blocks', 400))
 
     const { POST } = await import('@/app/api/events/preview/route')
@@ -183,7 +183,7 @@ describe('POST /api/events/preview', () => {
   })
 
   it('returns 500 when the service throws an internal server error', async () => {
-    const { ServiceError } = await import('@/lib/server/service-error')
+    const { ServiceError } = await import('@/lib/server/shared/service-error')
     previewEventConflictsMock.mockRejectedValue(new ServiceError('Internal server error', 500))
 
     const { POST } = await import('@/app/api/events/preview/route')

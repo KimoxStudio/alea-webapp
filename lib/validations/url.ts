@@ -1,4 +1,4 @@
-import { serviceError } from '@/lib/server/service-error'
+import { serviceError } from '@/lib/server/shared/service-error'
 
 // URL hardening (MEDIUM finding from PR #148 security review, generalised in
 // OIR-203 code review as the shared validator — Finding 7): any user-supplied

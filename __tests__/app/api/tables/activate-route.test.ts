@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest, NextResponse } from 'next/server'
-import { ServiceError } from '@/lib/server/service-error'
+import { ServiceError } from '@/lib/server/shared/service-error'
 
 // --- Top-level mock functions ---
 
@@ -10,15 +10,15 @@ const activateReservationByTableMock = vi.fn()
 const enforceMutationSecurityMock = vi.fn()
 const enforceRateLimitMock = vi.fn()
 
-vi.mock('@/lib/server/auth', () => ({
+vi.mock('@/lib/server/auth/auth', () => ({
   requireAuth: requireAuthMock,
 }))
 
-vi.mock('@/lib/server/reservations-service', () => ({
+vi.mock('@/lib/server/reservations/reservations-service', () => ({
   activateReservationByTable: activateReservationByTableMock,
 }))
 
-vi.mock('@/lib/server/security', () => ({
+vi.mock('@/lib/server/shared/security', () => ({
   enforceMutationSecurity: enforceMutationSecurityMock,
   enforceRateLimit: enforceRateLimitMock,
   RATE_LIMIT_POLICIES: {

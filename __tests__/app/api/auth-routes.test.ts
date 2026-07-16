@@ -13,7 +13,7 @@ const routeGetUserMock = vi.fn()
 const routeProfileMaybeSingleMock = vi.fn()
 const routeSignInWithPasswordMock = vi.fn()
 
-vi.mock('@/lib/server/auth-service', () => ({
+vi.mock('@/lib/server/auth/auth-service', () => ({
   login: loginMock,
   register: registerMock,
   logoutWithClient: logoutWithClientMock,
@@ -86,7 +86,7 @@ describe('auth API routes', () => {
     vi.resetModules()
     vi.clearAllMocks()
     vi.unstubAllEnvs()
-    const { resetRateLimitStoreForTests } = await import('@/lib/server/security')
+    const { resetRateLimitStoreForTests } = await import('@/lib/server/shared/security')
     resetRateLimitStoreForTests()
     vi.stubEnv('TRUST_PROXY_HEADERS', 'true')
     vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
@@ -196,7 +196,7 @@ describe('auth API routes', () => {
 
   it('maps invalid credentials from the service to a 401 response', async () => {
     const { POST } = await import('@/app/api/auth/login/route')
-    const { ServiceError } = await import('@/lib/server/service-error')
+    const { ServiceError } = await import('@/lib/server/shared/service-error')
     loginMock.mockRejectedValueOnce(new ServiceError('Invalid credentials', 401))
 
     const response = await POST(
@@ -356,7 +356,7 @@ describe('auth API routes', () => {
 
   it('returns 401 from /me when current-user resolution is unauthorized', async () => {
     const { GET } = await import('@/app/api/auth/me/route')
-    const { ServiceError } = await import('@/lib/server/service-error')
+    const { ServiceError } = await import('@/lib/server/shared/service-error')
     getCurrentUserMock.mockRejectedValueOnce(new ServiceError('Unauthorized', 401))
 
     const response = await GET(new NextRequest('http://localhost:3000/api/auth/me'))
@@ -390,7 +390,7 @@ describe('auth API routes', () => {
 
   it('maps logout service failures to a 500 response', async () => {
     const { POST } = await import('@/app/api/auth/logout/route')
-    const { ServiceError } = await import('@/lib/server/service-error')
+    const { ServiceError } = await import('@/lib/server/shared/service-error')
     logoutWithClientMock.mockRejectedValueOnce(new ServiceError('Internal server error', 500))
 
     const response = await POST(createJsonRequest('/api/auth/logout'))

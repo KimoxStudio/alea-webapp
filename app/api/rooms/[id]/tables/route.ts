@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { listRoomTables, createTableEntry } from '@/lib/server/rooms-service'
-import { toServiceErrorResponse } from '@/lib/server/http-error'
-import { requireAdmin, requireAuth } from '@/lib/server/auth'
-import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
+import { listRoomTables, createTableEntry } from '@/lib/server/rooms/rooms-service'
+import { toServiceErrorResponse } from '@/lib/server/shared/http-error'
+import { requireAdmin, requireAuth } from '@/lib/server/auth/auth'
+import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/shared/security'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth(request)

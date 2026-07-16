@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { toGameTable } from '@/lib/server/table-mappers'
+import { toGameTable } from '@/lib/server/tables/table-mappers'
 import type { Tables } from '@/lib/supabase/types'
 
 type TableRow = Tables<'tables'>

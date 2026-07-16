@@ -13,14 +13,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import type { ServiceError } from '@/lib/server/service-error'
+import type { ServiceError } from '@/lib/server/shared/service-error'
 
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerAdminClient: vi.fn(),
   createSupabaseServerClient: vi.fn(),
 }))
-vi.mock('@/lib/server/service-error', () => ({
+vi.mock('@/lib/server/shared/service-error', () => ({
   serviceError: vi.fn((message: string, statusCode: number) => {
     const err = new Error(message) as ServiceError
     err.name = 'ServiceError'
@@ -245,7 +245,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { createClubEvent } = await import('@/lib/server/club-events-service')
+      const { createClubEvent } = await import('@/lib/server/events/club-events-service')
 
       const result = await createClubEvent(createAdminSession(), {
         titleEs: 'Evento Prueba',
@@ -302,7 +302,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { createClubEvent } = await import('@/lib/server/club-events-service')
+      const { createClubEvent } = await import('@/lib/server/events/club-events-service')
 
       const result = await createClubEvent(createAdminSession(), {
         titleEs: 'Evento Interno',
@@ -322,7 +322,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { createClubEvent } = await import('@/lib/server/club-events-service')
+      const { createClubEvent } = await import('@/lib/server/events/club-events-service')
 
       await expect(
         createClubEvent(createAdminSession(), {
@@ -340,7 +340,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { createClubEvent } = await import('@/lib/server/club-events-service')
+      const { createClubEvent } = await import('@/lib/server/events/club-events-service')
 
       await expect(
         createClubEvent(createAdminSession(), {
@@ -358,7 +358,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { createClubEvent } = await import('@/lib/server/club-events-service')
+      const { createClubEvent } = await import('@/lib/server/events/club-events-service')
 
       await expect(
         createClubEvent(createAdminSession(), {
@@ -376,7 +376,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { createClubEvent } = await import('@/lib/server/club-events-service')
+      const { createClubEvent } = await import('@/lib/server/events/club-events-service')
 
       await expect(
         createClubEvent(createAdminSession(), {
@@ -423,7 +423,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { createClubEvent } = await import('@/lib/server/club-events-service')
+      const { createClubEvent } = await import('@/lib/server/events/club-events-service')
 
       const result = await createClubEvent(createAdminSession(), {
         titleEs: 'Evento',
@@ -442,7 +442,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { createClubEvent } = await import('@/lib/server/club-events-service')
+      const { createClubEvent } = await import('@/lib/server/events/club-events-service')
 
       await expect(
         createClubEvent(createAdminSession(), {
@@ -527,7 +527,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { updateClubEvent } = await import('@/lib/server/club-events-service')
+      const { updateClubEvent } = await import('@/lib/server/events/club-events-service')
 
       await updateClubEvent(createAdminSession(), 'evt-1', {
         schedules: [
@@ -613,7 +613,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { updateClubEvent } = await import('@/lib/server/club-events-service')
+      const { updateClubEvent } = await import('@/lib/server/events/club-events-service')
 
       await updateClubEvent(createAdminSession(), 'evt-1', {
         schedules: [
@@ -693,7 +693,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { updateClubEvent } = await import('@/lib/server/club-events-service')
+      const { updateClubEvent } = await import('@/lib/server/events/club-events-service')
 
       // table-1 belongs to room-1 (TABLE_ROOM_MAP); pairing it with room-2
       // simulates an admin payload where the table selection doesn't match
@@ -800,7 +800,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { updateClubEvent } = await import('@/lib/server/club-events-service')
+      const { updateClubEvent } = await import('@/lib/server/events/club-events-service')
 
       await updateClubEvent(createAdminSession(), 'evt-1', {
         schedules: [
@@ -838,7 +838,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { updateClubEvent } = await import('@/lib/server/club-events-service')
+      const { updateClubEvent } = await import('@/lib/server/events/club-events-service')
 
       await updateClubEvent(createAdminSession(), 'evt-1', {
         schedules: [
@@ -879,7 +879,7 @@ describe('OIR-208: Unified Events', () => {
         mockSupabase as any,
       )
 
-      const { updateClubEvent } = await import('@/lib/server/club-events-service')
+      const { updateClubEvent } = await import('@/lib/server/events/club-events-service')
 
       await updateClubEvent(createAdminSession(), 'evt-1', {
         schedules: [
@@ -1040,7 +1040,7 @@ describe('OIR-208: Unified Events', () => {
         buildAvailabilityAdminClient(eventBlocks) as any,
       )
 
-      const { getTableAvailability } = await import('@/lib/server/tables-service')
+      const { getTableAvailability } = await import('@/lib/server/tables/tables-service')
 
       const blockedTable = await getTableAvailability('table-A', '2026-04-20')
       const blockedSlot = blockedTable.slots.find((slot) => slot.startTime === '14:00')
@@ -1064,7 +1064,7 @@ describe('OIR-208: Unified Events', () => {
         buildAvailabilityAdminClient(eventBlocks) as any,
       )
 
-      const { getTableAvailability } = await import('@/lib/server/tables-service')
+      const { getTableAvailability } = await import('@/lib/server/tables/tables-service')
 
       const tableA = await getTableAvailability('table-A', '2026-04-20')
       const tableB = await getTableAvailability('table-B', '2026-04-20')
@@ -1084,7 +1084,7 @@ describe('OIR-208: Unified Events', () => {
         buildAvailabilityAdminClient(eventBlocks) as any,
       )
 
-      const { getRoomTablesAvailability } = await import('@/lib/server/rooms-service')
+      const { getRoomTablesAvailability } = await import('@/lib/server/rooms/rooms-service')
 
       const result = await getRoomTablesAvailability(ROOM, '2026-04-20')
       expect(result['table-A']?.slots.find((slot) => slot.startTime === '14:00')?.available).toBe(false)
@@ -1103,7 +1103,7 @@ describe('OIR-208: Unified Events', () => {
         buildAvailabilityAdminClient(eventBlocks) as any,
       )
 
-      const { getRoomTablesAvailability } = await import('@/lib/server/rooms-service')
+      const { getRoomTablesAvailability } = await import('@/lib/server/rooms/rooms-service')
 
       const result = await getRoomTablesAvailability(ROOM, '2026-04-20')
       expect(result['table-A']?.slots.find((slot) => slot.startTime === '14:00')?.available).toBe(false)
@@ -1231,7 +1231,7 @@ describe('OIR-208: Unified Events', () => {
         buildReservationAdminClient({ eventBlocks }) as any,
       )
 
-      const { createReservationForSession } = await import('@/lib/server/reservations-service')
+      const { createReservationForSession } = await import('@/lib/server/reservations/reservations-service')
 
       await expect(createReservationForSession({ id: 'user-1', role: 'member' }, {
         tableId: 'res-table-1',
@@ -1250,7 +1250,7 @@ describe('OIR-208: Unified Events', () => {
         buildReservationAdminClient({ eventBlocks }) as any,
       )
 
-      const { createReservationForSession } = await import('@/lib/server/reservations-service')
+      const { createReservationForSession } = await import('@/lib/server/reservations/reservations-service')
 
       const result = await createReservationForSession({ id: 'user-1', role: 'member' }, {
         tableId: 'res-table-2',
@@ -1270,7 +1270,7 @@ describe('OIR-208: Unified Events', () => {
         buildReservationAdminClient({ eventBlocks }) as any,
       )
 
-      const { createReservationForSession } = await import('@/lib/server/reservations-service')
+      const { createReservationForSession } = await import('@/lib/server/reservations/reservations-service')
 
       await expect(createReservationForSession({ id: 'user-1', role: 'member' }, {
         tableId: 'res-table-2',
@@ -1328,7 +1328,7 @@ describe('OIR-208: Unified Events', () => {
       }
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(admin as any)
 
-      const { createSavedGameForSession } = await import('@/lib/server/saved-games-service')
+      const { createSavedGameForSession } = await import('@/lib/server/games/saved-games-service')
 
       // The blocked table itself must conflict.
       await expect(createSavedGameForSession({ id: 'user-1', role: 'member' }, {
@@ -1356,7 +1356,7 @@ describe('OIR-208: Unified Events', () => {
         buildReservationAdminClient({ eventBlocks }) as any,
       )
 
-      const { createReservationForSession } = await import('@/lib/server/reservations-service')
+      const { createReservationForSession } = await import('@/lib/server/reservations/reservations-service')
 
       await expect(createReservationForSession({ id: 'user-1', role: 'member' }, {
         tableId: 'res-table-1',
@@ -1378,7 +1378,7 @@ describe('OIR-208: Unified Events', () => {
         buildReservationAdminClient({ eventBlocks }) as any,
       )
 
-      const { createReservationForSession } = await import('@/lib/server/reservations-service')
+      const { createReservationForSession } = await import('@/lib/server/reservations/reservations-service')
 
       const result = await createReservationForSession({ id: 'user-1', role: 'member' }, {
         tableId: 'res-table-2',
@@ -1413,7 +1413,7 @@ describe('OIR-208: Unified Events', () => {
         buildReservationAdminClient({ eventBlocks, existingReservation }) as any,
       )
 
-      const { updateReservationForSession } = await import('@/lib/server/reservations-service')
+      const { updateReservationForSession } = await import('@/lib/server/reservations/reservations-service')
 
       // Existing reservation runs 10:00-12:00 (no conflict); moving it to
       // 14:00-16:00 now overlaps the table-level block on its own table.
@@ -1507,7 +1507,7 @@ describe('OIR-208: Unified Events', () => {
           mockSupabase as any,
         )
 
-        const { updateClubEvent } = await import('@/lib/server/club-events-service')
+        const { updateClubEvent } = await import('@/lib/server/events/club-events-service')
 
         const result = await updateClubEvent(createAdminSession(), 'evt-preserve-1', {
           titleEs: 'Nuevo Título',
@@ -1595,7 +1595,7 @@ describe('OIR-208: Unified Events', () => {
           mockSupabase as any,
         )
 
-        const { updateClubEvent } = await import('@/lib/server/club-events-service')
+        const { updateClubEvent } = await import('@/lib/server/events/club-events-service')
 
         await updateClubEvent(createAdminSession(), 'evt-times-1', {
           titleEs: 'Updated Title',
@@ -1662,7 +1662,7 @@ describe('OIR-208: Unified Events', () => {
           mockSupabase as any,
         )
 
-        const { createClubEvent } = await import('@/lib/server/club-events-service')
+        const { createClubEvent } = await import('@/lib/server/events/club-events-service')
 
         const result = await createClubEvent(createAdminSession(), {
           titleEs: 'New Event',
@@ -1752,7 +1752,7 @@ describe('OIR-208: Unified Events', () => {
           mockSupabase as any,
         )
 
-        const { updateClubEvent } = await import('@/lib/server/club-events-service')
+        const { updateClubEvent } = await import('@/lib/server/events/club-events-service')
 
         const result = await updateClubEvent(createAdminSession(), 'evt-toggle-1', {
           visibleOnLanding: false,
