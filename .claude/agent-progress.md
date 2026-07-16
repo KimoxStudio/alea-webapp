@@ -1510,3 +1510,11 @@ No blocking issues. No modifications needed. Code is ready for security-reviewer
 - [22:20] Ran pnpm typecheck (clean), pnpm lint (clean), pnpm test --run (1065/1065 passed, incl. 75 new cutover tests), pnpm build (clean, exit 0).
 - [22:22] Pushed branch to origin (pre-push hook re-ran full local CI, all green) and opened PR #171 targeting develop.
 - [22:23] ✅ Complete — APPROVE. PR opened: https://github.com/KimoxStudio/alea-webapp/pull/171
+
+#### [KIM-419] pr-comment-responder — Fix stale precondition note re: profiles.password_hash (PR #171 comment 3599393719)
+- [Started] Reviewer Oiranca: now that PR #169 (migration-f1-drizzle-schema) adds `profiles.password_hash`, the runbook precondition (docs/CUTOVER-RUNBOOK-F2.md, section 1) still calls it a "blocking gap" / missing column — stale in the opposite direction from the earlier fix round.
+- Verified against origin/migration-f1-drizzle-schema: `lib/db/schema/profiles.ts` has `passwordHash: text('password_hash')`, and the generated migration SQL (`lib/db/migrations/0000_fine_magma.sql`) has `"password_hash" text` — column confirmed present.
+- Updated docs/CUTOVER-RUNBOOK-F2.md precondition bullet (was line 25): replaced "PR #169's schema does not yet define this column ... blocking gap" language with confirmation that PR #169 now defines the column, contract resolved; clarified the column exists but remains unpopulated with real data until step 2.3's hash-copy runs during the real cutover.
+- Ran pnpm install (worktree had no node_modules), pnpm typecheck (clean), pnpm lint (clean, no warnings/errors), pnpm build (clean, exit 0).
+- Replied to PR #171 inline comment 3599393719 individually, marked ✅.
+- ✅ Complete — docs-only fix, committed and pushed.
