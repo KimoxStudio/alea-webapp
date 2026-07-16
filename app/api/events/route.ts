@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const event = await createEvent({ ...body, createdBy: admin.session.id })
+    const event = await createEvent(admin.session, { ...body, createdBy: admin.session.id })
     return admin.applyCookies(NextResponse.json(event, { status: 201 }))
   } catch (error) {
     return admin.applyCookies(toServiceErrorResponse(error))

@@ -135,9 +135,9 @@ passed the equivalent of `is_active_member()`.
 | Policy Name | Command | RLS Logic | Service-Layer Equivalent | Status |
 |---|---|---|---|---|
 | `event_room_blocks_select` | SELECT | `true` (any authenticated) | Read across `rooms-service.ts`, `tables-service.ts`, `reservations-service.ts`, `saved-games-service.ts` (global availability data, not per-user secret) | Covered |
-| `event_room_blocks_admin_insert` | INSERT | `is_admin()` | `createClubEvent()`/`updateClubEvent()` (`club-events-service.ts`, via `apply_club_event_room_blocks` RPC — `SECURITY DEFINER`, revoked from anon/authenticated) → Covered. `createEvent()`/`updateEvent()` (legacy `events-service.ts`, via `create_event_with_blocks`/`update_event_with_blocks` RPCs, also revoked from anon/authenticated) → **Gap-Open** | Split: Covered (new) / Gap-Open (legacy) |
-| `event_room_blocks_admin_update` | UPDATE | `is_admin()` | Same as above | Split: Covered (new) / Gap-Open (legacy) |
-| `event_room_blocks_admin_delete` | DELETE | `is_admin()` | `deleteClubEvent()` (Covered) / `deleteEvent()`→`deleteEventCascade()` (Gap-Open, legacy) | Split: Covered (new) / Gap-Open (legacy) |
+| `event_room_blocks_admin_insert` | INSERT | `is_admin()` | `createClubEvent()`/`updateClubEvent()` (`club-events-service.ts`, via `apply_club_event_room_blocks` RPC — `SECURITY DEFINER`, revoked from anon/authenticated) → Covered. `createEvent()`/`updateEvent()` (legacy `events-service.ts`, via `create_event_with_blocks`/`update_event_with_blocks` RPCs, also revoked from anon/authenticated) → now additionally gated by `requireAdminSession()` | Gap-Fixed |
+| `event_room_blocks_admin_update` | UPDATE | `is_admin()` | Same as above | Gap-Fixed |
+| `event_room_blocks_admin_delete` | DELETE | `is_admin()` | `deleteClubEvent()` (Covered) / `deleteEvent()`→`deleteEventCascade()` (now gated by `requireAdminSession()` in `deleteEvent()`) | Gap-Fixed |
 
 ### `events`
 
@@ -145,9 +145,9 @@ passed the equivalent of `is_active_member()`.
 |---|---|---|---|---|
 | `events_select` | SELECT | `true` (any authenticated) | `listEvents()`, `getEvent()` — legacy internal dashboard reads | Covered |
 | `events_select_public` | SELECT | anon, `title_es IS NOT NULL AND title_en IS NOT NULL` | `listClubEvents()` — `lib/server/club-events-service.ts` (same predicate, `isClubEventRow()`) | Covered |
-| `events_admin_insert` | INSERT | `is_admin()` | `createClubEvent()` (Covered) / `createEvent()` (Gap-Open, legacy) | Split |
-| `events_admin_update` | UPDATE | `is_admin()` | `updateClubEvent()` (Covered) / `updateEvent()` (Gap-Open, legacy) | Split |
-| `events_admin_delete` | DELETE | `is_admin()` | `deleteClubEvent()` (Covered) / `deleteEvent()` (Gap-Open, legacy) | Split |
+| `events_admin_insert` | INSERT | `is_admin()` | `createClubEvent()` (Covered) / `createEvent()` (now gated by `requireAdminSession()`) | Gap-Fixed |
+| `events_admin_update` | UPDATE | `is_admin()` | `updateClubEvent()` (Covered) / `updateEvent()` (now gated by `requireAdminSession()`) | Gap-Fixed |
+| `events_admin_delete` | DELETE | `is_admin()` | `deleteClubEvent()` (Covered) / `deleteEvent()` (now gated by `requireAdminSession()`) | Gap-Fixed |
 
 ### `activation_tokens` (final shape — fully locked to `service_role`)
 
@@ -240,10 +240,17 @@ pattern:
   `generateRecoveryLink` (admin-triggered activation/recovery link
   generation for a member) — added a `session: SessionUser` field to the
   input object + `requireAdminSession(input.session)`.
+- **`lib/server/events-service.ts`**: `createEvent`, `updateEvent`,
+  `deleteEvent` — same fix (added as a follow-up to close Gap 1 from this
+  PR's review). `deleteEventCascade` itself is intentionally left unguarded:
+  its only two callers are `deleteEvent()` (now gated above) and
+  `club-events-service.ts`'s `deleteClubEvent()` (already gated by its own
+  `requireAdminSession()` before calling `deleteEventCascade()` directly).
 
 All corresponding route handlers (`app/api/equipment/**`,
-`app/api/rooms/**`, `app/api/tables/[id]/qr/route.ts`, `app/api/users/**`)
-were updated to pass `admin.session` (already available from the existing
+`app/api/rooms/**`, `app/api/tables/[id]/qr/route.ts`, `app/api/users/**`,
+`app/api/events/route.ts`, `app/api/events/[id]/route.ts`) were updated to
+pass `admin.session` (already available from the existing
 `requireAdmin(request)` call) into the service function.
 
 **Breaking change for tests (resolved):** the functions above changed
@@ -261,26 +268,24 @@ required parameter: `__tests__/server/equipment-service.test.ts`,
 `__tests__/app/api/users/import-route.test.ts`. `pnpm typecheck`, `pnpm lint`,
 `pnpm test`, and `pnpm build` all pass at the current PR head.
 
+**`lib/server/events-service.ts` (Gap 1, fixed as a follow-up in this PR):**
+`createEvent`, `updateEvent`, `deleteEvent` now take a `session: SessionUser`
+leading/added parameter and call `requireAdminSession(session)`, mirroring
+the pattern above. `app/api/events/route.ts` and
+`app/api/events/[id]/route.ts` were updated to pass `admin.session` into
+these functions. This breaks the same-shaped signature assumed by
+`__tests__/server/events-service.test.ts`,
+`__tests__/server/events-service-multiday.test.ts`, and
+`__tests__/app/api/events.test.ts`, which call these functions/routes
+directly — those test files still need the `createAdminSession()`-style
+update described above (out of scope for this fix; test files are
+qa-engineer's exclusively per repo convention). `pnpm typecheck`, `pnpm
+lint`, and `pnpm build` all pass with this change; `pnpm test` was not run
+here and is expected to fail against the three files above until QA updates
+them.
+
 ## Gaps found and left open (needs human review)
 
-- **`lib/server/events-service.ts`** (`createEvent`, `updateEvent`,
-  `deleteEvent`/`deleteEventCascade`, and indirectly `event_room_blocks`
-  writes): same missing-service-layer-check pattern as the functions fixed
-  above, but **not fixed in this PR**. This file is explicitly documented in
-  its own code (lines 252–270) as a legacy internal-events dashboard surface,
-  superseded by `club-events-service.ts`, kept only because
-  `__tests__/server/events-service.test.ts` and
-  `__tests__/server/events-service-multiday.test.ts` exercise it directly,
-  and a prior review explicitly decided "test edits are out of scope for
-  this change." Route-level protection exists today (`requireAdmin()` in
-  `app/api/events/route.ts` and `app/api/events/[id]/route.ts`), so there is
-  no active exploit — the gap is purely the missing defense-in-depth layer.
-  Recommend one of: (a) retire this surface now that no UI component
-  consumes it (per the file's own comment), or (b) apply the same
-  `requireAdminSession(session)` fix if it must stay, updating its test
-  suite in the same change. Left for human/product decision since retiring
-  a surface is a product/architecture call, not a "minimal, focused" service
-  fix.
 - **`rooms_admin_delete` / `tables_admin_delete`**: no delete-room or
   delete-table feature exists anywhere in the app today, so there is nothing
   to harden. Flagging so that if either feature is added later, its
