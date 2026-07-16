@@ -23,11 +23,23 @@ interface ProfileRow {
  * cutover note in docs/MIGRATION-supabase-to-neon.md, which copies hashes
  * straight from `auth.users.encrypted_password` with no re-hash.
  *
+ * NOTE: `profiles.password_hash` does not exist yet as of the F1 Drizzle
+ * schema (KIM-417, PR #169) — Supabase never had this column either, since
+ * password hashes live in Supabase-managed `auth.users.encrypted_password`
+ * today. The column is only added during the F2 cutover migration, at the
+ * same time it gets populated. This is a known, tracked gap, not an
+ * oversight of this PR or #169.
+ *
  * This is defensive scaffolding: the `profiles` table (and its Drizzle
- * schema, KIM-417) may not exist yet on any real database when this runs.
- * Any failure — missing table, connection error, no matching row, or a
- * wrong password — resolves to `null` uniformly so callers can never infer
- * whether a given email exists.
+ * schema, KIM-417) may not exist yet on any real database when this runs,
+ * and even once it does, `password_hash` may still be missing until F2.
+ * Any failure — missing table, missing column, connection error, no
+ * matching row, or a wrong password — resolves to `null` uniformly so
+ * callers can never infer whether a given email exists. This route is also
+ * gated 404-by-default behind `AUTH_JS_ENABLED` (see
+ * app/api/authjs/[...nextauth]/route.ts) so this code path cannot be
+ * reached in any deployed environment before the F2 cutover intentionally
+ * enables it.
  */
 export async function verifyCredentials(
   email: string,
