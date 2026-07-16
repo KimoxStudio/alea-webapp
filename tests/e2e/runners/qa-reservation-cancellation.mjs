@@ -7,7 +7,7 @@
  * NOTE: The cutoff guard is `session.role !== 'admin'` — must use member (secondary) user.
  */
 import { chromium } from 'playwright';
-import { chromiumLaunchOptions, env, requireE2EEnv } from './env.mjs';
+import { chromiumLaunchOptions, env, requireE2EEnv } from '../env.mjs';
 
 const required = [
   'PLAYWRIGHT_QA_USER', 'PLAYWRIGHT_QA_PASSWORD',

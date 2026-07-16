@@ -14,7 +14,7 @@ import { join } from 'path'
  * without requiring a real database or applying migrations.
  */
 
-const MIGRATION_DIR = join(__dirname, '../../lib/db/migrations')
+const MIGRATION_DIR = join(__dirname, '../../../lib/db/migrations')
 
 function readMigration(filename: string): string {
   const path = join(MIGRATION_DIR, filename)
@@ -107,7 +107,7 @@ describe('F1 Drizzle Schema Smoke Tests', () => {
   describe('Schema/Migration alignment', () => {
     it('Drizzle schema profiles.ts defines password_hash matching the SQL', () => {
       // Read the Drizzle schema file
-      const schemaPath = join(__dirname, '../../lib/db/schema/profiles.ts')
+      const schemaPath = join(__dirname, '../../../lib/db/schema/profiles.ts')
       const schemaTsContent = readFileSync(schemaPath, 'utf-8')
 
       // The TS schema must include passwordHash (maps to password_hash in SQL)
@@ -115,7 +115,7 @@ describe('F1 Drizzle Schema Smoke Tests', () => {
     })
 
     it('profiles.ts passwordHash column is nullable (for pre-cutover rows)', () => {
-      const schemaPath = join(__dirname, '../../lib/db/schema/profiles.ts')
+      const schemaPath = join(__dirname, '../../../lib/db/schema/profiles.ts')
       const schemaTsContent = readFileSync(schemaPath, 'utf-8')
 
       // Should NOT have .notNull() on passwordHash (it's nullable by design)

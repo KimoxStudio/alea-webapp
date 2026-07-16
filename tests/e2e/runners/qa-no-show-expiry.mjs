@@ -7,7 +7,7 @@
  *  4. Assert that slot is released (slot is available again)
  *  5. Assert that cron without auth returns 401
  */
-import { env, requireE2EEnv } from './env.mjs';
+import { env, requireE2EEnv } from '../env.mjs';
 
 const required = ['PLAYWRIGHT_QA_USER', 'CRON_SECRET', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SECRET_DEFAULT_KEY'];
 requireE2EEnv(required);

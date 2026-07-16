@@ -13,7 +13,7 @@ export default defineConfig({
     teardownTimeout: 10000,
     // Keep file execution sequential; parallel workers add memory pressure here.
     fileParallelism: false,
-    setupFiles: ['./vitest.setup.ts'],
+    setupFiles: ['./tests/setup.ts'],
     env: {
       // Pin tests to a known IANA timezone so service code and test helpers agree.
       // The service defaults to the server's system timezone when this is unset;
