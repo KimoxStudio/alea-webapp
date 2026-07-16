@@ -1,6 +1,6 @@
 import type { MemberImportIssue, MemberImportRow } from '@/lib/types'
 import { strFromU8, unzipSync } from 'fflate'
-import { serviceError } from '@/lib/server/service-error'
+import { serviceError } from '@/lib/server/shared/service-error'
 import { memberNumberSchema } from '@/lib/validations/auth'
 import ExcelJS from 'exceljs'
 

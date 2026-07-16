@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   getPendingCheckInDeadline,
   isPendingReservationExpired,
-} from '@/lib/server/pending-reservation-expiry'
+} from '@/lib/server/reservations/pending-reservation-expiry'
 
 describe('pending reservation expiry', () => {
   const longSlot = {

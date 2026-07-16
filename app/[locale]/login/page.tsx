@@ -3,8 +3,8 @@ import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import { LoginForm } from '@/components/auth/login-form'
-import { getSessionFromServerCookies } from '@/lib/server/auth'
-import { getCurrentUser } from '@/lib/server/auth-service'
+import { getSessionFromServerCookies } from '@/lib/server/auth/auth'
+import { getCurrentUser } from '@/lib/server/auth/auth-service'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('auth')

@@ -2,12 +2,12 @@ import qrcode from 'qrcode'
 import type { GameTable } from '@/lib/types'
 import { uploadToStorage } from '@/lib/storage/qr'
 import { getAdminDb, getDb } from '@/lib/db'
-import { serviceError } from '@/lib/server/service-error'
-import { resolveDate, buildAvailability } from '@/lib/server/availability'
+import { serviceError } from '@/lib/server/shared/service-error'
+import { resolveDate, buildAvailability } from '@/lib/server/reservations/availability'
 import type { Tables } from '@/lib/supabase/types'
-import { toGameTable } from '@/lib/server/table-mappers'
-import { getDatabaseNow } from '@/lib/server/database-time'
-import { isPendingReservationExpired } from '@/lib/server/pending-reservation-expiry'
+import { toGameTable } from '@/lib/server/tables/table-mappers'
+import { getDatabaseNow } from '@/lib/server/shared/database-time'
+import { isPendingReservationExpired } from '@/lib/server/reservations/pending-reservation-expiry'
 
 type TableRow = Tables<'tables'>
 type ReservationRow = Tables<'reservations'>

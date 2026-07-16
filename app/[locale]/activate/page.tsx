@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { KeyRound, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { ActivationForm } from '@/components/auth/activation-form'
-import { getActivationLinkState } from '@/lib/server/auth-service'
+import { getActivationLinkState } from '@/lib/server/auth/auth-service'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('auth')

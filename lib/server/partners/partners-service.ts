@@ -1,9 +1,9 @@
 import 'server-only'
 import type { AdminPartner, Partner } from '@/lib/types'
 import { getDb, getAdminDb } from '@/lib/db'
-import { serviceError } from '@/lib/server/service-error'
+import { serviceError } from '@/lib/server/shared/service-error'
 import type { Tables } from '@/lib/supabase/types'
-import type { SessionUser } from '@/lib/server/auth'
+import type { SessionUser } from '@/lib/server/auth/auth'
 import { validateOptionalUrl } from '@/lib/validations/url'
 
 type PartnerRow = Tables<'partners'>

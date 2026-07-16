@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/server/auth'
-import { toServiceErrorResponse } from '@/lib/server/http-error'
-import { regenerateQrCodes } from '@/lib/server/tables-service'
-import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
+import { requireAdmin } from '@/lib/server/auth/auth'
+import { toServiceErrorResponse } from '@/lib/server/shared/http-error'
+import { regenerateQrCodes } from '@/lib/server/tables/tables-service'
+import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/shared/security'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const securityError = enforceMutationSecurity(request)

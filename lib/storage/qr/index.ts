@@ -16,7 +16,7 @@ import type { Database } from '@/lib/supabase/types'
  * NOTE on the directory name: this module is named after the migration
  * issue's original shorthand label ("Storage/QR"), but it also backs the
  * general admin-uploaded landing-media images used by
- * lib/server/uploads-service.ts — that upload is NOT QR-code related. The
+ * lib/server/uploads/uploads-service.ts — that upload is NOT QR-code related. The
  * directory name is fixed per the tracked migration plan; the exported
  * function names below are intentionally generic/accurate rather than
  * QR-specific, since this seam wraps Storage access for more than QR codes.

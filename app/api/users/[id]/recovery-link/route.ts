@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/server/auth'
-import { toServiceErrorResponse } from '@/lib/server/http-error'
-import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
-import { generateRecoveryLink } from '@/lib/server/auth-service'
+import { requireAdmin } from '@/lib/server/auth/auth'
+import { toServiceErrorResponse } from '@/lib/server/shared/http-error'
+import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/shared/security'
+import { generateRecoveryLink } from '@/lib/server/auth/auth-service'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const securityError = enforceMutationSecurity(request)

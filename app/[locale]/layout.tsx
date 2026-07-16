@@ -8,8 +8,8 @@ import { Providers } from '@/lib/providers'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { NavigationProgress } from '@/components/ui/navigation-progress'
-import { getSessionFromServerCookies } from '@/lib/server/auth'
-import { getCurrentUser } from '@/lib/server/auth-service'
+import { getSessionFromServerCookies } from '@/lib/server/auth/auth'
+import { getCurrentUser } from '@/lib/server/auth/auth-service'
 
 export const metadata: Metadata = {
   title: 'Alea — Asociacion Cultural de Juegos',

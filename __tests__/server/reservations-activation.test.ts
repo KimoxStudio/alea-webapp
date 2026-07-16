@@ -1,8 +1,8 @@
 // @vitest-environment node
-import type { SessionUser } from '@/lib/server/auth'
+import type { SessionUser } from '@/lib/server/auth/auth'
 import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
 
-vi.mock('@/lib/server/saved-games-service', () => ({ recordSavedGameAttendance: vi.fn() }))
+vi.mock('@/lib/server/games/saved-games-service', () => ({ recordSavedGameAttendance: vi.fn() }))
 
 type ReservationRow = {
   id: string
@@ -420,7 +420,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
 async function loadReservationModules() {
   vi.resetModules()
-  const service = await import('@/lib/server/reservations-service')
+  const service = await import('@/lib/server/reservations/reservations-service')
   return { ...service }
 }
 
@@ -841,7 +841,7 @@ describe('reservations service', () => {
         }),
       }))
 
-      const { activateReservationByTable: activate } = await import('@/lib/server/reservations-service')
+      const { activateReservationByTable: activate } = await import('@/lib/server/reservations/reservations-service')
 
       await expect(activate('t3', '2', undefined)).rejects.toMatchObject({
         name: 'ServiceError',

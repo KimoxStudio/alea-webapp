@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/server/auth'
-import { toServiceErrorResponse } from '@/lib/server/http-error'
-import { activateReservationByTable } from '@/lib/server/reservations-service'
-import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
+import { requireAuth } from '@/lib/server/auth/auth'
+import { toServiceErrorResponse } from '@/lib/server/shared/http-error'
+import { activateReservationByTable } from '@/lib/server/reservations/reservations-service'
+import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/shared/security'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const securityError = enforceMutationSecurity(request)

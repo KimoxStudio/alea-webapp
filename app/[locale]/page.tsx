@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
-import { listClubEvents, type ListClubEventsResult } from '@/lib/server/club-events-service'
-import { listPartners } from '@/lib/server/partners-service'
-import { listLibraryGames } from '@/lib/server/library-games-service'
+import { listClubEvents, type ListClubEventsResult } from '@/lib/server/events/club-events-service'
+import { listPartners } from '@/lib/server/partners/partners-service'
+import { listLibraryGames } from '@/lib/server/games/library-games-service'
 import type { LibraryGame, Partner } from '@/lib/types'
 import { LandingView } from '@/components/landing/landing-view'
 

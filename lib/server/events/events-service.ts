@@ -1,6 +1,6 @@
 import 'server-only'
 import { getAdminDb, getDb } from '@/lib/db'
-import { serviceError } from '@/lib/server/service-error'
+import { serviceError } from '@/lib/server/shared/service-error'
 import type { Tables } from '@/lib/supabase/types'
 import type { AdminEvent, AdminEventRoomBlock, AdminEventSchedule } from '@/lib/types'
 
@@ -12,7 +12,7 @@ type EventRoomBlockRow = Tables<'event_room_blocks'>
 // ---------------------------------------------------------------------------
 // Shared "is this a club-event (landing) row?" predicate (OIR-203 code
 // review, Finding 3). A row becomes public landing content once BOTH
-// title_es and title_en are populated (see lib/server/club-events-service.ts).
+// title_es and title_en are populated (see lib/server/events/club-events-service.ts).
 // Every legacy internal room-booking entry point (updateEvent, deleteEvent,
 // and listEvents' `.or('title_es.is.null,title_en.is.null')` filter) must
 // treat such rows as out of scope for this surface — they are owned
@@ -206,7 +206,7 @@ function jsonToAdminEvent(obj: Record<string, unknown>): AdminEvent {
 // ---------------------------------------------------------------------------
 // Validate a raw schedule payload element and return normalised block
 //
-// Exported so lib/server/club-events-service.ts (OIR-203) can reuse the same
+// Exported so lib/server/events/club-events-service.ts (OIR-203) can reuse the same
 // validation for the public club-event "blocks rooms" sub-flow instead of
 // duplicating date/time parsing rules.
 // ---------------------------------------------------------------------------
@@ -255,7 +255,7 @@ export function validateAndNormaliseSchedule(
 // OIR-208 review (Finding 2 — legacy /api/events double-write surface):
 // listEvents/createEvent/updateEvent/deleteEvent below back the legacy
 // internal-events dashboard section, which has since been replaced by the
-// unified "Eventos" flow in lib/server/club-events-service.ts. No component
+// unified "Eventos" flow in lib/server/events/club-events-service.ts. No component
 // or hook consumes app/api/events/route.ts or app/api/events/[id]/route.ts
 // anymore (verified: no references to the use-admin.ts event hooks outside
 // that hook file and its tests). Those routes — and these functions — are
@@ -266,7 +266,7 @@ export function validateAndNormaliseSchedule(
 // (both title_es/title_en NULL, created via the unified admin flow) remains
 // writable/deletable through this surface too, with different
 // validation/defaults than the unified service. Do not wire any new
-// consumer to this surface — prefer lib/server/club-events-service.ts.
+// consumer to this surface — prefer lib/server/events/club-events-service.ts.
 // ---------------------------------------------------------------------------
 
 export async function listEvents(): Promise<AdminEvent[]> {
@@ -276,7 +276,7 @@ export async function listEvents(): Promise<AdminEvent[]> {
     .select('id, title, description, date, start_time, end_time, created_by, created_at')
     // Exclude public "club event" landing rows (OIR-203): a row becomes
     // landing content once both bilingual titles are populated (see
-    // lib/server/club-events-service.ts). Those are managed exclusively via
+    // lib/server/events/club-events-service.ts). Those are managed exclusively via
     // the dedicated "Club events" dashboard section, not this legacy
     // internal room-booking view.
     .or('title_es.is.null,title_en.is.null')
@@ -545,7 +545,7 @@ export async function deleteEvent(id: string): Promise<void> {
  * Cancel overlapping reservations for every room block attached to `id`,
  * then delete the event row (blocks cascade via FK). Shared by `deleteEvent`
  * (legacy internal surface, guarded above) and
- * `lib/server/club-events-service.ts`'s `deleteClubEvent` (which performs its
+ * `lib/server/events/club-events-service.ts`'s `deleteClubEvent` (which performs its
  * own club-event-row validation — the inverse of the guard above — before
  * calling this directly, so it must NOT go through the `isClubEventRow`
  * check in `deleteEvent`).

@@ -1,5 +1,5 @@
-import { serviceError } from '@/lib/server/service-error'
-import type { SessionUser } from '@/lib/server/auth'
+import { serviceError } from '@/lib/server/shared/service-error'
+import type { SessionUser } from '@/lib/server/auth/auth'
 
 /**
  * Defense-in-depth for member-scoped reads. The query SHOULD already filter

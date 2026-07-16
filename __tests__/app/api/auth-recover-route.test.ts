@@ -7,12 +7,12 @@ const enforceMutationSecurityMock = vi.fn()
 const enforceRateLimitMock = vi.fn()
 const routeSignInWithPasswordMock = vi.fn()
 
-vi.mock('@/lib/server/auth-service', () => ({
+vi.mock('@/lib/server/auth/auth-service', () => ({
   recoverAccount: recoverAccountMock,
 }))
 
-vi.mock('@/lib/server/security', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/server/security')>()
+vi.mock('@/lib/server/shared/security', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/server/shared/security')>()
   return {
     ...actual,
     enforceMutationSecurity: enforceMutationSecurityMock,
@@ -96,7 +96,7 @@ describe('POST /api/auth/recover', () => {
   })
 
   it('maps recovery failures to service error responses', async () => {
-    const { ServiceError } = await import('@/lib/server/service-error')
+    const { ServiceError } = await import('@/lib/server/shared/service-error')
     recoverAccountMock.mockRejectedValueOnce(new ServiceError('Recovery link has already been used', 400))
 
     const { POST } = await import('@/app/api/auth/recover/route')

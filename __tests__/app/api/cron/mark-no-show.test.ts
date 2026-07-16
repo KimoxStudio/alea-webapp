@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server'
 
 const markNoShowReservationsMock = vi.fn()
 
-vi.mock('@/lib/server/reservations-service', () => ({
+vi.mock('@/lib/server/reservations/reservations-service', () => ({
   markNoShowReservations: markNoShowReservationsMock,
 }))
 

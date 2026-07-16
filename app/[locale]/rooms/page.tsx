@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { redirect } from 'next/navigation'
 import { RoomsView } from '@/components/rooms/rooms-view'
-import { getSessionFromServerCookies } from '@/lib/server/auth'
-import { getCurrentUser } from '@/lib/server/auth-service'
-import { markNoShowReservations } from '@/lib/server/reservations-service'
+import { getSessionFromServerCookies } from '@/lib/server/auth/auth'
+import { getCurrentUser } from '@/lib/server/auth/auth-service'
+import { markNoShowReservations } from '@/lib/server/reservations/reservations-service'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('rooms')

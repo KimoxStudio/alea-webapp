@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseRouteHandlerClient } from '@/lib/supabase/server'
 import { getAuthUser } from '@/lib/auth/session'
 import { getDb } from '@/lib/db'
-export { enforceSameOriginForMutation } from '@/lib/server/security'
+export { enforceSameOriginForMutation } from '@/lib/server/shared/security'
 
 export type SessionUser = {
   id: string

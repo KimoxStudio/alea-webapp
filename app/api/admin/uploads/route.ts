@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/server/auth'
-import { uploadLandingMediaImage, type UploadFileLike } from '@/lib/server/uploads-service'
-import { toServiceErrorResponse } from '@/lib/server/http-error'
-import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/security'
-import { ServiceError } from '@/lib/server/service-error'
+import { requireAdmin } from '@/lib/server/auth/auth'
+import { uploadLandingMediaImage, type UploadFileLike } from '@/lib/server/uploads/uploads-service'
+import { toServiceErrorResponse } from '@/lib/server/shared/http-error'
+import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '@/lib/server/shared/security'
+import { ServiceError } from '@/lib/server/shared/service-error'
 
 function toUploadFileLike(value: FormDataEntryValue | null): UploadFileLike | null {
   if (!value || typeof value === 'string' || typeof value.arrayBuffer !== 'function') return null

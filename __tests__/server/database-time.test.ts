@@ -8,7 +8,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 async function loadModule() {
-  return import('@/lib/server/database-time')
+  return import('@/lib/server/shared/database-time')
 }
 
 describe('database-time', () => {

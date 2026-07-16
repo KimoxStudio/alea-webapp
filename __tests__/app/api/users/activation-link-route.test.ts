@@ -7,16 +7,16 @@ const enforceMutationSecurityMock = vi.fn()
 const enforceRateLimitMock = vi.fn()
 const generateActivationLinkMock = vi.fn()
 
-vi.mock('@/lib/server/auth', () => ({
+vi.mock('@/lib/server/auth/auth', () => ({
   requireAdmin: requireAdminMock,
 }))
 
-vi.mock('@/lib/server/auth-service', () => ({
+vi.mock('@/lib/server/auth/auth-service', () => ({
   generateActivationLink: generateActivationLinkMock,
 }))
 
-vi.mock('@/lib/server/security', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/server/security')>()
+vi.mock('@/lib/server/shared/security', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/server/shared/security')>()
   return {
     ...actual,
     enforceMutationSecurity: enforceMutationSecurityMock,
@@ -83,7 +83,7 @@ describe('POST /api/users/[id]/activation-link', () => {
   })
 
   it('maps service failures to HTTP errors', async () => {
-    const { ServiceError } = await import('@/lib/server/service-error')
+    const { ServiceError } = await import('@/lib/server/shared/service-error')
     generateActivationLinkMock.mockRejectedValueOnce(new ServiceError('This member is already active', 400))
 
     const { POST } = await import('@/app/api/users/[id]/activation-link/route')

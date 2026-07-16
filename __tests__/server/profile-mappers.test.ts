@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { toPublicUser } from '@/lib/server/profile-mappers'
+import { toPublicUser } from '@/lib/server/users/profile-mappers'
 import type { Tables } from '@/lib/supabase/types'
 
 type ProfileRow = Tables<'profiles'>

@@ -13,15 +13,15 @@ vi.mock('next-intl/server', () => ({
   getTranslations: vi.fn(async () => ((key: string) => key)),
 }))
 
-vi.mock('@/lib/server/auth', () => ({
+vi.mock('@/lib/server/auth/auth', () => ({
   getSessionFromServerCookies: getSessionFromServerCookiesMock,
 }))
 
-vi.mock('@/lib/server/auth-service', () => ({
+vi.mock('@/lib/server/auth/auth-service', () => ({
   getCurrentUser: getCurrentUserMock,
 }))
 
-vi.mock('@/lib/server/reservations-service', () => ({
+vi.mock('@/lib/server/reservations/reservations-service', () => ({
   markNoShowReservations: markNoShowReservationsMock,
 }))
 

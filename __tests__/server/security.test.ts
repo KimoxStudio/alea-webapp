@@ -44,13 +44,13 @@ describe('server security helpers', () => {
     mockRedisConstructor.mockReset()
     mockRatelimitConstructor.mockReset()
     mockSlidingWindow.mockClear()
-    const { resetRateLimitStoreForTests } = await import('@/lib/server/security')
+    const { resetRateLimitStoreForTests } = await import('@/lib/server/shared/security')
     resetRateLimitStoreForTests()
   })
 
   it('uses secure:false when COOKIE_SECURE is explicitly set to false', async () => {
     vi.stubEnv('COOKIE_SECURE', 'false')
-    const security = await import('@/lib/server/security')
+    const security = await import('@/lib/server/shared/security')
 
     expect(security.getSupabaseCookieOptions()).toMatchObject({
       httpOnly: true,
@@ -62,7 +62,7 @@ describe('server security helpers', () => {
 
   it('uses secure:true when COOKIE_SECURE is explicitly set to true', async () => {
     vi.stubEnv('COOKIE_SECURE', 'true')
-    const security = await import('@/lib/server/security')
+    const security = await import('@/lib/server/shared/security')
 
     expect(security.getSupabaseCookieOptions()).toMatchObject({
       httpOnly: true,
@@ -75,7 +75,7 @@ describe('server security helpers', () => {
   it('uses secure:true when COOKIE_SECURE is unset and NODE_ENV is production', async () => {
     vi.stubEnv('NODE_ENV', 'production')
     vi.stubEnv('COOKIE_SECURE', undefined)
-    const security = await import('@/lib/server/security')
+    const security = await import('@/lib/server/shared/security')
 
     expect(security.getSupabaseCookieOptions()).toMatchObject({
       httpOnly: true,
@@ -88,7 +88,7 @@ describe('server security helpers', () => {
   it('uses secure:false when COOKIE_SECURE is unset and NODE_ENV is not production', async () => {
     vi.stubEnv('NODE_ENV', 'development')
     vi.stubEnv('COOKIE_SECURE', undefined)
-    const security = await import('@/lib/server/security')
+    const security = await import('@/lib/server/shared/security')
 
     expect(security.getSupabaseCookieOptions()).toMatchObject({
       httpOnly: true,
@@ -101,7 +101,7 @@ describe('server security helpers', () => {
   it('returns 429 when a client exceeds the configured rate limit window', async () => {
     vi.stubEnv('TRUST_PROXY_HEADERS', 'true')
     vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
-    const { enforceRateLimit } = await import('@/lib/server/security')
+    const { enforceRateLimit } = await import('@/lib/server/shared/security')
     const policy = { bucket: 'test-rate-limit', limit: 2, windowMs: 60_000 }
 
     const first = await enforceRateLimit(
@@ -144,7 +144,7 @@ describe('server security helpers', () => {
   it('trusts x-forwarded-for only when the request comes through a trusted proxy IP', async () => {
     vi.stubEnv('TRUST_PROXY_HEADERS', 'true')
     vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
-    const { enforceRateLimit } = await import('@/lib/server/security')
+    const { enforceRateLimit } = await import('@/lib/server/shared/security')
     const policy = { bucket: 'test-trusted-forwarded-for', limit: 1, windowMs: 60_000 }
 
     const first = await enforceRateLimit(
@@ -175,7 +175,7 @@ describe('server security helpers', () => {
   it('ignores spoofed x-forwarded-for headers from untrusted clients', async () => {
     vi.stubEnv('TRUST_PROXY_HEADERS', 'true')
     vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
-    const { enforceRateLimit } = await import('@/lib/server/security')
+    const { enforceRateLimit } = await import('@/lib/server/shared/security')
     const policy = { bucket: 'test-untrusted-forwarded-for', limit: 1, windowMs: 60_000 }
 
     const first = await enforceRateLimit(
@@ -204,7 +204,7 @@ describe('server security helpers', () => {
   })
 
   it('falls back to local when forwarded headers are present without a trusted source IP', async () => {
-    const { enforceRateLimit } = await import('@/lib/server/security')
+    const { enforceRateLimit } = await import('@/lib/server/shared/security')
     const policy = { bucket: 'test-missing-real-ip', limit: 1, windowMs: 60_000 }
 
     const first = await enforceRateLimit(
@@ -233,7 +233,7 @@ describe('server security helpers', () => {
   it('does not trust platform-style headers on their own', async () => {
     vi.stubEnv('TRUST_PROXY_HEADERS', 'true')
     vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
-    const { enforceRateLimit } = await import('@/lib/server/security')
+    const { enforceRateLimit } = await import('@/lib/server/shared/security')
     const policy = { bucket: 'test-forged-platform-header', limit: 1, windowMs: 60_000 }
 
     const first = await enforceRateLimit(
@@ -266,7 +266,7 @@ describe('server security helpers', () => {
   it('rejects malformed IPv6 proxy source values when deciding whether to trust x-forwarded-for', async () => {
     vi.stubEnv('TRUST_PROXY_HEADERS', 'true')
     vi.stubEnv('TRUSTED_PROXY_CIDRS', '::1/128')
-    const { enforceRateLimit } = await import('@/lib/server/security')
+    const { enforceRateLimit } = await import('@/lib/server/shared/security')
     const policy = { bucket: 'test-invalid-ipv6-source', limit: 1, windowMs: 60_000 }
 
     const first = await enforceRateLimit(
@@ -297,7 +297,7 @@ describe('server security helpers', () => {
   it('rejects malformed non-compressed IPv6 values with empty segments', async () => {
     vi.stubEnv('TRUST_PROXY_HEADERS', 'true')
     vi.stubEnv('TRUSTED_PROXY_CIDRS', '::1/128')
-    const { enforceRateLimit } = await import('@/lib/server/security')
+    const { enforceRateLimit } = await import('@/lib/server/shared/security')
     const policy = { bucket: 'test-invalid-ipv6-empty-segment', limit: 1, windowMs: 60_000 }
 
     const first = await enforceRateLimit(
@@ -327,7 +327,7 @@ describe('server security helpers', () => {
 
   it('does not trust x-forwarded-for unless proxy header trust is explicitly enabled', async () => {
     vi.stubEnv('TRUSTED_PROXY_CIDRS', '127.0.0.1/32')
-    const { enforceRateLimit } = await import('@/lib/server/security')
+    const { enforceRateLimit } = await import('@/lib/server/shared/security')
     const policy = { bucket: 'test-proxy-trust-disabled', limit: 1, windowMs: 60_000 }
 
     const first = await enforceRateLimit(
@@ -369,7 +369,7 @@ describe('server security helpers', () => {
         reset: Date.now() + 60_000,
       })
 
-      const { enforceRateLimit } = await import('@/lib/server/security')
+      const { enforceRateLimit } = await import('@/lib/server/shared/security')
       const policy = { bucket: 'test-redis-allowed', limit: 5, windowMs: 60_000 }
 
       const result = await enforceRateLimit(
@@ -400,7 +400,7 @@ describe('server security helpers', () => {
         reset: resetAt,
       })
 
-      const { enforceRateLimit } = await import('@/lib/server/security')
+      const { enforceRateLimit } = await import('@/lib/server/shared/security')
       const policy = { bucket: 'test-redis-blocked', limit: 5, windowMs: 60_000 }
 
       const result = await enforceRateLimit(
@@ -425,7 +425,7 @@ describe('server security helpers', () => {
         reset: Date.now() + 60_000,
       })
 
-      const { enforceRateLimit } = await import('@/lib/server/security')
+      const { enforceRateLimit } = await import('@/lib/server/shared/security')
       const policy = { bucket: 'test-redis-singleton', limit: 5, windowMs: 60_000 }
       const makeRequest = () =>
         new NextRequest('http://localhost:3000/api/auth/login', {
@@ -475,7 +475,7 @@ describe('server security helpers', () => {
       // `_redisClient` / `_ratelimitCache` singletons. Re-importing gives us
       // a brand-new module instance to exercise.
       vi.resetModules()
-      const instanceA = await import('@/lib/server/security')
+      const instanceA = await import('@/lib/server/shared/security')
 
       const resultA1 = await instanceA.enforceRateLimit(makeRequest(), policy)
       const resultA2 = await instanceA.enforceRateLimit(makeRequest(), policy)
@@ -491,7 +491,7 @@ describe('server security helpers', () => {
       // `ratelimit.limit()` call, this fresh instance would start back at
       // zero and wrongly allow the next request.
       vi.resetModules()
-      const instanceB = await import('@/lib/server/security')
+      const instanceB = await import('@/lib/server/shared/security')
 
       // Sanity check that this really is a distinct module instance and not
       // the same cached export object.

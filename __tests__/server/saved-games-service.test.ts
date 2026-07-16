@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SessionUser } from '@/lib/server/auth'
+import type { SessionUser } from '@/lib/server/auth/auth'
 import { createQueryBuilder } from '@/__tests__/mocks/supabase-mock'
 
 type SavedGameRow = {
@@ -144,7 +144,7 @@ describe('saved games service', () => {
   })
 
   it('creates a day-based Saved Game on a removable-top table', async () => {
-    const { createSavedGameForSession } = await import('@/lib/server/saved-games-service')
+    const { createSavedGameForSession } = await import('@/lib/server/games/saved-games-service')
     const result = await createSavedGameForSession(member, {
       tableId: 'double',
       startDate: '2026-06-20',
@@ -159,7 +159,7 @@ describe('saved games service', () => {
   })
 
   it('rejects regular tables and durations over three months', async () => {
-    const { createSavedGameForSession } = await import('@/lib/server/saved-games-service')
+    const { createSavedGameForSession } = await import('@/lib/server/games/saved-games-service')
     await expect(
       createSavedGameForSession(member, {
         tableId: 'regular',
@@ -178,7 +178,7 @@ describe('saved games service', () => {
 
   it('rejects date ranges blocked by an event', async () => {
     state.blocks.push({ id: 'event-1', room_id: 'room-1', date: '2026-07-01' })
-    const { createSavedGameForSession } = await import('@/lib/server/saved-games-service')
+    const { createSavedGameForSession } = await import('@/lib/server/games/saved-games-service')
     await expect(
       createSavedGameForSession(member, {
         tableId: 'double',
@@ -201,7 +201,7 @@ describe('saved games service', () => {
       created_at: '',
       updated_at: '',
     })
-    const { renewSavedGameForSession } = await import('@/lib/server/saved-games-service')
+    const { renewSavedGameForSession } = await import('@/lib/server/games/saved-games-service')
     const renewed = await renewSavedGameForSession(member, 'sg-1')
     expect(renewed).toMatchObject({
       startDate: '2026-07-01',
@@ -223,7 +223,7 @@ describe('saved games service', () => {
       created_at: '',
       updated_at: '',
     })
-    const { renewSavedGameForSession } = await import('@/lib/server/saved-games-service')
+    const { renewSavedGameForSession } = await import('@/lib/server/games/saved-games-service')
     await expect(renewSavedGameForSession(member, 'sg-1')).rejects.toMatchObject({
       message: 'SAVED_GAME_RENEWAL_NOT_OPEN',
     })
@@ -242,7 +242,7 @@ describe('saved games service', () => {
       created_at: '',
       updated_at: '',
     })
-    const { listSavedGamesForSession } = await import('@/lib/server/saved-games-service')
+    const { listSavedGamesForSession } = await import('@/lib/server/games/saved-games-service')
 
     await expect(listSavedGamesForSession(member)).resolves.toEqual([
       expect.objectContaining({ id: 'sg-1', status: 'completed', canRenew: false }),
@@ -263,7 +263,7 @@ describe('saved games service', () => {
       created_at: '',
       updated_at: '',
     })
-    const { recordSavedGameAttendance } = await import('@/lib/server/saved-games-service')
+    const { recordSavedGameAttendance } = await import('@/lib/server/games/saved-games-service')
     const reservation = {
       id: 'r-1',
       table_id: 'double',
@@ -284,7 +284,7 @@ describe('saved games service', () => {
   })
 
   it('member session cannot access foreign saved games (isolation via assertMemberRowsScoped)', async () => {
-    const { listSavedGamesForSession } = await import('@/lib/server/saved-games-service')
+    const { listSavedGamesForSession } = await import('@/lib/server/games/saved-games-service')
     const memberSession = { id: 'user-1', role: 'member' } as const
     const adminSession = { id: 'admin-1', role: 'admin' } as const
 

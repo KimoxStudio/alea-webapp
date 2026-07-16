@@ -1,8 +1,8 @@
 import type { User } from '@/lib/types'
-import type { SessionUser } from '@/lib/server/auth'
+import type { SessionUser } from '@/lib/server/auth/auth'
 import { createHash, randomBytes } from 'node:crypto'
-import { getDatabaseNow } from '@/lib/server/database-time'
-import { serviceError } from '@/lib/server/service-error'
+import { getDatabaseNow } from '@/lib/server/shared/database-time'
+import { serviceError } from '@/lib/server/shared/service-error'
 import { getAdminDb, getDb } from '@/lib/db'
 import {
   createAuthUser,
@@ -13,7 +13,7 @@ import {
 } from '@/lib/auth/session'
 import type { Tables, TablesInsert } from '@/lib/supabase/types'
 import { activationServerSchema, recoveryServerSchema, registerServerSchema } from '@/lib/validations/auth'
-import { type PublicProfileRow, toPublicUser } from '@/lib/server/profile-mappers'
+import { type PublicProfileRow, toPublicUser } from '@/lib/server/users/profile-mappers'
 
 type ActivationTokenRow = Tables<'activation_tokens'>
 type AuthCredentialRow = Pick<Tables<'profiles'>, 'id' | 'member_number' | 'auth_email' | 'email' | 'full_name' | 'phone' | 'role' | 'is_active' | 'active_from' | 'no_show_count' | 'blocked_until' | 'created_at' | 'updated_at'>

@@ -61,7 +61,7 @@ describe('server auth helpers', () => {
 
   it('reads the session from a request-scoped Supabase client', async () => {
     withSession('user-1', 'admin')
-    const { getSessionFromRequest } = await import('@/lib/server/auth')
+    const { getSessionFromRequest } = await import('@/lib/server/auth/auth')
 
     await expect(
       getSessionFromRequest(new NextRequest('http://localhost:3000/api/auth/me')),
@@ -73,7 +73,7 @@ describe('server auth helpers', () => {
 
   it('reads the session from server cookies for SSR hydration', async () => {
     withSession('user-2', 'member')
-    const { getSessionFromServerCookies } = await import('@/lib/server/auth')
+    const { getSessionFromServerCookies } = await import('@/lib/server/auth/auth')
 
     await expect(getSessionFromServerCookies()).resolves.toEqual({
       id: 'user-2',
@@ -84,7 +84,7 @@ describe('server auth helpers', () => {
   it('returns null when the profile lookup fails after a valid auth session', async () => {
     routeGetUser.mockResolvedValueOnce({ data: { user: { id: 'user-1' } }, error: null })
     profileMaybeSingle.mockResolvedValueOnce({ data: null, error: { message: 'db failed' } })
-    const { getSessionFromRequest } = await import('@/lib/server/auth')
+    const { getSessionFromRequest } = await import('@/lib/server/auth/auth')
 
     await expect(
       getSessionFromRequest(new NextRequest('http://localhost:3000/api/auth/me')),
@@ -97,7 +97,7 @@ describe('server auth helpers', () => {
       data: { id: 'user-1', role: 'admin', is_active: false },
       error: null,
     })
-    const { getSessionFromRequest } = await import('@/lib/server/auth')
+    const { getSessionFromRequest } = await import('@/lib/server/auth/auth')
 
     await expect(
       getSessionFromRequest(new NextRequest('http://localhost:3000/api/auth/me')),
@@ -105,7 +105,7 @@ describe('server auth helpers', () => {
   })
 
   it('returns 401 from requireAuth when no Supabase user is present', async () => {
-    const { requireAuth } = await import('@/lib/server/auth')
+    const { requireAuth } = await import('@/lib/server/auth/auth')
 
     const response = await requireAuth(new NextRequest('http://localhost:3000/api/users'))
     expect(response).toBeInstanceOf(NextResponse)
@@ -115,7 +115,7 @@ describe('server auth helpers', () => {
 
   it('returns 403 from requireAdmin for authenticated members', async () => {
     withSession('user-2', 'member')
-    const { requireAdmin } = await import('@/lib/server/auth')
+    const { requireAdmin } = await import('@/lib/server/auth/auth')
 
     const response = await requireAdmin(new NextRequest('http://localhost:3000/api/users'))
     expect(response).toBeInstanceOf(NextResponse)
@@ -125,7 +125,7 @@ describe('server auth helpers', () => {
 
   it('returns the session user from requireAdmin for admins', async () => {
     withSession('user-1', 'admin')
-    const { requireAdmin } = await import('@/lib/server/auth')
+    const { requireAdmin } = await import('@/lib/server/auth/auth')
 
     await expect(
       requireAdmin(new NextRequest('http://localhost:3000/api/users')),
@@ -136,7 +136,7 @@ describe('server auth helpers', () => {
   })
 
   it('enforces same-origin for unsafe methods and skips GET requests', async () => {
-    const { enforceSameOriginForMutation } = await import('@/lib/server/auth')
+    const { enforceSameOriginForMutation } = await import('@/lib/server/auth/auth')
 
     expect(
       enforceSameOriginForMutation(

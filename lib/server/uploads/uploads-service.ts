@@ -1,7 +1,7 @@
 import 'server-only'
 import { uploadToStorage, getPublicStorageUrl } from '@/lib/storage/qr'
-import { serviceError } from '@/lib/server/service-error'
-import type { SessionUser } from '@/lib/server/auth'
+import { serviceError } from '@/lib/server/shared/service-error'
+import type { SessionUser } from '@/lib/server/auth/auth'
 
 // ---------------------------------------------------------------------------
 // Image uploads to Supabase Storage (OIR-207)

@@ -1,17 +1,17 @@
 import type { MemberImportIssue, MemberImportResult, MemberImportRow, PaginatedResponse, User } from '@/lib/types'
 import { getAdminDb } from '@/lib/db'
 import { createAuthUser, deleteAuthUser, updateAuthUserById } from '@/lib/auth/session'
-import { serviceError } from '@/lib/server/service-error'
+import { serviceError } from '@/lib/server/shared/service-error'
 import type { TablesUpdate } from '@/lib/supabase/types'
 import { memberNumberSchema } from '@/lib/validations/auth'
-import { type PublicProfileRow, toPublicUser } from '@/lib/server/profile-mappers'
+import { type PublicProfileRow, toPublicUser } from '@/lib/server/users/profile-mappers'
 import {
   type MemberImportOptionalColumnPresence,
   MEMBER_IMPORT_PREVIEW_LIMIT,
   parseMemberImportCsv,
   normalizeMemberImportSource,
   pushImportIssue,
-} from '@/lib/server/member-import'
+} from '@/lib/server/users/member-import'
 
 type ProfilesQuery = {
   eq: (column: string, value: unknown) => ProfilesQuery

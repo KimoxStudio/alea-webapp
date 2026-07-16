@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import type { SessionUser } from '@/lib/server/auth'
-import { assertMemberRowsScoped } from '@/lib/server/data-scoping'
+import type { SessionUser } from '@/lib/server/auth/auth'
+import { assertMemberRowsScoped } from '@/lib/server/shared/data-scoping'
 
 type ScopedRow = { user_id: string; id?: string }
 

@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import type { ServiceError } from '@/lib/server/service-error'
+import type { ServiceError } from '@/lib/server/shared/service-error'
 
 vi.mock('server-only', () => ({}))
 
@@ -23,7 +23,7 @@ vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn(),
 }))
 
-vi.mock('@/lib/server/service-error', () => ({
+vi.mock('@/lib/server/shared/service-error', () => ({
   serviceError: vi.fn((message: string, statusCode: number) => {
     const err = new Error(message) as ServiceError
     err.name = 'ServiceError'
@@ -143,7 +143,7 @@ describe('events-service — previewEventConflicts', () => {
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-    const { previewEventConflicts } = await import('@/lib/server/events-service')
+    const { previewEventConflicts } = await import('@/lib/server/events/events-service')
 
     const result = await previewEventConflicts({
       schedules: [
@@ -174,7 +174,7 @@ describe('events-service — previewEventConflicts', () => {
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-    const { previewEventConflicts } = await import('@/lib/server/events-service')
+    const { previewEventConflicts } = await import('@/lib/server/events/events-service')
 
     const result = await previewEventConflicts({
       schedules: [
@@ -207,7 +207,7 @@ describe('events-service — previewEventConflicts', () => {
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-    const { previewEventConflicts } = await import('@/lib/server/events-service')
+    const { previewEventConflicts } = await import('@/lib/server/events/events-service')
 
     const result = await previewEventConflicts({
       schedules: [
@@ -238,7 +238,7 @@ describe('events-service — previewEventConflicts', () => {
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-    const { previewEventConflicts } = await import('@/lib/server/events-service')
+    const { previewEventConflicts } = await import('@/lib/server/events/events-service')
 
     await previewEventConflicts({
       schedules: [
@@ -264,7 +264,7 @@ describe('events-service — previewEventConflicts', () => {
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-    const { previewEventConflicts } = await import('@/lib/server/events-service')
+    const { previewEventConflicts } = await import('@/lib/server/events/events-service')
 
     // The service implementation: `!Array.isArray(schedules) || schedules.length === 0` → early return
     const result = await previewEventConflicts({ schedules: [] })
@@ -281,7 +281,7 @@ describe('events-service — previewEventConflicts', () => {
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-    const { previewEventConflicts } = await import('@/lib/server/events-service')
+    const { previewEventConflicts } = await import('@/lib/server/events/events-service')
 
     const schedules = Array.from({ length: 367 }, (_, i) => {
       const dateStr = new Date(2026, 0, 1 + (i % 365)).toISOString().slice(0, 10)
@@ -319,7 +319,7 @@ describe('events-service — previewEventConflicts', () => {
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-    const { previewEventConflicts } = await import('@/lib/server/events-service')
+    const { previewEventConflicts } = await import('@/lib/server/events/events-service')
 
     // Block: 14:00–18:00; a boundary-touch reservation ends exactly at 14:00 → not counted.
     const result = await previewEventConflicts({
@@ -349,7 +349,7 @@ describe('events-service — previewEventConflicts', () => {
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-    const { previewEventConflicts } = await import('@/lib/server/events-service')
+    const { previewEventConflicts } = await import('@/lib/server/events/events-service')
 
     const result = await previewEventConflicts({
       schedules: [
@@ -375,7 +375,7 @@ describe('events-service — previewEventConflicts', () => {
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-    const { previewEventConflicts } = await import('@/lib/server/events-service')
+    const { previewEventConflicts } = await import('@/lib/server/events/events-service')
 
     const result = await previewEventConflicts({
       schedules: [
@@ -398,7 +398,7 @@ describe('events-service — previewEventConflicts', () => {
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-    const { previewEventConflicts } = await import('@/lib/server/events-service')
+    const { previewEventConflicts } = await import('@/lib/server/events/events-service')
 
     let caught: ServiceError | undefined
     try {
@@ -422,7 +422,7 @@ describe('events-service — previewEventConflicts', () => {
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-    const { previewEventConflicts } = await import('@/lib/server/events-service')
+    const { previewEventConflicts } = await import('@/lib/server/events/events-service')
 
     let caught: ServiceError | undefined
     try {
@@ -456,7 +456,7 @@ describe('events-service — previewEventConflicts', () => {
     const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
     vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-    const { previewEventConflicts } = await import('@/lib/server/events-service')
+    const { previewEventConflicts } = await import('@/lib/server/events/events-service')
 
     const result = await previewEventConflicts({
       schedules: [

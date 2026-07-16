@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { SessionUser } from '@/lib/server/auth'
+import type { SessionUser } from '@/lib/server/auth/auth'
 import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
 
 type ReservationRow = {
@@ -502,7 +502,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
 async function loadReservationModules() {
   vi.resetModules()
-  const service = await import('@/lib/server/reservations-service')
+  const service = await import('@/lib/server/reservations/reservations-service')
   return { ...service }
 }
 
@@ -1914,7 +1914,7 @@ describe('reservations service', () => {
         createSupabaseServerClient: vi.fn(async () => ({ from: vi.fn() })),
       }))
 
-      const { markNoShowReservations } = await import('@/lib/server/reservations-service')
+      const { markNoShowReservations } = await import('@/lib/server/reservations/reservations-service')
       const result = await markNoShowReservations()
 
       expect(mockRpc).toHaveBeenCalledWith('mark_no_show_reservations', {
@@ -1938,7 +1938,7 @@ describe('reservations service', () => {
         createSupabaseServerClient: vi.fn(async () => ({ from: vi.fn() })),
       }))
 
-      const { markNoShowReservations } = await import('@/lib/server/reservations-service')
+      const { markNoShowReservations } = await import('@/lib/server/reservations/reservations-service')
       const result = await markNoShowReservations()
 
       expect(result).toBe(0)
@@ -1956,7 +1956,7 @@ describe('reservations service', () => {
         createSupabaseServerClient: vi.fn(async () => ({ from: vi.fn() })),
       }))
 
-      const { markNoShowReservations } = await import('@/lib/server/reservations-service')
+      const { markNoShowReservations } = await import('@/lib/server/reservations/reservations-service')
 
       await expect(markNoShowReservations()).rejects.toMatchObject({
         name: 'ServiceError',
@@ -1978,7 +1978,7 @@ describe('reservations service', () => {
         createSupabaseServerClient: vi.fn(async () => ({ from: vi.fn() })),
       }))
 
-      const { markNoShowReservations } = await import('@/lib/server/reservations-service')
+      const { markNoShowReservations } = await import('@/lib/server/reservations/reservations-service')
       const result = await markNoShowReservations()
 
       expect(result).toBe(0)

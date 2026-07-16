@@ -2,13 +2,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import type { ServiceError } from '@/lib/server/service-error'
+import type { ServiceError } from '@/lib/server/shared/service-error'
 
 /**
  * LIBRARY GAMES SERVICE TEST COVERAGE (OIR-205)
  *
  * Tests for admin CRUD operations on library games (ludoteca highlights) and public read access.
- * Implementation: lib/server/library-games-service.ts
+ * Implementation: lib/server/games/library-games-service.ts
  *
  * Key scenarios tested:
  * - listLibraryGames returns active games ordered by sort_order then title (public, via RLS)
@@ -29,7 +29,7 @@ vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn(),
 }))
 
-vi.mock('@/lib/server/service-error', () => ({
+vi.mock('@/lib/server/shared/service-error', () => ({
   serviceError: vi.fn((message: string, statusCode: number) => {
     const err = new Error(message) as ServiceError
     err.name = 'ServiceError'
@@ -272,7 +272,7 @@ function createMemberSession(): SessionUser {
 
 async function loadLibraryGamesService() {
   vi.resetModules()
-  const mod = await import('@/lib/server/library-games-service')
+  const mod = await import('@/lib/server/games/library-games-service')
   return {
     listLibraryGames: mod.listLibraryGames,
     listAdminLibraryGames: mod.listAdminLibraryGames,
@@ -418,7 +418,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -487,7 +487,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -558,7 +558,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -585,7 +585,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -612,7 +612,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -639,7 +639,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -666,7 +666,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -693,7 +693,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -720,7 +720,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -747,7 +747,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -774,7 +774,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -801,7 +801,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -827,7 +827,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -876,7 +876,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -896,7 +896,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -924,7 +924,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -946,7 +946,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -1002,7 +1002,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -1020,7 +1020,7 @@ describe('library-games-service', () => {
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient.mockReturnValue(
         mockSupabaseAdmin as any
       )
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -1576,7 +1576,7 @@ describe('library-games-service', () => {
 
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
         .mockReturnValue(mockSupabaseAdmin as any)
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -1605,7 +1605,7 @@ describe('library-games-service', () => {
 
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
         .mockReturnValue(mockSupabaseAdmin as any)
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -1634,7 +1634,7 @@ describe('library-games-service', () => {
 
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
         .mockReturnValue(mockSupabaseAdmin as any)
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err
@@ -1701,7 +1701,7 @@ describe('library-games-service', () => {
 
       vi.mocked(await import('@/lib/supabase/server')).createSupabaseServerAdminClient
         .mockReturnValue(mockSupabaseAdmin as any)
-      vi.mocked(await import('@/lib/server/service-error')).serviceError.mockImplementation((msg, code) => {
+      vi.mocked(await import('@/lib/server/shared/service-error')).serviceError.mockImplementation((msg, code) => {
         const err = new Error(msg) as ServiceError
         err.statusCode = code
         throw err

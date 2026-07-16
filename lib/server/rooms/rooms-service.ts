@@ -1,12 +1,12 @@
 import type { GameTable, Room, TableAvailability } from '@/lib/types'
 import { getAdminDb, getDb } from '@/lib/db'
-import { serviceError } from '@/lib/server/service-error'
-import { resolveDate, buildAvailability } from '@/lib/server/availability'
+import { serviceError } from '@/lib/server/shared/service-error'
+import { resolveDate, buildAvailability } from '@/lib/server/reservations/availability'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
-import { regenerateQrCodes } from '@/lib/server/tables-service'
-import { toGameTable } from '@/lib/server/table-mappers'
-import { getDatabaseNow } from '@/lib/server/database-time'
-import { isPendingReservationExpired } from '@/lib/server/pending-reservation-expiry'
+import { regenerateQrCodes } from '@/lib/server/tables/tables-service'
+import { toGameTable } from '@/lib/server/tables/table-mappers'
+import { getDatabaseNow } from '@/lib/server/shared/database-time'
+import { isPendingReservationExpired } from '@/lib/server/reservations/pending-reservation-expiry'
 
 type RoomRow = Tables<'rooms'>
 type TableRow = Tables<'tables'>

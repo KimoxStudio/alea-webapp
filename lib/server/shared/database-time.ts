@@ -1,6 +1,6 @@
 import 'server-only'
 import { getAdminDb } from '@/lib/db'
-import { serviceError } from '@/lib/server/service-error'
+import { serviceError } from '@/lib/server/shared/service-error'
 
 export async function getDatabaseNow(client?: unknown) {
   const admin = (client ?? getAdminDb()) as {

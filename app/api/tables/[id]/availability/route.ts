@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/server/auth'
-import { toServiceErrorResponse } from '@/lib/server/http-error'
-import { getTableAvailability } from '@/lib/server/tables-service'
+import { requireAuth } from '@/lib/server/auth/auth'
+import { toServiceErrorResponse } from '@/lib/server/shared/http-error'
+import { getTableAvailability } from '@/lib/server/tables/tables-service'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth(request)

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
-import { getSessionFromServerCookies } from '@/lib/server/auth'
-import { getCurrentUser } from '@/lib/server/auth-service'
+import { getSessionFromServerCookies } from '@/lib/server/auth/auth'
+import { getCurrentUser } from '@/lib/server/auth/auth-service'
 
 export default async function RootPage() {
   const session = await getSessionFromServerCookies()

@@ -1,5 +1,5 @@
 import { getAdminDb, getDb } from '@/lib/db'
-import { serviceError } from '@/lib/server/service-error'
+import { serviceError } from '@/lib/server/shared/service-error'
 import { ERROR_CODES } from '@/lib/types/error-codes'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
 import type { Equipment } from '@/lib/types'

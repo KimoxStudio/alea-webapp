@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/server/auth'
-import { getCurrentUser } from '@/lib/server/auth-service'
-import { toServiceErrorResponse } from '@/lib/server/http-error'
+import { requireAuth } from '@/lib/server/auth/auth'
+import { getCurrentUser } from '@/lib/server/auth/auth-service'
+import { toServiceErrorResponse } from '@/lib/server/shared/http-error'
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request)

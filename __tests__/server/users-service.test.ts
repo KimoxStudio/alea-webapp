@@ -126,7 +126,7 @@ vi.mock('@/lib/supabase/server', () => ({
 async function loadUsersModules() {
   vi.resetModules()
 
-  const service = await import('@/lib/server/users-service')
+  const service = await import('@/lib/server/users/users-service')
 
   return { ...service }
 }
