@@ -17,6 +17,10 @@ Real-time log of all agent work. Agents append entries as work progresses.
 - [22:30] Started. Task #4 was not found in the Task State Engine (.agent-cache/tasks.json has no matching entry, no docs/issues/ spec file, KIM-411 previously logged as "deferred" in docs/DECISIONS.md). Proceeded using the detailed inline instructions provided directly in the invocation prompt as the task spec.
 - [22:30] Branch: chore/KIM-411-test-consolidation (created from main HEAD 842c5d6, in worktree .claude/worktrees/agent-aee69184481856f45)
 - [22:30] Target structure decided: __tests__/** -> tests/unit/** (Vitest), qa/e2e/** -> tests/e2e/** (Playwright/Node runners). Config-only changes in this stage; qa-engineer performs the physical file moves (git mv) in stage 2.
+- [22:36] Changed: vitest.config.mts (include -> tests/unit/**), tsconfig.json (exclude -> tests), .semgrepignore, .gitignore (qa/e2e/* -> tests/e2e/*), package.json (merged playwright+dotenv devDeps from qa/e2e/package.json, added test:e2e:* scripts), pnpm-lock.yaml (pnpm install). Deleted qa/e2e/package.json.
+- [22:36] Validation: pnpm typecheck pass, pnpm build pass, pnpm lint pass (0 warnings). pnpm test intentionally reports "No test files found" (expected mid-pipeline — files haven't moved yet).
+- [22:37] Committed (5babcc6) but push blocked by local pre-push hook (scripts/ci-local.sh runs pnpm test, which fails in this interim state). Per global no-skip-hooks rule, did NOT use --no-verify. Left commit local in worktree; sent handoff to qa-engineer (task 50806f2f) to continue in same worktree, do the file moves, then push both commits together once tests pass.
+- [22:37] ✅ Complete — config stage done, retroactively tracked as task 50806f2f (original Task #4 was not found in the Task State Engine). Worktree left in place at .claude/worktrees/agent-aee69184481856f45, branch chore/KIM-411-test-consolidation.
 
 #### [KIM-366] product-manager — Coordinate Issue Execution
 
