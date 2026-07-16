@@ -8,12 +8,24 @@ import type { Tables } from '@/lib/supabase/types'
 import { toGameTable } from '@/lib/server/tables/table-mappers'
 import { getDatabaseNow } from '@/lib/server/shared/database-time'
 import { isPendingReservationExpired } from '@/lib/server/reservations/pending-reservation-expiry'
+import type { SessionUser } from '@/lib/server/auth/auth'
 
 type TableRow = Tables<'tables'>
 type ReservationRow = Tables<'reservations'>
 type EventBlockRow = Tables<'event_room_blocks'>
 
 const TABLE_COLUMNS = 'id, room_id, name, type, qr_code, qr_code_inf, pos_x, pos_y'
+
+// Privilege checks (role === 'admin') live here in the service layer, not in
+// route handlers (repo convention). QR generation mutates the tables row and
+// writes to the "table-qr-codes" storage bucket via the admin client
+// (bypasses RLS/storage policies entirely), so this in-function check is the
+// only authorization guard once RLS is removed as part of the Vercel/Postgres
+// migration — mirrors tables_admin_update and qr_codes_service_* storage
+// policies (service_role only).
+function requireAdminSession(session: SessionUser): void {
+  if (session.role !== 'admin') serviceError('Forbidden', 403)
+}
 
 async function uploadQrCodeToStorage(url: string, storagePath: string): Promise<string> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -33,7 +45,8 @@ async function uploadQrCodeToStorage(url: string, storagePath: string): Promise<
   return `${supabaseUrl}/storage/v1/object/public/table-qr-codes/${storagePath}`
 }
 
-export async function generateTableQrCode(tableId: string): Promise<string> {
+export async function generateTableQrCode(session: SessionUser, tableId: string): Promise<string> {
+  requireAdminSession(session)
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tableId)) {
     serviceError('Invalid table ID', 400)
   }
@@ -43,7 +56,11 @@ export async function generateTableQrCode(tableId: string): Promise<string> {
   return uploadQrCodeToStorage(url, `${tableId}.png`)
 }
 
-export async function regenerateQrCodes(tableId: string): Promise<{ qr_code: string; qr_code_inf: string | null }> {
+export async function regenerateQrCodes(
+  session: SessionUser,
+  tableId: string,
+): Promise<{ qr_code: string; qr_code_inf: string | null }> {
+  requireAdminSession(session)
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tableId)) {
     serviceError('Invalid table ID', 400)
   }

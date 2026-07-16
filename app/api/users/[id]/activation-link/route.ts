@@ -20,6 +20,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const requestUrl = new URL(request.url)
 
     return admin.applyCookies(NextResponse.json(await generateActivationLink({
+      session: admin.session,
       userId: id,
       locale,
       baseUrl: requestUrl.origin,

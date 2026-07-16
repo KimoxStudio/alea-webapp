@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   try {
     const [{ id }, body] = await Promise.all([params, request.json()])
-    return admin.applyCookies(NextResponse.json(await createTableEntry(id, body), { status: 201 }))
+    return admin.applyCookies(NextResponse.json(await createTableEntry(admin.session, id, body), { status: 201 }))
   } catch (error) {
     return admin.applyCookies(toServiceErrorResponse(error))
   }

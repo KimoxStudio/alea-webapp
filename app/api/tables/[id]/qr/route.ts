@@ -16,7 +16,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   try {
     const { id: tableId } = await params
-    const { qr_code, qr_code_inf } = await regenerateQrCodes(tableId)
+    const { qr_code, qr_code_inf } = await regenerateQrCodes(admin.session, tableId)
     return admin.applyCookies(NextResponse.json({ qr_code, qr_code_inf }))
   } catch (error) {
     return admin.applyCookies(toServiceErrorResponse(error))
