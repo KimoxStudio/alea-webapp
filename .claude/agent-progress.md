@@ -1350,3 +1350,180 @@ No blocking issues. No modifications needed. Code is ready for security-reviewer
 - [01:40] Validation: pnpm run typecheck ✅, pnpm run lint ✅ (no warnings/errors), pnpm exec vitest run ✅ (1030 passed, 21 skipped, 72 files), pnpm run build ✅ (all routes generated, exit 0).
 - [01:41] Pushed rebased branch to origin/migration-f1-auth-js (force-with-lease, pre-push hook re-ran full local CI: typecheck/lint/test/build all green, no --no-verify needed).
 - [01:41] ✅ Complete — PR #170 confirmed mergeable=MERGEABLE, mergeStateStatus=CLEAN against develop via `gh pr view`. Not merged (user merges manually).
+#### [KIM-412] software-engineer — Finish lib/server domain regroup
+- [12:30] Started — resuming in-progress worktree at .claude/worktrees/agent-a506da04fc25e1192, branch migration-f0-08-lib-server-regroup
+- [12:20] Fixed middleware.ts import: './lib/server/security-edge' -> './lib/server/shared/security-edge'
+- [12:22] pnpm typecheck: clean (no other broken import paths found)
+- [12:25] pnpm lint: no warnings/errors
+- [12:28] pnpm test --run: 990/990 passed (67 test files)
+- [12:32] pnpm build: succeeded (exit 0)
+- [12:35] Committed 120 files on migration-f0-08-lib-server-regroup (6948e49), pushed to origin
+- [12:36] ✅ Complete — Opened PR #167 targeting develop: https://github.com/KimoxStudio/alea-webapp/pull/167
+
+#### [KIM-412] qa-engineer — Review PR #167
+- [12:07] Started QA validation for F0-08 lib/server refactor
+- [12:07] Spot-checked auth-service.ts and reservations-service.ts: confirmed pure import path changes only
+- [12:07] Created isolated worktree for full validation suite
+- [12:07] pnpm install: ✅ succeeded
+- [12:07] pnpm typecheck: ✅ passed (no type errors)
+- [12:07] pnpm lint: ✅ passed (no ESLint warnings/errors)
+- [12:07] pnpm test --run: ✅ 990/990 tests passed (67 test files)
+- [12:07] pnpm build: ✅ succeeded
+- [12:07] Verified no stray/orphaned files in lib/server
+- [12:07] Verified lib/server subdomain structure: auth, equipment, events, games, partners, reservations, rooms, shared, tables, uploads, users
+- [12:07] Verified all test imports updated correctly to new domain paths
+- [12:07] ✅ Complete — APPROVE all checks pass
+
+#### [KIM-412] security-reviewer — Review PR #167
+- [12:08] Started
+- [12:10] ✅ Complete — APPROVE PR #167: verified all 24 renamed lib/server files diff to import-path/comment-only changes vs base (zero logic-line changes across ~4257-line diff, 0 suspicious non-import lines via automated scan); assertMemberRowsScoped seam intact in reservations-service.ts:663 and saved-games-service.ts:134, both importing from lib/server/shared/data-scoping.ts; CSRF/rate-limit re-export shims (security.ts/security-edge.ts) and auth.ts/auth-service.ts unaffected beyond path updates; no secrets introduced.
+
+#### [KIM-412] pr-comment-responder — Fix PR #167 review comments
+- [12:23] Started
+- [12:33] Reworded stale post-move comments in lib/server/shared/security.ts and lib/server/shared/security-edge.ts to state the Node-only vs Edge-safe boundary directly instead of the old "unaffected import" framing. Verified via pnpm typecheck (next typegen + tsc --noEmit) and pnpm build, both clean.
+- [12:33] ✅ Complete — Pushed commit 976e773 to migration-f0-08-lib-server-regroup; replied individually to inline comments 3594959604 (reply 3594985343) and 3594959614 (reply 3594985576) on PR #167.
+
+#### [KIM-418] software-engineer — RLS policy audit + service-layer hardening
+- [00:00] Started. Worktree created at /private/tmp/claude-501/-Users-samuelromeroarbelo-Projects-Alea-alea-webapp/b35f520c-f2b9-4c60-831d-dbbb8253457f/scratchpad/kim418-worktree on branch migration-f1-rls-service-layer
+
+#### [KIM-416] software-engineer — Build Auth.js (Credentials + bcrypt)
+- [12:44] Started
+
+#### [KIM-417] software-engineer — Build Drizzle schema (85 migrations)
+- [12:44] Started. Worktree created at /private/tmp/claude-501/-Users-samuelromeroarbelo-Projects-Alea-alea-webapp/kim417-worktree on branch migration-f1-drizzle-schema (base develop @ e8fb337).
+- [12:55] Enumerated 48 currently-active RLS policies across migrations (52 ever created, 4 net-removed without replacement). This differs from the 30 stated in KIM-418 — reporting as discrepancy, not forcing the count.
+- [12:55] Found systemic gap: admin-only mutations in equipment-service.ts, rooms-service.ts, tables-service.ts, users-service.ts, and auth-service.ts (link generation) used getAdminDb() with NO in-function role check — relying solely on route-handler requireAdmin(), unlike the already-hardened pattern in club-events-service.ts/partners-service.ts/library-games-service.ts/uploads-service.ts. Fixed by adding requireAdminSession(session) + session param, following the established convention, and updated all route-handler call sites.
+- [12:55] reservations-service.ts / saved-games-service.ts already correctly implement ownership + assertMemberRowsScoped per repo convention — Covered, no changes needed.
+- [12:55] Flagged events-service.ts (legacy, deprecated internal dashboard surface per its own code comments) as Gap-Open/needs-human-review — same missing-service-layer-check pattern, but left untouched to avoid breaking intentionally-preserved legacy test coverage; recommend follow-up ticket.
+- [12:55] pnpm typecheck and pnpm build both pass clean after service-layer changes.
+- [12:59] Committed work locally on migration-f1-rls-service-layer (commit 36f6121). Attempted `git push -u origin migration-f1-rls-service-layer` — BLOCKED by the repo's pre-push hook (scripts/ci-local.sh), which runs the full test suite: 100 tests fail across 11 files because they call the now-changed service function signatures (expected — these are the test files qa-engineer owns: equipment/rooms/tables/users-service.test.ts, member-import.test.ts, recovery-link-route.test.ts, patch-route.test.ts, etc.). Per global policy, hooks are never bypassed (--no-verify) without explicit user instruction, so the branch was NOT pushed. Commit is ready locally in the worktree for qa-engineer to update tests against, after which push should succeed cleanly.
+- [12:59] ⚠️ BLOCKED — push pending qa-engineer test updates (pre-push hook runs full suite; 100 failures are the expected consequence of the added `session` parameters, not a regression).
+
+#### [KIM-418] qa-engineer — test fixes + coverage for RLS service-layer hardening
+- [start] Reading software-engineer's audit doc and reviewing changes
+- [13:02] Added lib/authjs/{db,credentials-user,config,auth}.ts + app/api/authjs/[...nextauth]/route.ts; deps next-auth@beta, bcryptjs, pg. Build/typecheck/lint/tests pass. Pushed branch migration-f1-auth-js.
+- [13:02] ✅ Complete — Auth.js scaffolding added, parallel and inert, no existing Supabase auth files touched.
+- [13:02] Read all 85 migrations (concatenated to scratchpad for review). Wrote 11 Drizzle schema files under lib/db/schema/ covering 15 tables + 4 enums. tsc --noEmit passes cleanly (schema files confirmed included via --listFiles).
+- [13:10] Fixed test file signatures: users-service, member-import, tables-service, rooms-service, equipment-service, and route tests (patch, recovery-link, activation-link)
+- [13:10] Added adminSession() helper and session parameters to all test calls
+- [13:10] Updated mock expectations to include session object in parameters
+
+#### [KIM-416] qa-engineer — Validate Auth.js scaffolding
+- Starting QA validation of `migration-f1-auth-js` branch
+- [13:25] Fixed remaining function calls in rooms-service and tables-service tests to pass adminSession parameter
+- [13:25] Updated import-route test expectations to include session parameter
+- [13:50] All tests fixed and passing (995 tests across 67 files)
+- [13:50] Commit created: "test: fix test signatures for RLS service-layer hardening (KIM-418)"
+- [13:50] Pushed branch migration-f1-rls-service-layer to origin
+- [13:50] Pre-push validation passed: typecheck, lint, test (995 PASS), build
+- [13:50] ✅ Complete - test suite is fully green, ready for security-reviewer PR
+
+#### [KIM-418] security-reviewer — authorization review + PR
+- [00:00] Started
+- [13:25] Reviewed docs/RLS-SERVICE-LAYER-AUDIT.md (48 policies enumerated, mapping coherent, honest count reconciliation vs issue's "30")
+- [13:25] Diffed all lib/server/*.ts + app/api/** changes: every guarded function calls requireAdminSession(session) as first statement before any DB op; serviceError() throws (never falls through); every route handler passes real admin.session (post requireAdmin() + instanceof NextResponse guard) — no fake/bypassable session construction found
+- [13:25] Confirmed reservations-service.ts / saved-games-service.ts untouched (zero diff) — user_id filters + assertMemberRowsScoped() intact, no regression
+- [13:25] Confirmed zero diff in supabase/migrations/ — audit/app-code-only PR as claimed
+- [13:25] No .env files touched; no secret-like strings in diff or commit messages
+- [13:25] Independently ran pnpm typecheck (pass), pnpm lint (pass), pnpm vitest run (995/995 pass) inside isolated worktree — matches software-engineer/qa-engineer claims
+- [13:25] events-service.ts deferred gap verified: route-level requireAdmin() still active on both routes; pre-existing OIR-208 code comments (independent of this PR) corroborate its legacy/deprecated status — judgment: acceptable to ship as documented follow-up
+- [13:27] ✅ Complete — APPROVE. PR #168 opened (migration-f1-rls-service-layer → develop): https://github.com/KimoxStudio/alea-webapp/pull/168. No blocking findings. events-service.ts gap accepted as documented follow-up. Human merge only, not merged by this agent.
+- [13:37] pnpm exec drizzle-kit generate produced lib/db/migrations/0000_fine_magma.sql (15 tables, matches manual review of the 85 source migrations exactly). Added lib/db/migrations/0001_exclusion_constraints.sql as a hand-written drizzle-kit "custom" migration for the 3 EXCLUDE USING gist constraints (no Drizzle pg-core builder exists for these). pnpm typecheck (repo script, includes next typegen) passes cleanly.
+- [13:38] Created test files: __tests__/authjs/credentials-user.test.ts and __tests__/authjs/config.test.ts
+- [13:38] Running test suite to validate implementation
+- [14:42] Wrote docs/MIGRATION-F1-DRIZZLE-COVERAGE.md (all 85 migrations classified, 15/15 tables covered, RLS catalog by table, Supabase-specific constructs skipped, judgment calls, reviewer checklist). pnpm lint: 0 warnings. pnpm exec tsc --noEmit and pnpm typecheck both pass cleanly (schema files confirmed in --listFiles). Committed on migration-f1-drizzle-schema (commit 2d165cb), not pushed, no PR opened (per instructions).
+- [14:42] ✅ Complete — 15/15 tables + 4/4 enums translated into lib/db/schema/*.ts with full column/constraint/FK/index fidelity (2 documented auth.users FK adaptations); 3 EXCLUDE constraints delivered as lib/db/migrations/0001_exclusion_constraints.sql (drizzle-kit custom migration, no live DB). RLS (30+ migrations touching policies) and ~20 SECURITY DEFINER functions/9 triggers cataloged, not translated, per scope. typecheck/lint pass. No DB commands executed against any real database.
+
+#### [KIM-417] qa-engineer — Validate Drizzle schema translation
+- [HH:MM] Starting QA validation of migration-f1-drizzle-schema branch
+
+#### [KIM-417] software-engineer — Rebase onto develop, commit schema, validate
+- [14:44] Started — resumed mid-flight work in existing worktree kim417-worktree
+- [14:44] Verified working tree already had a checkpoint commit (2d165cb) on stale base e8fb337; no uncommitted changes remained to stage
+- [14:45] Rebased onto origin/develop (842c5d6) — clean, no conflicts (package.json/pnpm-lock.yaml unchanged on develop since fork point, so no dependency conflict either); new commit d1b7f3e
+- [14:45] pnpm install --frozen-lockfile: lockfile already up to date, no regeneration needed
+- [14:46] typecheck: pass (tsc --noEmit clean) | lint: pass (no ESLint warnings/errors) | build: pass (43/43 static pages, exit 0)
+- [14:48] Pre-push hook additionally ran full local CI (typecheck, lint, 990/990 tests, build) — all green
+- [14:48] ✅ Complete — pushed to origin/migration-f1-drizzle-schema (new branch, no force needed, no one else had pushed)
+- [14:45] All 1008 tests passed (including 14 new Auth.js tests)
+- [14:45] Running typecheck and build
+- [14:55] Running pnpm install and validation commands
+
+#### [KIM-417] security-reviewer — Review Drizzle schema translation, open PR
+- [$(date +%H:%M)] Started — reviewing worktree at kim417-worktree, branch migration-f1-drizzle-schema
+- [15:00] Diff scope confirmed: only lib/db/, docs/MIGRATION-F1-DRIZZLE-COVERAGE.md, drizzle.config.ts, package.json, pnpm-lock.yaml changed — no runtime code touched
+- [15:00] No secrets/hardcoded credentials found; drizzle.config.ts references POSTGRES_URL/POSTGRES_URL_NON_POOLING by name only, no live DB commands run
+- [15:00] Independent validation: typecheck clean, lint clean, test 990/990 passed (67 files), build succeeded
+- [15:00] No new package.json scripts execute against a live database; only drizzle-orm/drizzle-kit deps added
+- [15:02] ✅ Complete — PR #169 opened: https://github.com/KimoxStudio/alea-webapp/pull/169 (migration-f1-drizzle-schema -> develop)
+
+#### [KIM-416] software-engineer — Finish rebased Auth.js scaffold, push + PR
+- [14:54] Started in existing worktree at commit 7f58c57 (branch migration-f1-auth-js, already rebased onto develop 842c5d6 incl. PR #167)
+- [14:54] Confirmed clean working tree, state matches handoff description
+- [14:55] Full validation: typecheck clean, lint clean, test 1013/1013 passed (69 files), build succeeded
+- [14:56] `git push --force-with-lease origin migration-f1-auth-js` — pre-push hook re-ran full CI (typecheck/lint/test/build), all green; push succeeded
+- [14:57] ✅ Complete — PR #170 opened: https://github.com/KimoxStudio/alea-webapp/pull/170 (migration-f1-auth-js -> develop)
+
+#### [KIM-419] software-engineer — Write CUTOVER-RUNBOOK-F2.md + rehearsal script
+- [22:00] Started. Working on branch worktree-agent-acc4d0ba2f5aa3cbb (worktree base; final content targets migration-f2-cutover-runbook per task instructions).
+- [22:08] Read F1 scaffolding read-only via git show (origin/migration-f1-auth-js: lib/authjs/*, origin/migration-f1-drizzle-schema: lib/db/schema/*) to reference real shapes without depending on unmerged PRs.
+- [22:08] Wrote docs/CUTOVER-RUNBOOK-F2.md (dump/restore, Auth.js+Drizzle activation flag, bcrypt hash verbatim-copy, session invalidation, rollback plan; KIM-420 explicitly marked user-only).
+- [22:08] Added lib/cutover/{dump-integrity,hash-copy,session-invalidation,index}.mjs — pure, dependency-free logic (no new npm deps) backing the rehearsal, plus scripts/cutover-rehearsal-runner.mjs and scripts/cutover-rehearsal.sh (synthetic fixtures only, no real infra/credentials). Added pnpm script `cutover:rehearsal`.
+- [22:08] Validation: pnpm typecheck ✅, pnpm lint ✅ (no warnings/errors), pnpm build ✅ (all routes generated, exit 0), pnpm cutover:rehearsal ✅ (all synthetic checks pass).
+- [22:08] ✅ Complete — docs/CUTOVER-RUNBOOK-F2.md + scripts/cutover-rehearsal.sh + lib/cutover/ committed on the current worktree branch (base migration-f2-cutover-runbook, HEAD 6ac6fde); no test files touched, no supabase/migrations/ touched, no frontend-domain files touched.
+
+---
+
+#### [KIM-419] qa-engineer — Task #2: Test validation of cutover runbook + rehearsal script
+- [QA-START] Worktree created at .claude/worktrees/qa-engineer-kim419 (commit 225e1de)
+- [QA-00] Test files created: hash-copy.test.ts, session-invalidation.test.ts, dump-integrity.test.ts
+- [QA-00] Running pnpm typecheck to validate test syntax
+- [QA-01] Test files created: 3 files, 680 LOC, 75 test cases
+  - __tests__/lib/cutover/hash-copy.test.ts (25 tests) — bcrypt validation, verbatim copy, format rejection
+  - __tests__/lib/cutover/session-invalidation.test.ts (25 tests) — boundary classification, forced re-login
+  - __tests__/lib/cutover/dump-integrity.test.ts (25 tests) — pg_dump parsing, table/row validation
+- [QA-02] Test execution: pnpm test --run __tests__/lib/cutover/ → 75 tests PASSED ✓
+- [QA-03] Full test suite validation: pnpm test --run → 1065 tests PASSED (70 test files) ✓
+- [QA-04] Code quality validation:
+  - pnpm typecheck → PASSED ✓
+  - pnpm lint → PASSED ✓ (0 warnings/errors)
+  - pnpm build → PASSED ✓
+- [QA-05] Constraint verification:
+  - No migrations created ✓
+  - No files modified in (app/, components/, messages/, lib/hooks/, lib/authjs/, lib/db/schema/) ✓
+  - All tests use synthetic fixtures only (no real DB/credentials) ✓
+  - Software-engineer created NO test files (correct) ✓
+- [QA-06] Hard safety-critical test case passed:
+  - hash-copy verbatim copy (byte-for-byte) with NO re-hashing validated ✓
+  - Tested that single character change is detected ✓
+  - Tested that truncation/extension is detected ✓
+- [QA-07] Commit f1b6aa6: test(cutover): add comprehensive test suite for F2 cutover rehearsal logic
+- [QA-COMPLETE] ✅ Complete — APPROVE. All validation gates passed.
+
+#### [KIM-419] security-reviewer — Security review + open PR for cutover runbook
+- [22:05] Started. Created isolated worktree (detached at 4219038) to avoid touching shared checkout on migration-f2-cutover-runbook.
+- [22:10] Reviewed full diff (git diff origin/develop...migration-f2-cutover-runbook, 12 files, +1477): no real credentials/.env values/hostnames/project refs found; no changes under supabase/migrations/.
+- [22:12] Confirmed scripts/cutover-rehearsal* never shell out to pg_dump/psql/pg_restore and never touch real infra — synthetic in-memory fixtures only.
+- [22:14] Confirmed lib/cutover/hash-copy.mjs is genuinely copy-only: no bcrypt.hash() call, no re-hashing, assertByteForByteCopy enforces verbatim equality.
+- [22:15] Confirmed docs/CUTOVER-RUNBOOK-F2.md rollback plan is sound (per-step stop/rollback triggers, partial-failure states addressed in section 4) and explicitly states KIM-420 real execution is USER-ONLY (section 0 table).
+- [22:16] Confirmed test files (__tests__/lib/cutover/*) were added in a single separate commit (be4910e), not touched by the software-engineer commit (225e1de) — QA/impl separation intact.
+- [22:20] Ran pnpm typecheck (clean), pnpm lint (clean), pnpm test --run (1065/1065 passed, incl. 75 new cutover tests), pnpm build (clean, exit 0).
+- [22:22] Pushed branch to origin (pre-push hook re-ran full local CI, all green) and opened PR #171 targeting develop.
+- [22:23] ✅ Complete — APPROVE. PR opened: https://github.com/KimoxStudio/alea-webapp/pull/171
+
+#### [KIM-419] pr-comment-responder — Fix stale precondition note re: profiles.password_hash (PR #171 comment 3599393719)
+- [Started] Reviewer Oiranca: now that PR #169 (migration-f1-drizzle-schema) adds `profiles.password_hash`, the runbook precondition (docs/CUTOVER-RUNBOOK-F2.md, section 1) still calls it a "blocking gap" / missing column — stale in the opposite direction from the earlier fix round.
+- Verified against origin/migration-f1-drizzle-schema: `lib/db/schema/profiles.ts` has `passwordHash: text('password_hash')`, and the generated migration SQL (`lib/db/migrations/0000_fine_magma.sql`) has `"password_hash" text` — column confirmed present.
+- Updated docs/CUTOVER-RUNBOOK-F2.md precondition bullet (was line 25): replaced "PR #169's schema does not yet define this column ... blocking gap" language with confirmation that PR #169 now defines the column, contract resolved; clarified the column exists but remains unpopulated with real data until step 2.3's hash-copy runs during the real cutover.
+- Ran pnpm install (worktree had no node_modules), pnpm typecheck (clean), pnpm lint (clean, no warnings/errors), pnpm build (clean, exit 0).
+- Replied to PR #171 inline comment 3599393719 individually, marked ✅.
+- ✅ Complete — docs-only fix, committed and pushed.
+
+#### [rebase-f2-cutover] software-engineer — Rebase migration-f2-cutover-runbook onto develop (post PR #169/#170 merge)
+- [01:35] Started: rebasing migration-f2-cutover-runbook (21b884f, 7 commits) onto origin/develop (cf5a15a, includes merged PR #167/#169/#170) to resolve conflicts blocking PR #171.
+- [01:38] Conflict found: `.claude/agent-progress.md` on commit 1/7 (`6ac6fde` — an earlier "reconcile agent-progress.md" commit already on this branch). Single append-only conflict region resolved via union/concatenation of both sides (HEAD's develop-side entries followed by this branch's entries) — no entries dropped, just conflict markers removed. Remaining 6 commits applied cleanly with no further conflicts.
+- [01:38] `package.json`/`pnpm-lock.yaml`: no conflict — this branch only adds an npm script (`cutover:rehearsal`), no new dependencies, so nothing to merge/regenerate; `pnpm install` confirms lockfile already consistent (zero diff vs develop).
+- [01:40] Checked `docs/CUTOVER-RUNBOOK-F2.md` for stale cross-references per task instructions: found the header line claimed "All three PRs [#168/#169/#170] are open, not yet merged, as of this writing" — now stale since PR #169 and #170 are merged into develop (only #168 remains open). Updated that sentence for accuracy; no other stale references found (checklist items and step-by-step language already conditional/precondition-style, unaffected by merge status). Committed separately (657b1d2).
+- [01:45] Validation: `pnpm install` ✅ (lockfile unchanged), `pnpm run typecheck` ✅ (clean), `pnpm run lint` ✅ (no warnings/errors), `pnpm exec vitest run` ✅ (74 files / 1105 tests passed, 21 skipped — including the previously-flaky `__tests__/server/availability.test.ts`, which passed cleanly this run, no timezone flake encountered), `pnpm run build` ✅ (all routes generated, exit 0).
+- [01:46] Pushed rebased branch to origin/migration-f2-cutover-runbook with `--force-with-lease` (pre-push hook re-ran full local CI: typecheck/lint/test/build, all green — no `--no-verify` needed).
+- [01:47] ✅ Complete — PR #171 confirmed `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN` against develop via `gh pr view`. Not merged (user merges manually).
