@@ -1553,3 +1553,9 @@ No blocking issues. No modifications needed. Code is ready for security-reviewer
 - [01:45] Validation: `pnpm install` ✅ (lockfile unchanged), `pnpm run typecheck` ✅ (clean), `pnpm run lint` ✅ (no warnings/errors), `pnpm exec vitest run` ✅ (74 files / 1105 tests passed, 21 skipped — including the previously-flaky `__tests__/server/availability.test.ts`, which passed cleanly this run, no timezone flake encountered), `pnpm run build` ✅ (all routes generated, exit 0).
 - [01:46] Pushed rebased branch to origin/migration-f2-cutover-runbook with `--force-with-lease` (pre-push hook re-ran full local CI: typecheck/lint/test/build, all green — no `--no-verify` needed).
 - [01:47] ✅ Complete — PR #171 confirmed `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN` against develop via `gh pr view`. Not merged (user merges manually).
+
+#### [KIM-430] pr-comment-responder — Address PR #173 inline review comments
+- [00:00] Started — fetched 2 unresolved inline comments on PR #173 (tests/e2e/README.md lines 17, 112)
+- [00:01] Comment 1 (stale local-install fallback): confirmed real — "cd tests/e2e && npm install" line survived the path rename from #172 even though qa/e2e/package.json was removed. Replaced with root-only pnpm instructions.
+- [00:02] Comment 2 (gitignore not recursive): confirmed real — .gitignore only had tests/e2e/*.png|*.webm|*.pdf, missing nested tests/e2e/runners/. Made patterns recursive (tests/e2e/**/*.png etc.) and updated README note to match.
+- [00:03] Files changed: tests/e2e/README.md, .gitignore

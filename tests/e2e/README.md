@@ -8,16 +8,12 @@ Standalone Node.js/Playwright scripts that validate the reservation system end-t
 
 ### 1. Install dependencies
 
-The runners need `playwright` and `dotenv`. Install them locally in this directory or use the repo devDependencies:
+`playwright` and `dotenv` are root devDependencies (there is no standalone `package.json` under `tests/e2e/`). Install them from the repo root with pnpm:
 
 ```bash
-# From repo root (if playwright/dotenv are already devDeps):
+# From repo root:
 pnpm install
-
-# Or install locally inside tests/e2e/:
-cd tests/e2e
-npm install playwright dotenv
-npx playwright install chromium
+pnpm exec playwright install chromium
 ```
 
 ### 2. Environment variables
@@ -109,4 +105,4 @@ Equipment conflict and validation:
 - The runners refuse to start unless `E2E_ALLOW_DESTRUCTIVE=1` is present in `.env.e2e.local`.
 - All runners clean up only the exact DB fixture IDs they created in the `finally` block.
 - Time-sensitive checks (check-in window, cancellation cutoff) are skipped gracefully if the time of day makes the fixture impossible.
-- Screenshots or videos generated during a run are gitignored (`tests/e2e/*.png`, `*.webm`, `*.pdf`).
+- Screenshots or videos generated during a run are gitignored, including inside `tests/e2e/runners/` (`tests/e2e/**/*.png`, `*.webm`, `*.pdf`).
