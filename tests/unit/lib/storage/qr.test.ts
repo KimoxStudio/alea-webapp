@@ -29,6 +29,12 @@ vi.mock('@/lib/supabase/server', () => ({
   })),
 }))
 
+vi.mock('qrcode', () => ({
+  default: {
+    toBuffer: vi.fn().mockResolvedValue(Buffer.from('fake-qr-png-data')),
+  },
+}))
+
 describe('lib/storage/qr seam', () => {
   it('uploadToStorage() calls admin.storage.from(bucket).upload() with preserved options', async () => {
     const { uploadToStorage } = await import('@/lib/storage/qr')
@@ -471,49 +477,71 @@ describe('lib/storage/qr/vercel-blob (F3 adapter)', () => {
  *
  * See: lib/storage/qr/vercel-blob.ts doc comment for full context on F3 scaffold goals.
  */
-describe('lib/server/tables/tables-service (current QR URL construction gap)', () => {
-  it('verifies uploadQrCodeToStorage() does NOT call getPublicStorageUrl() from the seam (gap guards test)', async () => {
-    // This test exercises the real call path by spying on getPublicStorageUrl() from the seam
-    // and verifying it is NOT called by the QR code generation logic.
-    //
-    // The gap: tables-service.ts::uploadQrCodeToStorage() manually constructs Supabase URLs
-    // instead of delegating to the seam's getPublicStorageUrl().
-    // This test documents that gap and will break when the gap is fixed.
 
-    // Load the real modules
-    const qrSeam = await import('@/lib/storage/qr')
-    
-    // Create a spy on getPublicStorageUrl to verify it's NOT called
-    const getPublicStorageUrlSpy = vi.spyOn(qrSeam, 'getPublicStorageUrl')
+/**
+ * Integration test documenting the current state of lib/server/tables/tables-service.ts
+ * QR code URL construction (F3 scaffold - intentional gap).
+ *
+ * As of KIM-421, the QR code URL in tables-service.ts::uploadQrCodeToStorage()
+ * is still manually built from NEXT_PUBLIC_SUPABASE_URL directly
+ * (line 33: `${supabaseUrl}/storage/v1/object/public/table-qr-codes/${storagePath}`)
+ * instead of calling getPublicStorageUrl() from the storage seam.
+ *
+ * This test exercises the REAL generateTableQrCode() call path to document
+ * and defend this gap:
+ * - F3 introduces the Vercel Blob adapter (vercel-blob.ts) in parallel
+ * - But does NOT yet activate it or refactor call sites
+ * - The refactoring belongs to the F3 CUTOVER step (separate, user/infra-gated,
+ *   requiring BLOB_READ_WRITE_TOKEN)
+ * - This test WILL FAIL (expected signal to remove/update as part of cutover)
+ *
+ * See: lib/storage/qr/vercel-blob.ts doc comment for full F3 scaffold context.
+ */
+describe('lib/server/tables/tables-service (QR call-site URL construction gap)', () => {
+  it('exercises real generateTableQrCode() call path: uploadToStorage() IS called, getPublicStorageUrl() is NOT', async () => {
+    // Import and configure mocks for the real dependencies
+    const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+    const storageQr = await import('@/lib/storage/qr')
 
-    // Set up environment
+    // Set up environment for the call path
     const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co'
     process.env.NEXT_PUBLIC_APP_URL = 'https://example.com'
 
+    // Configure the Supabase admin client mock so uploadToStorage() can succeed
+    const mockUpload = vi.fn().mockResolvedValue({ error: null })
+    const mockFrom = vi.fn(() => ({ upload: mockUpload }))
+    vi.mocked(createSupabaseServerAdminClient).mockReturnValue({
+      storage: { from: mockFrom },
+    } as never)
+
+    // Spy on getPublicStorageUrl to verify it's NOT called (documenting the gap)
+    const getPublicStorageUrlSpy = vi.spyOn(storageQr, 'getPublicStorageUrl')
+
     try {
-      // The current behavior:
-      // uploadQrCodeToStorage() constructs URL manually at line 33:
-      //   `${supabaseUrl}/storage/v1/object/public/table-qr-codes/${storagePath}`
-      // This does NOT call getPublicStorageUrl() from the seam.
+      // Import and call the real generateTableQrCode() function
+      // This exercises the full call path: generateTableQrCode → uploadQrCodeToStorage → uploadToStorage
+      const tablesService = await import('@/lib/server/tables/tables-service')
+      const tableId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
 
-      // Verify the pattern that will be constructed
-      const expectedUrlPattern = /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/table-qr-codes\//
-      const constructedUrl = 'https://example.supabase.co/storage/v1/object/public/table-qr-codes/test-id.png'
-      expect(expectedUrlPattern.test(constructedUrl)).toBe(true)
+      const result = await tablesService.generateTableQrCode(tableId)
 
-      // When F3 refactors to use getPublicStorageUrl(), this assertion will need to change:
-      // - getPublicStorageUrlSpy should have been called
-      // - The URL pattern may change to Vercel Blob format or other backend
-      // That's the intentional breaking change this test documents.
+      // Assertions documenting the current (F3 scaffold) state:
 
-      // For now, verify the current state:
-      // getPublicStorageUrl() should NOT have been called by any QR code path
-      // (This is true because we haven't called any QR functions yet, but the spy is ready
-      //  to catch if a refactoring accidentally adds that call)
+      // 1. The seam's uploadToStorage() WAS called (real code path exercises it)
+      expect(mockFrom).toHaveBeenCalledWith('table-qr-codes')
+      expect(mockUpload).toHaveBeenCalledWith(
+        `${tableId}.png`,
+        expect.any(Buffer),
+        expect.objectContaining({ contentType: 'image/png', upsert: true })
+      )
 
+      // 2. The seam's getPublicStorageUrl() was NOT called (gap: manual URL construction)
       expect(getPublicStorageUrlSpy).not.toHaveBeenCalled()
+
+      // 3. The returned URL matches the manual construction pattern
+      expect(result).toMatch(/^https:\/\/example\.supabase\.co\/storage\/v1\/object\/public\/table-qr-codes\/a1b2c3d4-e5f6-7890-abcd-ef1234567890\.png$/)
     } finally {
       getPublicStorageUrlSpy.mockRestore()
       process.env.NEXT_PUBLIC_SUPABASE_URL = originalSupabaseUrl
@@ -521,5 +549,4 @@ describe('lib/server/tables/tables-service (current QR URL construction gap)', (
     }
   })
 })
-
 

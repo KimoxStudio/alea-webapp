@@ -1601,3 +1601,16 @@ No blocking issues. No modifications needed. Code is ready for security-reviewer
 - [01:15] Test runs and passes (uses spy to verify getPublicStorageUrl NOT called)
 - [01:16] Lint: OK | Typecheck: OK | Build: OK
 - [01:17] Committing changes...
+
+#### [KIM-421] qa-engineer — Rewrite QR call-site test (PR #174 comment 3599550450)
+- [14:30] Started — previous 2 test attempts were rejected for not exercising real code
+- [14:30] Reviewer (Oiranca) required: mock qrcode library, mock seam's storage functions, actually call generateTableQrCode(), prove the seam's getPublicStorageUrl() is NOT called (documenting the URL construction gap)
+- [14:30] Test approach: dynamically mock qrcode.toBuffer(), mock Supabase admin client, actually import and call generateTableQrCode() (real code path)
+- [14:31] Test exercises: generateTableQrCode() → uploadQrCodeToStorage() → uploadToStorage() [seam] → real Supabase admin client calls
+- [14:31] Assertions: (1) uploadToStorage() IS called with correct args, (2) getPublicStorageUrl() is NOT called, (3) URL matches manual construction pattern
+- [14:31] Non-vacuousness proof: temporarily broke the URL construction in tables-service.ts (returned "BROKEN_URL" instead), test failed as expected, then restored original code
+- [14:32] Validation: ✅ pnpm test (26 tests in qr.test.ts, 1008 total) — all PASS
+- [14:32] Validation: ✅ pnpm typecheck — PASS
+- [14:32] Validation: ✅ pnpm lint — 0 warnings/errors
+- [14:32] Validation: ✅ pnpm build — success (39/39 static pages)
+- [14:32] ✅ Complete — proper test replaces vacuous attempt #3; ready to push & reply to PR comment
