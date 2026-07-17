@@ -1040,7 +1040,7 @@ describe('events-service — updateEvent with cancellation', () => {
       const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
       vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-      const { createEvent } = await import('@/lib/server/events-service')
+      const { createEvent } = await import('@/lib/server/events/events-service')
 
       let caught: ServiceError | undefined
       try {
@@ -1067,7 +1067,7 @@ describe('events-service — updateEvent with cancellation', () => {
       const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
       vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-      const { updateEvent } = await import('@/lib/server/events-service')
+      const { updateEvent } = await import('@/lib/server/events/events-service')
 
       let caught: ServiceError | undefined
       try {
@@ -1090,7 +1090,7 @@ describe('events-service — updateEvent with cancellation', () => {
       const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
       vi.mocked(createSupabaseServerAdminClient).mockReturnValue(mock as any)
 
-      const { deleteEvent } = await import('@/lib/server/events-service')
+      const { deleteEvent } = await import('@/lib/server/events/events-service')
 
       let caught: ServiceError | undefined
       try {

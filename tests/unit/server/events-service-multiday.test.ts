@@ -1360,9 +1360,9 @@ describe('events-service — deleteEvent multi-day cancellation', () => {
   describe('Member-role session denial for multi-day (schedules)', () => {
     it('createEvent with schedules array throws 403 when session role is member', async () => {
       const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
-      const { serviceError } = await import('@/lib/server/service-error')
+      const { serviceError } = await import('@/lib/server/shared/service-error')
 
-      const { createEvent } = await import('@/lib/server/events-service')
+      const { createEvent } = await import('@/lib/server/events/events-service')
 
       let caught: ServiceError | undefined
       try {
@@ -1389,7 +1389,7 @@ describe('events-service — deleteEvent multi-day cancellation', () => {
     it('updateEvent with schedules array throws 403 when session role is member', async () => {
       const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
 
-      const { updateEvent } = await import('@/lib/server/events-service')
+      const { updateEvent } = await import('@/lib/server/events/events-service')
 
       let caught: ServiceError | undefined
       try {
@@ -1415,7 +1415,7 @@ describe('events-service — deleteEvent multi-day cancellation', () => {
     it('deleteEvent throws 403 when session role is member (multi-day context)', async () => {
       const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
 
-      const { deleteEvent } = await import('@/lib/server/events-service')
+      const { deleteEvent } = await import('@/lib/server/events/events-service')
 
       let caught: ServiceError | undefined
       try {

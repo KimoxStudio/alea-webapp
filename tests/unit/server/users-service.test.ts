@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SessionUser } from '@/lib/server/auth'
+import type { SessionUser } from '@/lib/server/auth/auth'
 
 function createAdminSession(): SessionUser {
   return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }

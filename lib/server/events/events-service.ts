@@ -3,7 +3,7 @@ import { getAdminDb, getDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/shared/service-error'
 import type { Tables } from '@/lib/supabase/types'
 import type { AdminEvent, AdminEventRoomBlock, AdminEventSchedule } from '@/lib/types'
-import type { SessionUser } from '@/lib/server/auth'
+import type { SessionUser } from '@/lib/server/auth/auth'
 
 export type { AdminEvent, AdminEventRoomBlock, AdminEventSchedule }
 

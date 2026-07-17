@@ -3,7 +3,7 @@ import { serviceError } from '@/lib/server/shared/service-error'
 import { ERROR_CODES } from '@/lib/types/error-codes'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
 import type { Equipment } from '@/lib/types'
-import type { SessionUser } from '@/lib/server/auth'
+import type { SessionUser } from '@/lib/server/auth/auth'
 
 export type { Equipment }
 

@@ -524,8 +524,12 @@ describe('lib/server/tables/tables-service (QR call-site URL construction gap)',
       // This exercises the full call path: generateTableQrCode → uploadQrCodeToStorage → uploadToStorage
       const tablesService = await import('@/lib/server/tables/tables-service')
       const tableId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+      // KIM-418 (migration-f1-rls-service-layer): generateTableQrCode() now
+      // requires an admin SessionUser as its first argument (service-layer
+      // admin gating hardening) — this call path is otherwise unaffected.
+      const adminSession = { id: 'admin-1', role: 'admin' as const, email: 'admin@example.com' }
 
-      const result = await tablesService.generateTableQrCode(tableId)
+      const result = await tablesService.generateTableQrCode(adminSession, tableId)
 
       // Assertions documenting the current (F3 scaffold) state:
 
