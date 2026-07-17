@@ -7,6 +7,10 @@ function createAdminSession(): SessionUser {
   return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
 }
 
+function createMemberSession(): SessionUser {
+  return { id: 'member-1', role: 'member', email: 'member@example.com' }
+}
+
 
 // ── Mock state ─────────────────────────────────────────────────────────────────
 const maybeSingleMock = vi.fn()
@@ -433,4 +437,44 @@ describe('setRoomDefaultEquipment', () => {
 
     await expect(setRoomDefaultEquipment(adminSession, 'room-1', ['eq-1'])).rejects.toMatchObject({ statusCode: 500 })
   })
+
+
+  describe('Member-role session denial for requireAdminSession', () => {
+    it('createEquipment throws 403 when session role is member', async () => {
+      const { createEquipment } = await loadModule()
+      const memberSession = createMemberSession()
+      await expect(createEquipment(memberSession, { name: 'Projector' })).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 403,
+      })
+    })
+
+    it('updateEquipment throws 403 when session role is member', async () => {
+      const { updateEquipment } = await loadModule()
+      const memberSession = createMemberSession()
+      await expect(updateEquipment(memberSession, 'eq-1', { name: 'Updated' })).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 403,
+      })
+    })
+
+    it('deleteEquipment throws 403 when session role is member', async () => {
+      const { deleteEquipment } = await loadModule()
+      const memberSession = createMemberSession()
+      await expect(deleteEquipment(memberSession, 'eq-1')).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 403,
+      })
+    })
+
+    it('setRoomDefaultEquipment throws 403 when session role is member', async () => {
+      const { setRoomDefaultEquipment } = await loadModule()
+      const memberSession = createMemberSession()
+      await expect(setRoomDefaultEquipment(memberSession, 'room-1', ['eq-1'])).rejects.toMatchObject({
+        name: 'ServiceError',
+        statusCode: 403,
+      })
+    })
+  })
+
 })
