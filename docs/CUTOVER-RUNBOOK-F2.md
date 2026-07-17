@@ -2,7 +2,7 @@
 
 **Status:** Prep artifact only — not yet executed.
 **Related plan:** `docs/MIGRATION-supabase-to-neon.md` (phase F2, issues #12/#13 in that plan's table; tracked as KIM-419/KIM-420).
-**Depends on:** F1 sign-off — the RLS → service-layer parity gate (`docs/RLS-SERVICE-LAYER-AUDIT.md`, PR #168), Drizzle schema (`lib/db/schema/`, PR #169), and Auth.js scaffold (`lib/authjs/`, PR #170). **All three PRs are open, not yet merged, as of this writing.**
+**Depends on:** F1 sign-off — the RLS → service-layer parity gate (`docs/RLS-SERVICE-LAYER-AUDIT.md`, PR #168), Drizzle schema (`lib/db/schema/`, PR #169), and Auth.js scaffold (`lib/authjs/`, PR #170). **PR #169 and PR #170 have been merged into `develop`; PR #168 (RLS → service-layer parity gate) is still open, not yet merged, as of this writing.**
 
 ---
 
