@@ -8,6 +8,10 @@ function createAdminSession(): SessionUser {
   return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
 }
 
+function createMemberSession(): SessionUser {
+  return { id: 'member-1', role: 'member', email: 'member@example.com' }
+}
+
 const maybeSingleMock = vi.fn()
 const listRoomsMock = vi.fn()
 const listTablesMock = vi.fn()
@@ -485,5 +489,42 @@ describe('getRoomTablesAvailability', () => {
     const availability = await getRoomTablesAvailability('1', '2025-01-01')
 
     expect(availability.t3?.top?.some((slot) => slot.startTime === '10:00' && !slot.available)).toBe(true)
+  })
+})
+
+describe('Member-role session denial for requireAdminSession', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+  })
+
+  it('createRoomEntry throws 403 when session role is member', async () => {
+    const { createRoomEntry } = await loadRoomsModules()
+    const memberSession = createMemberSession()
+
+    await expect(createRoomEntry(memberSession, { name: 'New Room', tableCount: 5 })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
+  })
+
+  it('updateRoom throws 403 when session role is member', async () => {
+    const { updateRoom } = await loadRoomsModules()
+    const memberSession = createMemberSession()
+
+    await expect(updateRoom(memberSession, '1', { name: 'Updated Room' })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
+  })
+
+  it('createTableEntry throws 403 when session role is member', async () => {
+    const { createTableEntry } = await loadRoomsModules()
+    const memberSession = createMemberSession()
+
+    await expect(createTableEntry(memberSession, '1', { name: 'Mesa X', type: 'small' })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
   })
 })

@@ -7,6 +7,10 @@ function createAdminSession(): SessionUser {
   return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
 }
 
+function createMemberSession(): SessionUser {
+  return { id: 'member-1', role: 'member', email: 'member@example.com' }
+}
+
 
 const createUserMock = vi.fn()
 const deleteUserMock = vi.fn()
@@ -696,5 +700,36 @@ describe('importMembersFromSource', () => {
     expect(result.normalizedRows).toHaveLength(50)
     expect(result.normalizedRows[0]?.memberNumber).toBe('200000')
     expect(result.normalizedRows.at(-1)?.memberNumber).toBe('200049')
+  })
+})
+
+describe('Member-role session denial for requireAdminSession', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetProfileState()
+  })
+
+  it('importMembersFromCsv throws 403 when session role is member', async () => {
+    const { importMembersFromCsv } = await loadService()
+    const memberSession = createMemberSession()
+
+    await expect(importMembersFromCsv(memberSession, 'USUARIOS,ID,email\nNew Member,100020,new@alea.club\n')).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
+  })
+
+  it('importMembersFromSource throws 403 when session role is member', async () => {
+    const { importMembersFromSource } = await loadService()
+    const memberSession = createMemberSession()
+
+    await expect(importMembersFromSource(memberSession, {
+      fileName: 'members.csv',
+      contentType: 'text/csv',
+      bytes: new Uint8Array([1, 2, 3]),
+    })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
   })
 })

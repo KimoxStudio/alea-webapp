@@ -7,6 +7,10 @@ function createAdminSession(): SessionUser {
   return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
 }
 
+function createMemberSession(): SessionUser {
+  return { id: 'member-1', role: 'member', email: 'member@example.com' }
+}
+
 
 const maybeSingleMock = vi.fn()
 const listReservationsMock = vi.fn()
@@ -393,5 +397,32 @@ describe('regenerateQrCodes', () => {
     const adminSession = createAdminSession()
 
     await expect(regenerateQrCodes(adminSession, 'not-a-uuid')).rejects.toMatchObject({ statusCode: 400 })
+  })
+})
+
+describe('Member-role session denial for requireAdminSession', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+  })
+
+  it('generateTableQrCode throws 403 when session role is member', async () => {
+    const { generateTableQrCode } = await loadTablesModules()
+    const memberSession = createMemberSession()
+
+    await expect(generateTableQrCode(memberSession, 'a1b2c3d4-e5f6-7890-abcd-ef1234567890')).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
+  })
+
+  it('regenerateQrCodes throws 403 when session role is member', async () => {
+    const { regenerateQrCodes } = await loadTablesModules()
+    const memberSession = createMemberSession()
+
+    await expect(regenerateQrCodes(memberSession, 'a1b2c3d4-e5f6-7890-abcd-ef1234567890')).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
   })
 })
