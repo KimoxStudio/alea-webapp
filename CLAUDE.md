@@ -63,7 +63,7 @@ When running parallel implementation agents on this repo, use this domain split 
 | Agent | File ownership |
 |-------|----------------|
 | A (frontend) | `app/`, `components/`, `messages/`, `lib/hooks/` |
-| B (backend)  | `lib/server/`, `lib/supabase/`, `supabase/`, `__tests__/` |
+| B (backend)  | `lib/server/`, `lib/supabase/`, `supabase/`, `tests/` |
 
 If a task touches both domains, run agents **sequentially**.
 

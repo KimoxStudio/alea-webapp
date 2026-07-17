@@ -8,7 +8,7 @@ import { enforceMutationSecurity, enforceRateLimit, RATE_LIMIT_POLICIES } from '
 // no dashboard component or hook consumes this route anymore (the legacy
 // "internal events" admin section was replaced by the unified Eventos flow
 // in lib/server/events/club-events-service.ts, driven by lib/hooks/use-admin.ts's
-// club-event hooks). It's kept only because __tests__/app/api/events.test.ts
+// club-event hooks). It's kept only because tests/unit/app/api/events.test.ts
 // imports PUT/DELETE from this exact file directly and cannot be edited as
 // part of this change. Divergence risk: updateEvent/deleteEvent still accept
 // any non-club-event row — i.e. a unified internal event (both titles NULL,

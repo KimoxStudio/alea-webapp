@@ -42,9 +42,9 @@ Related issue spec: Linear KIM-393
   - `app/api/cron/mark-no-show/route.ts:8` — validates the caller's `Authorization: Bearer`
     header against it via `tokensMatch()` (imported from `lib/server/security` at
     `app/api/cron/mark-no-show/route.ts:3`); returns 401 if missing/invalid.
-  - Also referenced in QA e2e tooling: `qa/e2e/qa-no-show-expiry.mjs:5,12,106` (used to call
-    the cron endpoint during E2E validation) and in unit tests
-    `__tests__/app/api/cron/mark-no-show.test.ts` (stubbed test value, not a real secret).
+  - Also referenced in QA e2e tooling: `tests/e2e/runners/qa-no-show-expiry.mjs:5,12,106` (used
+    to call the cron endpoint during E2E validation) and in unit tests
+    `tests/unit/app/api/cron/mark-no-show.test.ts` (stubbed test value, not a real secret).
 - **What breaks if rotated without updating dependents:** The cron endpoint's own
   authorization check (`app/api/cron/mark-no-show/route.ts:7-8`). If the env var is rotated
   in Vercel but the external cron scheduler's `Authorization: Bearer <value>` header is not
@@ -68,9 +68,10 @@ Related issue spec: Linear KIM-393
     `getSupabaseSecretKey()` to construct the Supabase admin client, which bypasses RLS for
     all server-side admin write operations.
   - Also referenced in QA e2e tooling (for privileged fixture writes/deletes against
-    Supabase): `qa/e2e/qa-reservation-cancellation.mjs:15,21`,
-    `qa/e2e/qa-reservation-lifecycle.mjs:13,18`, `qa/e2e/qa-no-show-expiry.mjs:12,17`,
-    `qa/e2e/qa-reservation-equipment.mjs:16,22`.
+    Supabase): `tests/e2e/runners/qa-reservation-cancellation.mjs:15,21`,
+    `tests/e2e/runners/qa-reservation-lifecycle.mjs:13,18`,
+    `tests/e2e/runners/qa-no-show-expiry.mjs:12,17`,
+    `tests/e2e/runners/qa-reservation-equipment.mjs:16,22`.
 - **What breaks if rotated without updating dependents:** Every server-side admin Supabase
   client created via `createSupabaseServerAdminClient()` (`lib/supabase/server.ts:67`) — i.e.
   all admin write operations across the app's service layer that bypass RLS. If the env var
@@ -84,7 +85,7 @@ Related issue spec: Linear KIM-393
 ## 4. QA credentials
 
 Grepped `.env.example` for `QA_`, `TEST_`, `E2E_`, `PLAYWRIGHT`, and `qa` patterns: **none of
-these appear in `.env.example`.** They are documented separately in `qa/e2e/README.md`
+these appear in `.env.example`.** They are documented separately in `tests/e2e/README.md`
 (lines 27-36) as belonging to a dedicated `.env.e2e.local` file at the repo root — the E2E
 runners intentionally do not load the app's `.env.local` because they perform privileged
 fixture writes/deletes.
@@ -98,16 +99,16 @@ fixture writes/deletes.
     acknowledge privileged fixture writes/deletes performed by the E2E runners.
 - **Where set:** `.env.e2e.local` at the repo root (local dev / CI runner only — not part of
   the deployed app's runtime env).
-- **Code consumers:** the standalone Playwright/Node E2E runners under `qa/e2e/*.mjs`
-  (e.g. `qa/e2e/qa-reservation-lifecycle.mjs:13,63-64,113`,
-  `qa/e2e/qa-reservation-equipment.mjs:14,99-100`,
-  `qa/e2e/qa-no-show-expiry.mjs:12,44`,
-  `qa/e2e/qa-reservation-cancellation.mjs:13`). Not consumed by any app runtime code (`app/`,
-  `lib/`) or by the Vitest unit tests under `__tests__/`.
+- **Code consumers:** the standalone Playwright/Node E2E runners under `tests/e2e/runners/*.mjs`
+  (e.g. `tests/e2e/runners/qa-reservation-lifecycle.mjs:13,63-64,113`,
+  `tests/e2e/runners/qa-reservation-equipment.mjs:14,99-100`,
+  `tests/e2e/runners/qa-no-show-expiry.mjs:12,44`,
+  `tests/e2e/runners/qa-reservation-cancellation.mjs:13`). Not consumed by any app runtime code
+  (`app/`, `lib/`) or by the Vitest unit tests under `tests/unit/`.
 - **What breaks if rotated without updating dependents:** the corresponding QA/member account
   credentials in Supabase must be updated to match, and `.env.e2e.local` on every machine/CI
-  runner that executes the `qa/e2e/*.mjs` scripts must be updated, or those E2E runs will fail
-  to log in / authenticate.
+  runner that executes the `tests/e2e/runners/*.mjs` scripts must be updated, or those E2E runs
+  will fail to log in / authenticate.
 
 ---
 
