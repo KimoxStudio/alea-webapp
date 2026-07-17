@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1
     const limit = Number.isFinite(rawLimit) && rawLimit > 0 && rawLimit <= 100 ? rawLimit : 10
     return admin.applyCookies(NextResponse.json(
-      await listPaginatedUsers({
+      await listPaginatedUsers(admin.session, {
         page,
         limit,
         search: searchParams.get('search') ?? '',

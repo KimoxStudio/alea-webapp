@@ -3,11 +3,22 @@ import { serviceError } from '@/lib/server/shared/service-error'
 import { ERROR_CODES } from '@/lib/types/error-codes'
 import type { Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types'
 import type { Equipment } from '@/lib/types'
+import type { SessionUser } from '@/lib/server/auth/auth'
 
 export type { Equipment }
 
 type EquipmentRow = Tables<'equipment'>
 type RoomDefaultEquipmentRow = Tables<'room_default_equipment'>
+
+// Privilege checks (role === 'admin') live here in the service layer, not in
+// route handlers (repo convention). These mutations use the admin client
+// (bypasses RLS entirely), so this in-function check is the only
+// authorization guard once RLS is removed as part of the Vercel/Postgres
+// migration — mirrors equipment_admin_insert/update/delete and
+// room_default_equipment_admin_insert/delete RLS policies (is_admin()).
+function requireAdminSession(session: SessionUser): void {
+  if (session.role !== 'admin') serviceError('Forbidden', 403)
+}
 
 function toEquipment(row: EquipmentRow): Equipment {
   return {
@@ -32,7 +43,11 @@ export async function listEquipment(): Promise<Equipment[]> {
   return ((data ?? []) as EquipmentRow[]).map(toEquipment)
 }
 
-export async function createEquipment(body: { name?: unknown; description?: unknown }): Promise<Equipment> {
+export async function createEquipment(
+  session: SessionUser,
+  body: { name?: unknown; description?: unknown },
+): Promise<Equipment> {
+  requireAdminSession(session)
   const name = String(body.name ?? '').trim()
   if (!name) {
     serviceError('Equipment name is required', 400)
@@ -61,9 +76,11 @@ export async function createEquipment(body: { name?: unknown; description?: unkn
 }
 
 export async function updateEquipment(
+  session: SessionUser,
   id: string,
   body: { name?: unknown; description?: unknown },
 ): Promise<Equipment> {
+  requireAdminSession(session)
   const updates: TablesUpdate<'equipment'> = {}
   if (body.name !== undefined) {
     const name = String(body.name).trim()
@@ -98,7 +115,8 @@ export async function updateEquipment(
   return toEquipment(data as EquipmentRow)
 }
 
-export async function deleteEquipment(id: string): Promise<void> {
+export async function deleteEquipment(session: SessionUser, id: string): Promise<void> {
+  requireAdminSession(session)
   const supabase = getAdminDb()
   const { data, error } = await supabase
     .from('equipment')
@@ -132,7 +150,12 @@ export async function getRoomDefaultEquipment(roomId: string): Promise<Equipment
     .map(toEquipment)
 }
 
-export async function setRoomDefaultEquipment(roomId: string, equipmentIds: string[]): Promise<void> {
+export async function setRoomDefaultEquipment(
+  session: SessionUser,
+  roomId: string,
+  equipmentIds: string[],
+): Promise<void> {
+  requireAdminSession(session)
   const supabase = getAdminDb()
 
   if (equipmentIds.length > 0) {

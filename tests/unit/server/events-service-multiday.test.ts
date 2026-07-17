@@ -33,6 +33,17 @@ vi.mock('@/lib/server/shared/service-error', () => ({
   }),
 }))
 
+type SessionUser = { id: string; role: 'admin' | 'member'; email?: string }
+
+function createAdminSession(): SessionUser {
+  return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
+}
+
+function createMemberSession(): SessionUser {
+  return { id: 'member-1', role: 'member', email: 'member@example.com' }
+}
+
+
 // ---------------------------------------------------------------------------
 // Mock builder
 // ---------------------------------------------------------------------------
@@ -114,7 +125,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     const { createEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await createEvent({
+    const result = await createEvent(createAdminSession(), {
       title: 'Multi-Day Event',
       schedules: [
         { date: '2026-07-10', startTime: '18:00', endTime: '22:00', roomId: 'room-1', allDay: false },
@@ -149,7 +160,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     const { createEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await createEvent({
+    const result = await createEvent(createAdminSession(), {
       title: 'Multi-Day Event',
       schedules: [
         { date: '2026-07-10', startTime: '18:00', endTime: '22:00', roomId: 'room-1', allDay: false },
@@ -177,7 +188,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     const { createEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await createEvent({
+    const result = await createEvent(createAdminSession(), {
       title: 'All Day Event',
       schedules: [
         { date: '2026-07-10', roomId: 'room-1', allDay: true, startTime: '', endTime: '' },
@@ -207,7 +218,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await createEvent({
+      await createEvent(createAdminSession(), {
         title: 'Bad Date Event',
         schedules: [
           { date: 'not-a-date', startTime: '18:00', endTime: '22:00', roomId: null, allDay: false },
@@ -232,7 +243,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await createEvent({
+      await createEvent(createAdminSession(), {
         title: 'Bad Time Event',
         schedules: [
           { date: '2026-07-10', startTime: '22:00', endTime: '18:00', roomId: null, allDay: false },
@@ -257,7 +268,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await createEvent({
+      await createEvent(createAdminSession(), {
         title: 'Bad Time Event',
         schedules: [
           { date: '2026-07-10', startTime: '18:30', endTime: '22:00', roomId: null, allDay: false },
@@ -285,7 +296,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     const { createEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await createEvent({
+    const result = await createEvent(createAdminSession(), {
       title: 'No Room Event',
       schedules: [
         { date: '2026-07-10', startTime: '18:00', endTime: '22:00', roomId: null, allDay: false },
@@ -322,7 +333,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await createEvent({
+      await createEvent(createAdminSession(), {
         title: 'Failing Event',
         schedules: [
           { date: '2026-07-10', startTime: '18:00', endTime: '22:00', roomId: 'room-1', allDay: false },
@@ -344,7 +355,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await createEvent({ title: 'Empty Schedules', schedules: [] })
+      await createEvent(createAdminSession(), { title: 'Empty Schedules', schedules: [] })
     } catch (err) {
       caught = err as ServiceError
     }
@@ -370,7 +381,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await createEvent({ title: 'Too Many Blocks', schedules })
+      await createEvent(createAdminSession(), { title: 'Too Many Blocks', schedules })
     } catch (err) {
       caught = err as ServiceError
     }
@@ -393,7 +404,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     const { createEvent } = await import('@/lib/server/events/events-service')
 
-    await createEvent({
+    await createEvent(createAdminSession(), {
       title: 'Creator Event',
       createdBy: 'user-abc',
       schedules: [
@@ -427,7 +438,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     const { createEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await createEvent({
+    const result = await createEvent(createAdminSession(), {
       title: 'Out Of Order',
       schedules: [
         { date: '2026-08-03', startTime: '14:00', endTime: '16:00', roomId: 'room-1', allDay: false },
@@ -463,7 +474,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     const { createEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await createEvent({
+    const result = await createEvent(createAdminSession(), {
       title: 'Multi-Room Single Day',
       schedules: [
         { date: '2026-10-01', startTime: '10:00', endTime: '14:00', roomId: 'room-A', allDay: false },
@@ -490,7 +501,7 @@ describe('events-service — createEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await createEvent({
+      await createEvent(createAdminSession(), {
         title: 'Constraint Fail',
         schedules: [
           { date: '2026-07-10', startTime: '10:00', endTime: '12:00', roomId: 'room-1', allDay: false },
@@ -560,7 +571,7 @@ describe('events-service — updateEvent multi-day (schedules)', () => {
 
     const { updateEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await updateEvent('evt-1', {
+    const result = await updateEvent(createAdminSession(), 'evt-1', {
       title: 'Updated Multi-Day',
       schedules: [
         { date: '2026-08-01', startTime: '09:00', endTime: '13:00', roomId: 'room-1', allDay: false },
@@ -620,7 +631,7 @@ describe('events-service — updateEvent multi-day (schedules)', () => {
 
     const { updateEvent } = await import('@/lib/server/events/events-service')
 
-    await updateEvent('evt-1', {
+    await updateEvent(createAdminSession(), 'evt-1', {
       schedules: [
         { date: '2026-07-10', startTime: '18:00', endTime: '22:00', roomId: 'room-1', allDay: false },
       ],
@@ -657,7 +668,7 @@ describe('events-service — updateEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await updateEvent('nonexistent', {
+      await updateEvent(createAdminSession(), 'nonexistent', {
         schedules: [
           { date: '2026-07-10', startTime: '18:00', endTime: '22:00', roomId: 'room-1', allDay: false },
         ],
@@ -706,7 +717,7 @@ describe('events-service — updateEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await updateEvent('evt-1', {
+      await updateEvent(createAdminSession(), 'evt-1', {
         schedules: [
           { date: '2026-07-10', startTime: '18:00', endTime: '22:00', roomId: 'room-1', allDay: false },
         ],
@@ -752,7 +763,7 @@ describe('events-service — updateEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await updateEvent('evt-1', { schedules: [] })
+      await updateEvent(createAdminSession(), 'evt-1', { schedules: [] })
     } catch (err) {
       caught = err as ServiceError
     }
@@ -802,7 +813,7 @@ describe('events-service — updateEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await updateEvent('evt-1', { schedules })
+      await updateEvent(createAdminSession(), 'evt-1', { schedules })
     } catch (err) {
       caught = err as ServiceError
     }
@@ -855,7 +866,7 @@ describe('events-service — updateEvent multi-day (schedules)', () => {
 
     const { updateEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await updateEvent('evt-1', {
+    const result = await updateEvent(createAdminSession(), 'evt-1', {
       schedules: [
         { date: '2026-08-01', startTime: '09:00', endTime: '13:00', roomId: 'room-1', allDay: false },
       ],
@@ -915,7 +926,7 @@ describe('events-service — updateEvent multi-day (schedules)', () => {
 
     const { updateEvent } = await import('@/lib/server/events/events-service')
 
-    const result = await updateEvent('evt-1', {
+    const result = await updateEvent(createAdminSession(), 'evt-1', {
       schedules: [
         { date: '2026-09-01', startTime: '10:00', endTime: '14:00', roomId: 'room-1', allDay: false },
         { date: '2026-09-02', startTime: '10:00', endTime: '14:00', roomId: 'room-1', allDay: false },
@@ -965,7 +976,7 @@ describe('events-service — updateEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await updateEvent('evt-1', {
+      await updateEvent(createAdminSession(), 'evt-1', {
         schedules: [
           { date: '2026-07-10', startTime: '10:00', endTime: '12:00', roomId: 'room-1', allDay: false },
         ],
@@ -1013,7 +1024,7 @@ describe('events-service — updateEvent multi-day (schedules)', () => {
 
     let caught: ServiceError | undefined
     try {
-      await updateEvent('evt-1', {
+      await updateEvent(createAdminSession(), 'evt-1', {
         schedules: [
           { date: '2026-07-10', startTime: '10:00', endTime: '12:00', roomId: 'room-1', allDay: false },
         ],
@@ -1198,7 +1209,7 @@ describe('events-service — deleteEvent multi-day cancellation', () => {
 
     const { deleteEvent } = await import('@/lib/server/events/events-service')
 
-    await deleteEvent('evt-multi')
+    await deleteEvent(createAdminSession(), 'evt-multi')
 
     // update called once per block (3 blocks, each with a real room)
     expect(updateReturnMock).toHaveBeenCalledTimes(3)
@@ -1248,7 +1259,7 @@ describe('events-service — deleteEvent multi-day cancellation', () => {
 
     const { deleteEvent } = await import('@/lib/server/events/events-service')
 
-    await deleteEvent('evt-null')
+    await deleteEvent(createAdminSession(), 'evt-null')
 
     // No reservations should be cancelled — null-room blocks have no tableIds
     expect(updateReturnMock).not.toHaveBeenCalled()
@@ -1306,7 +1317,7 @@ describe('events-service — deleteEvent multi-day cancellation', () => {
 
     const { deleteEvent } = await import('@/lib/server/events/events-service')
 
-    await deleteEvent('evt-mixed')
+    await deleteEvent(createAdminSession(), 'evt-mixed')
 
     // Only the one real-room block (2026-10-02) triggers a reservation update
     expect(updateFn).toHaveBeenCalledTimes(1)
@@ -1334,11 +1345,88 @@ describe('events-service — deleteEvent multi-day cancellation', () => {
 
     let caught: ServiceError | undefined
     try {
-      await deleteEvent('nonexistent')
+      await deleteEvent(createAdminSession(), 'nonexistent')
     } catch (err) {
       caught = err as ServiceError
     }
 
     expect(caught?.statusCode).toBe(404)
+  })
+
+  // ============================================================
+  // Member-role 403 Denial Tests for multi-day events
+  // ============================================================
+
+  describe('Member-role session denial for multi-day (schedules)', () => {
+    it('createEvent with schedules array throws 403 when session role is member', async () => {
+      const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+      const { serviceError } = await import('@/lib/server/shared/service-error')
+
+      const { createEvent } = await import('@/lib/server/events/events-service')
+
+      let caught: ServiceError | undefined
+      try {
+        await createEvent(createMemberSession(), {
+          title: 'Multi-Day Event',
+          schedules: [
+            {
+              date: '2026-07-10',
+              startTime: '18:00',
+              endTime: '22:00',
+              roomId: 'room-1',
+            },
+          ],
+        })
+      } catch (err) {
+        caught = err as ServiceError
+      }
+
+      expect(caught).toBeDefined()
+      expect(caught?.statusCode).toBe(403)
+      expect(caught?.message).toBe('Forbidden')
+    })
+
+    it('updateEvent with schedules array throws 403 when session role is member', async () => {
+      const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+
+      const { updateEvent } = await import('@/lib/server/events/events-service')
+
+      let caught: ServiceError | undefined
+      try {
+        await updateEvent(createMemberSession(), 'evt-1', {
+          schedules: [
+            {
+              date: '2026-07-10',
+              startTime: '18:00',
+              endTime: '22:00',
+              roomId: 'room-1',
+            },
+          ],
+        })
+      } catch (err) {
+        caught = err as ServiceError
+      }
+
+      expect(caught).toBeDefined()
+      expect(caught?.statusCode).toBe(403)
+      expect(caught?.message).toBe('Forbidden')
+    })
+
+    it('deleteEvent throws 403 when session role is member (multi-day context)', async () => {
+      const { createSupabaseServerAdminClient } = await import('@/lib/supabase/server')
+
+      const { deleteEvent } = await import('@/lib/server/events/events-service')
+
+      let caught: ServiceError | undefined
+      try {
+        await deleteEvent(createMemberSession(), 'evt-multi-1')
+      } catch (err) {
+        caught = err as ServiceError
+      }
+
+      expect(caught).toBeDefined()
+      expect(caught?.statusCode).toBe(403)
+      expect(caught?.message).toBe('Forbidden')
+    })
   })
 })

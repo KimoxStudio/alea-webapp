@@ -16,7 +16,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     const [{ id }, body] = await Promise.all([params, request.json()])
-    return admin.applyCookies(NextResponse.json(await updateUser(id, body)))
+    return admin.applyCookies(NextResponse.json(await updateUser(admin.session, id, body)))
   } catch (error) {
     return admin.applyCookies(toServiceErrorResponse(error))
   }
@@ -37,12 +37,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { action } = body as { action?: string }
 
     if (action === 'reset_no_shows') {
-      await resetNoShows(id)
+      await resetNoShows(admin.session, id)
       return admin.applyCookies(NextResponse.json({ ok: true }))
     }
 
     if (action === 'unblock') {
-      await unblockUser(id)
+      await unblockUser(admin.session, id)
       return admin.applyCookies(NextResponse.json({ ok: true }))
     }
 
@@ -65,7 +65,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   if (admin instanceof NextResponse) return admin
 
   try {
-    await deleteUser((await params).id)
+    await deleteUser(admin.session, (await params).id)
     return admin.applyCookies(new NextResponse(null, { status: 204 }))
   } catch (error) {
     return admin.applyCookies(toServiceErrorResponse(error))

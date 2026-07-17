@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    return admin.applyCookies(NextResponse.json(await createRoomEntry(body), { status: 201 }))
+    return admin.applyCookies(NextResponse.json(await createRoomEntry(admin.session, body), { status: 201 }))
   } catch (error) {
     return admin.applyCookies(toServiceErrorResponse(error))
   }

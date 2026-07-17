@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return admin.applyCookies(NextResponse.json(await importMembersFromSource({
+    return admin.applyCookies(NextResponse.json(await importMembersFromSource(admin.session, {
       fileName: file.name,
       contentType: file.type,
       bytes,

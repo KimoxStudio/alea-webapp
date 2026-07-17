@@ -29,7 +29,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const [{ id }, body] = await Promise.all([params, request.json()])
     const equipmentIds: string[] = Array.isArray(body.equipmentIds) ? body.equipmentIds : []
-    await setRoomDefaultEquipment(id, equipmentIds)
+    await setRoomDefaultEquipment(admin.session, id, equipmentIds)
     return admin.applyCookies(new NextResponse(null, { status: 204 }))
   } catch (error) {
     return admin.applyCookies(toServiceErrorResponse(error))

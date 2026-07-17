@@ -16,7 +16,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     const [{ id }, body] = await Promise.all([params, request.json()])
-    return admin.applyCookies(NextResponse.json(await updateRoom(id, body)))
+    return admin.applyCookies(NextResponse.json(await updateRoom(admin.session, id, body)))
   } catch (error) {
     return admin.applyCookies(toServiceErrorResponse(error))
   }

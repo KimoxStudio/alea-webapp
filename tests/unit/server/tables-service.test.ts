@@ -1,6 +1,17 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+type SessionUser = { id: string; role: 'admin' | 'member'; email?: string }
+
+function createAdminSession(): SessionUser {
+  return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
+}
+
+function createMemberSession(): SessionUser {
+  return { id: 'member-1', role: 'member', email: 'member@example.com' }
+}
+
+
 const maybeSingleMock = vi.fn()
 const listReservationsMock = vi.fn()
 const adminTableMaybeSingleMock = vi.fn()
@@ -199,16 +210,18 @@ describe('generateTableQrCode', () => {
 
   it('returns a Supabase Storage public URL containing the tableId', async () => {
     const { generateTableQrCode } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    const result = await generateTableQrCode('a1b2c3d4-e5f6-7890-abcd-ef1234567890')
+    const result = await generateTableQrCode(adminSession, 'a1b2c3d4-e5f6-7890-abcd-ef1234567890')
 
     expect(result).toMatch(/^https:\/\/supabase\.example\.com\/storage\/v1\/object\/public\/table-qr-codes\/a1b2c3d4-e5f6-7890-abcd-ef1234567890\.png$/)
   })
 
   it('encodes the absolute URL with the tableId in the QR payload', async () => {
     const { generateTableQrCode } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    const result = await generateTableQrCode('a1b2c3d4-e5f6-7890-abcd-ef1234567890')
+    const result = await generateTableQrCode(adminSession, 'a1b2c3d4-e5f6-7890-abcd-ef1234567890')
 
     // Assert the result is a valid Supabase Storage URL
     expect(result).toMatch(/^https:\/\/supabase\.example\.com\/storage\/v1\/object\/public\/table-qr-codes\/a1b2c3d4-e5f6-7890-abcd-ef1234567890\.png$/)
@@ -223,8 +236,9 @@ describe('generateTableQrCode', () => {
   it('handles missing NEXT_PUBLIC_APP_URL by throwing serviceError', async () => {
     delete process.env.NEXT_PUBLIC_APP_URL
     const { generateTableQrCode } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    await expect(generateTableQrCode('a1b2c3d4-e5f6-7890-abcd-ef1234567890')).rejects.toMatchObject({
+    await expect(generateTableQrCode(adminSession, 'a1b2c3d4-e5f6-7890-abcd-ef1234567890')).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 500,
     })
@@ -233,8 +247,9 @@ describe('generateTableQrCode', () => {
   it('handles missing NEXT_PUBLIC_SUPABASE_URL by throwing serviceError', async () => {
     delete process.env.NEXT_PUBLIC_SUPABASE_URL
     const { generateTableQrCode } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    await expect(generateTableQrCode('a1b2c3d4-e5f6-7890-abcd-ef1234567890')).rejects.toMatchObject({
+    await expect(generateTableQrCode(adminSession, 'a1b2c3d4-e5f6-7890-abcd-ef1234567890')).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 500,
     })
@@ -242,8 +257,9 @@ describe('generateTableQrCode', () => {
 
   it('uploads buffer to Storage with correct path and options', async () => {
     const { generateTableQrCode } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    await generateTableQrCode('a1b2c3d4-e5f6-7890-abcd-ef1234567890')
+    await generateTableQrCode(adminSession, 'a1b2c3d4-e5f6-7890-abcd-ef1234567890')
 
     expect(storageUploadMock).toHaveBeenCalledWith(
       'a1b2c3d4-e5f6-7890-abcd-ef1234567890.png',
@@ -255,14 +271,16 @@ describe('generateTableQrCode', () => {
   it('throws 500 when Storage upload fails', async () => {
     storageUploadMock.mockResolvedValueOnce({ data: null, error: { message: 'Bucket not found' } })
     const { generateTableQrCode } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    await expect(generateTableQrCode('a1b2c3d4-e5f6-7890-abcd-ef1234567890')).rejects.toMatchObject({ statusCode: 500 })
+    await expect(generateTableQrCode(adminSession, 'a1b2c3d4-e5f6-7890-abcd-ef1234567890')).rejects.toMatchObject({ statusCode: 500 })
   })
 
   it('throws 400 when tableId is not a valid UUID', async () => {
     const { generateTableQrCode } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    await expect(generateTableQrCode('not-a-uuid')).rejects.toMatchObject({ statusCode: 400 })
+    await expect(generateTableQrCode(adminSession, 'not-a-uuid')).rejects.toMatchObject({ statusCode: 400 })
   })
 })
 
@@ -284,8 +302,9 @@ describe('regenerateQrCodes', () => {
     })
 
     const { regenerateQrCodes } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    const result = await regenerateQrCodes('d4e5f6a7-b8c9-0123-def0-123456789012')
+    const result = await regenerateQrCodes(adminSession, 'd4e5f6a7-b8c9-0123-def0-123456789012')
 
     expect(result.qr_code).toMatch(/^https:\/\/supabase\.example\.com\/storage\/v1\/object\/public\/table-qr-codes\/d4e5f6a7-b8c9-0123-def0-123456789012\.png$/)
     expect(result.qr_code_inf).toBeNull()
@@ -298,8 +317,9 @@ describe('regenerateQrCodes', () => {
     })
 
     const { regenerateQrCodes } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    const result = await regenerateQrCodes('c3d4e5f6-a7b8-9012-cdef-012345678901')
+    const result = await regenerateQrCodes(adminSession, 'c3d4e5f6-a7b8-9012-cdef-012345678901')
 
     expect(result.qr_code).toMatch(/^https:\/\/supabase\.example\.com\/storage\/v1\/object\/public\/table-qr-codes\/c3d4e5f6-a7b8-9012-cdef-012345678901\.png$/)
     expect(result.qr_code_inf).toBeNull()
@@ -312,8 +332,9 @@ describe('regenerateQrCodes', () => {
     })
 
     const { regenerateQrCodes } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    await regenerateQrCodes('c3d4e5f6-a7b8-9012-cdef-012345678901')
+    await regenerateQrCodes(adminSession, 'c3d4e5f6-a7b8-9012-cdef-012345678901')
 
     expect(storageUploadMock).toHaveBeenCalledWith(
       'c3d4e5f6-a7b8-9012-cdef-012345678901.png',
@@ -331,8 +352,9 @@ describe('regenerateQrCodes', () => {
     })
 
     const { regenerateQrCodes } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    await expect(regenerateQrCodes('d4e5f6a7-b8c9-0123-def0-123456789012')).rejects.toMatchObject({
+    await expect(regenerateQrCodes(adminSession, 'd4e5f6a7-b8c9-0123-def0-123456789012')).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 500,
     })
@@ -346,8 +368,9 @@ describe('regenerateQrCodes', () => {
     })
 
     const { regenerateQrCodes } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    await expect(regenerateQrCodes('c3d4e5f6-a7b8-9012-cdef-012345678901')).rejects.toMatchObject({
+    await expect(regenerateQrCodes(adminSession, 'c3d4e5f6-a7b8-9012-cdef-012345678901')).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 500,
     })
@@ -361,8 +384,9 @@ describe('regenerateQrCodes', () => {
     })
 
     const { regenerateQrCodes } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    await expect(regenerateQrCodes('d4e5f6a7-b8c9-0123-def0-123456789012')).rejects.toMatchObject({
+    await expect(regenerateQrCodes(adminSession, 'd4e5f6a7-b8c9-0123-def0-123456789012')).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 500,
     })
@@ -370,7 +394,35 @@ describe('regenerateQrCodes', () => {
 
   it('throws 400 when tableId is not a valid UUID', async () => {
     const { regenerateQrCodes } = await loadTablesModules()
+    const adminSession = createAdminSession()
 
-    await expect(regenerateQrCodes('not-a-uuid')).rejects.toMatchObject({ statusCode: 400 })
+    await expect(regenerateQrCodes(adminSession, 'not-a-uuid')).rejects.toMatchObject({ statusCode: 400 })
+  })
+})
+
+describe('Member-role session denial for requireAdminSession', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+  })
+
+  it('generateTableQrCode throws 403 when session role is member', async () => {
+    const { generateTableQrCode } = await loadTablesModules()
+    const memberSession = createMemberSession()
+
+    await expect(generateTableQrCode(memberSession, 'a1b2c3d4-e5f6-7890-abcd-ef1234567890')).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
+  })
+
+  it('regenerateQrCodes throws 403 when session role is member', async () => {
+    const { regenerateQrCodes } = await loadTablesModules()
+    const memberSession = createMemberSession()
+
+    await expect(regenerateQrCodes(memberSession, 'a1b2c3d4-e5f6-7890-abcd-ef1234567890')).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
   })
 })

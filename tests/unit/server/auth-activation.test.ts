@@ -2,6 +2,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHash } from 'node:crypto'
 
+
+type SessionUser = { id: string; role: 'admin' | 'member'; email?: string }
+
+function createAdminSession(): SessionUser {
+  return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
+}
+
+function createMemberSession(): SessionUser {
+  return { id: 'member-1', role: 'member', email: 'member@example.com' }
+}
+
 type ProfileRow = {
   id: string
   member_number: string
@@ -278,6 +289,7 @@ describe('auth activation helpers', () => {
       locale: 'es',
       baseUrl: 'http://localhost:3000',
       createdBy: 'admin-1',
+      session: { id: 'admin-1', role: 'admin' },
     })
 
     expect(result.activationLink).toContain('http://localhost:3000/es/activate?token=')
@@ -298,6 +310,7 @@ describe('auth activation helpers', () => {
       locale: 'es',
       baseUrl: 'http://localhost:3000',
       createdBy: 'admin-1',
+      session: { id: 'admin-1', role: 'admin' },
     })
 
     expect(activationTokenUpsertMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -418,4 +431,20 @@ describe('auth activation helpers', () => {
 
     expect(activationTokensByProfileId.get('member-1')?.used_at).toBeTruthy()
   })
+
+
+describe('Member-role session denial for generateActivationLink', () => {
+  it('generateActivationLink throws 403 when session role is member', async () => {
+    const { generateActivationLink } = await loadService()
+    const memberSession = createMemberSession()
+
+    await expect(generateActivationLink({
+      session: memberSession,
+      memberNumber: '100020',
+    })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
+  })
+})
 })

@@ -1,6 +1,16 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SessionUser } from '@/lib/server/auth/auth'
 import ExcelJS from 'exceljs'
+
+function createAdminSession(): SessionUser {
+  return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
+}
+
+function createMemberSession(): SessionUser {
+  return { id: 'member-1', role: 'member', email: 'member@example.com' }
+}
+
 
 const createUserMock = vi.fn()
 const deleteUserMock = vi.fn()
@@ -357,8 +367,8 @@ describe('importMembersFromCsv', () => {
   it('updates existing members with generated fallback email and nullable phone', async () => {
     const { importMembersFromCsv } = await loadService()
 
-    const result = await importMembersFromCsv(
-      'USUARIOS,ID,email,phone\nUpdated Name,100001,,\n'
+    const adminSession = createAdminSession()
+    const result = await importMembersFromCsv(adminSession, 'USUARIOS,ID,email,phone\nUpdated Name,100001,,\n'
     )
 
     expect(result.createdCount).toBe(0)
@@ -394,8 +404,8 @@ describe('importMembersFromCsv', () => {
   it('creates new imported members as inactive profiles with internal auth email', async () => {
     const { importMembersFromCsv } = await loadService()
 
-    const result = await importMembersFromCsv(
-      'USUARIOS,ID,email,phone\nNew Member,100020,new@alea.club,699000111\n'
+    const adminSession = createAdminSession()
+    const result = await importMembersFromCsv(adminSession, 'USUARIOS,ID,email,phone\nNew Member,100020,new@alea.club,699000111\n'
     )
 
     expect(result.createdCount).toBe(1)
@@ -432,8 +442,8 @@ describe('importMembersFromCsv', () => {
   it('fills missing source email with internal generated email and keeps phone null', async () => {
     const { importMembersFromCsv } = await loadService()
 
-    const result = await importMembersFromCsv(
-      'USUARIOS,ID,phone\nNo Email Member,100024,\n'
+    const adminSession = createAdminSession()
+    const result = await importMembersFromCsv(adminSession, 'USUARIOS,ID,phone\nNo Email Member,100024,\n'
     )
 
     expect(result.createdCount).toBe(1)
@@ -458,8 +468,8 @@ describe('importMembersFromCsv', () => {
   it('preserves existing optional contact data when optional headers are omitted', async () => {
     const { importMembersFromCsv } = await loadService()
 
-    const result = await importMembersFromCsv(
-      'USUARIOS,ID\nExisting Again,100001\n'
+    const adminSession = createAdminSession()
+    const result = await importMembersFromCsv(adminSession, 'USUARIOS,ID\nExisting Again,100001\n'
     )
 
     expect(result.updatedCount).toBe(1)
@@ -596,8 +606,8 @@ describe('importMembersFromCsv', () => {
     } as never)
 
     const { importMembersFromCsv } = await loadService()
-    const result = await importMembersFromCsv(
-      'USUARIOS,ID,email,phone\nNew Member,100020,new@alea.club,699000111\n'
+    const adminSession = createAdminSession()
+    const result = await importMembersFromCsv(adminSession, 'USUARIOS,ID,email,phone\nNew Member,100020,new@alea.club,699000111\n'
     )
 
     expect(result.createdCount).toBe(0)
@@ -649,7 +659,8 @@ describe('importMembersFromSource', () => {
     const buffer = await workbook.xlsx.writeBuffer()
     const bytes = new Uint8Array(buffer as ArrayBuffer)
 
-    const result = await importMembersFromSource({
+    const adminSession = createAdminSession()
+    const result = await importMembersFromSource(adminSession, {
       fileName: 'members.xlsx',
       contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       bytes: new Uint8Array(bytes),
@@ -676,17 +687,49 @@ describe('importMembersFromSource', () => {
 
   it('limits normalizedRows to a bounded preview size', async () => {
     const { importMembersFromCsv } = await loadService()
+    const adminSession = createAdminSession()
 
     const rows = ['USUARIOS,ID,email']
     for (let index = 0; index < 60; index += 1) {
       rows.push(`Member ${index},${200000 + index},member${index}@alea.club`)
     }
 
-    const result = await importMembersFromCsv(rows.join('\n'))
+    const result = await importMembersFromCsv(adminSession, rows.join('\n'))
 
     expect(result.createdCount).toBe(60)
     expect(result.normalizedRows).toHaveLength(50)
     expect(result.normalizedRows[0]?.memberNumber).toBe('200000')
     expect(result.normalizedRows.at(-1)?.memberNumber).toBe('200049')
+  })
+})
+
+describe('Member-role session denial for requireAdminSession', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetProfileState()
+  })
+
+  it('importMembersFromCsv throws 403 when session role is member', async () => {
+    const { importMembersFromCsv } = await loadService()
+    const memberSession = createMemberSession()
+
+    await expect(importMembersFromCsv(memberSession, 'USUARIOS,ID,email\nNew Member,100020,new@alea.club\n')).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
+  })
+
+  it('importMembersFromSource throws 403 when session role is member', async () => {
+    const { importMembersFromSource } = await loadService()
+    const memberSession = createMemberSession()
+
+    await expect(importMembersFromSource(memberSession, {
+      fileName: 'members.csv',
+      contentType: 'text/csv',
+      bytes: new Uint8Array([1, 2, 3]),
+    })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
   })
 })

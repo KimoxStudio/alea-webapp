@@ -110,6 +110,16 @@ function getActivationTokenTable(client: { from: (table: 'activation_tokens') =>
   return client.from('activation_tokens') as ActivationTokenTableClient
 }
 
+// Privilege check (role === 'admin') lives here in the service layer, not in
+// route handlers (repo convention). activation_tokens is now locked down to
+// service_role only at the RLS layer (no anon/authenticated policies remain —
+// see docs/RLS-SERVICE-LAYER-AUDIT.md), so this in-function check is the only
+// authorization guard for admin-triggered activation/recovery link
+// generation once RLS is removed as part of the Vercel/Postgres migration.
+function requireAdminSession(session: SessionUser): void {
+  if (session.role !== 'admin') serviceError('Forbidden', 403)
+}
+
 async function getPublicProfileBy(
   client: ProfileLookupClient,
   column: PublicProfileLookupColumn,
@@ -213,11 +223,13 @@ export async function getActivationLinkState(token: string): Promise<ActivationL
 }
 
 export async function generateActivationLink(input: {
+  session: SessionUser
   userId: string
   locale: string
   baseUrl: string
   createdBy: string
 }) {
+  requireAdminSession(input.session)
   const admin = getAdminDb()
   const profile = await getAuthCredentialProfileBy(admin, 'id', input.userId)
 
@@ -293,11 +305,13 @@ export async function getRecoveryLinkState(token: string): Promise<RecoveryLinkS
 }
 
 export async function generateRecoveryLink(input: {
+  session: SessionUser
   userId: string
   locale: string
   baseUrl: string
   createdBy: string
 }) {
+  requireAdminSession(input.session)
   const admin = getAdminDb()
   const profile = await getAuthCredentialProfileBy(admin, 'id', input.userId)
 

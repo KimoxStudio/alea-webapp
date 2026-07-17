@@ -5,6 +5,7 @@ import { serviceError } from '@/lib/server/shared/service-error'
 import type { TablesUpdate } from '@/lib/supabase/types'
 import { memberNumberSchema } from '@/lib/validations/auth'
 import { type PublicProfileRow, toPublicUser } from '@/lib/server/users/profile-mappers'
+import type { SessionUser } from '@/lib/server/auth/auth'
 import {
   type MemberImportOptionalColumnPresence,
   MEMBER_IMPORT_PREVIEW_LIMIT,
@@ -12,6 +13,17 @@ import {
   normalizeMemberImportSource,
   pushImportIssue,
 } from '@/lib/server/users/member-import'
+
+// Privilege checks (role === 'admin') live here in the service layer, not in
+// route handlers (repo convention). All functions below use the admin client
+// (bypasses RLS entirely) to read/write public.profiles, so this in-function
+// check is the only authorization guard once RLS is removed as part of the
+// Vercel/Postgres migration — mirrors profiles_admin_insert/update/delete
+// RLS policies (is_admin()). Member self-service profile reads/updates are
+// handled by a separate, non-admin surface and are not affected here.
+function requireAdminSession(session: SessionUser): void {
+  if (session.role !== 'admin') serviceError('Forbidden', 403)
+}
 
 type ProfilesQuery = {
   eq: (column: string, value: unknown) => ProfilesQuery
@@ -246,25 +258,34 @@ async function importMembersFromNormalizedRows(input: {
   }
 }
 
-export async function importMembersFromCsv(input: string): Promise<MemberImportResult> {
+export async function importMembersFromCsv(session: SessionUser, input: string): Promise<MemberImportResult> {
+  requireAdminSession(session)
   const parsed = parseMemberImportCsv(input)
   return importMembersFromNormalizedRows(parsed)
 }
 
-export async function importMembersFromSource(input: {
-  fileName: string
-  contentType?: string | null
-  bytes: Uint8Array
-}): Promise<MemberImportResult> {
+export async function importMembersFromSource(
+  session: SessionUser,
+  input: {
+    fileName: string
+    contentType?: string | null
+    bytes: Uint8Array
+  },
+): Promise<MemberImportResult> {
+  requireAdminSession(session)
   const normalized = await normalizeMemberImportSource(input)
   return importMembersFromNormalizedRows(normalized)
 }
 
-export async function listPaginatedUsers(input: {
-  page: number
-  limit: number
-  search?: string
-}): Promise<PaginatedResponse<User>> {
+export async function listPaginatedUsers(
+  session: SessionUser,
+  input: {
+    page: number
+    limit: number
+    search?: string
+  },
+): Promise<PaginatedResponse<User>> {
+  requireAdminSession(session)
   const page = normalizePage(input.page)
   const limit = normalizeLimit(input.limit)
   const search = input.search?.trim() ?? ''
@@ -298,9 +319,11 @@ export async function listPaginatedUsers(input: {
 }
 
 export async function updateUser(
+  session: SessionUser,
   id: string,
   body: { memberNumber?: unknown; fullName?: unknown; email?: unknown; phone?: unknown; role?: unknown; is_active?: unknown }
 ) {
+  requireAdminSession(session)
   const updates: TablesUpdate<'profiles'> = {}
   let nextMemberNumber: string | null = null
   if (body.memberNumber !== undefined) {
@@ -388,7 +411,8 @@ export async function updateUser(
   return toPublicUser(data as PublicProfileRow)
 }
 
-export async function resetNoShows(id: string) {
+export async function resetNoShows(session: SessionUser, id: string) {
+  requireAdminSession(session)
   const admin = getAdminDb()
   const profiles = admin.from('profiles') as unknown as AdminProfilesTableClient
   const { data: existing, error: selectError } = await profiles
@@ -405,7 +429,8 @@ export async function resetNoShows(id: string) {
   if (error) serviceError('Internal server error', 500)
 }
 
-export async function unblockUser(id: string) {
+export async function unblockUser(session: SessionUser, id: string) {
+  requireAdminSession(session)
   const admin = getAdminDb()
   const profiles = admin.from('profiles') as unknown as AdminProfilesTableClient
   const { data: existing, error: selectError } = await profiles
@@ -422,7 +447,8 @@ export async function unblockUser(id: string) {
   if (error) serviceError('Internal server error', 500)
 }
 
-export async function deleteUser(id: string) {
+export async function deleteUser(session: SessionUser, id: string) {
+  requireAdminSession(session)
   const admin = getAdminDb()
   const profiles = admin.from('profiles') as unknown as AdminProfilesTableClient
   const { data, error } = await profiles

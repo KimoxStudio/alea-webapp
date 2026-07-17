@@ -3,11 +3,22 @@ import { getAdminDb, getDb } from '@/lib/db'
 import { serviceError } from '@/lib/server/shared/service-error'
 import type { Tables } from '@/lib/supabase/types'
 import type { AdminEvent, AdminEventRoomBlock, AdminEventSchedule } from '@/lib/types'
+import type { SessionUser } from '@/lib/server/auth/auth'
 
 export type { AdminEvent, AdminEventRoomBlock, AdminEventSchedule }
 
 type EventRow = Tables<'events'>
 type EventRoomBlockRow = Tables<'event_room_blocks'>
+
+// Privilege checks (role === 'admin') live here in the service layer, not in
+// route handlers (repo convention). These mutations use the admin client
+// (bypasses RLS entirely), so this in-function check is the only
+// authorization guard once RLS is removed as part of the Vercel/Postgres
+// migration — mirrors events_admin_insert/update/delete RLS policies
+// (is_admin()).
+function requireAdminSession(session: SessionUser): void {
+  if (session.role !== 'admin') serviceError('Forbidden', 403)
+}
 
 // ---------------------------------------------------------------------------
 // Shared "is this a club-event (landing) row?" predicate (OIR-203 code
@@ -328,18 +339,22 @@ export async function getEvent(id: string): Promise<AdminEvent> {
   return toAdminEvent(event as EventRow, (blocks ?? []) as EventRoomBlockRow[])
 }
 
-export async function createEvent(body: {
-  title?: unknown
-  description?: unknown
-  schedules?: unknown
-  // Legacy single-block fields (kept for backward compat / existing tests)
-  date?: unknown
-  startTime?: unknown
-  endTime?: unknown
-  roomId?: unknown
-  createdBy?: unknown
-  allDay?: unknown
-}): Promise<AdminEvent> {
+export async function createEvent(
+  session: SessionUser,
+  body: {
+    title?: unknown
+    description?: unknown
+    schedules?: unknown
+    // Legacy single-block fields (kept for backward compat / existing tests)
+    date?: unknown
+    startTime?: unknown
+    endTime?: unknown
+    roomId?: unknown
+    createdBy?: unknown
+    allDay?: unknown
+  },
+): Promise<AdminEvent> {
+  requireAdminSession(session)
   const title = String(body.title ?? '').trim()
   if (!title) serviceError('Title is required', 400)
 
@@ -402,6 +417,7 @@ export async function createEvent(body: {
 }
 
 export async function updateEvent(
+  session: SessionUser,
   id: string,
   body: {
     title?: unknown
@@ -415,6 +431,7 @@ export async function updateEvent(
     allDay?: unknown
   },
 ): Promise<AdminEvent> {
+  requireAdminSession(session)
   const admin = getAdminDb()
 
   // Load current event to fill in any fields not provided in the body
@@ -521,7 +538,8 @@ export async function updateEvent(
   return jsonToAdminEvent(result as Record<string, unknown>)
 }
 
-export async function deleteEvent(id: string): Promise<void> {
+export async function deleteEvent(session: SessionUser, id: string): Promise<void> {
+  requireAdminSession(session)
   const admin = getAdminDb()
 
   const { data: eventData } = await admin

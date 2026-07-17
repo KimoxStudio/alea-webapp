@@ -7,6 +7,17 @@ import { regenerateQrCodes } from '@/lib/server/tables/tables-service'
 import { toGameTable } from '@/lib/server/tables/table-mappers'
 import { getDatabaseNow } from '@/lib/server/shared/database-time'
 import { isPendingReservationExpired } from '@/lib/server/reservations/pending-reservation-expiry'
+import type { SessionUser } from '@/lib/server/auth/auth'
+
+// Privilege checks (role === 'admin') live here in the service layer, not in
+// route handlers (repo convention). These mutations use the admin client
+// (bypasses RLS entirely), so this in-function check is the only
+// authorization guard once RLS is removed as part of the Vercel/Postgres
+// migration — mirrors rooms_admin_insert/update and tables_admin_insert
+// RLS policies (is_admin()).
+function requireAdminSession(session: SessionUser): void {
+  if (session.role !== 'admin') serviceError('Forbidden', 403)
+}
 
 type RoomRow = Tables<'rooms'>
 type TableRow = Tables<'tables'>
@@ -94,7 +105,11 @@ export async function listAllRooms() {
   return ((data ?? []) as RoomRow[]).map(toRoom)
 }
 
-export async function createRoomEntry(body: { name?: unknown; tableCount?: unknown; description?: unknown }) {
+export async function createRoomEntry(
+  session: SessionUser,
+  body: { name?: unknown; tableCount?: unknown; description?: unknown },
+) {
+  requireAdminSession(session)
   const name = String(body.name ?? '').trim()
   if (!name) {
     serviceError('Room name is required', 400)
@@ -128,7 +143,12 @@ export async function createRoomEntry(body: { name?: unknown; tableCount?: unkno
   return toRoom(data as RoomRow)
 }
 
-export async function updateRoom(id: string, body: { name?: unknown; description?: unknown; tableCount?: unknown }) {
+export async function updateRoom(
+  session: SessionUser,
+  id: string,
+  body: { name?: unknown; description?: unknown; tableCount?: unknown },
+) {
+  requireAdminSession(session)
   let tableCount: number | undefined
   if (body.tableCount !== undefined && body.tableCount !== null && body.tableCount !== '') {
     const raw = Number(body.tableCount)
@@ -267,9 +287,11 @@ export async function getRoomTablesAvailability(roomId: string, date?: string | 
 }
 
 export async function createTableEntry(
+  session: SessionUser,
   roomId: string,
   body: { name?: unknown; type?: unknown },
 ) {
+  requireAdminSession(session)
   const name = String(body.name ?? '').trim()
   if (!name) {
     serviceError('Table name is required', 400)
@@ -313,7 +335,7 @@ export async function createTableEntry(
   // If QR generation fails the admin can regenerate later via the dashboard.
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
   if (appUrl) {
-    regenerateQrCodes(tableRow.id).catch((qrErr: unknown) => {
+    regenerateQrCodes(session, tableRow.id).catch((qrErr: unknown) => {
       console.error('[createTableEntry] QR generation failed in background:', qrErr)
     })
   }

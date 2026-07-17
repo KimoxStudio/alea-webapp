@@ -84,7 +84,10 @@ describe('PATCH /api/users/[id]', () => {
     expect(response.status).toBe(200)
     const body = await response.json()
     expect(body).toEqual({ ok: true })
-    expect(resetNoShowsMock).toHaveBeenCalledWith('user-123')
+    expect(resetNoShowsMock).toHaveBeenCalledWith(
+      {id: 'admin-1', role: 'admin'},
+      'user-123'
+    )
     expect(unblockUserMock).not.toHaveBeenCalled()
   })
 
@@ -97,7 +100,10 @@ describe('PATCH /api/users/[id]', () => {
     expect(response.status).toBe(200)
     const body = await response.json()
     expect(body).toEqual({ ok: true })
-    expect(unblockUserMock).toHaveBeenCalledWith('user-456')
+    expect(unblockUserMock).toHaveBeenCalledWith(
+      {id: 'admin-1', role: 'admin'},
+      'user-456'
+    )
     expect(resetNoShowsMock).not.toHaveBeenCalled()
   })
 

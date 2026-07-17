@@ -92,11 +92,14 @@ describe('POST /api/users/import', () => {
     const response = await POST(request)
 
     expect(response.status).toBe(200)
-    expect(importMembersFromSourceMock).toHaveBeenCalledWith(expect.objectContaining({
-      fileName: 'members.csv',
-      contentType: 'text/csv',
-      bytes: expect.any(Uint8Array),
-    }))
+    expect(importMembersFromSourceMock).toHaveBeenCalledWith(
+      { id: 'admin-1', role: 'admin' },
+      expect.objectContaining({
+        fileName: 'members.csv',
+        contentType: 'text/csv',
+        bytes: expect.any(Uint8Array),
+      })
+    )
   })
 
   it('returns 400 when no file is provided', async () => {
@@ -180,9 +183,12 @@ describe('POST /api/users/import', () => {
     }))
 
     expect(response.status).toBe(200)
-    expect(importMembersFromSourceMock).toHaveBeenCalledWith(expect.objectContaining({
-      fileName: 'members.xlsx',
-    }))
+    expect(importMembersFromSourceMock).toHaveBeenCalledWith(
+      { id: 'admin-1', role: 'admin' },
+      expect.objectContaining({
+        fileName: 'members.xlsx',
+      })
+    )
   })
 
   it('returns 400 when source normalization rejects malformed odt input', async () => {

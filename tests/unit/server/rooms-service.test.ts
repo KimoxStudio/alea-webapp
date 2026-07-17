@@ -2,6 +2,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ServiceError } from '@/lib/server/shared/service-error'
 
+type SessionUser = { id: string; role: 'admin' | 'member'; email?: string }
+
+function createAdminSession(): SessionUser {
+  return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
+}
+
+function createMemberSession(): SessionUser {
+  return { id: 'member-1', role: 'member', email: 'member@example.com' }
+}
+
 const maybeSingleMock = vi.fn()
 const listRoomsMock = vi.fn()
 const listTablesMock = vi.fn()
@@ -239,8 +249,9 @@ describe('updateRoom', () => {
       error: null,
     })
     const { updateRoom } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
-    const updated = await updateRoom('1', { tableCount: 5 })
+    const updated = await updateRoom(adminSession, '1', { tableCount: 5 })
 
     expect(updated).not.toBeNull()
     expect(updated?.tableCount).toBe(5)
@@ -248,10 +259,11 @@ describe('updateRoom', () => {
 
   it('throws ServiceError with status 400 when tableCount is not a non-negative integer', async () => {
     const { updateRoom } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
     let caught: ServiceError | undefined
     try {
-      await updateRoom('1', { tableCount: -1 })
+      await updateRoom(adminSession, '1', { tableCount: -1 })
     } catch (err) {
       caught = err as ServiceError
     }
@@ -264,8 +276,9 @@ describe('updateRoom', () => {
 
   it('succeeds when tableCount is not provided (using seed room id "1")', async () => {
     const { updateRoom } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
-    const updated = await updateRoom('1', { name: 'Sala Mirkwood Updated' })
+    const updated = await updateRoom(adminSession, '1', { name: 'Sala Mirkwood Updated' })
 
     expect(updated).not.toBeNull()
     expect(updated?.name).toBe('Sala Mirkwood Updated')
@@ -273,9 +286,10 @@ describe('updateRoom', () => {
 
   it('skips table_count update when tableCount is null', async () => {
     const { updateRoom } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
     // null is treated as "not provided" — should not reset table_count to 0
-    await expect(updateRoom('1', { tableCount: null })).resolves.not.toThrow()
+    await expect(updateRoom(adminSession, '1', { tableCount: null })).resolves.not.toThrow()
     expect(updateMock).toHaveBeenCalledWith(
       expect.not.objectContaining({ table_count: expect.anything() })
     )
@@ -283,9 +297,10 @@ describe('updateRoom', () => {
 
   it('skips table_count update when tableCount is empty string', async () => {
     const { updateRoom } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
     // empty string is treated as "not provided" — should not reset table_count to 0
-    await expect(updateRoom('1', { tableCount: '' })).resolves.not.toThrow()
+    await expect(updateRoom(adminSession, '1', { tableCount: '' })).resolves.not.toThrow()
     expect(updateMock).toHaveBeenCalledWith(
       expect.not.objectContaining({ table_count: expect.anything() })
     )
@@ -297,8 +312,9 @@ describe('updateRoom', () => {
       error: null,
     })
     const { updateRoom } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
-    const updated = await updateRoom('1', { description: null })
+    const updated = await updateRoom(adminSession, '1', { description: null })
 
     expect(updated.description).not.toBe('null')
   })
@@ -309,8 +325,9 @@ describe('updateRoom', () => {
       error: null,
     })
     const { updateRoom } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
-    const updated = await updateRoom('1', { description: undefined })
+    const updated = await updateRoom(adminSession, '1', { description: undefined })
 
     expect(updated.description).not.toBe('null')
   })
@@ -321,8 +338,9 @@ describe('updateRoom', () => {
       error: null,
     })
     const { updateRoom } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
-    const updated = await updateRoom('1', { description: 'New description' })
+    const updated = await updateRoom(adminSession, '1', { description: 'New description' })
 
     expect(updated.description).toBe('New description')
   })
@@ -346,8 +364,9 @@ describe('createTableEntry', () => {
   it('maps a foreign-key violation (23503) to a 400 ServiceError', async () => {
     maybeSingleMock.mockResolvedValue({ data: null, error: { code: '23503', message: 'FK violation' } })
     const { createTableEntry } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
-    await expect(createTableEntry('nonexistent-room', { name: 'Mesa X', type: 'small' })).rejects.toMatchObject({
+    await expect(createTableEntry(adminSession, 'nonexistent-room', { name: 'Mesa X', type: 'small' })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
@@ -355,16 +374,18 @@ describe('createTableEntry', () => {
 
   it('returns the created table on success', async () => {
     const { createTableEntry } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
-    const result = await createTableEntry('1', { name: 'Mesa 1', type: 'small' })
+    const result = await createTableEntry(adminSession, '1', { name: 'Mesa 1', type: 'small' })
 
     expect(result).toMatchObject({ name: 'Mesa 1', type: 'small' })
   })
 
   it('throws 400 when table name is empty', async () => {
     const { createTableEntry } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
-    await expect(createTableEntry('1', { name: '', type: 'small' })).rejects.toMatchObject({
+    await expect(createTableEntry(adminSession, '1', { name: '', type: 'small' })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
@@ -372,8 +393,9 @@ describe('createTableEntry', () => {
 
   it('throws 400 when table type is invalid', async () => {
     const { createTableEntry } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
-    await expect(createTableEntry('1', { name: 'Mesa X', type: 'invalid_type' })).rejects.toMatchObject({
+    await expect(createTableEntry(adminSession, '1', { name: 'Mesa X', type: 'invalid_type' })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
@@ -383,9 +405,10 @@ describe('createTableEntry', () => {
     vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://test.example.com')
     regenerateQrCodesMock.mockRejectedValue(new Error('QR generation failed'))
     const { createTableEntry } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
     // Should not throw even though regenerateQrCodes rejects
-    const result = await createTableEntry('1', { name: 'Mesa 1', type: 'small' })
+    const result = await createTableEntry(adminSession, '1', { name: 'Mesa 1', type: 'small' })
     expect(result).toMatchObject({ name: 'Mesa 1', type: 'small' })
   })
 
@@ -397,9 +420,10 @@ describe('createTableEntry', () => {
     })
     regenerateQrCodesMock.mockReturnValue(qrPromise)
     const { createTableEntry } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
     // Call createTableEntry
-    const resultPromise = createTableEntry('1', { name: 'Mesa 1', type: 'small' })
+    const resultPromise = createTableEntry(adminSession, '1', { name: 'Mesa 1', type: 'small' })
 
     // createTableEntry should resolve immediately without waiting for QR generation
     const result = await resultPromise
@@ -414,8 +438,9 @@ describe('createTableEntry', () => {
     // Task 6: when NEXT_PUBLIC_APP_URL is empty/unset, regenerateQrCodes must NOT be called
     vi.stubEnv('NEXT_PUBLIC_APP_URL', '')
     const { createTableEntry } = await loadRoomsModules()
+    const adminSession = createAdminSession()
 
-    const result = await createTableEntry('1', { name: 'Mesa 1', type: 'small' })
+    const result = await createTableEntry(adminSession, '1', { name: 'Mesa 1', type: 'small' })
 
     expect(result).toMatchObject({ name: 'Mesa 1', type: 'small' })
     expect(regenerateQrCodesMock).not.toHaveBeenCalled()
@@ -464,5 +489,42 @@ describe('getRoomTablesAvailability', () => {
     const availability = await getRoomTablesAvailability('1', '2025-01-01')
 
     expect(availability.t3?.top?.some((slot) => slot.startTime === '10:00' && !slot.available)).toBe(true)
+  })
+})
+
+describe('Member-role session denial for requireAdminSession', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+  })
+
+  it('createRoomEntry throws 403 when session role is member', async () => {
+    const { createRoomEntry } = await loadRoomsModules()
+    const memberSession = createMemberSession()
+
+    await expect(createRoomEntry(memberSession, { name: 'New Room', tableCount: 5 })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
+  })
+
+  it('updateRoom throws 403 when session role is member', async () => {
+    const { updateRoom } = await loadRoomsModules()
+    const memberSession = createMemberSession()
+
+    await expect(updateRoom(memberSession, '1', { name: 'Updated Room' })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
+  })
+
+  it('createTableEntry throws 403 when session role is member', async () => {
+    const { createTableEntry } = await loadRoomsModules()
+    const memberSession = createMemberSession()
+
+    await expect(createTableEntry(memberSession, '1', { name: 'Mesa X', type: 'small' })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
   })
 })

@@ -1,5 +1,14 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SessionUser } from '@/lib/server/auth/auth'
+
+function createAdminSession(): SessionUser {
+  return { id: 'admin-1', role: 'admin', email: 'admin@example.com' }
+}
+
+function createMemberSession(): SessionUser {
+  return { id: 'member-1', role: 'member', email: 'member@example.com' }
+}
 
 const maybeSingleMock = vi.fn()
 const rangeMock = vi.fn()
@@ -139,25 +148,28 @@ describe('listPaginatedUsers', () => {
   })
 
   it('clamps page=0 to 1', async () => {
+    const adminSession = createAdminSession()
     const { listPaginatedUsers } = await loadUsersModules()
 
-    const result = await listPaginatedUsers({ page: 0, limit: 10 })
+    const result = await listPaginatedUsers(adminSession, { page: 0, limit: 10 })
 
     expect(result.page).toBe(1)
   })
 
   it('clamps page=-5 to 1', async () => {
+    const adminSession = createAdminSession()
     const { listPaginatedUsers } = await loadUsersModules()
 
-    const result = await listPaginatedUsers({ page: -5, limit: 10 })
+    const result = await listPaginatedUsers(adminSession, { page: -5, limit: 10 })
 
     expect(result.page).toBe(1)
   })
 
   it('clamps limit=0 to default and totalPages is not Infinity', async () => {
+    const adminSession = createAdminSession()
     const { listPaginatedUsers } = await loadUsersModules()
 
-    const result = await listPaginatedUsers({ page: 1, limit: 0 })
+    const result = await listPaginatedUsers(adminSession, { page: 1, limit: 0 })
 
     // limit=0 is treated as missing and falls back to the internal default (20)
     // The key invariant: totalPages must never be Infinity
@@ -166,81 +178,100 @@ describe('listPaginatedUsers', () => {
   })
 
   it('clamps limit=-10 to 1', async () => {
+    const adminSession = createAdminSession()
     const { listPaginatedUsers } = await loadUsersModules()
 
-    const result = await listPaginatedUsers({ page: 1, limit: -10 })
+    const result = await listPaginatedUsers(adminSession, { page: 1, limit: -10 })
 
     expect(result.limit).toBe(1)
   })
 
   it('clamps limit=200 to 100', async () => {
+    const adminSession = createAdminSession()
     const { listPaginatedUsers } = await loadUsersModules()
 
-    const result = await listPaginatedUsers({ page: 1, limit: 200 })
+    const result = await listPaginatedUsers(adminSession, { page: 1, limit: 200 })
 
     expect(result.limit).toBe(100)
   })
 
   it('returns limit=50 as-is when within bounds', async () => {
+    const adminSession = createAdminSession()
     const { listPaginatedUsers } = await loadUsersModules()
 
-    const result = await listPaginatedUsers({ page: 1, limit: 50 })
+    const result = await listPaginatedUsers(adminSession, { page: 1, limit: 50 })
 
     expect(result.limit).toBe(50)
   })
 
   it('filters by memberNumber substring case-insensitively', async () => {
+    const adminSession = createAdminSession()
     const { listPaginatedUsers } = await loadUsersModules()
 
-    await listPaginatedUsers({ page: 1, limit: 10, search: 'ADMIN' })
+    await listPaginatedUsers(adminSession, { page: 1, limit: 10, search: 'ADMIN' })
 
     expect(orMock).toHaveBeenCalledWith('member_number.ilike.%ADMIN%,full_name.ilike.%ADMIN%,email.ilike.%ADMIN%')
     expect(capturedOrFilter).toBe('member_number.ilike.%ADMIN%,full_name.ilike.%ADMIN%,email.ilike.%ADMIN%')
   })
 
   it('filters by memberNumber substring', async () => {
+    const adminSession = createAdminSession()
     const { listPaginatedUsers } = await loadUsersModules()
 
     // seed member has memberNumber '100002'
-    const result = await listPaginatedUsers({ page: 1, limit: 10, search: '100002' })
+    const result = await listPaginatedUsers(adminSession, { page: 1, limit: 10, search: '100002' })
 
     expect(result.data.length).toBeGreaterThan(0)
     expect(orMock).toHaveBeenCalledWith('member_number.ilike.%100002%,full_name.ilike.%100002%,email.ilike.%100002%')
   })
 
   it('filters by full name substring', async () => {
+    const adminSession = createAdminSession()
     const { listPaginatedUsers } = await loadUsersModules()
 
-    const result = await listPaginatedUsers({ page: 1, limit: 10, search: 'member user' })
+    const result = await listPaginatedUsers(adminSession, { page: 1, limit: 10, search: 'member user' })
 
     expect(result.data).toHaveLength(1)
     expect(result.data[0]?.id).toBe('2')
   })
 
   it('filters by email substring', async () => {
+    const adminSession = createAdminSession()
     const { listPaginatedUsers } = await loadUsersModules()
 
-    const result = await listPaginatedUsers({ page: 1, limit: 10, search: 'admin@alea.club' })
+    const result = await listPaginatedUsers(adminSession, { page: 1, limit: 10, search: 'admin@alea.club' })
 
     expect(result.data).toHaveLength(1)
     expect(result.data[0]?.id).toBe('1')
   })
 
   it('returns all users when search is empty', async () => {
+    const adminSession = createAdminSession()
     const { listPaginatedUsers } = await loadUsersModules()
 
-    const all = await listPaginatedUsers({ page: 1, limit: 100 })
-    const withEmpty = await listPaginatedUsers({ page: 1, limit: 100, search: '' })
+    const all = await listPaginatedUsers(adminSession, { page: 1, limit: 100 })
+    const withEmpty = await listPaginatedUsers(adminSession, { page: 1, limit: 100, search: '' })
 
     expect(withEmpty.total).toBe(all.total)
   })
 
   it('does not filter out suspended users from the admin listing', async () => {
+    const adminSession = createAdminSession()
     const { listPaginatedUsers } = await loadUsersModules()
 
-    await listPaginatedUsers({ page: 1, limit: 10 })
+    await listPaginatedUsers(adminSession, { page: 1, limit: 10 })
 
     expect(eqMock).not.toHaveBeenCalledWith('is_active', true)
+  })
+
+  it('throws Forbidden when called by non-admin', async () => {
+    const memberSession = createMemberSession()
+    const { listPaginatedUsers } = await loadUsersModules()
+
+    await expect(listPaginatedUsers(memberSession, { page: 1, limit: 10 })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
   })
 })
 
@@ -284,27 +315,30 @@ describe('updateUser', () => {
 
   it('returns the updated public user payload for the correct user id', async () => {
     await mockAdminClientForUpdateUser()
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    const updated = await updateUser('2', { role: 'member' })
+    const updated = await updateUser(adminSession, '2', { role: 'member' })
 
     expect(updated.id).toBe('2')
     expect(updated.id).not.toBe('1')
   })
 
   it('throws 400 when no updatable fields are provided', async () => {
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', {})).rejects.toMatchObject({
+    await expect(updateUser(adminSession, '1', {})).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
   })
 
   it('throws 400 when memberNumber exceeds 10 digits', async () => {
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', { memberNumber: '1'.repeat(11) })).rejects.toMatchObject({
+    await expect(updateUser(adminSession, '1', { memberNumber: '1'.repeat(11) })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
@@ -312,32 +346,36 @@ describe('updateUser', () => {
 
   it('accepts memberNumber of exactly 10 digits', async () => {
     await mockAdminClientForUpdateUser()
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', { memberNumber: '1'.repeat(10) })).resolves.toBeDefined()
+    await expect(updateUser(adminSession, '1', { memberNumber: '1'.repeat(10) })).resolves.toBeDefined()
   })
 
   it('throws 400 when memberNumber contains non-numeric characters', async () => {
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', { memberNumber: 'abc12' })).rejects.toMatchObject({
+    await expect(updateUser(adminSession, '1', { memberNumber: 'abc12' })).rejects.toMatchObject({
       statusCode: 400,
     })
   })
 
   it('throws 400 when memberNumber is null (coerced to string "null")', async () => {
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', { memberNumber: null as unknown as string })).rejects.toMatchObject({
+    await expect(updateUser(adminSession, '1', { memberNumber: null as unknown as string })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
   })
 
   it('throws 400 when memberNumber is an empty string', async () => {
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', { memberNumber: '' })).rejects.toMatchObject({
+    await expect(updateUser(adminSession, '1', { memberNumber: '' })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
@@ -345,9 +383,10 @@ describe('updateUser', () => {
 
   it('accepts memberNumber of single digit zero', async () => {
     await mockAdminClientForUpdateUser()
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', { memberNumber: '0' })).resolves.toBeDefined()
+    await expect(updateUser(adminSession, '1', { memberNumber: '0' })).resolves.toBeDefined()
   })
 
   it('accepts is_active boolean and includes it in the update', async () => {
@@ -373,9 +412,10 @@ describe('updateUser', () => {
       })),
       auth: { admin: { deleteUser: deleteUserMock, updateUserById: updateAuthUserByIdMock } },
     } as never)
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await updateUser('1', { is_active: false })
+    await updateUser(adminSession, '1', { is_active: false })
 
     expect(capturedUpdates).toMatchObject({ is_active: false })
   })
@@ -403,9 +443,10 @@ describe('updateUser', () => {
       })),
       auth: { admin: { deleteUser: deleteUserMock, updateUserById: updateAuthUserByIdMock } },
     } as never)
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await updateUser('1', { fullName: 'Updated User', email: 'updated@alea.club', phone: '699000111' })
+    await updateUser(adminSession, '1', { fullName: 'Updated User', email: 'updated@alea.club', phone: '699000111' })
 
     expect(capturedUpdates).toMatchObject({
       full_name: 'Updated User',
@@ -437,9 +478,10 @@ describe('updateUser', () => {
       })),
       auth: { admin: { deleteUser: deleteUserMock, updateUserById: updateAuthUserByIdMock } },
     } as never)
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await updateUser('1', { memberNumber: '100123' })
+    await updateUser(adminSession, '1', { memberNumber: '100123' })
 
     expect(capturedUpdates).toMatchObject({
       member_number: '100123',
@@ -449,18 +491,20 @@ describe('updateUser', () => {
   })
 
   it('rejects blank fullName updates', async () => {
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', { fullName: '   ' })).rejects.toMatchObject({
+    await expect(updateUser(adminSession, '1', { fullName: '   ' })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
     })
   })
 
   it('rejects non-string email updates', async () => {
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', { email: { bad: true } })).rejects.toMatchObject({
+    await expect(updateUser(adminSession, '1', { email: { bad: true } })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
       message: 'Email must be a string or null',
@@ -468,9 +512,10 @@ describe('updateUser', () => {
   })
 
   it('rejects non-string phone updates', async () => {
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', { phone: ['699000111'] })).rejects.toMatchObject({
+    await expect(updateUser(adminSession, '1', { phone: ['699000111'] })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
       message: 'Phone must be a string or null',
@@ -478,11 +523,22 @@ describe('updateUser', () => {
   })
 
   it('rejects is_active when provided as a non-boolean string', async () => {
+    const adminSession = createAdminSession()
     const { updateUser } = await loadUsersModules()
 
-    await expect(updateUser('1', { is_active: 'false' })).rejects.toMatchObject({
+    await expect(updateUser(adminSession, '1', { is_active: 'false' })).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 400,
+    })
+  })
+
+  it('throws Forbidden when called by non-admin', async () => {
+    const memberSession = createMemberSession()
+    const { updateUser } = await loadUsersModules()
+
+    await expect(updateUser(memberSession, '1', { fullName: 'New Name' })).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
     })
   })
 })
@@ -495,10 +551,21 @@ describe('deleteUser', () => {
   })
 
   it('deletes the auth user after confirming the profile exists', async () => {
+    const adminSession = createAdminSession()
     const { deleteUser } = await loadUsersModules()
 
-    await expect(deleteUser('1')).resolves.toBeUndefined()
+    await expect(deleteUser(adminSession, '1')).resolves.toBeUndefined()
     expect(deleteUserMock).toHaveBeenCalledWith('1')
+  })
+
+  it('throws Forbidden when called by non-admin', async () => {
+    const memberSession = createMemberSession()
+    const { deleteUser } = await loadUsersModules()
+
+    await expect(deleteUser(memberSession, '1')).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
+    })
   })
 })
 
@@ -530,9 +597,10 @@ describe('resetNoShows', () => {
       })),
       auth: { admin: { deleteUser: deleteUserMock } },
     } as never)
+    const adminSession = createAdminSession()
     const { resetNoShows } = await loadUsersModules()
 
-    await resetNoShows('user-123')
+    await resetNoShows(adminSession, 'user-123')
 
     expect(capturedUpdates).toEqual({ no_show_count: 0, blocked_until: null })
   })
@@ -554,11 +622,22 @@ describe('resetNoShows', () => {
       })),
       auth: { admin: { deleteUser: deleteUserMock } },
     } as never)
+    const adminSession = createAdminSession()
     const { resetNoShows } = await loadUsersModules()
 
-    await expect(resetNoShows('user-123')).rejects.toMatchObject({
+    await expect(resetNoShows(adminSession, 'user-123')).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 500,
+    })
+  })
+
+  it('throws Forbidden when called by non-admin', async () => {
+    const memberSession = createMemberSession()
+    const { resetNoShows } = await loadUsersModules()
+
+    await expect(resetNoShows(memberSession, 'user-123')).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
     })
   })
 })
@@ -591,9 +670,10 @@ describe('unblockUser', () => {
       })),
       auth: { admin: { deleteUser: deleteUserMock } },
     } as never)
+    const adminSession = createAdminSession()
     const { unblockUser } = await loadUsersModules()
 
-    await unblockUser('user-456')
+    await unblockUser(adminSession, 'user-456')
 
     expect(capturedUpdates).toEqual({ blocked_until: null })
   })
@@ -615,11 +695,22 @@ describe('unblockUser', () => {
       })),
       auth: { admin: { deleteUser: deleteUserMock } },
     } as never)
+    const adminSession = createAdminSession()
     const { unblockUser } = await loadUsersModules()
 
-    await expect(unblockUser('user-456')).rejects.toMatchObject({
+    await expect(unblockUser(adminSession, 'user-456')).rejects.toMatchObject({
       name: 'ServiceError',
       statusCode: 500,
+    })
+  })
+
+  it('throws Forbidden when called by non-admin', async () => {
+    const memberSession = createMemberSession()
+    const { unblockUser } = await loadUsersModules()
+
+    await expect(unblockUser(memberSession, 'user-456')).rejects.toMatchObject({
+      name: 'ServiceError',
+      statusCode: 403,
     })
   })
 })
