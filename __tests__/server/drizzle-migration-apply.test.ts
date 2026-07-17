@@ -132,6 +132,27 @@ describe.skipIf(SKIP_TESTS)(
       })
 
       await client.connect()
+
+      // Apply migrations ONCE in setup to provide a consistent baseline for all assertions
+      // Migrations contain non-idempotent DDL (CREATE TYPE, CREATE TABLE without IF NOT EXISTS),
+      // so we apply them once upfront rather than repeatedly per test scenario.
+      // All subsequent tests verify the resulting schema state.
+      const migration0000 = readMigration('0000_fine_magma.sql')
+      const migration0001 = readMigration('0001_exclusion_constraints.sql')
+
+      const stmts0000 = parseMigrationStatements(migration0000)
+      const stmts0001 = parseMigrationStatements(migration0001)
+
+      for (const stmt of stmts0000) {
+        if (stmt.trim().length > 0) {
+          await client.query(stmt)
+        }
+      }
+      for (const stmt of stmts0001) {
+        if (stmt.trim().length > 0) {
+          await client.query(stmt)
+        }
+      }
     })
 
     afterAll(async () => {
@@ -153,19 +174,7 @@ describe.skipIf(SKIP_TESTS)(
       })
     })
 
-    describe('Migration 0000_fine_magma.sql application', () => {
-      it('applies without error', async () => {
-        const migration0000 = readMigration('0000_fine_magma.sql')
-        const statements = parseMigrationStatements(migration0000)
-
-        // Apply each statement in order
-        for (const stmt of statements) {
-          if (stmt.trim().length > 0) {
-            await expect(client.query(stmt)).resolves.not.toThrow()
-          }
-        }
-      })
-
+    describe('Migration 0000_fine_magma.sql validation', () => {
       it('creates pgcrypto extension successfully', async () => {
         const result = await client.query(
           `SELECT EXISTS (
@@ -251,19 +260,7 @@ describe.skipIf(SKIP_TESTS)(
       })
     })
 
-    describe('Migration 0001_exclusion_constraints.sql application', () => {
-      it('applies without error', async () => {
-        const migration0001 = readMigration('0001_exclusion_constraints.sql')
-        const statements = parseMigrationStatements(migration0001)
-
-        // Apply each statement in order
-        for (const stmt of statements) {
-          if (stmt.trim().length > 0) {
-            await expect(client.query(stmt)).resolves.not.toThrow()
-          }
-        }
-      })
-
+    describe('Migration 0001_exclusion_constraints.sql validation', () => {
       it('creates btree_gist extension', async () => {
         const result = await client.query(
           `SELECT EXISTS (
@@ -319,26 +316,6 @@ describe.skipIf(SKIP_TESTS)(
     })
 
     describe('Schema consistency and type safety', () => {
-      it('both migrations can be applied in order without error', async () => {
-        // This is the key validation: migrations apply cleanly, in order
-        const migration0000 = readMigration('0000_fine_magma.sql')
-        const migration0001 = readMigration('0001_exclusion_constraints.sql')
-
-        const stmts0000 = parseMigrationStatements(migration0000)
-        const stmts0001 = parseMigrationStatements(migration0001)
-
-        for (const stmt of stmts0000) {
-          if (stmt.trim().length > 0) {
-            await expect(client.query(stmt)).resolves.not.toThrow()
-          }
-        }
-        for (const stmt of stmts0001) {
-          if (stmt.trim().length > 0) {
-            await expect(client.query(stmt)).resolves.not.toThrow()
-          }
-        }
-      })
-
       it('pgcrypto is available before gen_random_uuid() usage in 0000', async () => {
         // Verify pgcrypto was created (necessary precondition for gen_random_uuid)
         const result = await client.query(
