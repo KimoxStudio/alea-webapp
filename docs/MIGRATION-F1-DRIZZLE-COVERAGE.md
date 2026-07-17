@@ -1,7 +1,7 @@
 # F1: Drizzle schema coverage report (KIM-417)
 
 **Status:** Schema authored, not applied to any database. Part of the Supabase → Neon
-migration (see `docs/MIGRATION-supabase-to-neon.md`, phase F1). This is a companion
+migration (see Linear KIM-393..422, Supabase→Neon migration, phase F1). This is a companion
 document to `lib/db/schema/*.ts` and `lib/db/migrations/*.sql`.
 
 **Scope of this issue:** translate the 85 Supabase SQL migrations in `supabase/migrations/`
@@ -272,7 +272,7 @@ for completeness/audit only.
   (`INSERT INTO storage.buckets ...`, public read, 5 MB limit, image mime types
   only) with `landing_media_select_public` policy (`anon`+`authenticated` SELECT).
 - Supabase Storage has no Drizzle/Neon equivalent — this is F3's job (Vercel Blob
-  migration, see `docs/MIGRATION-supabase-to-neon.md`), not F1.
+  migration, see Linear KIM-393..422, Supabase→Neon migration), not F1.
 
 ## 4. Exclusion constraints (Drizzle limitation)
 
@@ -401,7 +401,7 @@ not part of this issue).
    `events.created_by` originally only had an `auth.users` FK (no `profiles` FK
    existed) — this schema **redirects** it to `profiles(id) ON DELETE SET NULL`
    instead of dropping it outright, since `profiles` becomes the durable identity
-   table under the target Auth.js stack (per `docs/MIGRATION-supabase-to-neon.md`,
+   table under the target Auth.js stack (per Linear KIM-393..422, Supabase→Neon migration,
    F2: "copy bcrypt hashes ... to profiles.password_hash"). **Reviewer should
    double-check**: this assumes `profiles` remains the single source of truth for
    user identity post-cutover; if KIM-416 (Auth.js) introduces a separate `users`
@@ -447,7 +447,7 @@ not part of this issue).
 ## 8. What a human reviewer should double-check before this schema is applied to Neon
 
 1. **Do not run this against a real database** without a full read of
-   `docs/MIGRATION-supabase-to-neon.md` F2 plan first — this issue is schema
+   the Linear KIM-393..422 F2 plan first — this issue is schema
    authoring only (`drizzle-kit generate`, no `push`/`migrate` was run).
 2. Confirm the `auth.users` FK removal/redirect decisions in §7.1 match whatever
    KIM-416 (Auth.js) actually builds for user identity — if it diverges from

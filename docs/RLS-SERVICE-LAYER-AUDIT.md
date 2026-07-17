@@ -1,7 +1,7 @@
 # RLS → Service-Layer Audit (KIM-418)
 
 Migration context: Phase F1 of the Supabase → Vercel/Postgres migration (see
-`docs/MIGRATION-supabase-to-neon.md`). RLS is planned for removal in a later
+Linear KIM-393..422, Supabase→Neon migration). RLS is planned for removal in a later
 phase; several service files already document this explicitly (e.g.
 `lib/server/reservations-service.ts`, `lib/server/saved-games-service.ts`).
 Since most reads/writes already go through `getAdminDb()` (the RLS-bypassing

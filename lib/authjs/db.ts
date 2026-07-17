@@ -3,7 +3,7 @@ import { Pool } from 'pg'
 
 /**
  * lib/authjs/db — direct Postgres connection helper for the Auth.js (NextAuth v5)
- * scaffolding introduced in F1 (see docs/MIGRATION-supabase-to-neon.md).
+ * scaffolding introduced in F1 (see Linear KIM-393..422, Supabase→Neon migration).
  *
  * This is intentionally NOT the same seam as `lib/db` (which still wraps the
  * existing Supabase client for the live GoTrue-based auth flow). Auth.js is

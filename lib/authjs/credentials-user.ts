@@ -20,7 +20,7 @@ interface ProfileRow {
  * verifies the supplied password against `profiles.password_hash`.
  *
  * `password_hash` is expected to be bcryptjs-compatible — see the F2
- * cutover note in docs/MIGRATION-supabase-to-neon.md, which copies hashes
+ * cutover note in Linear KIM-393..422 (Supabase→Neon migration), which copies hashes
  * straight from `auth.users.encrypted_password` with no re-hash.
  *
  * NOTE: `profiles.password_hash` now exists in the F1 Drizzle schema

@@ -11,7 +11,7 @@ import type {
  * lib/storage/qr/vercel-blob — Vercel Blob-backed implementation of the same
  * seam interface exposed by lib/storage/qr/index.ts.
  *
- * This is an F3 parallel-buildable scaffold (see docs/MIGRATION-supabase-to-neon.md):
+ * This is an F3 parallel-buildable scaffold (see Linear KIM-393..422, Supabase→Neon migration):
  * it implements the storage seam's exact function signatures
  * (`uploadToStorage`, `getPublicStorageUrl`, `removeFromStorage`) against
  * Vercel Blob so a later, explicit cutover step can swap the active backend
