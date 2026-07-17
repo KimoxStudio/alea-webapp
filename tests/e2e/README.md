@@ -1,6 +1,6 @@
 # Alea — Reservation E2E Runners
 
-Standalone Node.js/Playwright scripts that validate the reservation system end-to-end against a running dev server. They are **not** picked up by Vitest (which only scans `__tests__/**`).
+Standalone Node.js/Playwright scripts that validate the reservation system end-to-end against a running dev server. They are **not** picked up by Vitest (which only scans `tests/unit/**`).
 
 ---
 
@@ -8,16 +8,12 @@ Standalone Node.js/Playwright scripts that validate the reservation system end-t
 
 ### 1. Install dependencies
 
-The runners need `playwright` and `dotenv`. Install them locally in this directory or use the repo devDependencies:
+`playwright` and `dotenv` are root devDependencies (there is no standalone `package.json` under `tests/e2e/`). Install them from the repo root with pnpm:
 
 ```bash
-# From repo root (if playwright/dotenv are already devDeps):
+# From repo root:
 pnpm install
-
-# Or install locally inside qa/e2e/:
-cd qa/e2e
-npm install playwright dotenv
-npx playwright install chromium
+pnpm exec playwright install chromium
 ```
 
 ### 2. Environment variables
@@ -60,10 +56,10 @@ Wait until the server is ready (you should see "Ready in Xs" in the terminal), t
 From the repo root (each runner resolves `.env.e2e.local` relative to its own file location):
 
 ```bash
-node qa/e2e/qa-reservation-lifecycle.mjs
-node qa/e2e/qa-reservation-cancellation.mjs
-node qa/e2e/qa-no-show-expiry.mjs
-node qa/e2e/qa-reservation-equipment.mjs
+node tests/e2e/runners/qa-reservation-lifecycle.mjs
+node tests/e2e/runners/qa-reservation-cancellation.mjs
+node tests/e2e/runners/qa-no-show-expiry.mjs
+node tests/e2e/runners/qa-reservation-equipment.mjs
 ```
 
 Each runner prints a JSON summary: `{ summary: { passed, total }, checks: [...] }` and exits 0 on success, non-zero on failure.
@@ -109,4 +105,4 @@ Equipment conflict and validation:
 - The runners refuse to start unless `E2E_ALLOW_DESTRUCTIVE=1` is present in `.env.e2e.local`.
 - All runners clean up only the exact DB fixture IDs they created in the `finally` block.
 - Time-sensitive checks (check-in window, cancellation cutoff) are skipped gracefully if the time of day makes the fixture impossible.
-- Screenshots or videos generated during a run are gitignored (`qa/e2e/*.png`, `*.webm`, `*.pdf`).
+- Screenshots or videos generated during a run are gitignored, including inside `tests/e2e/runners/` (`tests/e2e/**/*.png`, `*.webm`, `*.pdf`).

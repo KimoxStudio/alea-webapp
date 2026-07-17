@@ -259,8 +259,8 @@ export function validateAndNormaliseSchedule(
 // or hook consumes app/api/events/route.ts or app/api/events/[id]/route.ts
 // anymore (verified: no references to the use-admin.ts event hooks outside
 // that hook file and its tests). Those routes — and these functions — are
-// intentionally NOT removed here because __tests__/app/api/events.test.ts
-// and __tests__/server/events-service.test.ts (and
+// intentionally NOT removed here because tests/unit/app/api/events.test.ts
+// and tests/unit/server/events-service.test.ts (and
 // events-service-multiday.test.ts) exercise them directly and test edits are
 // out of scope for this change. Divergence risk: a unified internal event
 // (both title_es/title_en NULL, created via the unified admin flow) remains

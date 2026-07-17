@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 // no dashboard component or hook consumes POST/GET here anymore (the legacy
 // "internal events" admin section was replaced by the unified Eventos flow
 // in lib/server/events/club-events-service.ts, driven by lib/hooks/use-admin.ts's
-// club-event hooks). Kept only because __tests__/app/api/events.test.ts
+// club-event hooks). Kept only because tests/unit/app/api/events.test.ts
 // imports GET/POST from this exact file directly and cannot be edited as
 // part of this change. Divergence risk: createEvent still writes a plain
 // internal event indistinguishable from a unified "visibleOnLanding: false"

@@ -89,7 +89,7 @@ alea-webapp/
 ├── supabase/                   # Supabase project config
 │   ├── config.toml             # Local dev config
 │   └── migrations/             # SQL migration files (versioned)
-└── __tests__/                  # Integration and unit tests
+└── tests/unit/                  # Integration and unit tests
 ```
 
 ---
@@ -296,7 +296,7 @@ This reapplies all migrations and the local QA seed in `supabase/seed.sql`.
 
 ## Testing
 
-Tests live in `__tests__/`. Vitest + React Testing Library is used for unit and component tests.
+Tests live in `tests/unit/`. Vitest + React Testing Library is used for unit and component tests.
 
 ```bash
 pnpm test          # run all tests once
