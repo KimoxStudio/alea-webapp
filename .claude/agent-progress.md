@@ -1518,3 +1518,11 @@ No blocking issues. No modifications needed. Code is ready for security-reviewer
 - Ran pnpm install (worktree had no node_modules), pnpm typecheck (clean), pnpm lint (clean, no warnings/errors), pnpm build (clean, exit 0).
 - Replied to PR #171 inline comment 3599393719 individually, marked ✅.
 - ✅ Complete — docs-only fix, committed and pushed.
+
+#### [rebase-f2-cutover] software-engineer — Rebase migration-f2-cutover-runbook onto develop (post PR #169/#170 merge)
+- [01:35] Started: rebasing migration-f2-cutover-runbook (21b884f, 7 commits) onto origin/develop (cf5a15a, includes merged PR #167/#169/#170) to resolve conflicts blocking PR #171.
+- [01:38] Conflict found: `.claude/agent-progress.md` on commit 1/7 (`6ac6fde` — an earlier "reconcile agent-progress.md" commit already on this branch). Single append-only conflict region resolved via union/concatenation of both sides (HEAD's develop-side entries followed by this branch's entries) — no entries dropped, just conflict markers removed. Remaining 6 commits applied cleanly with no further conflicts.
+- [01:38] `package.json`/`pnpm-lock.yaml`: no conflict — this branch only adds an npm script (`cutover:rehearsal`), no new dependencies, so nothing to merge/regenerate; `pnpm install` confirms lockfile already consistent (zero diff vs develop).
+- [01:40] Checked `docs/CUTOVER-RUNBOOK-F2.md` for stale cross-references per task instructions: found the header line claimed "All three PRs [#168/#169/#170] are open, not yet merged, as of this writing" — now stale since PR #169 and #170 are merged into develop (only #168 remains open). Updated that sentence for accuracy; no other stale references found (checklist items and step-by-step language already conditional/precondition-style, unaffected by merge status). Committed separately (657b1d2).
+- [01:45] Validation: `pnpm install` ✅ (lockfile unchanged), `pnpm run typecheck` ✅ (clean), `pnpm run lint` ✅ (no warnings/errors), `pnpm exec vitest run` ✅ (74 files / 1105 tests passed, 21 skipped — including the previously-flaky `__tests__/server/availability.test.ts`, which passed cleanly this run, no timezone flake encountered), `pnpm run build` ✅ (all routes generated, exit 0).
+- [01:46] Pushing rebased branch to origin/migration-f2-cutover-runbook with `--force-with-lease` (rebase rewrites history).
