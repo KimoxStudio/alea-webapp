@@ -3,7 +3,7 @@ import 'server-only'
 /**
  * lib/auth/session — single seam for Supabase Auth session/user operations.
  *
- * This is an F0 abstraction seam (see docs/MIGRATION-supabase-to-neon.md):
+ * This is an F0 abstraction seam (see Linear KIM-393..422, Supabase→Neon migration):
  * it introduces indirection with zero behavior change so a later phase (F1)
  * can swap the underlying implementation (Supabase Auth -> Auth.js) without
  * touching call sites again. For F0 this is intentionally a thin wrapper

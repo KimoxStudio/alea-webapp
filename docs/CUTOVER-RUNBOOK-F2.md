@@ -1,7 +1,7 @@
 # F2 Cutover Runbook — Supabase → Neon (via Vercel Postgres) + Auth.js
 
 **Status:** Prep artifact only — not yet executed.
-**Related plan:** `docs/MIGRATION-supabase-to-neon.md` (phase F2, issues #12/#13 in that plan's table; tracked as KIM-419/KIM-420).
+**Related plan:** Linear KIM-393..422, Supabase→Neon migration (phase F2, tracked as KIM-419/KIM-420).
 **Depends on:** F1 sign-off — the RLS → service-layer parity gate (`docs/RLS-SERVICE-LAYER-AUDIT.md`, PR #168), Drizzle schema (`lib/db/schema/`, PR #169), and Auth.js scaffold (`lib/authjs/`, PR #170). **PR #169 and PR #170 have been merged into `develop`; PR #168 (RLS → service-layer parity gate) is still open, not yet merged, as of this writing.**
 
 ---
@@ -21,7 +21,7 @@ If you are an agent reading this document: you may read, extend, and rehearse ag
 ## 1. Preconditions (must all be true before scheduling a real cutover)
 
 - [ ] F1 PRs (#168 RLS→service-layer audit, #169 Drizzle schema, #170 Auth.js) are merged to `develop`.
-- [ ] The RLS → service-layer parity gate (`docs/MIGRATION-supabase-to-neon.md`, "RLS → service-layer parity gate") is fully signed off: all 48 active RLS policies (audited count, PR #168 — supersedes the earlier 30-policy planning estimate in `docs/MIGRATION-supabase-to-neon.md`) enumerated, mapped 1:1 to service-layer checks, and covered by owner/admin/cross-tenant-denial tests — all green.
+- [ ] The RLS → service-layer parity gate (Linear KIM-393..422, "RLS → service-layer parity gate") is fully signed off: all 48 active RLS policies (audited count, PR #168 — supersedes the earlier 30-policy planning estimate) enumerated, mapped 1:1 to service-layer checks, and covered by owner/admin/cross-tenant-denial tests — all green.
 - [ ] The `profiles.password_hash` column exists in the target Drizzle schema (`lib/db/schema/profiles.ts`) and its type/nullability matches what `lib/authjs/credentials-user.ts` expects. **PR #169 now defines this column (`passwordHash: text('password_hash')` in `lib/db/schema/profiles.ts`, and `"password_hash" text` in the generated migration SQL), so the schema/auth contract is resolved and the column is no longer missing.** It remains unpopulated with real data until step 2.3 below actually copies the bcrypt hashes over during the real F2 cutover. Verify this precondition by confirming the column is still present in the merged schema (e.g. `grep passwordHash lib/db/schema/profiles.ts` or the generated migration SQL) before scheduling a real cutover.
 - [ ] A **rehearsal against a disposable/local throwaway Postgres** (not just the synthetic-fixture rehearsal in this repo) has been run at least once, using a realistic-shape copy of schema + anonymized/synthetic data, and produced a clean pass.
 - [ ] `POSTGRES_URL` / `POSTGRES_URL_NON_POOLING` for the target Neon/Vercel Postgres database exist and have been verified reachable (by the user, out of band — never pasted into chat or committed).
@@ -140,7 +140,7 @@ The cutover is designed so that **Supabase remains untouched (frozen, not delete
 2. **If the failure is caught during/after step 2.4 (flag already flipped):** flip the runtime flag back to the Supabase-Auth-backed path immediately. Since Supabase was never written to after the freeze in 2.1, and never decommissioned, this restores full pre-cutover functionality with no data loss — any writes that happened against Neon during the failed window are simply not carried back (they only existed in the new backend, which is now inactive again).
 3. **If the failure is caught after step 2.5 (sessions already invalidated) and rollback to Supabase-Auth is needed:** users will need to log in again against the restored Supabase-Auth path too (their old Supabase session cookies, if still present, may or may not still be valid depending on how long the window was — treat this the same as a normal rollback needing re-auth, per `docs/ROLLBACK.md`'s `AUTH_SESSION_SECRET` guidance pattern, applied here to the Supabase-Auth cookie instead).
 4. **Communicate** the rollback to users the same way the cutover itself would have been communicated (brief downtime / please log in again).
-5. **Do not decommission or delete the Supabase project** until the team has run the full post-cutover verification checklist (section 3) successfully and is confident enough not to need rollback again. Freeze-but-keep is the safe default; irreversible teardown is out of scope for this runbook (see F4 in `docs/MIGRATION-supabase-to-neon.md`, "remove Supabase deps/dirs", which only happens after F2 is fully trusted).
+5. **Do not decommission or delete the Supabase project** until the team has run the full post-cutover verification checklist (section 3) successfully and is confident enough not to need rollback again. Freeze-but-keep is the safe default; irreversible teardown is out of scope for this runbook (see F4 in Linear KIM-393..422, "remove Supabase deps/dirs", which only happens after F2 is fully trusted).
 
 ### 4.3 What rollback does *not* need to undo
 

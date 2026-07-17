@@ -9,7 +9,7 @@ import type { Database } from '@/lib/supabase/types'
 /**
  * lib/db — single seam for Postgres access.
  *
- * This is an F0 abstraction seam (see docs/MIGRATION-supabase-to-neon.md):
+ * This is an F0 abstraction seam (see Linear KIM-393..422, Supabase→Neon migration):
  * it introduces indirection with zero behavior change so a later phase (F1)
  * can swap the underlying implementation (Supabase -> Drizzle/Neon) without
  * touching call sites again. For F0 this is intentionally a thin wrapper

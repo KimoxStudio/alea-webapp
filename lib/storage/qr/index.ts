@@ -6,7 +6,7 @@ import type { Database } from '@/lib/supabase/types'
 /**
  * lib/storage/qr — single seam for Supabase Storage access.
  *
- * This is an F0 abstraction seam (see docs/MIGRATION-supabase-to-neon.md):
+ * This is an F0 abstraction seam (see Linear KIM-393..422, Supabase→Neon migration):
  * it introduces indirection with zero behavior change so a later phase (F1+)
  * can swap the underlying storage backend (Supabase Storage -> Vercel Blob)
  * without touching call sites again. For F0 this is intentionally a thin

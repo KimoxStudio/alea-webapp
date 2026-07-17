@@ -20,7 +20,7 @@ export const reservationStatusEnum = pgEnum('reservation_status', [
 
 /** public.role — member vs admin. Distinct from Postgres roles (anon/authenticated),
  * which do not exist as a concept in the Neon target (RLS is being removed, see
- * docs/MIGRATION-supabase-to-neon.md "RLS -> service-layer parity gate"). */
+ * Linear KIM-393..422, Supabase→Neon migration, "RLS -> service-layer parity gate"). */
 export const roleEnum = pgEnum('role', ['member', 'admin'])
 
 /** public.table_surface — top/bottom half of a removable-top table. */

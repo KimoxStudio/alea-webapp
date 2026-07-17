@@ -1,7 +1,7 @@
 import type { Config } from 'drizzle-kit'
 
 /**
- * drizzle-kit config — F1 (docs/MIGRATION-supabase-to-neon.md).
+ * drizzle-kit config — F1 (Linear KIM-393..422, Supabase→Neon migration).
  *
  * This project is not yet cut over to Neon (see F2). This config exists so
  * `drizzle-kit generate` can produce SQL migration files locally from
