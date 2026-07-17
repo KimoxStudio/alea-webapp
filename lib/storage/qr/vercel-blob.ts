@@ -41,7 +41,7 @@ import type {
  *   the URL construction is backend-agnostic and respects the active seam.
  * - This scaffold intentionally does NOT refactor it now to preserve inert-only
  *   semantics (zero runtime behavior change until real cutover activation).
- * - See __tests__/lib/storage/qr.test.ts for a documenting test of this gap.
+ * - See tests/unit/lib/storage/qr.test.ts for a documenting test of this gap.
  */
 
 function toPathname(bucket: string, path: string): string {
