@@ -8,7 +8,7 @@
  *  5. second activate rejected (CHECK_IN_ALREADY_ACTIVE)
  */
 import { chromium } from 'playwright';
-import { chromiumLaunchOptions, env, requireE2EEnv } from './env.mjs';
+import { chromiumLaunchOptions, env, requireE2EEnv } from '../env.mjs';
 
 const required = ['PLAYWRIGHT_QA_USER', 'PLAYWRIGHT_QA_PASSWORD', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SECRET_DEFAULT_KEY'];
 requireE2EEnv(required);

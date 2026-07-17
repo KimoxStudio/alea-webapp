@@ -8,7 +8,7 @@
  *  4. Use unknown equipment ID → assert 400 INVALID_ROOM_EQUIPMENT
  */
 import { chromium } from 'playwright';
-import { chromiumLaunchOptions, env, requireE2EEnv } from './env.mjs';
+import { chromiumLaunchOptions, env, requireE2EEnv } from '../env.mjs';
 
 const required = [
   'PLAYWRIGHT_QA_USER', 'PLAYWRIGHT_QA_PASSWORD',

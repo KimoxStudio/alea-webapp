@@ -26,7 +26,7 @@ import { join } from 'path'
  * to run these tests.
  */
 
-const MIGRATION_DIR = join(__dirname, '../../lib/db/migrations')
+const MIGRATION_DIR = join(__dirname, '../../../lib/db/migrations')
 const CONTAINER_NAME = `postgres-test-kim417-${Date.now()}`
 const POSTGRES_PORT = 25432 // non-standard to avoid conflicts
 

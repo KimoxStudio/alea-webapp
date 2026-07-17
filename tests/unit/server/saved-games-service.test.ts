@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SessionUser } from '@/lib/server/auth/auth'
-import { createQueryBuilder } from '@/__tests__/mocks/supabase-mock'
+import { createQueryBuilder } from '@/tests/unit/mocks/supabase-mock'
 
 type SavedGameRow = {
   id: string

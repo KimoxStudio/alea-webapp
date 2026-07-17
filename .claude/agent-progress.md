@@ -7,6 +7,32 @@ Real-time log of all agent work. Agents append entries as work progresses.
 
 ---
 
+#### [KIM-411] software-engineer — Rebase chore/KIM-411-test-consolidation onto origin/develop
+
+- [01:48] Started. Rebasing chore/KIM-411-test-consolidation (49159ea) onto origin/develop (04683d5) which now includes PR #169 (Drizzle deps), #170 (Auth.js deps/tests), #171 (cutover scripts).
+- [01:48] `git rebase origin/develop` stopped at first commit (5babcc6) with conflicts in package.json and pnpm-lock.yaml.
+- [01:50] Resolved package.json devDependencies conflict by keeping both sides: develop's drizzle-kit/pg plus this branch's dotenv/playwright. Took develop's pnpm-lock.yaml as base (--ours) to be regenerated later via pnpm install.
+- [01:52] Second conflict on Stage 2 commit (cc80e80): 3 file-location conflicts where develop had NEW test files added directly under old __tests__/ path (authjs-route.test.ts, drizzle-migration-apply.test.ts, drizzle-schema-apply.test.ts from PR #169/#170) — git already auto-relocated them to tests/unit/ as "added by us", content verified byte-identical to origin/develop, staged as-is.
+- [01:55] Manual cross-check (diff of origin/develop's __tests__/ file list vs staged tests/unit/) found 5 MORE new files that had NOT been auto-moved by git and had no conflict flagged: __tests__/authjs/config.test.ts, __tests__/authjs/credentials-user.test.ts, __tests__/lib/cutover/dump-integrity.test.ts, __tests__/lib/cutover/hash-copy.test.ts, __tests__/lib/cutover/session-invalidation.test.ts. Moved all 5 via `git mv` into tests/unit/authjs/ and tests/unit/lib/cutover/ respectively.
+- [01:56] Re-ran the diff check — full match, all 77 files (72 pre-existing + 5 new) from develop's __tests__/ now accounted for under tests/unit/. Removed leftover empty __tests__ directory tree from disk (untracked, git doesn't track empty dirs). Confirmed `find . -maxdepth 1 -name '__tests__'` and `-name 'qa'` both return nothing.
+- [01:57] `git rebase --continue` completed cleanly through remaining commits (docs log commit, Stage 2 move commit, semgrep narrow-scope fix commit). Final .semgrepignore correctly ends at `tests/unit/` (not `tests/`), confirming the semgrep bugfix from the last commit survived the rebase.
+- [02:00] Test file count sanity check: `find tests/unit -name '*.test.ts' -o -name '*.test.tsx'` = 75, matches `git ls-tree origin/develop -- __tests__` count of 75 exactly.
+- [02:02] Ran `pnpm install` to regenerate pnpm-lock.yaml from the merged package.json (adds dotenv/playwright/@types entries on top of develop's pg/drizzle/next-auth/bcryptjs). Folded the resulting lockfile diff into the first commit via `git commit --fixup` + `git rebase -i --autosquash` to keep history clean — back to 4 commits, working tree clean.
+- [02:03] Ran `pnpm run typecheck` and `pnpm run lint` — both pass clean.
+- [02:05] `pnpm test` found a real regression from the relocation: tests/unit/server/drizzle-schema-apply.test.ts (12 failures) and tests/unit/server/drizzle-migration-apply.test.ts (Docker-skipped, same bug) used `join(__dirname, '../../lib/db/migrations')` / `'../../lib/db/schema/profiles.ts'` — correct for their old depth in develop's __tests__/server/, but now one level too shallow at tests/unit/server/. Fixed both to `'../../../lib/db/...'` (3 levels up to repo root). No other new file (authjs/, lib/cutover/) used __dirname-relative paths, so nothing else was affected. Folded into the Stage 2 move commit (2f71e23) via fixup+autosquash, since it's a direct depth-adjustment consequence of that commit's directory move, not new test behavior.
+- [02:08] Re-ran full validation after the fix: typecheck pass, lint pass (0 warnings), test suite 1105 passed / 21 skipped (Docker-gated) / 1 file skipped — matches develop's 75 test files exactly, tests:e2e:check (playwright syntax check) pass, build pass.
+- [02:12] Pushed `--force-with-lease` to origin/chore/KIM-411-test-consolidation. Local pre-push hook (scripts/ci-local.sh) ran full CI and passed clean — no timezone flake hit, no --no-verify needed. Confirmed PR #172 mergeable=MERGEABLE against develop via `gh pr view` and a clean `git merge-tree` dry-run. ✅ Complete — rebase clean, 4 commits (config, docs, file-move+drizzle-path-fixup, semgrep-narrow) plus 1 new docs commit, ready for qa/security review. PR #173 (docs/KIM-430) branch untouched as instructed.
+
+#### [KIM-411] software-engineer — Test consolidation: config + package.json changes
+
+- [22:30] Started. Task #4 was not found in the Task State Engine (.agent-cache/tasks.json has no matching entry, no docs/issues/ spec file, KIM-411 previously logged as "deferred" in docs/DECISIONS.md). Proceeded using the detailed inline instructions provided directly in the invocation prompt as the task spec.
+- [22:30] Branch: chore/KIM-411-test-consolidation (created from main HEAD 842c5d6, in worktree .claude/worktrees/agent-aee69184481856f45)
+- [22:30] Target structure decided: __tests__/** -> tests/unit/** (Vitest), qa/e2e/** -> tests/e2e/** (Playwright/Node runners). Config-only changes in this stage; qa-engineer performs the physical file moves (git mv) in stage 2.
+- [22:36] Changed: vitest.config.mts (include -> tests/unit/**), tsconfig.json (exclude -> tests), .semgrepignore, .gitignore (qa/e2e/* -> tests/e2e/*), package.json (merged playwright+dotenv devDeps from qa/e2e/package.json, added test:e2e:* scripts), pnpm-lock.yaml (pnpm install). Deleted qa/e2e/package.json.
+- [22:36] Validation: pnpm typecheck pass, pnpm build pass, pnpm lint pass (0 warnings). pnpm test intentionally reports "No test files found" (expected mid-pipeline — files haven't moved yet).
+- [22:37] Committed (5babcc6) but push blocked by local pre-push hook (scripts/ci-local.sh runs pnpm test, which fails in this interim state). Per global no-skip-hooks rule, did NOT use --no-verify. Left commit local in worktree; sent handoff to qa-engineer (task 50806f2f) to continue in same worktree, do the file moves, then push both commits together once tests pass.
+- [22:37] ✅ Complete — config stage done, retroactively tracked as task 50806f2f (original Task #4 was not found in the Task State Engine). Worktree left in place at .claude/worktrees/agent-aee69184481856f45, branch chore/KIM-411-test-consolidation.
+
 #### [KIM-366] product-manager — Coordinate Issue Execution
 
 - [09:00] Started coordination — resuming after interruption
