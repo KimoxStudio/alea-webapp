@@ -144,23 +144,6 @@ export interface AdminEventRoomBlock {
   allDay: boolean
 }
 
-/**
- * A single schedule entry for a multi-day event.
- * Mirrors AdminEventRoomBlock but is the canonical shape used in create/update
- * payloads and UI state — roomId may be null when no room is blocked.
- */
-export interface AdminEventSchedule {
-  /** Present only on persisted blocks, absent in create payloads */
-  id?: string
-  roomId: string | null
-  /** Null (or absent) blocks the whole room; a table id scopes the block to that single table (OIR-208). */
-  tableId?: string | null
-  date: string
-  startTime: string
-  endTime: string
-  allDay: boolean
-}
-
 /** One material (equipment) attached to an event, with the quantity needed (OIR-208). */
 export interface AdminEventMaterial {
   equipmentId: string
@@ -168,37 +151,12 @@ export interface AdminEventMaterial {
   quantity: number
 }
 
-export interface AdminEvent {
-  id: string
-  title: string
-  description: string | null
-  /**
-   * Anchor date derived from the earliest schedule block.
-   * Used for display / sorting only — do not use for availability checks.
-   */
-  date: string
-  startTime: string
-  endTime: string
-  createdBy: string | null
-  createdAt: string
-  allDay: boolean
-  /** Raw room-block rows from the DB (legacy field, kept for compat) */
-  roomBlocks: AdminEventRoomBlock[]
-  /**
-   * Canonical multi-day schedule list.  Each entry represents one
-   * (room × date × time-range) block.  For single-day events this has
-   * exactly one element.
-   */
-  schedules: AdminEventSchedule[]
-}
-
 export type ClubEventDateKind = 'single' | 'range' | 'recurring'
 export type ClubEventStatus = 'upcoming' | 'past'
 
 /**
  * Public marketing "club event" (tournaments, game nights, club history) shown
- * on the public landing page. Distinct from AdminEvent, which models
- * room-reservation blocking for the booking platform.
+ * on the public landing page.
  */
 export interface ClubEvent {
   id: string

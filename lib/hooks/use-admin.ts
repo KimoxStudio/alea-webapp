@@ -7,7 +7,6 @@ import type {
   GameTable,
   Reservation,
   PaginatedResponse,
-  AdminEvent,
   AdminClubEvent,
   AdminListClubEventsResult,
   AdminPartner,
@@ -174,111 +173,6 @@ export function useAdminCreateTable() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', variables.roomId, 'tables'] }),
       queryClient.invalidateQueries({ queryKey: ['rooms', variables.roomId, 'tables'] }),
     ]),
-  })
-}
-
-// ----- Events -----
-
-export function useAdminEvents() {
-  return useQuery<AdminEvent[]>({
-    queryKey: ['admin', 'events'],
-    queryFn: () => apiClient.get<AdminEvent[]>(endpoints.events.list),
-    staleTime: 30_000,
-  })
-}
-
-/** Schedule entry used in create/update payloads */
-export interface EventSchedulePayload {
-  roomId?: string | null
-  date: string
-  startTime?: string
-  endTime?: string
-  allDay?: boolean
-}
-
-export function useAdminCreateEvent() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (data: {
-      title: string
-      description?: string | null
-      /** Multi-day: one entry per (room × date × time) block */
-      schedules?: EventSchedulePayload[]
-      /** Legacy single-block fields */
-      date?: string
-      startTime?: string
-      endTime?: string
-      roomId?: string | null
-      allDay?: boolean
-    }) =>
-      apiClient.post<AdminEvent>(endpoints.events.list, data),
-    onSuccess: () => Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
-      queryClient.invalidateQueries({ queryKey: ['availability'] }),
-    ]),
-  })
-}
-
-export function useAdminUpdateEvent() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, data }: {
-      id: string
-      data: {
-        title?: string
-        description?: string | null
-        /** Multi-day: one entry per (room × date × time) block */
-        schedules?: EventSchedulePayload[]
-        /** Legacy single-block fields */
-        date?: string
-        startTime?: string
-        endTime?: string
-        roomId?: string | null
-        allDay?: boolean
-      }
-    }) =>
-      apiClient.put<AdminEvent>(endpoints.events.byId(id), data),
-    onSuccess: () => Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
-      queryClient.invalidateQueries({ queryKey: ['availability'] }),
-    ]),
-  })
-}
-
-export function useAdminDeleteEvent() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => apiClient.delete<void>(endpoints.events.byId(id)),
-    onSuccess: () => Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
-      queryClient.invalidateQueries({ queryKey: ['availability'] }),
-    ]),
-  })
-}
-
-export interface EventConflictBlock {
-  date: string
-  roomId: string
-  count: number
-}
-
-export interface EventConflictPreview {
-  total: number
-  blocks: EventConflictBlock[]
-}
-
-export function useAdminPreviewEventConflicts() {
-  return useMutation({
-    mutationFn: (payload: {
-      schedules: Array<{
-        date: string
-        startTime?: string
-        endTime?: string
-        roomId?: string | null
-        allDay?: boolean
-      }>
-    }) =>
-      apiClient.post<EventConflictPreview>(endpoints.events.preview, payload),
   })
 }
 

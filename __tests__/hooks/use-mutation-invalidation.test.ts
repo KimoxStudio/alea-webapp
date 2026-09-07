@@ -31,10 +31,6 @@ vi.mock('@/lib/api/endpoints', () => ({
       list: '/equipment',
       roomDefaults: (roomId: string) => `/rooms/${roomId}/default-equipment`,
     },
-    events: {
-      byId: (id: string) => `/events/${id}`,
-      list: '/events',
-    },
     reservations: {
       byId: (id: string) => `/reservations/${id}`,
     },
@@ -131,51 +127,5 @@ describe('mutation invalidation loading state', () => {
     expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2)
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['admin', 'rooms'] })
     expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['rooms'] })
-  })
-})
-
-describe('event mutation invalidation — invalidates both admin events and availability', () => {
-  beforeEach(() => {
-    mocks.invalidateQueries.mockClear()
-    mocks.useMutation.mockClear()
-  })
-
-  it('useAdminCreateEvent invalidates admin events and availability', async () => {
-    const { useAdminCreateEvent } = await import('@/lib/hooks/use-admin')
-    const { result } = renderHook(() => useAdminCreateEvent())
-
-    const onSuccessResult = (result.current as any).onSuccess()
-
-    expect(onSuccessResult).toBeInstanceOf(Promise)
-    await onSuccessResult
-    expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2)
-    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['admin', 'events'] })
-    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['availability'] })
-  })
-
-  it('useAdminUpdateEvent invalidates admin events and availability', async () => {
-    const { useAdminUpdateEvent } = await import('@/lib/hooks/use-admin')
-    const { result } = renderHook(() => useAdminUpdateEvent())
-
-    const onSuccessResult = (result.current as any).onSuccess()
-
-    expect(onSuccessResult).toBeInstanceOf(Promise)
-    await onSuccessResult
-    expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2)
-    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['admin', 'events'] })
-    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['availability'] })
-  })
-
-  it('useAdminDeleteEvent invalidates admin events and availability', async () => {
-    const { useAdminDeleteEvent } = await import('@/lib/hooks/use-admin')
-    const { result } = renderHook(() => useAdminDeleteEvent())
-
-    const onSuccessResult = (result.current as any).onSuccess()
-
-    expect(onSuccessResult).toBeInstanceOf(Promise)
-    await onSuccessResult
-    expect(mocks.invalidateQueries).toHaveBeenCalledTimes(2)
-    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['admin', 'events'] })
-    expect(mocks.invalidateQueries).toHaveBeenCalledWith({ queryKey: ['availability'] })
   })
 })

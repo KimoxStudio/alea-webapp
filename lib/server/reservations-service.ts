@@ -24,8 +24,6 @@ type ReservationListRow = ReservationRow & {
   room_name: string | null
 }
 
-/** @deprecated Pending expiry is slot-relative; retained for compatibility. */
-export const GRACE_PERIOD_MINUTES = CHECK_IN_LATE_MINUTES
 // How many minutes before the reservation start time check-in is allowed.
 export const CHECK_IN_EARLY_MINUTES = 5
 // How many minutes after the reservation start time check-in is still allowed.
