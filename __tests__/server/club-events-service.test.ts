@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createSqlMock, hasExactSelectColumns, whereHasColumn } from '../helpers/sql-mock'
+import { createSqlMock, hasExactSelectColumns, whereHasColumn, neonDbError } from '../helpers/sql-mock'
 
 /**
  * CLUB EVENTS SERVICE TEST COVERAGE (OIR-203, raw-SQL Neon port #304)
@@ -23,7 +23,6 @@ import { createSqlMock, hasExactSelectColumns, whereHasColumn } from '../helpers
  * - URL hardening: validateOptionalUrl rejects javascript:, data:, relative URLs
  * - Room blocking is optional: events without blocksRooms don't create event_room_blocks rows
  * - Upcoming/past split derived from date_kind and end_date at read time
- * - listEvents() excludes landing rows (both title_es and title_en populated)
  */
 
 vi.mock('server-only', () => ({}))
@@ -75,14 +74,6 @@ async function loadClubEventsService() {
     deleteClubEvent: mod.deleteClubEvent,
     listAdminClubEvents: mod.listAdminClubEvents,
     listClubEvents: mod.listClubEvents,
-  }
-}
-
-async function loadEventsService() {
-  vi.resetModules()
-  const mod = await import('@/lib/server/events-service')
-  return {
-    listEvents: mod.listEvents,
   }
 }
 
@@ -436,12 +427,12 @@ function addEventRoomBlocksSelectHandler(blocks: unknown[] = []) {
   })
 }
 
-/** SELECT room_id, date::text AS date, start_time, end_time FROM event_room_blocks WHERE event_id=$1 — deleteEventCascade's blocks fetch (#313 fix folded in — date is cast to text, see events-service.ts) */
+/** SELECT room_id, table_id, date::text AS date, start_time, end_time FROM event_room_blocks WHERE event_id=$1 — deleteEventCascade's blocks fetch (#353 fix: table_id now selected so cancellation can be table-scoped) */
 function addCascadeBlocksFetchHandler(blocks: unknown[] = []) {
   sqlMock.addHandler({
-    name: 'SELECT room_id, date::text AS date, start_time, end_time FROM event_room_blocks (cascade)',
+    name: 'SELECT room_id, table_id, date::text AS date, start_time, end_time FROM event_room_blocks (cascade)',
     verb: 'select',
-    match: (stmt) => stmt.table === 'event_room_blocks' && hasExactSelectColumns(stmt, 'room_id, date::text as date, start_time, end_time'),
+    match: (stmt) => stmt.table === 'event_room_blocks' && hasExactSelectColumns(stmt, 'room_id, table_id, date::text as date, start_time, end_time'),
     respond: () => blocks,
   })
 }
@@ -453,6 +444,48 @@ function addCascadeTablesFetchHandler(tables: unknown[] = []) {
     verb: 'select',
     match: (stmt) => stmt.table === 'tables' && hasExactSelectColumns(stmt, 'id, room_id'),
     respond: () => tables,
+  })
+}
+
+/**
+ * UPDATE reservations SET status='active' WHERE id = ANY(...) AND
+ * status='cancelled' — restoreCancelledReservations, deleteEventCascade's
+ * compensating rollback for a reservation that was originally 'active'.
+ * Disambiguated from the cancel-overlapping handler (also `reservations`,
+ * also `update`) by the absence of `table_id` in the WHERE clause, and from
+ * the 'pending' restore handler below by the `SET status = 'active'` literal
+ * in the statement text — the SET value is a literal, not a bound param, so
+ * both restore branches share the exact same `id = ANY(...) AND status =
+ * 'cancelled'` WHERE shape and can only be told apart by that literal.
+ */
+function addReservationsRestoreActiveHandler(spy?: (values: unknown[]) => void) {
+  sqlMock.addHandler({
+    name: "UPDATE reservations SET status = 'active' (deleteEventCascade rollback)",
+    verb: 'update',
+    match: (stmt) => stmt.table === 'reservations' && !whereHasColumn(stmt, 'table_id') && stmt.text.includes("status = 'active'"),
+    respond: (stmt) => {
+      spy?.(stmt.values)
+      return []
+    },
+  })
+}
+
+/**
+ * UPDATE reservations SET status='pending' WHERE id = ANY(...) AND
+ * status='cancelled' — restoreCancelledReservations, deleteEventCascade's
+ * compensating rollback for a reservation that was originally 'pending'. See
+ * `addReservationsRestoreActiveHandler` above for why the `status = 'pending'`
+ * literal, not WHERE shape, is what disambiguates the two branches.
+ */
+function addReservationsRestorePendingHandler(spy?: (values: unknown[]) => void) {
+  sqlMock.addHandler({
+    name: "UPDATE reservations SET status = 'pending' (deleteEventCascade rollback)",
+    verb: 'update',
+    match: (stmt) => stmt.table === 'reservations' && !whereHasColumn(stmt, 'table_id') && stmt.text.includes("status = 'pending'"),
+    respond: (stmt) => {
+      spy?.(stmt.values)
+      return []
+    },
   })
 }
 
@@ -1324,7 +1357,7 @@ describe('club-events-service', () => {
     it('cascades to cancel overlapping reservations for an event with a room block', async () => {
       addDeleteGuardHandler({ id: 'evt-1', title_es: null, title_en: null })
       addCascadeBlocksFetchHandler([
-        { room_id: 'room-1', date: '2026-04-20', start_time: '18:00:00', end_time: '22:00:00' },
+        { room_id: 'room-1', table_id: null, date: '2026-04-20', start_time: '18:00:00', end_time: '22:00:00' },
       ])
       addCascadeTablesFetchHandler([{ id: 'table-1', room_id: 'room-1' }])
       const cancelSpy = vi.fn(() => [])
@@ -1338,6 +1371,161 @@ describe('club-events-service', () => {
 
       expect(cancelSpy).toHaveBeenCalledTimes(1)
       expect(deleteSpy).toHaveBeenCalledWith(['evt-1'])
+    })
+
+    it('only cancels reservations on the block\'s own table, not other tables in the same room (#353)', async () => {
+      // Regression for #353: deleteEventCascade used to always cancel
+      // reservations across every table in the room, ignoring the block's
+      // own table_id. A room with two tables ('table-A', 'table-B') and a
+      // block scoped to 'table-A' only must not touch a reservation on
+      // 'table-B', even though it overlaps the same room/date/time window.
+      addDeleteGuardHandler({ id: 'evt-1', title_es: null, title_en: null })
+      addCascadeBlocksFetchHandler([
+        { room_id: 'room-1', table_id: 'table-A', date: '2026-04-20', start_time: '18:00:00', end_time: '22:00:00' },
+      ])
+      addCascadeTablesFetchHandler([
+        { id: 'table-A', room_id: 'room-1' },
+        { id: 'table-B', room_id: 'room-1' },
+      ])
+
+      const seededReservations = [
+        { id: 'res-table-a', table_id: 'table-A', status: 'active' },
+        { id: 'res-table-b', table_id: 'table-B', status: 'active' },
+      ]
+      const cancelSpy = vi.fn()
+      sqlMock.addHandler({
+        name: 'UPDATE reservations cancel overlapping (table-scoped, #353 regression)',
+        verb: 'update',
+        match: (stmt) => stmt.table === 'reservations' && whereHasColumn(stmt, 'table_id'),
+        respond: (stmt) => {
+          cancelSpy(stmt.values)
+          const tableIds = stmt.values[0] as string[]
+          return seededReservations
+            .filter((r) => tableIds.includes(r.table_id))
+            .map((r) => ({ id: r.id, status: r.status }))
+        },
+      })
+      const deleteSpy = vi.fn()
+      addEventsDeleteHandler(deleteSpy)
+
+      const { deleteClubEvent } = await loadClubEventsService()
+
+      await deleteClubEvent(createAdminSession(), 'evt-1')
+
+      // The cancellation query must have been scoped to table-A only.
+      expect(cancelSpy).toHaveBeenCalledTimes(1)
+      const [values] = cancelSpy.mock.calls[0]
+      const tableIdsArg = (values as unknown[])[0]
+      expect(tableIdsArg).toEqual(['table-A'])
+
+      // Asserted via the seeded-data filter above: res-table-a was cancelled
+      // (returned from the mocked UPDATE...RETURNING), res-table-b was not
+      // (never matched table_id = ANY(['table-A'])) — proving the reservation
+      // on the other table in the room survives the cascade.
+      expect(deleteSpy).toHaveBeenCalledWith(['evt-1'])
+    })
+
+    it('returns 500 when the event_room_blocks fetch fails (deleteEventCascade)', async () => {
+      addDeleteGuardHandler({ id: 'evt-1', title_es: null, title_en: null })
+      sqlMock.addHandler({
+        name: 'SELECT room_id, table_id, date::text AS date, start_time, end_time FROM event_room_blocks (cascade, failing)',
+        verb: 'select',
+        match: (stmt) => stmt.table === 'event_room_blocks' && hasExactSelectColumns(stmt, 'room_id, table_id, date::text as date, start_time, end_time'),
+        respond: () => { throw new Error('blocks fetch failed') },
+      })
+
+      const { deleteClubEvent } = await loadClubEventsService()
+
+      await expect(
+        deleteClubEvent(createAdminSession(), 'evt-1')
+      ).rejects.toMatchObject({ statusCode: 500 })
+    })
+
+    it('returns 500 when the room->table lookup fails (deleteEventCascade)', async () => {
+      addDeleteGuardHandler({ id: 'evt-1', title_es: null, title_en: null })
+      addCascadeBlocksFetchHandler([
+        { room_id: 'room-1', table_id: null, date: '2026-04-20', start_time: '18:00:00', end_time: '22:00:00' },
+      ])
+      sqlMock.addHandler({
+        name: 'SELECT id, room_id FROM tables (cascade, failing)',
+        verb: 'select',
+        match: (stmt) => stmt.table === 'tables' && hasExactSelectColumns(stmt, 'id, room_id'),
+        respond: () => { throw new Error('table lookup failed') },
+      })
+
+      const { deleteClubEvent } = await loadClubEventsService()
+
+      await expect(
+        deleteClubEvent(createAdminSession(), 'evt-1')
+      ).rejects.toMatchObject({ statusCode: 500 })
+    })
+
+    it('restores already-cancelled reservations and returns 500 when a later reservation-cancel fails (deleteEventCascade, multi-block)', async () => {
+      addDeleteGuardHandler({ id: 'evt-1', title_es: null, title_en: null })
+      addCascadeBlocksFetchHandler([
+        { room_id: 'room-1', table_id: null, date: '2026-04-20', start_time: '18:00:00', end_time: '22:00:00' },
+        { room_id: 'room-1', table_id: null, date: '2026-04-21', start_time: '18:00:00', end_time: '22:00:00' },
+      ])
+      addCascadeTablesFetchHandler([{ id: 'table-1', room_id: 'room-1' }])
+
+      let callCount = 0
+      sqlMock.addHandler({
+        name: 'UPDATE reservations cancel overlapping (second call fails)',
+        verb: 'update',
+        match: (stmt) => stmt.table === 'reservations' && whereHasColumn(stmt, 'table_id'),
+        respond: () => {
+          callCount += 1
+          if (callCount === 2) throw new Error('second cancel failed')
+          return [{ id: 'res-1', status: 'active' }]
+        },
+      })
+      const restoreActiveSpy = vi.fn()
+      const restorePendingSpy = vi.fn()
+      addReservationsRestoreActiveHandler(restoreActiveSpy)
+      addReservationsRestorePendingHandler(restorePendingSpy)
+
+      const { deleteClubEvent } = await loadClubEventsService()
+
+      await expect(
+        deleteClubEvent(createAdminSession(), 'evt-1')
+      ).rejects.toMatchObject({ statusCode: 500 })
+
+      // The cancelled reservation was originally 'active' — restore must route
+      // through the 'active' branch, not 'pending' (a mutation inverting the
+      // pendingIds/activeIds filters in restoreCancelledReservations would
+      // otherwise pass this test unchanged).
+      expect(restoreActiveSpy).toHaveBeenCalledWith([['res-1']])
+      expect(restorePendingSpy).not.toHaveBeenCalled()
+    })
+
+    it('restores cancelled reservations and returns 500 when the final DELETE FROM events fails (deleteEventCascade)', async () => {
+      addDeleteGuardHandler({ id: 'evt-1', title_es: null, title_en: null })
+      addCascadeBlocksFetchHandler([
+        { room_id: 'room-1', table_id: null, date: '2026-04-20', start_time: '18:00:00', end_time: '22:00:00' },
+      ])
+      addCascadeTablesFetchHandler([{ id: 'table-1', room_id: 'room-1' }])
+      addReservationsCancelHandler(() => [{ id: 'res-1', status: 'pending' }])
+      const restoreActiveSpy = vi.fn()
+      const restorePendingSpy = vi.fn()
+      addReservationsRestoreActiveHandler(restoreActiveSpy)
+      addReservationsRestorePendingHandler(restorePendingSpy)
+      sqlMock.addHandler({
+        name: 'DELETE events WHERE id (failing)',
+        verb: 'delete',
+        match: (stmt) => stmt.table === 'events',
+        respond: () => { throw new Error('delete failed') },
+      })
+
+      const { deleteClubEvent } = await loadClubEventsService()
+
+      await expect(
+        deleteClubEvent(createAdminSession(), 'evt-1')
+      ).rejects.toMatchObject({ statusCode: 500 })
+
+      // The cancelled reservation was originally 'pending' — restore must
+      // route through the 'pending' branch, not 'active'.
+      expect(restorePendingSpy).toHaveBeenCalledWith([['res-1']])
+      expect(restoreActiveSpy).not.toHaveBeenCalled()
     })
   })
 
@@ -1473,48 +1661,6 @@ describe('club-events-service', () => {
       const allIds = [...result.upcoming, ...result.past].map((e) => e.id)
       expect(allIds).toContain('evt-bilingual')
       expect(allIds).not.toContain('evt-leaked-internal')
-    })
-  })
-
-  describe('listEvents (from events-service.ts)', () => {
-    it('excludes landing-only rows (both title_es and title_en populated)', async () => {
-      const eventsSelectSpy = vi.fn(() => [
-        {
-          id: 'evt-internal-1',
-          title: 'Internal Event',
-          description: null,
-          date: '2026-04-20',
-          start_time: '18:00:00',
-          end_time: '22:00:00',
-          created_by: 'user-1',
-          created_at: '2026-04-01T00:00:00Z',
-        },
-      ])
-      sqlMock.addHandler({
-        name: 'SELECT events excluding landing rows (title_es/title_en IS NULL)',
-        verb: 'select',
-        match: (stmt) =>
-          stmt.table === 'events' &&
-          hasExactSelectColumns(stmt, 'id, title, description, date::text as date, start_time, end_time, created_by, created_at') &&
-          Boolean(stmt.whereClause?.includes('title_es')) &&
-          Boolean(stmt.whereClause?.includes('title_en')),
-        respond: eventsSelectSpy,
-      })
-      sqlMock.addHandler({
-        name: 'SELECT event_room_blocks for the listed events',
-        verb: 'select',
-        match: (stmt) => stmt.table === 'event_room_blocks',
-        respond: () => [],
-      })
-
-      const { listEvents } = await loadEventsService()
-
-      const result = await listEvents()
-
-      expect(eventsSelectSpy).toHaveBeenCalledTimes(1)
-      expect(Array.isArray(result)).toBe(true)
-      expect(result).toHaveLength(1)
-      expect(result[0].id).toBe('evt-internal-1')
     })
   })
 
@@ -2189,6 +2335,93 @@ describe('club-events-service', () => {
       ])
 
       consoleErrorSpy.mockRestore()
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// events-service.ts's own exported helpers, shared by club-events-service.ts
+// (#353: the legacy events admin surface was removed and its unit tests along
+// with it — these still-live shared validators need their own direct
+// coverage rather than relying on it as an incidental side effect of
+// club-events-service.ts's own scenarios).
+// ---------------------------------------------------------------------------
+describe('events-service shared helpers', () => {
+  describe('validateAndNormaliseSchedule', () => {
+    it('rejects a non-object schedule entry', async () => {
+      const { validateAndNormaliseSchedule } = await import('@/lib/server/events-service')
+
+      expect(() => validateAndNormaliseSchedule(null, 0)).toThrow(
+        expect.objectContaining({ statusCode: 400 }),
+      )
+      expect(() => validateAndNormaliseSchedule('not-an-object', 0)).toThrow(
+        expect.objectContaining({ statusCode: 400 }),
+      )
+    })
+
+    it('an allDay schedule resolves to the 00:00-23:59 window regardless of the supplied times', async () => {
+      const { validateAndNormaliseSchedule } = await import('@/lib/server/events-service')
+
+      const result = validateAndNormaliseSchedule(
+        { date: '2026-05-01', allDay: true, roomId: 'room-1' },
+        0,
+      )
+
+      expect(result.all_day).toBe(true)
+      expect(result.start_time).toBe('00:00')
+      expect(result.end_time).toBe('23:59')
+    })
+  })
+
+  describe('mapEventWriteError', () => {
+    it('maps a mapped Postgres error code to 400 Invalid event data', async () => {
+      const { mapEventWriteError } = await import('@/lib/server/events-service')
+
+      expect(() => mapEventWriteError(neonDbError('23503'))).toThrow(
+        expect.objectContaining({ statusCode: 400, message: 'Invalid event data' }),
+      )
+    })
+
+    it('maps an unrecognised Postgres error code to 500 Internal server error', async () => {
+      const { mapEventWriteError } = await import('@/lib/server/events-service')
+
+      expect(() => mapEventWriteError(neonDbError('99999'))).toThrow(
+        expect.objectContaining({ statusCode: 500 }),
+      )
+    })
+
+    it('maps a non-NeonDbError to 500 Internal server error', async () => {
+      const { mapEventWriteError } = await import('@/lib/server/events-service')
+
+      expect(() => mapEventWriteError(new Error('unexpected'))).toThrow(
+        expect.objectContaining({ statusCode: 500 }),
+      )
+    })
+  })
+
+  describe('resolveBlockCancellationTableIds', () => {
+    it('returns just the block\'s own table when the block has a table_id', async () => {
+      const { resolveBlockCancellationTableIds } = await import('@/lib/server/events-service')
+
+      const roomTableMap = new Map([['room-1', ['table-1', 'table-2']]])
+
+      expect(resolveBlockCancellationTableIds('table-2', 'room-1', roomTableMap)).toEqual(['table-2'])
+    })
+
+    it('returns every table of the room when the block has no table_id', async () => {
+      const { resolveBlockCancellationTableIds } = await import('@/lib/server/events-service')
+
+      const roomTableMap = new Map([['room-1', ['table-1', 'table-2']]])
+
+      expect(resolveBlockCancellationTableIds(null, 'room-1', roomTableMap)).toEqual(['table-1', 'table-2'])
+    })
+
+    it('returns an empty array when the block has no table_id and the room has no entry in the map', async () => {
+      const { resolveBlockCancellationTableIds } = await import('@/lib/server/events-service')
+
+      const roomTableMap = new Map<string, string[]>()
+
+      expect(resolveBlockCancellationTableIds(null, 'room-1', roomTableMap)).toEqual([])
     })
   })
 })

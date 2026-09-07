@@ -267,11 +267,11 @@ describe('server auth helpers (Clerk username model)', () => {
     })
   })
 
-  describe('enforceSameOriginForMutation', () => {
+  describe('enforceMutationSecurity', () => {
     it('allows GET requests without origin check', async () => {
-      const { enforceSameOriginForMutation } = await import('@/lib/server/auth')
+      const { enforceMutationSecurity } = await import('@/lib/server/security')
 
-      const result = enforceSameOriginForMutation(
+      const result = enforceMutationSecurity(
         new NextRequest('http://localhost:3000/api/auth/me', { method: 'GET' }),
       )
 
@@ -279,9 +279,9 @@ describe('server auth helpers (Clerk username model)', () => {
     })
 
     it('allows POST from same origin with matching CSRF token', async () => {
-      const { enforceSameOriginForMutation } = await import('@/lib/server/auth')
+      const { enforceMutationSecurity } = await import('@/lib/server/security')
 
-      const result = enforceSameOriginForMutation(
+      const result = enforceMutationSecurity(
         new NextRequest('http://localhost:3000/api/auth/login', {
           method: 'POST',
           headers: {
@@ -296,9 +296,9 @@ describe('server auth helpers (Clerk username model)', () => {
     })
 
     it('rejects POST with mismatched origin scheme', async () => {
-      const { enforceSameOriginForMutation } = await import('@/lib/server/auth')
+      const { enforceMutationSecurity } = await import('@/lib/server/security')
 
-      const result = enforceSameOriginForMutation(
+      const result = enforceMutationSecurity(
         new NextRequest('https://localhost:3000/api/auth/login', {
           method: 'POST',
           headers: {
@@ -314,9 +314,9 @@ describe('server auth helpers (Clerk username model)', () => {
     })
 
     it('rejects POST from cross-origin', async () => {
-      const { enforceSameOriginForMutation } = await import('@/lib/server/auth')
+      const { enforceMutationSecurity } = await import('@/lib/server/security')
 
-      const result = enforceSameOriginForMutation(
+      const result = enforceMutationSecurity(
         new NextRequest('http://localhost:3000/api/auth/login', {
           method: 'POST',
           headers: {
@@ -332,9 +332,9 @@ describe('server auth helpers (Clerk username model)', () => {
     })
 
     it('rejects POST when origin header is missing', async () => {
-      const { enforceSameOriginForMutation } = await import('@/lib/server/auth')
+      const { enforceMutationSecurity } = await import('@/lib/server/security')
 
-      const result = enforceSameOriginForMutation(
+      const result = enforceMutationSecurity(
         new NextRequest('http://localhost:3000/api/auth/login', {
           method: 'POST',
         }),
@@ -345,9 +345,9 @@ describe('server auth helpers (Clerk username model)', () => {
     })
 
     it('rejects POST when CSRF token is missing', async () => {
-      const { enforceSameOriginForMutation } = await import('@/lib/server/auth')
+      const { enforceMutationSecurity } = await import('@/lib/server/security')
 
-      const result = enforceSameOriginForMutation(
+      const result = enforceMutationSecurity(
         new NextRequest('http://localhost:3000/api/auth/login', {
           method: 'POST',
           headers: {
@@ -361,9 +361,9 @@ describe('server auth helpers (Clerk username model)', () => {
     })
 
     it('rejects POST with mismatched CSRF token', async () => {
-      const { enforceSameOriginForMutation } = await import('@/lib/server/auth')
+      const { enforceMutationSecurity } = await import('@/lib/server/security')
 
-      const result = enforceSameOriginForMutation(
+      const result = enforceMutationSecurity(
         new NextRequest('http://localhost:3000/api/auth/login', {
           method: 'POST',
           headers: {
@@ -379,9 +379,9 @@ describe('server auth helpers (Clerk username model)', () => {
     })
 
     it('rejects PUT requests with same security checks as POST', async () => {
-      const { enforceSameOriginForMutation } = await import('@/lib/server/auth')
+      const { enforceMutationSecurity } = await import('@/lib/server/security')
 
-      const result = enforceSameOriginForMutation(
+      const result = enforceMutationSecurity(
         new NextRequest('http://localhost:3000/api/users', {
           method: 'PUT',
           headers: {
@@ -395,9 +395,9 @@ describe('server auth helpers (Clerk username model)', () => {
     })
 
     it('rejects DELETE requests with same security checks', async () => {
-      const { enforceSameOriginForMutation } = await import('@/lib/server/auth')
+      const { enforceMutationSecurity } = await import('@/lib/server/security')
 
-      const result = enforceSameOriginForMutation(
+      const result = enforceMutationSecurity(
         new NextRequest('http://localhost:3000/api/users', {
           method: 'DELETE',
           headers: {

@@ -17,6 +17,7 @@ import {
   deleteEventCascade,
   isClubEventRow,
   mapEventWriteError,
+  resolveBlockCancellationTableIds,
   restoreCancelledReservations,
   validateAndNormaliseSchedule,
   type CancelledReservation,
@@ -159,9 +160,10 @@ export interface ListClubEventsResult {
 
 /**
  * Public read of club marketing events (tournaments, game nights, club
- * history) for the landing page. These live in the same "events" table used
- * for internal room-reservation blocking (lib/server/events-service.ts) —
- * a row is landing-eligible once it carries bilingual copy (title_es/title_en).
+ * history) for the landing page. A row is landing-eligible once it carries
+ * bilingual copy (title_es/title_en); non-bilingual rows in this same
+ * "events" table are room-reservation blocks with no public copy, created
+ * via this file's own `blocksRooms`/`schedules` admin sub-flow below.
  *
  * Neon has no RLS — the "events_select_public" Supabase RLS policy that used
  * to additionally restrict anon visibility to bilingual rows is replaced by
@@ -203,11 +205,11 @@ export async function listClubEvents(options: ListClubEventsOptions = {}): Promi
 // ---------------------------------------------------------------------------
 // Admin CRUD (OIR-203)
 //
-// Public club events are rows in the same "events" table used for internal
+// Public club events are rows in the same "events" table used for
 // room-reservation blocking. Room blocking is optional: creating/updating a
 // club event never creates event_room_blocks rows unless the admin
-// explicitly attaches them via `blocksRooms` + `schedules` (reusing the same
-// validation as the internal admin event flow in events-service.ts).
+// explicitly attaches them via `blocksRooms` + `schedules` (reusing the
+// shared schedule validation in events-service.ts).
 //
 // Privilege checks (role === 'admin') live here in the service layer, not in
 // the route handlers, so every entry point is protected regardless of how
@@ -568,8 +570,8 @@ function toAdminClubEvent(
  * race-condition paragraph below) instead of omitting it.
  *
  * Captures each cancelled row's id AND its pre-cancellation `updated_at`
- * (via `UPDATE ... FROM (subquery) ... RETURNING`, same pattern as
- * `cancelOverlappingReservationsForRoomCapturing`) so a later failure in the
+ * (via `UPDATE ... FROM (subquery) ... RETURNING`, same reservation-capturing
+ * pattern used elsewhere in this file) so a later failure in the
  * same call can restore it exactly — including the timestamp, not just the
  * status (code-review finding: the original restore flipped `status` back
  * but left `updated_at` at the cancellation-time value, so a rolled-back
@@ -689,8 +691,8 @@ async function restoreCancelledSavedGames(cancelled: Array<{ id: string; updated
 
 /**
  * Compensating rollback for `applyClubEventBlocksAndMaterials` (#304, mirrors
- * `events-service.ts`'s `rollbackPartialMultiBlockWrite`/
- * `restoreDeletedBlocksOnUpdateFailure`). If a later step in that function's
+ * the compensating-rollback pattern `events-service.ts`'s `deleteEventCascade`
+ * uses). If a later step in that function's
  * block/material loops fails, this restores what the call has done so far:
  * deletes any `event_room_blocks` rows this call itself inserted, reactivates
  * any reservations AND saved games this call itself cancelled, and reinserts
@@ -935,14 +937,16 @@ async function applyClubEventBlocksAndMaterials(
         // Table-level scoping (OIR-208): a block with a table_id only
         // cancels reservations for that single table; a null table_id
         // cancels reservations across every table of the room (unchanged
-        // behavior).
-        const tableIds = block.table_id ? [block.table_id] : (roomTableMap.get(block.room_id) ?? [])
+        // behavior). Shared with `events-service.ts`'s `deleteEventCascade`
+        // via `resolveBlockCancellationTableIds` (#353 code-review, high
+        // effort) instead of each independently reimplementing this branch.
+        const tableIds = resolveBlockCancellationTableIds(block.table_id, block.room_id, roomTableMap)
 
         if (tableIds.length > 0) {
           // Capture each cancelled reservation's id AND pre-cancellation
           // status (via `UPDATE ... FROM` `RETURNING`, same pattern as
-          // events-service.ts's cancelOverlappingReservationsForRoomCapturing)
-          // so rollback can restore it exactly, not assume 'active'.
+          // events-service.ts's `deleteEventCascade`) so rollback can restore
+          // it exactly, not assume 'active'.
           let cancelledRows: CancelledReservation[]
           try {
             cancelledRows = await sql`
@@ -1385,9 +1389,8 @@ export async function createClubEvent(session: SessionUser, body: ClubEventInput
 }
 
 /**
- * Best-effort compensation for `updateClubEvent`'s own event-fields UPDATE
- * (mirrors `events-service.ts`'s `revertEventFieldsOnFailure`). Reverts the
- * row back to the field values it had before this call (captured from the
+ * Best-effort compensation for `updateClubEvent`'s own event-fields UPDATE.
+ * Reverts the row back to the field values it had before this call (captured from the
  * pre-write `originalFields` snapshot at the top of `updateClubEvent`).
  * Errors here are logged and swallowed, matching the pattern above.
  */
@@ -1440,8 +1443,6 @@ export async function updateClubEvent(session: SessionUser, id: string, body: Cl
   const current = currentRows[0] ?? null
   // OIR-208: the unified service operates on ANY event row (landing or
   // internal) — the isClubEventRow guard from OIR-203 is superseded here.
-  // The legacy /api/events/[id] endpoints (lib/server/events-service.ts)
-  // keep their own isClubEventRow guard so old clients can't touch these rows.
   if (!current) serviceError('Club event not found', 404)
 
   // Finding 2: validate EVERYTHING — fields, URL allowlist, and (when
@@ -1585,11 +1586,8 @@ export async function deleteClubEvent(session: SessionUser, id: string): Promise
   // internal) — the isClubEventRow guard from OIR-203 is superseded here.
   if (!row) serviceError('Club event not found', 404)
 
-  // Reuse the internal delete flow: cancels overlapping reservations for any
+  // Reuse the shared delete flow: cancels overlapping reservations for any
   // attached room blocks, then removes the row (and its blocks/materials, via
   // FK cascade) — same behavior as deleting a room-booking event today.
-  // Calls deleteEventCascade directly (not the guarded deleteEvent) since
-  // this surface intentionally operates on any row — the inverse of
-  // deleteEvent's own isClubEventRow guard.
   await deleteEventCascade(id)
 }

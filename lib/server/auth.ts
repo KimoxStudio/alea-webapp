@@ -2,7 +2,6 @@ import 'server-only'
 import { NextRequest, NextResponse } from 'next/server'
 import { getClerkSession, getClerkUser } from '@/lib/server/session'
 import { resolveProfileForClerkUser } from '@/lib/server/auth-service'
-export { enforceSameOriginForMutation } from '@/lib/server/security'
 
 /**
  * Route-handler auth gates (#299).

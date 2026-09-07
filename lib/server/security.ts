@@ -343,15 +343,6 @@ export function enforceMutationSecurity(request: NextRequest): NextResponse | nu
   return null
 }
 
-/**
- * @deprecated Use `enforceMutationSecurity` instead. This helper now enforces
- * Fetch Metadata, same-origin `Origin` validation, and double-submit CSRF
- * protection, so the old name is preserved only for backwards compatibility.
- */
-export function enforceSameOriginForMutation(request: NextRequest): NextResponse | null {
-  return enforceMutationSecurity(request)
-}
-
 // ---------------------------------------------------------------------------
 // Rate limiting (KIM-401)
 //

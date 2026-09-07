@@ -624,7 +624,7 @@ describe('reservations service', () => {
 
       it('excludes pending reservations after their check-in deadline', async () => {
         vi.useFakeTimers()
-        const { listVisibleReservations, GRACE_PERIOD_MINUTES } = await loadReservationModules()
+        const { listVisibleReservations, CHECK_IN_LATE_MINUTES } = await loadReservationModules()
 
         // Create a pending reservation that was created 65 minutes ago
         const baseTime = new Date('2026-12-31T12:00:00.000Z')
@@ -637,7 +637,7 @@ describe('reservations service', () => {
           activated_at: null,
           start_time: '16:00:00',
           end_time: '17:00:00',
-          created_at: new Date(baseTime.getTime() - (GRACE_PERIOD_MINUTES + 5) * 60 * 1000).toISOString(),
+          created_at: new Date(baseTime.getTime() - (CHECK_IN_LATE_MINUTES + 5) * 60 * 1000).toISOString(),
         })
 
         const t1 = tablesState.get('t1')!
@@ -661,7 +661,7 @@ describe('reservations service', () => {
 
       it('includes pending reservations before their check-in deadline', async () => {
         vi.useFakeTimers()
-        const { listVisibleReservations, GRACE_PERIOD_MINUTES } = await loadReservationModules()
+        const { listVisibleReservations, CHECK_IN_LATE_MINUTES } = await loadReservationModules()
 
         // Create a pending reservation that was created 50 minutes ago (within grace period)
         const baseTime = new Date('2026-12-31T12:00:00.000Z')
@@ -674,7 +674,7 @@ describe('reservations service', () => {
           activated_at: null,
           start_time: '18:00:00',
           end_time: '19:00:00',
-          created_at: new Date(baseTime.getTime() - (GRACE_PERIOD_MINUTES - 10) * 60 * 1000).toISOString(),
+          created_at: new Date(baseTime.getTime() - (CHECK_IN_LATE_MINUTES - 10) * 60 * 1000).toISOString(),
         })
 
         const t2 = tablesState.get('t2')!
@@ -698,7 +698,7 @@ describe('reservations service', () => {
 
       it('respects the slot-relative check-in deadline boundary', async () => {
         vi.useFakeTimers()
-        const { listVisibleReservations, GRACE_PERIOD_MINUTES } = await loadReservationModules()
+        const { listVisibleReservations, CHECK_IN_LATE_MINUTES } = await loadReservationModules()
 
         const baseTime = new Date('2026-12-31T12:00:00.000Z')
         vi.setSystemTime(baseTime)
@@ -735,7 +735,7 @@ describe('reservations service', () => {
 
       it('always includes active (activated) reservations regardless of grace period', async () => {
         vi.useFakeTimers()
-        const { listVisibleReservations, GRACE_PERIOD_MINUTES } = await loadReservationModules()
+        const { listVisibleReservations, CHECK_IN_LATE_MINUTES } = await loadReservationModules()
 
         const baseTime = new Date('2026-12-31T12:00:00.000Z')
         vi.setSystemTime(baseTime)
