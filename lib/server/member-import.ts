@@ -140,6 +140,58 @@ function getSourceExtension(fileName: string) {
   return parts.length > 1 ? parts.at(-1) ?? '' : ''
 }
 
+// ---------------------------------------------------------------------------
+// Magic-byte (file signature) verification.
+//
+// `normalizeMemberImportSource`'s caller only validates the file extension
+// and the client-declared Content-Type — both attacker-controlled. Before
+// this file body reaches the CSV/XLSX/ODT parser, verify the actual bytes
+// match the claimed format, same pattern as
+// lib/server/uploads-service.ts's image magic-byte check.
+//
+// This check is deliberately narrow: it only confirms the file *signature*
+// matches the extension, not that the file is a well-formed XLSX/ODT/CSV —
+// deeper structural validity (a real workbook, real ODT content, parseable
+// rows) is still enforced further down by `assertSourceArchiveMatchesExtension`
+// and the CSV/XLSX/ODT parsers themselves.
+// ---------------------------------------------------------------------------
+
+const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04]
+
+function startsWithSignature(bytes: Uint8Array, signature: number[]): boolean {
+  if (bytes.length < signature.length) return false
+  return signature.every((byte, index) => bytes[index] === byte)
+}
+
+/** .xlsx and .odt are both ZIP-based formats — both must start with the ZIP local-file-header signature. */
+function requireZipSignature(extension: 'xlsx' | 'odt', bytes: Uint8Array): void {
+  if (!startsWithSignature(bytes, ZIP_SIGNATURE)) {
+    serviceError(`Import file content does not match the .${extension} extension.`, 400)
+  }
+}
+
+/**
+ * CSV has no reliable magic byte, so instead reject bodies that are not
+ * plausible text: a NUL byte or another C0 control byte outside of
+ * tab/LF/CR never appears in legitimate CSV content but is common in
+ * arbitrary binary data — and a body that is not valid UTF-8 fails outright.
+ */
+function requireTextualCsvBytes(bytes: Uint8Array): void {
+  for (let index = 0; index < bytes.length; index += 1) {
+    const byte = bytes[index]
+    const isAllowedControlByte = byte === 0x09 || byte === 0x0a || byte === 0x0d
+    if (byte === 0x00 || (byte < 0x20 && !isAllowedControlByte)) {
+      serviceError('Import file content does not match the .csv extension.', 400)
+    }
+  }
+
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  } catch {
+    serviceError('Import file content does not match the .csv extension.', 400)
+  }
+}
+
 function tryReadArchive(bytes: Uint8Array, invalidMessage: string) {
   try {
     return unzipSync(bytes)
@@ -412,11 +464,14 @@ export async function normalizeMemberImportSource(input: {
   let extractedCsv = ''
 
   if (extension === 'csv') {
+    requireTextualCsvBytes(sourceBytes)
     extractedCsv = new TextDecoder('utf-8').decode(sourceBytes).trim()
   } else if (extension === 'xlsx') {
+    requireZipSignature('xlsx', sourceBytes)
     assertSourceArchiveMatchesExtension('xlsx', sourceBytes)
     extractedCsv = await extractSpreadsheetCsv(sourceBytes)
   } else if (extension === 'odt') {
+    requireZipSignature('odt', sourceBytes)
     assertSourceArchiveMatchesExtension('odt', sourceBytes)
     extractedCsv = extractOdtCsv(sourceBytes)
   } else {

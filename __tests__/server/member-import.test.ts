@@ -674,6 +674,117 @@ describe('importMembersFromCsv', () => {
   })
 })
 
+describe('magic-byte verification (#388)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    setupSqlMock()
+    resetProfileState()
+  })
+
+  it('an .xlsx-named file with valid ZIP magic bytes but garbage content past that gets past the signature check (rejected later, by archive validation, not by the signature check)', async () => {
+    const { normalizeMemberImportSource } = await loadService()
+    // Real ZIP local-file-header signature (PK\x03\x04) followed by bytes
+    // that do not form a valid ZIP archive at all.
+    const bytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00])
+
+    await expect(normalizeMemberImportSource({
+      fileName: 'members.xlsx',
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      bytes,
+    })).rejects.toThrow('XLSX file is invalid or corrupted')
+  })
+
+  it('rejects an .xlsx-named file whose body is plain text (no ZIP signature)', async () => {
+    const { normalizeMemberImportSource } = await loadService()
+    const bytes = new TextEncoder().encode('USUARIOS,ID\nJohn Doe,100050\n')
+
+    await expect(normalizeMemberImportSource({
+      fileName: 'members.xlsx',
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      bytes,
+    })).rejects.toThrow('Import file content does not match the .xlsx extension.')
+  })
+
+  it('rejects an .odt-named file whose body is plain text (no ZIP signature)', async () => {
+    const { normalizeMemberImportSource } = await loadService()
+    const bytes = new TextEncoder().encode('this is not a zip file')
+
+    await expect(normalizeMemberImportSource({
+      fileName: 'members.odt',
+      contentType: 'application/vnd.oasis.opendocument.text',
+      bytes,
+    })).rejects.toThrow('Import file content does not match the .odt extension.')
+  })
+
+  it('rejects a .csv-named file that is actually binary garbage', async () => {
+    const { normalizeMemberImportSource } = await loadService()
+    const bytes = new Uint8Array([0x00, 0x01, 0x02, 0xff, 0xfe, 0x00, 0x10, 0x20])
+
+    await expect(normalizeMemberImportSource({
+      fileName: 'members.csv',
+      contentType: 'text/csv',
+      bytes,
+    })).rejects.toThrow('Import file content does not match the .csv extension.')
+  })
+
+  it('rejects a .csv-named file containing invalid UTF-8 byte sequences', async () => {
+    const { normalizeMemberImportSource } = await loadService()
+    // 0xC0 0xC0 is an invalid UTF-8 continuation sequence — not a valid
+    // multi-byte character, and no control byte among the earlier checks.
+    const bytes = new Uint8Array([0x55, 0x53, 0x55, 0xc0, 0xc0])
+
+    await expect(normalizeMemberImportSource({
+      fileName: 'members.csv',
+      contentType: 'text/csv',
+      bytes,
+    })).rejects.toThrow('Import file content does not match the .csv extension.')
+  })
+
+  it('rejects a .csv-named file with a NUL byte past the first 8192 bytes', async () => {
+    const { normalizeMemberImportSource } = await loadService()
+    // A large-but-realistic member list (~700 rows, matching this club's
+    // normal import size) padded well past the byte-scan's old 8192-byte
+    // cap, with a NUL byte planted near the end. TextDecoder(fatal) does
+    // not catch this either — NUL (U+0000) is valid UTF-8.
+    const header = 'USUARIOS,ID,email,phone\n'
+    const rows = Array.from(
+      { length: 700 },
+      (_, index) => `Member ${index},${100000 + index},member${index}@alea.club,600000${String(index).padStart(3, '0')}\n`,
+    ).join('')
+    const csvText = header + rows
+    const bytes = new TextEncoder().encode(csvText)
+    expect(bytes.length).toBeGreaterThan(8192)
+    bytes[bytes.length - 10] = 0x00
+
+    await expect(normalizeMemberImportSource({
+      fileName: 'members.csv',
+      contentType: 'text/csv',
+      bytes,
+    })).rejects.toThrow('Import file content does not match the .csv extension.')
+  })
+
+  it('accepts a normal valid CSV file', async () => {
+    const { normalizeMemberImportSource } = await loadService()
+    const bytes = new TextEncoder().encode('USUARIOS,ID,email,phone\nJohn Doe,100051,john@alea.club,600555666\n')
+
+    const result = await normalizeMemberImportSource({
+      fileName: 'members.csv',
+      contentType: 'text/csv',
+      bytes,
+    })
+
+    expect(result.normalizedRows).toEqual([
+      {
+        rowNumber: 2,
+        memberNumber: '100051',
+        fullName: 'John Doe',
+        email: 'john@alea.club',
+        phone: '600555666',
+      },
+    ])
+  })
+})
+
 describe('importMembersFromSource', () => {
   beforeEach(() => {
     vi.clearAllMocks()
