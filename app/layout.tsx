@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return <ClerkProvider>{children}</ClerkProvider>
+  return <ClerkProvider telemetry={{ disabled: true }}>{children}</ClerkProvider>
 }

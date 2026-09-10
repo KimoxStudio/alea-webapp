@@ -1,34 +1,8 @@
 import type { NextConfig } from 'next'
 import createNextIntlPlugin from 'next-intl/plugin'
+import { getClerkFrontendApiHost } from './lib/clerk-frontend-api'
 
 const withNextIntl = createNextIntlPlugin('./lib/i18n/request.ts')
-
-/**
- * Derives Clerk's Frontend API (FAPI) host from the configured publishable
- * key, replicating `parsePublishableKey()` from `@clerk/shared` (see
- * `node_modules/@clerk/shared/dist/keys.js`) without importing Clerk
- * internals into `next.config.ts`.
- *
- * A publishable key is `pk_(test|live)_<base64>`; the base64 segment
- * decodes to the FAPI host followed by a trailing `$`. A `pk_test_*` key
- * decodes to a `*.clerk.accounts.dev` host; a `pk_live_*` key decodes to
- * the app's own configured production Clerk domain. Hardcoding either
- * host is the bug this function exists to avoid — a dev-only host would
- * silently break auth in production, and vice versa.
- */
-function getClerkFrontendApiHost(publishableKey: string | undefined): string | null {
-  if (!publishableKey) return null
-  const parts = publishableKey.split('_')
-  if (parts.length !== 3) return null
-  try {
-    const decoded = Buffer.from(parts[2], 'base64').toString('utf-8')
-    // Clerk's decoded value ends with a trailing '$' — strip it, matching
-    // `parsePublishableKey`'s `.slice(0, -1)`.
-    return decoded.endsWith('$') ? decoded.slice(0, -1) : decoded
-  } catch {
-    return null
-  }
-}
 
 const clerkFrontendApiHost = getClerkFrontendApiHost(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
 
@@ -71,18 +45,25 @@ const isDev = process.env.NODE_ENV !== 'production'
  * `<script>self.__next_f.push([...])</script>` tags with no nonce wired up.
  *
  * The Clerk Frontend API host is derived from the active publishable key
- * (see `getClerkFrontendApiHost` above) rather than hardcoded, so this
+ * (see `getClerkFrontendApiHost` in `lib/clerk-frontend-api.ts`) rather than hardcoded, so this
  * same static header is correct for both a dev (`pk_test_*`) and a
  * production (`pk_live_*`) key.
  */
 const CSP_DIRECTIVES: Record<string, string[]> = {
   'default-src': ["'self'"],
-  'script-src': ["'self'", "'unsafe-inline'", ...(isDev ? ["'unsafe-eval'"] : []), CLERK_FAPI],
+  'script-src': [
+    "'self'",
+    "'unsafe-inline'",
+    ...(isDev ? ["'unsafe-eval'"] : []),
+    CLERK_FAPI,
+    CLERK_PROTECT,
+  ],
   'connect-src': ["'self'", CLERK_FAPI, CLERK_PROTECT],
   'frame-src': [CLERK_PROTECT],
   'img-src': ["'self'", 'data:', WP_MEDIA, VERCEL_BLOB],
   'font-src': ["'self'", 'data:'],
   'style-src': ["'self'", "'unsafe-inline'"],
+  'worker-src': ["'self'", 'blob:'],
   'base-uri': ["'self'"],
   'frame-ancestors': ["'none'"],
   'object-src': ["'none'"],
