@@ -1,4 +1,5 @@
 ---
+name: kx-standards
 description: Kimox Studio engineering standards — YAGNI, KISS and SOLID expressed as checkable tests. Read before writing, reviewing or measuring code.
 ---
 
@@ -90,6 +91,28 @@ Tests are code. Every rule above applies to them.
 - One reason to fail per test
 - Coverage percentage is not a standard here. "Does this test catch a real
   regression?" is.
+
+## A bug is fixed test first
+
+A defect found while working — in review, in a report, in the code under the
+change — gets the test that reproduces it before it gets the fix. Not after,
+and not "covered by the existing suite".
+
+**Test:** run the new test against the unfixed code. Does it fail? A test that
+passes before the fix is describing the fix, not the bug, and it will pass
+again the day the bug returns.
+
+Two reasons, and the first is the one that gets skipped:
+
+- **It proves the diagnosis.** A fix written from a theory fixes the bug that
+  was imagined. A failing test names the behaviour that is actually wrong, and
+  a fix that does not turn it green was the wrong fix.
+- **It is the one test written from a regression that really happened.** Every
+  other test guesses at what could break.
+
+A bug that is *not* being fixed now is out of scope for this rule: it goes to
+an issue with its evidence verbatim, and a reproduction is written down only
+if it was actually run.
 
 ## A migration is its own task
 

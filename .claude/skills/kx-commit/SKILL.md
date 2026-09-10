@@ -1,4 +1,5 @@
 ---
+name: kx-commit
 description: Write and make a git commit in a Kimox Studio repository, using Conventional Commits in English. Use whenever committing, staging changes for a commit, or writing a commit message.
 ---
 

@@ -1,4 +1,5 @@
 ---
+name: kx-reporting
 description: How to report status honestly — what passed, what failed, and what was never checked. Read when writing anything that tells someone whether their system works: a CLI report, a health check, CI output, a status page.
 ---
 

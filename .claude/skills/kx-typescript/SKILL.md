@@ -1,4 +1,5 @@
 ---
+name: kx-typescript
 description: Kimox Studio TypeScript conventions — strictness, type placement, error shapes, imports and naming. Use when writing or reviewing TypeScript anywhere in the studio.
 ---
 

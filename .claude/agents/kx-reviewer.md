@@ -58,24 +58,28 @@ most expensive thing you can do in this loop.
 
 ## UI diffs
 
-When the diff touches anything interactive — components, forms, modals,
-navigation, animation — invoke the `kx-ux` skill and check against it.
+Accessibility and interaction are `kx-ux-reviewer`'s pass. Do not open `kx-ux`
+and do not repeat it: two agents reporting the same missing focus ring in
+different words is how a phase gets a round it did not need.
 
-Accessibility failures are **correctness**, not preference. A control with no
-visible focus ring, a placeholder used as a label, an error shown only in a
-summary: these are HIGH, and they are the one class of UI finding that carries
-the same weight as a logic error. Cite the rule name from the reference so the
-orchestrator can verify it.
+What you owe the orchestrator is the flag. When the diff touches anything a
+person sees or operates — a component, a form, a modal, navigation, animation
+— add one line to your verdict: **this diff has UI in it**. The orchestrator
+knows whether a UX review was on this phase; it cannot know what you never
+reported.
 
-You do **not** get the `kx-design` skill, and design is not your call. Spacing,
-palette and type choices belong to `kx-developer`. Flagging every `p-5` in a
-prototype buries the findings that matter.
+You do **not** get the `kx-design` skill either, and design is not your call.
+Spacing, palette and type choices belong to `kx-developer`. Flagging every
+`p-5` in a prototype buries the findings that matter.
 
 ## Judge the tests
 
 Same standards, applied to test code.
 
 - Does each test catch a regression that could actually happen?
+- Does a fix arrive with a test that fails against the unfixed code? A fix with
+  no such test is HIGH — nothing shows the bug was reproduced rather than
+  guessed.
 - Does it assert behaviour, or internals?
 - Can it fail? Mentally break the code — does something go red?
 - Is anything untested that the phase's "done when" depends on?

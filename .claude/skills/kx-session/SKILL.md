@@ -1,4 +1,5 @@
 ---
+name: kx-session
 description: Run an orchestrated development session — grill, plan, approve, then delegate to developer and reviewer.
 disable-model-invocation: true
 ---
@@ -126,14 +127,52 @@ environment costs a full developer round to diagnose as if it were a code bug.
 
 ## Step 2 — Grill
 
-**Read the repo before asking anything.** Package manifests, directory
-layout, the files the request touches, recent commits in that area.
+**The repository answers most of what you would otherwise ask** — package
+manifests, directory layout, the files the request touches, recent commits in
+that area. Nothing gets asked until it has been read.
 
-Then ask only what you genuinely could not infer.
+### Send readers, do not read
+
+Decide what you need to know, then spawn one `kx-explorer` per question — all
+in the same message, so they run at once. Each gets **one concrete objective**
+and returns an answer with `path:line`:
+
+- *which HTTP client is used, and where is it configured*
+- *does anything already parse this file format*
+- *what do the last ten commits under `src/auth` actually change*
+
+Not *"look at the repo"*. An explorer given no objective returns a summary of
+everything, which is the file dump you were avoiding.
+
+Two things this buys that reading yourself does not:
+
+- **Your context survives the session.** It has to hold the plan, every diff
+  and every review round. A file you open now is in it until the end; an
+  explorer's answer is a paragraph.
+- **Four questions cost one round**, on a cheap model, in parallel.
+
+Read directly when the answer is one command — `cat package.json`, `ls`, a
+grep whose pattern you already know. Delegating that costs more than it saves.
+The line is this: the moment you would open a third file, or you do not yet
+know which files to open, send an explorer.
+
+**Say who you are sending**, before you send them: one line per explorer,
+naming the agent and the question you gave it. The human is watching a session
+spend on its own account. Who is working is never left implicit here — not at
+the grill, not in the plan.
+
+What comes back is evidence, not a verdict. `kx-explorer` reports what it
+found and says "ambiguous" rather than choosing; choosing is yours. An
+ambiguity two explorers agree on is usually the one question worth asking the
+human.
+
+### Then ask
+
+Ask only what you genuinely could not infer.
 
 Proportional to ambiguity:
 
-- Request is concrete and the repo answers the rest → **ask nothing, go to Step 2**
+- Request is concrete and the repo answers the rest → **ask nothing, go to Step 3**
 - Request is vague → at most 3 questions, the ones that change the plan
 
 Never ask something the repository answers. Asking which framework is in use
@@ -163,7 +202,15 @@ Produce phases. Each one:
 Changes:     <files or areas>
 Done when:   <a condition you can actually check>
 Not included: <the adjacent thing it will not touch>
+Agents:      <who will work this phase, in order>
 ```
+
+**`Agents:` is part of what the human approves**, alongside the scope. The
+default is `kx-developer → kx-reviewer`. A phase that changes something a
+person sees or operates adds `kx-ux-reviewer`; a phase that does not **must
+not** name it — an agent that appears on every phase stops carrying
+information, and the human loses the one signal that says this phase touches
+the interface.
 
 A phase without a checkable "done when" cannot be closed — you will not know
 when to stop. Rewrite it until it has one.
@@ -197,7 +244,8 @@ to leave out a skill the phase actually needs. Be deliberate because an
 irrelevant skill is noise the developer has to reconcile, not because you are
 saving room.
 
-Look at what the project has — `ls .claude/skills/` — and decide per phase:
+Look at what the project has — `ls .claude/skills/`, or `.agents/skills/`
+under Codex — and decide per phase:
 
 | The phase | Name |
 |---|---|
@@ -227,7 +275,8 @@ is cheaper than a review round that finds the same thing.
 **If the phase needs a service the project does not have yet**, `kx connector
 add <id>` records it and `kx creds --project <id> --guide` fills the
 credential — in that order, and both before anyone else syncs, because
-`op run` fails whole on one reference it cannot resolve. The connector is
+`op run` fails whole on one reference it cannot resolve and every `kx exec`
+of theirs becomes a question until the value is in. The connector is
 recorded for the project, not for the branch. `kx-cli` has the rest.
 
 **2. Read `git diff` yourself.** Do not skip this. If you review only the
@@ -237,7 +286,26 @@ ground truth, and you cannot arbitrate anything that follows.
 **3. Send the diff to `kx-reviewer`.** It returns structured findings by
 severity.
 
-**4. Arbitrate.** You have read the diff. Decide:
+**4. If the phase touched the interface, send the same diff to
+`kx-ux-reviewer`** — in the same message as step 3, so both reviews run at
+once rather than one after the other.
+
+It qualifies when the diff changes something a person sees or operates:
+components, a route that renders markup, forms, modals, navigation, styles,
+animation, anything a keyboard or a screen reader has to work. It does not
+qualify for a CLI's output, a migration, an API handler or a build script.
+`kx-ux` is written about interfaces, and pointing it at a terminal produces
+findings nobody can act on.
+
+`kx-ux-reviewer` reads `kx-ux` and nothing else, judges behaviour rather than
+looks, and cites the rule each finding breaks. It does not review the code —
+that is `kx-reviewer`'s, and sending both is how a diff gets one pass for
+correctness and one for whether the result can be used.
+
+If `kx-reviewer` comes back saying the diff has UI in it and you did not send
+`kx-ux-reviewer`, send it now. That line exists for exactly this.
+
+**5. Arbitrate.** You have read the diff. Decide:
 
 | Severity | Action |
 |---|---|
@@ -245,10 +313,12 @@ severity.
 | MEDIUM | Your call. Fix if cheap and the reviewer is right. Otherwise note it and move on. |
 | LOW | Drop by default. Mention only if several point at the same thing. |
 
-`kx-reviewer` is not the decision-maker. It reports; you decide. A finding you
-can see is wrong against the actual diff gets dropped — say so briefly.
+Neither reviewer is the decision-maker. They report; you decide. A finding you
+can see is wrong against the actual diff gets dropped — say so briefly. A HIGH
+blocks whichever of the two raised it: an unreachable control fails a phase as
+surely as wrong logic does.
 
-**5. Round cap: 2.** If a phase is still not clean after two
+**6. Round cap: 2.** If a phase is still not clean after two
 developer↔reviewer cycles, stop and escalate to the human with both positions
 stated plainly. Do not start a third round. Repeated cycles mean the
 disagreement is about the design, not the code, and no further round will

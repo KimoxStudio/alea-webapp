@@ -1,4 +1,5 @@
 ---
+name: kx-analyze
 description: Analyse a Claude Code conversation from its transcript — this one by default, or an earlier one by id — reporting where the session's time went, which skills fired, and which were followed. Use when asked to review, grade or debug how a session went, or why a skill did not fire.
 disable-model-invocation: true
 ---

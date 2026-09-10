@@ -1,4 +1,5 @@
 ---
+name: kx-style
 description: Kimox Studio output style — terse, no filler, causal chain intact. Applies to everything an agent writes for a human to read.
 ---
 

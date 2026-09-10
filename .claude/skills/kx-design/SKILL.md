@@ -1,5 +1,5 @@
 ---
-name: design
+name: kx-design
 description: Design and improve user interfaces using the concrete rules from Refactoring UI (Wathan & Schoger) — constrained spacing/type/color/shadow scales, visual hierarchy through weight and color rather than size, and depth through emulated light. Use when building or styling any UI (web, app, dashboard, landing page, component), when picking font sizes, spacing, colors, shadows or border radius, when designing a color palette or design tokens, and whenever someone says a UI "looks off", "looks amateur", "feels cluttered/plain/unfinished", or asks to "make this look better".
 ---
 

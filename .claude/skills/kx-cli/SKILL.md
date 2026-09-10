@@ -1,4 +1,5 @@
 ---
+name: kx-cli
 description: How this project gets its credentials and environment variables, and how to drive the kx CLI. Use when a variable or credential is missing, when adding one the app needs, when a service fails to authenticate, or when asked how to obtain a credential.
 ---
 
@@ -69,13 +70,15 @@ kx exec --env production pnpm build
 `op run --env-file` resolves the references as it reads the file, so the
 environment is chosen by which file is read, never as the command runs.
 
-**`kx exec` is also the form to write down.** The raw `op run` fails three ways
+**`kx exec` is also the form to write down.** The raw `op run` fails four ways
 that never mention `.env.op` — wrong directory, before the first sync, `op` not
-installed — and `kx exec` refuses with the reason instead, and names a variable
-the model has grown since the last sync. A file in the project spelling the raw
-form out is not a second convention: a `Fastfile` and the rest are scaffolded
-once and never rewritten, so their comments are as old as whatever generated
-them.
+installed, an item the vault lacks — and `kx exec` refuses with the reason
+instead, names a variable the model has grown since the last sync, and turns
+the missing item into a question or, for you, into `--skip-missing` (see
+"Running a command with the credentials"). A file in the project spelling the
+raw form out is not a second convention: a `Fastfile` and the rest are
+scaffolded once and never rewritten, so their comments are as old as whatever
+generated them.
 
 Declare one without editing the file by hand:
 
@@ -102,9 +105,13 @@ Then, always both — the file alone changes nothing until sync rewrites
 `.env.op`, and a secret with no value in the vault is a reference to nothing:
 
 ```bash
-kx sync
+kx sync --yes --commit
 kx creds --guide
 ```
+
+`--commit` commits what sync wrote, as `chore: sync kx`, touching nothing
+else in the working tree. With a terminal sync asks instead; without one it
+prints the commands, and `--json` reports `committed` so nothing is assumed.
 
 **A variable a connector already supplies is not yours to declare.** Vercel's
 token comes from the `vercel` connector; declaring `VERCEL_TOKEN` here as well
@@ -120,6 +127,12 @@ for again.
 No `.env`, no `.env.local`, no value pasted into a file, a commit, a comment
 or a message. The vault holds them and `op run` injects them at launch. If you
 need one to exist, add it to `kx.env.json` and let `kx creds` put it in.
+
+**And never read one out.** No `op read`, no `op item get`, no `export
+X=$(op …)`: the value lands in your shell, your transcript and every log of
+this session, which is exactly what `.env.op` exists to avoid. When `kx exec`
+refuses, the refusal is the answer — see below — and working around it with
+`op read` is the one thing worse than not running the command.
 
 ## The envelope
 
@@ -141,7 +154,10 @@ kx doctor --json
 ```
 
 Run from inside the project. It works out which project from the git remote;
-add `--project <id>` from anywhere else.
+add `--project <id>` from anywhere else. `kx doctor --all --json` answers
+for every project at once, as `{ healthy, projects: [...] }` with the same
+per-project shape, for the question "which of the studio's projects are set
+up at all".
 
 It answers the only question that matters: does this project's setup actually
 work. Read `healthy` first, then `summary`, then `checks` for the detail.
@@ -281,7 +297,10 @@ they sync. `kx exec` says so by name rather than failing at the service.
 
 **Fill the credential before anyone else syncs.** `op run` is all or nothing —
 one reference it cannot resolve fails the whole command, so a connector added
-before its value exists breaks every `kx exec` for whoever syncs next.
+before its value exists turns every `kx exec` for whoever syncs next into a
+question: launch without these variables? A person answers it at a terminal;
+you answer it with `--skip-missing`, and only for a command that does not need
+them. Either way it is a question nobody should have to keep answering.
 
 If two branches each added one, `.env.op` conflicts on merge. Do not resolve it
 by hand: take either side and run `kx sync`, which regenerates it from
@@ -299,6 +318,18 @@ kx sync --json --yes        # applies it
 ```
 
 `changes` is the count; `files.writes` and `files.stale` are what would happen.
+
+```bash
+kx sync --all --json --dry-run   # every repository: clone, plan, push nothing
+kx sync --all --json             # and push kx/sync, opening a pull request each
+```
+
+Every project's repositories, each through a pull request, and never a
+checkout on this machine. Needs `gh` signed in with push access and no `op`
+at all, so it is one of the things you *can* run without 1Password.
+`repositories[]` carries one entry each with `outcome.kind` — `opened`,
+`updated`, `up-to-date`, `planned`, or `failed` with the `step` — and the
+exit code is `1` when any failed. Report the URLs; do not merge them.
 `files.edited` are generated files a person has since changed by hand — those
 are skipped, and saying so is more useful than overwriting them.
 
@@ -322,12 +353,36 @@ that never mentions `.env.op`, and reads as a revoked token.
 Not JSON. It hands the terminal to the command and exits with its code.
 Everything after a bare `--` belongs to the command, flags included.
 
-`kx open --claude` is the same thing with the arguments already written down —
-Claude Code, `--dangerously-skip-permissions`, this project's credentials. It
-prints the command line before running it.
+An item the vault lacks, or a field the item lacks, is a question at a
+terminal — which variables the command would run without, launch anyway? —
+and a refusal without one: it prints what is missing and the variables and
+exits 1 without running anything.
 
-**`--claude` is the only launcher there is.** No `--cursor`, no `--code`, no
-`--shell`. Anything else is `kx exec`.
+You have no terminal, so the answer is a flag, and it is yours to give:
+
+```bash
+kx exec --skip-missing -- koyeb whoami
+```
+
+Read the names it printed first. If the command does not need them — a
+`koyeb whoami` does not need `POSTHOG_API_KEY` — re-run with
+`--skip-missing`, which launches without exactly those and still names them.
+If it does need them, stop: report the items and `kx creds --guide` is the
+fix, and it needs a person. `--skip-missing` is never the first thing you
+try, and never a habit.
+
+A `.env.op` that names an item the project no longer uses, or lacks a
+connector added since, is a different message — "does not match
+projects.json" — and its fix is `kx sync`, which rewrites a generated file
+and is yours to run.
+
+`kx open --claude` is the same thing with the arguments already written down —
+Claude Code, `--dangerously-skip-permissions`, this project's credentials.
+`kx open --codex` is Codex with `--dangerously-bypass-approvals-and-sandbox`.
+Both print the command line before running it.
+
+**`--claude` and `--codex` are the only launchers there are.** No `--cursor`,
+no `--code`, no `--shell`. Anything else is `kx exec`.
 
 At a terminal both add `op run --no-masking`, because masking pipes the
 child's output and a piped stdio is not a terminal. Anything whose output is

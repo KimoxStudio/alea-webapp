@@ -71,6 +71,11 @@ change but the behaviour does not, it is coupling.
 One reason to fail per test. Setup longer than the assertion means the code
 under test has a design problem — say so.
 
+**A bug inside the scope is fixed test first**: write the test that reproduces
+it, run it against the unfixed code and see it fail, then fix. `kx-standards`
+has the rule and the reason. A bug *outside* the scope is still reported and
+not touched — that has not changed.
+
 ## Stack conventions
 
 They are not in this file. Each project receives them as skills, named for its

@@ -1,4 +1,5 @@
 ---
+name: kx-nextjs
 description: Kimox Studio conventions for Next.js projects — directory layout, the server/client boundary, data fetching, component props. Use when writing or reviewing any code in a Next.js repository.
 ---
 

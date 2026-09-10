@@ -1,4 +1,5 @@
 ---
+name: kx-issue
 description: Open a GitHub issue in the repository being worked on, written to the studio's standard — one objective, a checkable "done when", evidence verbatim, in English. Use when something is found that will not be fixed now, or when someone asks to open, file, raise or write up an issue.
 ---
 

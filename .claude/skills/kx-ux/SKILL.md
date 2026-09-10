@@ -1,4 +1,5 @@
 ---
+name: kx-ux
 description: UX and accessibility rules — contrast, focus, keyboard, touch targets, form errors, reduced motion, responsive text. Use when building or reviewing any interactive UI, and whenever a change touches forms, navigation, modals, animation or anything a keyboard or screen reader has to operate.
 ---
 

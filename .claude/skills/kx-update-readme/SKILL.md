@@ -1,4 +1,5 @@
 ---
+name: kx-update-readme
 description: Write or update a repository's README from what the repo actually contains. Use when a README is missing, out of date, or when someone asks to document a project, refresh its setup instructions, or explain what a repo does.
 ---
 

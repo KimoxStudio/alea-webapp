@@ -1,4 +1,5 @@
 ---
+name: kx-manage-project
 description: Change what a project kx already knows uses — add or drop a service, declare an environment variable, or report what is missing. Stops short of credentials, which need 1Password. Use when asked to change or inspect an existing project's setup.
 ---
 
@@ -45,6 +46,7 @@ whether they are filled in is unknown from here", never "these are missing".
 | what does this project use | `kx connector list --json` |
 | what does the code look like it uses | `kx connector suggest` |
 | start using a service | `kx connector add <id>` |
+| keep separate keys per environment for one | `kx connector add <id> --per-environment <field>` — the project's choice, recorded on its connection |
 | stop using one | `kx connector remove <id>` |
 | the app needs a new variable | `kx env add <NAME> --secret` |
 | what does it declare already | `kx env list --json` |
@@ -61,8 +63,10 @@ setting. `kx-cli` has what that means at merge time.
 
 **`op run` is all or nothing.** One reference it cannot resolve fails the whole
 command, not just that variable — so a connector added before its credential
-exists breaks every `kx exec` for whoever syncs next. That is the reason to
-say, every time you add one, that a credential is now owed and by whom.
+exists turns every `kx exec` for whoever syncs next into a question: launch
+without it? (`kx-cli` says how that question is answered, and when
+`--skip-missing` is the answer.) That is the reason to say, every time you add
+one, that a credential is now owed and by whom.
 
 ## Removing a service
 

@@ -1,4 +1,5 @@
 ---
+name: kx-create-design-from-scratch
 description: Establish a project's initial brand direction — personality, base color, light/dark stance — grounded in comparable real products from RicoUI's Brands library, before kx-design builds a system from it. Use when a project has no brand direction yet: no primary color chosen, no design tokens, and someone asks what a product should look like, what its brand color should be, or to give it a personality. Not for styling an existing UI or extending an existing palette — that is kx-design.
 ---
 

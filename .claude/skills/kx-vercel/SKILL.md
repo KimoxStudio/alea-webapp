@@ -1,4 +1,5 @@
 ---
+name: kx-vercel
 description: Operate Vercel for this project through the vercel CLI — inspect deployments, read build and runtime logs, manage environment variables and domains. Use when a deploy fails, when checking what is live, when a bug only reproduces in preview or production, or when environment variables need reading or setting.
 ---
 

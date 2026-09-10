@@ -1,4 +1,5 @@
 ---
+name: kx-tailwind
 description: Kimox Studio conventions for Tailwind CSS — v4, CSS-variable tokens, class variants and dark mode. Use when styling any component or when a project's Tailwind setup needs changing.
 ---
 
