@@ -379,12 +379,13 @@ and is yours to run.
 `kx open --claude` is the same thing with the arguments already written down —
 Claude Code, `--dangerously-skip-permissions`, this project's credentials.
 `kx open --codex` is Codex with `--dangerously-bypass-approvals-and-sandbox`.
-Both print the command line before running it.
+`kx open --opencode` is OpenCode with `--auto`, auto-approving permissions not
+explicitly denied. All three print the command line before running it.
 
-**`--claude` and `--codex` are the only launchers there are.** No `--cursor`,
-no `--code`, no `--shell`. Anything else is `kx exec`.
+**`--claude`, `--codex` and `--opencode` are the only launchers there are.**
+No `--cursor`, no `--code`, no `--shell`. Anything else is `kx exec`.
 
-At a terminal both add `op run --no-masking`, because masking pipes the
+At a terminal all three add `op run --no-masking`, because masking pipes the
 child's output and a piped stdio is not a terminal. Anything whose output is
 being captured is still masked.
 
