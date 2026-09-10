@@ -3,10 +3,12 @@ import type { SessionUser } from '@/lib/server/auth'
 
 /**
  * Shared contract-test matrix for the "member row scoping" invariant enforced
- * independently by two live, non-duplicate production functions:
- * `assertMemberRowsScopedSql()` (lib/server/authz.ts, guards users-service.ts)
- * and `assertMemberRowsScoped()` (lib/server/data-scoping.ts, guards
- * saved-games-service.ts and reservations-service.ts). Both enforce the same
+ * independently by two non-duplicate functions with the same behavior:
+ * `assertMemberRowsScopedSql()` (lib/server/authz.ts — generic over any
+ * raw-SQL row shape; has no production call site as of #389, kept as the
+ * intended seam for the next Neon service that needs it, per authz.ts's own
+ * header comment) and `assertMemberRowsScoped()` (lib/server/data-scoping.ts,
+ * guards saved-games-service.ts and reservations-service.ts). Both enforce the same
  * behavior (admin passthrough; member rows must all match session.id; a
  * single foreign/null/undefined user_id throws a 500 "Data isolation
  * violation" ServiceError) so the ~12-case matrix is defined once here and

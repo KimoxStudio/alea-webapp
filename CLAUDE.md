@@ -81,7 +81,7 @@ Before `security-reviewer` opens a PR, it must run `/code-review` (medium effort
 - i18n keys must maintain full parity between `en.json` and `es.json`
 - Test files must be excluded from `tsconfig.app.json`
 - Test files are owned exclusively by `qa-engineer` — `software-engineer` must never create or modify test files
-- Every read of `reservations` / `saved_games` for a `member` session MUST filter `WHERE user_id = session.id`; member-scoped reads must also pass through `assertMemberRowsScoped()` (from `lib/server/data-scoping.ts`) as defense-in-depth after the DB fetch and before mapping rows to the public shape (admins exempt).
+- Every read of `reservations` / `saved_games` for a `member` session MUST filter `WHERE user_id = session.id`; member-scoped reads must also pass through a scoping guard as defense-in-depth after the DB fetch and before mapping rows to the public shape (admins exempt). Two non-duplicate guards exist: `assertMemberRowsScoped()` (`lib/server/data-scoping.ts`) is the one actually wired up today, guarding `reservations-service.ts` and `saved-games-service.ts`. `assertMemberRowsScopedSql()` (`lib/server/authz.ts`) is generic over any raw-SQL row shape and is the intended seam for the next Neon service that needs one — see `__tests__/server/member-row-scoping-enforcement.test.ts` (#389) for the automated check that a new member-scoped read of these two tables always calls one of them.
 
 ---
 
