@@ -41,23 +41,13 @@ Related issue spec: `docs/issues/migration-pre-04-rotate-p0-secrets.md`
   (and whatever external cron scheduler calls the endpoint, e.g. cron-job.org) for deploy.
 - **Code consumers — this section changed since the original P0 audit:** the route this
   section originally described, `app/api/cron/mark-no-show/route.ts`, **no longer exists**
-  (confirmed via `find` — not present anywhere in the repo, including `__tests__/`). The only
-  cron route now is `app/api/cron/cancel-pending/route.ts`, and its full body is:
-
-  ```ts
-  export async function POST() {
-    return NextResponse.json(
-      { error: 'Endpoint deprecated', message: 'Cron-based auto-cancellation replaced with lazy evaluation at query time (KIM-366)' },
-      { status: 410 },
-    )
-  }
-  ```
-
-  It always returns `410 Gone` and never reads `process.env.CRON_SECRET` or checks an
-  `Authorization` header at all. `.env.example:129-131`'s comment is accurate as of this
-  writing — it already states the route "never reads this header." A repo-wide grep for
-  `CRON_SECRET` (`git grep -n CRON_SECRET -- ':!node_modules'`, re-run against the final
-  tree of this branch) turns up **no remaining app-runtime (`app/`, `lib/`) consumer**.
+  (confirmed via `find` — not present anywhere in the repo, including `__tests__/`). The
+  route that replaced it, `app/api/cron/cancel-pending/route.ts` (an unauthenticated stub
+  that always returned `410 Gone` and never read `process.env.CRON_SECRET`), was itself
+  removed (#387) as dead, unauthenticated attacker-reachable surface. There is now **no**
+  cron route in the repo at all. A repo-wide grep for `CRON_SECRET`
+  (`git grep -n CRON_SECRET -- ':!node_modules'`, re-run against the final tree of this
+  branch) turns up **no remaining app-runtime (`app/`, `lib/`) consumer**.
   The rest of the hits split into two groups:
   - **Accurate, not stale:** `.env.example:129-132` (this section's own template entry
     and comment), `docs/ENVIRONMENT.md:45,206`, `docs/ROLLBACK.md:130` (all three added
