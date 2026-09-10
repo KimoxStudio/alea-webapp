@@ -959,8 +959,9 @@ export async function activateReservationByTable(
   // Defense-in-depth: the WHERE filter above already scopes this read to
   // the caller's own id, but per convention every member-scoped read of
   // reservations/saved_games also verifies the invariant independently
-  // (#389) — catches a future regression in the filter itself.
-  pendingRows = assertMemberRowsScopedSql(pendingRows, session) as ReservationRow[]
+  // (#389) — catches a future regression in the filter itself. Throws on
+  // violation; otherwise returns its input unchanged, so no reassignment.
+  assertMemberRowsScopedSql(pendingRows, session)
 
   if (!pendingRows[0]) {
     let activeRows: ReservationRow[]
@@ -978,7 +979,7 @@ export async function activateReservationByTable(
     } catch {
       serviceError('Internal server error', 500)
     }
-    activeRows = assertMemberRowsScopedSql(activeRows, session) as ReservationRow[]
+    assertMemberRowsScopedSql(activeRows, session)
 
     if (activeRows[0]) {
       serviceError(ERROR_CODES.CHECK_IN_ALREADY_ACTIVE, 409)
