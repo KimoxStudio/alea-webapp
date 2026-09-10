@@ -48,8 +48,10 @@ describe('LoginForm', () => {
   // fresh `initialUser` prop for `AuthProvider` — that part is asserted here.
   // Whether `AuthProvider` actually *adopts* that new prop into its `user`
   // state (the part that determines if the header renders) is a separate
-  // question, covered below against `AuthProvider` + `Header` directly,
-  // since mocking `router.refresh()` in this test can't observe it.
+  // question, covered in `__tests__/lib/auth-context.test.tsx`
+  // (`describe('AuthProvider adopting a refreshed initialUser (#391)')`)
+  // against `AuthProvider` + `Header` directly, since mocking
+  // `router.refresh()` in this test can't observe it.
   it('calls router.refresh() after router.push() on a successful sign-in (#391)', async () => {
     mockSignInCreate.mockResolvedValue({ status: 'complete', createdSessionId: 'sess-1' })
 
