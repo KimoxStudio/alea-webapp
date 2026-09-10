@@ -15,14 +15,18 @@ import type { SessionUser } from '@/lib/server/auth'
  * tagged-template driver) returns. `assertMemberRowsScoped()` in
  * `lib/server/data-scoping.ts` is a second, independently-live guard with the
  * same invariant (member/admin row isolation). `assertMemberRowsScoped()`
- * guards the actual member-scoped reads in `saved-games-service.ts` and
- * `reservations-service.ts`. `assertMemberRowsScopedSql()` here has no
- * production call sites as of this writing — `users-service.ts` is
- * admin-only (see its own header comment) and has no member-scoped reads to
- * guard. It is kept, generic and exported, as the intended defense-in-depth
- * seam for the next Neon service that does add a member-scoped read (per
- * the CLAUDE.md convention this module's header documents), and remains
- * covered by its own tests plus `member-row-scoping-contract.ts`.
+ * guards the two member-facing list reads in `saved-games-service.ts`
+ * (`listSavedGamesForSession`) and `reservations-service.ts`
+ * (`listVisibleReservations`). `assertMemberRowsScopedSql()` here guards
+ * `activateReservationByTable()` (`reservations-service.ts`, #389) — its
+ * first production call site — and remains the intended defense-in-depth
+ * seam for the next raw-SQL member-scoped read (per the CLAUDE.md convention
+ * this module's header documents). `users-service.ts` is admin-only (see its
+ * own header comment) and has no member-scoped reads to guard. Both guards
+ * are covered by their own tests plus `member-row-scoping-contract.ts`, and
+ * `__tests__/server/member-row-scoping-enforcement.test.ts` (#389) fails CI
+ * if a future `SessionUser`-scoped read of `reservations`/`saved_games` ships
+ * without calling either one.
  */
 
 /** Minimal shape a raw-SQL row must have to be ownership-checkable. */

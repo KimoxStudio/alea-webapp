@@ -19,7 +19,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { searchParams } = new URL(request.url)
     const side = searchParams.get('side') === 'inf' ? ('inf' as const) : undefined
 
-    const reservation = await activateReservationByTable(tableId, auth.session.id, side)
+    const reservation = await activateReservationByTable(tableId, auth.session, side)
     return auth.applyCookies(NextResponse.json({ reservation }))
   } catch (error) {
     return auth.applyCookies(toServiceErrorResponse(error))

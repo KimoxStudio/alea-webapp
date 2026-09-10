@@ -385,7 +385,7 @@ describe('reservations service', () => {
 
       seedPendingReservation({ start_time: makeStartTime(-30) })
 
-      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+      await expect(activateReservationByTable('t3', memberSession, undefined)).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
         message: expect.stringContaining('CHECK_IN_TOO_EARLY'),
@@ -400,7 +400,7 @@ describe('reservations service', () => {
       const startTime = makeStartTime(-5)
       seedPendingReservation({ start_time: startTime })
 
-      const result = await activateReservationByTable('t3', '2', undefined)
+      const result = await activateReservationByTable('t3', memberSession, undefined)
 
       expect(result.status).toBe('active')
     })
@@ -412,7 +412,7 @@ describe('reservations service', () => {
       // This is before the early window [start - 5min], so check-in should fail
       seedPendingReservation({ start_time: makeStartTime(-6) })
 
-      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+      await expect(activateReservationByTable('t3', memberSession, undefined)).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
         message: expect.stringContaining('CHECK_IN_TOO_EARLY'),
@@ -425,7 +425,7 @@ describe('reservations service', () => {
       const startTime = makeStartTime(25)
       seedPendingReservation({ start_time: startTime, end_time: makeEndTime(startTime, 20) })
 
-      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+      await expect(activateReservationByTable('t3', memberSession, undefined)).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
         message: expect.stringContaining('CHECK_IN_TOO_LATE'),
@@ -445,7 +445,7 @@ describe('reservations service', () => {
         start_time: makeStartTime(10),
       }))
 
-      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+      await expect(activateReservationByTable('t3', memberSession, undefined)).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 409,
         message: expect.stringContaining('CHECK_IN_ALREADY_ACTIVE'),
@@ -455,7 +455,7 @@ describe('reservations service', () => {
     it('throws CHECK_IN_NO_RESERVATION when no pending reservation exists', async () => {
       const { activateReservationByTable } = await loadReservationModules()
 
-      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+      await expect(activateReservationByTable('t3', memberSession, undefined)).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 404,
         message: expect.stringContaining('CHECK_IN_NO_RESERVATION'),
@@ -467,7 +467,7 @@ describe('reservations service', () => {
 
       seedPendingReservation({ surface: 'bottom', start_time: makeStartTime(10) })
 
-      const result = await activateReservationByTable('t3', '2', 'inf')
+      const result = await activateReservationByTable('t3', memberSession, 'inf')
 
       expect(result).toMatchObject({ tableId: 't3', userId: '2', status: 'active' })
     })
@@ -485,7 +485,7 @@ describe('reservations service', () => {
         start_time: makeStartTime(10),
       }))
 
-      await expect(activateReservationByTable('t1', '2', 'inf')).rejects.toMatchObject({
+      await expect(activateReservationByTable('t1', memberSession, 'inf')).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 404,
         message: expect.stringContaining('CHECK_IN_NO_RESERVATION'),
@@ -497,7 +497,7 @@ describe('reservations service', () => {
 
       seedPendingReservation({ start_time: makeStartTime(0) })
 
-      const result = await activateReservationByTable('t3', '2', undefined)
+      const result = await activateReservationByTable('t3', memberSession, undefined)
 
       expect(result.status).toBe('active')
     })
@@ -509,7 +509,7 @@ describe('reservations service', () => {
       // Within 60-min window: should succeed
       seedPendingReservation({ start_time: makeStartTime(30) })
 
-      const result = await activateReservationByTable('t3', '2', undefined)
+      const result = await activateReservationByTable('t3', memberSession, undefined)
 
       expect(result.status).toBe('active')
     })
@@ -525,7 +525,7 @@ describe('reservations service', () => {
       const endTime = makeEndTime(startTime, 90)
       seedPendingReservation({ start_time: startTime, end_time: endTime })
 
-      const result = await activateReservationByTable('t3', '2', undefined)
+      const result = await activateReservationByTable('t3', memberSession, undefined)
 
       expect(result.status).toBe('active')
     })
@@ -537,7 +537,7 @@ describe('reservations service', () => {
       // Beyond 60-min window: should fail
       seedPendingReservation({ start_time: makeStartTime(61) })
 
-      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+      await expect(activateReservationByTable('t3', memberSession, undefined)).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
         message: expect.stringContaining('CHECK_IN_TOO_LATE'),
@@ -555,7 +555,7 @@ describe('reservations service', () => {
       const endTime = makeEndTime(startTime, 10)
       seedPendingReservation({ start_time: startTime, end_time: endTime })
 
-      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+      await expect(activateReservationByTable('t3', memberSession, undefined)).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
         message: expect.stringContaining('CHECK_IN_TOO_LATE'),
@@ -571,7 +571,7 @@ describe('reservations service', () => {
       const endTime = makeEndTime(startTime, 20)
       seedPendingReservation({ start_time: startTime, end_time: endTime })
 
-      const result = await activateReservationByTable('t3', '2', undefined)
+      const result = await activateReservationByTable('t3', memberSession, undefined)
 
       expect(result.status).toBe('active')
     })
@@ -585,7 +585,7 @@ describe('reservations service', () => {
       const endTime = makeEndTime(startTime, 19)
       seedPendingReservation({ start_time: startTime, end_time: endTime })
 
-      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+      await expect(activateReservationByTable('t3', memberSession, undefined)).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 400,
         message: expect.stringContaining('CHECK_IN_TOO_LATE'),
@@ -607,7 +607,7 @@ describe('reservations service', () => {
         start_time: makeStartTime(10),
       }))
 
-      const result = await activateReservationByTable('t1', '2', undefined)
+      const result = await activateReservationByTable('t1', memberSession, undefined)
 
       expect(result).toMatchObject({ tableId: 't1', userId: '2', status: 'active' })
     })
@@ -615,7 +615,7 @@ describe('reservations service', () => {
     it('activeQuery DB error returns 500', async () => {
       activationActiveLookupError = true
       const { activateReservationByTable } = await loadReservationModules()
-      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+      await expect(activateReservationByTable('t3', memberSession, undefined)).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 500,
       })
@@ -628,7 +628,7 @@ describe('reservations service', () => {
 
       seedPendingReservation({ start_time: makeStartTime(10) })
 
-      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toThrow(RangeError)
+      await expect(activateReservationByTable('t3', memberSession, undefined)).rejects.toThrow(RangeError)
     })
 
     it('getTable returning null throws 404 with Table not found', async () => {
@@ -636,7 +636,7 @@ describe('reservations service', () => {
       const { activateReservationByTable } = await loadReservationModules()
 
       // Use a tableId that is not seeded in tablesState
-      await expect(activateReservationByTable('t-nonexistent', '2', undefined)).rejects.toMatchObject({
+      await expect(activateReservationByTable('t-nonexistent', memberSession, undefined)).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 404,
         message: expect.stringContaining('Table not found'),
@@ -647,7 +647,7 @@ describe('reservations service', () => {
       activationUpdateReturnsNoRow = true
       const { activateReservationByTable } = await loadReservationModules()
       seedPendingReservation({ start_time: makeStartTime(10) })
-      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+      await expect(activateReservationByTable('t3', memberSession, undefined)).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 409,
         message: expect.stringContaining('CHECK_IN_ALREADY_ACTIVE'),
@@ -660,11 +660,11 @@ describe('reservations service', () => {
       seedPendingReservation({ start_time: makeStartTime(10) })
 
       // First activation should succeed
-      const firstResult = await activateReservationByTable('t3', '2', undefined)
+      const firstResult = await activateReservationByTable('t3', memberSession, undefined)
       expect(firstResult).toMatchObject({ tableId: 't3', userId: '2', status: 'active' })
 
       // Second activation on the same table/user — reservation is now active, not pending
-      await expect(activateReservationByTable('t3', '2', undefined)).rejects.toMatchObject({
+      await expect(activateReservationByTable('t3', memberSession, undefined)).rejects.toMatchObject({
         name: 'ServiceError',
         statusCode: 409,
         message: expect.stringContaining('CHECK_IN_ALREADY_ACTIVE'),

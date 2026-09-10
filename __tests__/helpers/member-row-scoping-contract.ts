@@ -3,9 +3,11 @@ import type { SessionUser } from '@/lib/server/auth'
 
 /**
  * Shared contract-test matrix for the "member row scoping" invariant enforced
- * independently by two live, non-duplicate production functions:
- * `assertMemberRowsScopedSql()` (lib/server/authz.ts, guards users-service.ts)
- * and `assertMemberRowsScoped()` (lib/server/data-scoping.ts, guards
+ * independently by two non-duplicate functions with the same behavior:
+ * `assertMemberRowsScopedSql()` (lib/server/authz.ts — generic over any
+ * raw-SQL row shape; guards `activateReservationByTable()` in
+ * reservations-service.ts, #389) and `assertMemberRowsScoped()`
+ * (lib/server/data-scoping.ts, guards the member-facing list reads in
  * saved-games-service.ts and reservations-service.ts). Both enforce the same
  * behavior (admin passthrough; member rows must all match session.id; a
  * single foreign/null/undefined user_id throws a 500 "Data isolation
