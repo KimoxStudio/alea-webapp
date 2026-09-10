@@ -71,7 +71,7 @@ describe('POST /api/tables/[id]/activate', () => {
     expect(response.status).toBe(200)
     const body = await response.json()
     expect(body).toEqual({ reservation: mockReservation })
-    expect(activateReservationByTableMock).toHaveBeenCalledWith('table-123', 'user-abc', undefined)
+    expect(activateReservationByTableMock).toHaveBeenCalledWith('table-123', { id: 'user-abc', role: 'member' }, undefined)
   })
 
   it('passes side=inf to service when query param is present', async () => {
@@ -82,7 +82,7 @@ describe('POST /api/tables/[id]/activate', () => {
       params: Promise.resolve({ id: 'table-123' }),
     })
 
-    expect(activateReservationByTableMock).toHaveBeenCalledWith('table-123', 'user-abc', 'inf')
+    expect(activateReservationByTableMock).toHaveBeenCalledWith('table-123', { id: 'user-abc', role: 'member' }, 'inf')
   })
 
   it('passes side=undefined for any non-inf side query param value', async () => {
@@ -93,7 +93,7 @@ describe('POST /api/tables/[id]/activate', () => {
       params: Promise.resolve({ id: 'table-123' }),
     })
 
-    expect(activateReservationByTableMock).toHaveBeenCalledWith('table-123', 'user-abc', undefined)
+    expect(activateReservationByTableMock).toHaveBeenCalledWith('table-123', { id: 'user-abc', role: 'member' }, undefined)
   })
 
   it('returns security error and skips auth when enforceMutationSecurity fails', async () => {
@@ -287,7 +287,7 @@ describe('POST /api/tables/[id]/activate', () => {
 
     expect(activateReservationByTableMock).toHaveBeenCalledWith(
       'table-xyz',
-      'specific-user-id',
+      { id: 'specific-user-id', role: 'admin' },
       undefined,
     )
   })

@@ -30,6 +30,14 @@
  * inline (the `assertOwnsResource`-equivalent pattern) is intentionally
  * exempt via KNOWN_SAFE_FUNCTIONS below — each entry names why, so adding
  * one is a deliberate, reviewable act rather than the test guessing.
+ *
+ * Limitation, inherent to a text scan rather than a real AST/type check: it
+ * looks for the guard call's *text* anywhere in the function body, not that
+ * it is actually applied to the array just read (e.g. it would not catch a
+ * guard called on the wrong variable, or one hidden inside a comment). A
+ * false negative here still requires a human to write code that looks
+ * guarded but isn't — it doesn't catch a currently-unguarded read that gets
+ * added.
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync } from 'fs'
@@ -37,7 +45,12 @@ import { join } from 'path'
 
 const SERVER_DIR = join(__dirname, '..', '..', 'lib', 'server')
 
-const TARGET_TABLE_PATTERNS = [/FROM reservations\b/, /FROM saved_games\b/]
+// `(?<!DELETE\s)` excludes `DELETE FROM reservations ...` — a compensating
+// delete of a just-created row (see createReservationForSession's rollback),
+// not a read that returns member data. `DELETE FROM`/`FROM` share the same
+// SQL keyword, but only a SELECT-shaped read is what assertMemberRowsScoped
+// (Sql)() defends.
+const TARGET_TABLE_PATTERNS = [/(?<!DELETE\s)FROM reservations\b/, /(?<!DELETE\s)FROM saved_games\b/]
 const SCOPING_GUARD_PATTERNS = [/assertMemberRowsScoped\(/, /assertMemberRowsScopedSql\(/]
 
 /**
@@ -47,14 +60,39 @@ const SCOPING_GUARD_PATTERNS = [/assertMemberRowsScoped\(/, /assertMemberRowsSco
  */
 const KNOWN_SAFE_FUNCTIONS: Record<string, string> = {
   'saved-games-service.ts:renewSavedGameForSession':
-    'Fetches a single saved game by id (LIMIT-1-shaped, no ORDER BY/list ' +
-    'semantics) and checks ownership inline (`current.user_id !== session.id`) ' +
-    'before any mutation — the same invariant assertOwnsResource() encodes for ' +
-    'a single already-fetched row, just written inline. There is no list of ' +
-    'rows here for assertMemberRowsScoped(Sql) to verify.',
+    'Two reads, both safe. (1) Fetches the source saved game by id ' +
+    '(LIMIT-1-shaped, no ORDER BY/list semantics) and checks ownership ' +
+    'inline (`current.user_id !== session.id`) before any mutation — the ' +
+    'same invariant assertOwnsResource() encodes for a single already-' +
+    'fetched row, just written inline. (2) The `current_check` CTE inside ' +
+    'the locked renewal transaction re-reads that same row by ' +
+    '`sg.id = input.renewed_from_id` (a value derived from the row already ' +
+    'ownership-checked in (1), never from the caller) purely to confirm it ' +
+    'is still `active` under the lock — same row, same guarantee, no list.',
 }
 
 type FunctionSpan = { name: string; signature: string; body: string }
+
+/**
+ * Finds the index of the function body's opening `{`, starting the scan at
+ * `fromIndex` (the index right after the parameter list's closing `)`).
+ * A return type annotation between the params and the body can itself
+ * contain a balanced `{...}` — e.g. `): Promise<{ url: string }> {` — so a
+ * naive "first `{` after the params" search stops at the return type's
+ * object literal, not the body. Tracking angle-bracket depth and only
+ * accepting a `{` once it drops back to 0 skips past `Promise<{ ... }>`
+ * correctly, since that object literal is always nested inside the `<...>`.
+ */
+function findBodyStart(source: string, fromIndex: number): number {
+  let angleDepth = 0
+  for (let i = fromIndex; i < source.length; i++) {
+    const char = source[i]
+    if (char === '<') angleDepth++
+    else if (char === '>') angleDepth = Math.max(0, angleDepth - 1)
+    else if (char === '{' && angleDepth === 0) return i
+  }
+  return -1
+}
 
 /**
  * Extracts every top-level `function`/`async function` declaration (with or
@@ -71,7 +109,26 @@ function extractFunctions(source: string): FunctionSpan[] {
   while ((match = declRegex.exec(source)) !== null) {
     const name = match[1]
     const openParenIndex = match.index + match[0].length - 1
-    const bodyStart = source.indexOf('{', openParenIndex)
+
+    // Balance parens to find where the parameter list actually ends —
+    // several service functions take an inline object-type parameter
+    // (e.g. `input: { session: SessionUser; ... }`), whose own `{`/`}`
+    // would otherwise be mistaken for the function body's braces.
+    let parenDepth = 0
+    let closeParenIndex = -1
+    for (let i = openParenIndex; i < source.length; i++) {
+      if (source[i] === '(') parenDepth++
+      else if (source[i] === ')') {
+        parenDepth--
+        if (parenDepth === 0) {
+          closeParenIndex = i
+          break
+        }
+      }
+    }
+    if (closeParenIndex === -1) continue
+
+    const bodyStart = findBodyStart(source, closeParenIndex + 1)
     if (bodyStart === -1) continue
 
     let depth = 0
@@ -90,7 +147,7 @@ function extractFunctions(source: string): FunctionSpan[] {
 
     functions.push({
       name,
-      signature: source.slice(match.index, bodyStart),
+      signature: source.slice(match.index, closeParenIndex + 1),
       body: source.slice(bodyStart, bodyEnd + 1),
     })
   }

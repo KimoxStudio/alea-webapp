@@ -5,6 +5,7 @@ import { getCurrentClubDate, isValidDateOnlyString, zonedDateTimeToUtc } from '@
 import { getDatabaseNow } from '@/lib/server/database-time'
 import { serviceError } from '@/lib/server/service-error'
 import { assertMemberRowsScoped } from '@/lib/server/data-scoping'
+import { assertMemberRowsScopedSql } from '@/lib/server/authz'
 import { sql } from '@/lib/db/client'
 import { NeonDbError } from '@neondatabase/serverless'
 import type { Tables } from '@/lib/supabase/types'
@@ -928,7 +929,7 @@ export async function updateReservationForSession(
 
 export async function activateReservationByTable(
   tableId: string,
-  userId: string,
+  session: SessionUser,
   side?: 'inf',
 ): Promise<Reservation> {
   // Anchor "today" in the club's local timezone so near-midnight requests on
@@ -947,7 +948,7 @@ export async function activateReservationByTable(
       FROM reservations
       WHERE table_id = ${tableId}
         AND date = ${today}
-        AND user_id = ${userId}
+        AND user_id = ${session.id}
         AND status = 'pending'
         AND (${requiresBottomSurface} = false OR surface = 'bottom')
       LIMIT 1
@@ -955,6 +956,11 @@ export async function activateReservationByTable(
   } catch {
     serviceError('Internal server error', 500)
   }
+  // Defense-in-depth: the WHERE filter above already scopes this read to
+  // the caller's own id, but per convention every member-scoped read of
+  // reservations/saved_games also verifies the invariant independently
+  // (#389) — catches a future regression in the filter itself.
+  pendingRows = assertMemberRowsScopedSql(pendingRows, session) as ReservationRow[]
 
   if (!pendingRows[0]) {
     let activeRows: ReservationRow[]
@@ -964,7 +970,7 @@ export async function activateReservationByTable(
         FROM reservations
         WHERE table_id = ${tableId}
           AND date = ${today}
-          AND user_id = ${userId}
+          AND user_id = ${session.id}
           AND status = 'active'
           AND (${requiresBottomSurface} = false OR surface = 'bottom')
         LIMIT 1
@@ -972,6 +978,7 @@ export async function activateReservationByTable(
     } catch {
       serviceError('Internal server error', 500)
     }
+    activeRows = assertMemberRowsScopedSql(activeRows, session) as ReservationRow[]
 
     if (activeRows[0]) {
       serviceError(ERROR_CODES.CHECK_IN_ALREADY_ACTIVE, 409)
