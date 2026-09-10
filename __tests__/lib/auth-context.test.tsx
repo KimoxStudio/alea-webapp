@@ -1,12 +1,20 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react'
 import type { User } from '@/lib/types'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { AuthProvider } from '@/lib/auth/auth-context'
+import { Header } from '@/components/layout/header'
 
 const routerPushMock = vi.fn()
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: routerPushMock }),
   usePathname: () => '/es/rooms',
+  useSearchParams: () => new URLSearchParams(),
+}))
+
+vi.mock('next-intl', () => ({
+  useTranslations: (namespace?: string) => (key: string) =>
+    namespace ? `${namespace}.${key}` : key,
 }))
 
 const apiClientMock = vi.hoisted(() => ({
@@ -121,5 +129,68 @@ describe('AuthProvider', () => {
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
     expect(routerPushMock).toHaveBeenCalledWith('/es/login')
+  })
+})
+
+describe('AuthProvider adopting a refreshed initialUser (#391)', () => {
+  beforeEach(() => {
+    apiClientMock.get.mockReset()
+    apiClientMock.post.mockReset()
+    routerPushMock.mockReset()
+  })
+
+  // This is the actual user-visible bug: `router.refresh()` alone re-runs the
+  // layout and produces a new `initialUser`, but `AuthProvider` previously
+  // only read `initialUser` once at mount (`useState(initialUser ?? null)`)
+  // with no effect syncing later prop changes into state. So even after the
+  // refresh, `user` (and therefore `isAuthenticated`) stayed stuck on the
+  // stale unauthenticated value and `Header` kept returning null. Simulating
+  // exactly that prop transition — `initialUser={null}` then rerendered with
+  // an admin user, the same shape a `router.refresh()`-driven layout
+  // re-render produces — is what proves the header (and the admin link)
+  // actually reappears.
+  it('renders the header and admin nav link once initialUser transitions from null to an admin user', () => {
+    const { rerender } = render(
+      <AuthProvider initialUser={null}>
+        <Header locale="es" />
+      </AuthProvider>,
+    )
+
+    expect(screen.queryByRole('navigation', { name: 'nav.mainNavAriaLabel' })).not.toBeInTheDocument()
+
+    rerender(
+      <AuthProvider initialUser={createUser()}>
+        <Header locale="es" />
+      </AuthProvider>,
+    )
+
+    const desktopNav = screen.getByRole('navigation', { name: 'nav.mainNavAriaLabel' })
+    expect(desktopNav).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'nav.admin' })).toBeInTheDocument()
+  })
+
+  // The reverse transition. The `useEffect` guard is
+  // `if (initialUser !== undefined) setUser(initialUser)`, which must adopt
+  // `null` just as readily as a `User` — a `router.refresh()` after the
+  // server-side session is gone (expiry, logout elsewhere, admin revoke)
+  // delivers `initialUser={null}` and has to clear the header. A guard
+  // weakened to `if (initialUser)` would drop this branch silently and leave
+  // the admin nav visible to a session that no longer exists.
+  it('hides the header once initialUser transitions from an admin user back to null', () => {
+    const { rerender } = render(
+      <AuthProvider initialUser={createUser()}>
+        <Header locale="es" />
+      </AuthProvider>,
+    )
+
+    expect(screen.getByRole('navigation', { name: 'nav.mainNavAriaLabel' })).toBeInTheDocument()
+
+    rerender(
+      <AuthProvider initialUser={null}>
+        <Header locale="es" />
+      </AuthProvider>,
+    )
+
+    expect(screen.queryByRole('navigation', { name: 'nav.mainNavAriaLabel' })).not.toBeInTheDocument()
   })
 })

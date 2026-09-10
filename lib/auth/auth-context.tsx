@@ -38,6 +38,17 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
     checkAuth()
   }, [checkAuth, initialUser])
 
+  // A server-issued `initialUser` only reaches this component through a new
+  // render of the parent Server Component (`app/[locale]/layout.tsx`), which
+  // `router.refresh()` triggers after login/activation/recovery (#391). That
+  // re-render passes a *new* `initialUser` prop, but `user` state was only
+  // ever seeded from it once at mount — without this sync, the prop change
+  // is silently dropped and the header stays stuck on the stale
+  // unauthenticated value.
+  useEffect(() => {
+    if (initialUser !== undefined) setUser(initialUser)
+  }, [initialUser])
+
   const login = async (identifier: string, password: string) => {
     const data = await apiClient.post<User>(endpoints.auth.login, { identifier, password })
     setUser(data)
