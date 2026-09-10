@@ -3,6 +3,7 @@ import { strFromU8, unzipSync } from 'fflate'
 import { serviceError } from '@/lib/server/service-error'
 import { memberNumberSchema } from '@/lib/validations/auth'
 import ExcelJS from 'exceljs'
+import { startsWithSignature } from '@/lib/server/bytes'
 
 export type MemberImportOptionalColumnPresence = {
   email: boolean
@@ -157,11 +158,6 @@ function getSourceExtension(fileName: string) {
 // ---------------------------------------------------------------------------
 
 const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04]
-
-function startsWithSignature(bytes: Uint8Array, signature: number[]): boolean {
-  if (bytes.length < signature.length) return false
-  return signature.every((byte, index) => bytes[index] === byte)
-}
 
 /** .xlsx and .odt are both ZIP-based formats — both must start with the ZIP local-file-header signature. */
 function requireZipSignature(extension: 'xlsx' | 'odt', bytes: Uint8Array): void {
