@@ -7,6 +7,28 @@ import { Header } from '@/components/layout/header'
 const routerPushMock = vi.fn()
 const routerRefreshMock = vi.fn()
 
+// #397 (residual race): `push()` and `refresh()` must be batched inside a
+// single React transition, not fired as two un-batched router updates —
+// see auth-context.tsx's `logout()` comment for why. `next/navigation`'s
+// test router is synchronous, so it can't reproduce the actual timing race
+// (that needs real Playwright verification against a dev server); what a
+// unit test *can* prove is that the implementation actually routes both
+// calls through `startTransition` rather than calling them directly.
+// React's module namespace isn't spy-able directly under Vitest's ESM
+// handling ("Cannot redefine property"), so this wraps the real
+// `startTransition` via `vi.mock` instead of `vi.spyOn`.
+const startTransitionSpy = vi.hoisted(() => vi.fn())
+vi.mock('react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react')>()
+  return {
+    ...actual,
+    startTransition: (callback: () => void) => {
+      startTransitionSpy(callback)
+      actual.startTransition(callback)
+    },
+  }
+})
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: routerPushMock, refresh: routerRefreshMock }),
   usePathname: () => '/es/rooms',
@@ -27,6 +49,24 @@ vi.mock('@/lib/api/client', () => ({
   apiClient: apiClientMock,
 }))
 
+// #397 (corrected root cause): logout() must clear Clerk's client-side
+// session (`useClerk().signOut()`) — the backend-only `revokeSession()` call
+// (lib/server/auth-service.ts) stops the session being *refreshed* but
+// leaves the short-lived `__session` JWT valid client-side until it expires
+// on its own, verified empirically (see PR description) as still-200
+// responses from a protected API route right after logout. It must also
+// clear TanStack Query's cache (`queryClient.clear()`) so protected data
+// fetched before logout doesn't keep rendering.
+const clerkSignOutMock = vi.fn().mockResolvedValue(undefined)
+vi.mock('@clerk/nextjs', () => ({
+  useClerk: () => ({ signOut: clerkSignOutMock }),
+}))
+
+const queryClientClearMock = vi.fn()
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ clear: queryClientClearMock }),
+}))
+
 function createUser(overrides?: Partial<User>): User {
   return {
     id: '1',
@@ -44,6 +84,10 @@ describe('AuthProvider', () => {
     apiClientMock.post.mockReset()
     routerPushMock.mockReset()
     routerRefreshMock.mockReset()
+    startTransitionSpy.mockClear()
+    clerkSignOutMock.mockClear()
+    clerkSignOutMock.mockResolvedValue(undefined)
+    queryClientClearMock.mockReset()
   })
 
   it('hydrates from /auth/me when no initial user is provided', async () => {
@@ -133,6 +177,52 @@ describe('AuthProvider', () => {
     expect(routerPushMock).toHaveBeenCalledWith('/es/login')
   })
 
+  // #397 corrected root cause: the backend-only session revoke does not
+  // clear the client-side Clerk session — `clerk.signOut()` is what
+  // actually ends it (verified via Playwright, see PR description).
+  it('calls clerk.signOut() and clears the query cache on logout (#397)', async () => {
+    apiClientMock.post.mockResolvedValueOnce(undefined)
+
+    const { AuthProvider, useAuth } = await import('@/lib/auth/auth-context')
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider initialUser={createUser()}>{children}</AuthProvider>
+    )
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await act(async () => {
+      await result.current.logout()
+    })
+
+    expect(clerkSignOutMock).toHaveBeenCalledTimes(1)
+    expect(queryClientClearMock).toHaveBeenCalledTimes(1)
+  })
+
+  // The backend POST must run BEFORE clerk.signOut(): the server's logout
+  // handler (lib/server/auth-service.ts -> getClerkSession() ->
+  // revokeSession()) reads the session cookie, and if signOut() already
+  // cleared it client-side first, the server sees no session and
+  // short-circuits without ever revoking it server-side. Pinned here so
+  // this can't silently flip back — either order made the tests above pass.
+  it('calls apiClient.post(logout) before clerk.signOut()', async () => {
+    apiClientMock.post.mockResolvedValueOnce(undefined)
+
+    const { AuthProvider, useAuth } = await import('@/lib/auth/auth-context')
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider initialUser={createUser()}>{children}</AuthProvider>
+    )
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await act(async () => {
+      await result.current.logout()
+    })
+
+    expect(apiClientMock.post.mock.invocationCallOrder[0]).toBeLessThan(
+      clerkSignOutMock.mock.invocationCallOrder[0],
+    )
+  })
+
   // Regression test for #397: logout navigated away with `router.push()` but
   // never called `router.refresh()`, unlike `login()` (#391). Without the
   // refresh, the App Router can serve a cached RSC payload fetched while
@@ -160,12 +250,44 @@ describe('AuthProvider', () => {
     )
   })
 
-  // Sibling coverage to `login-form.test.tsx`'s "does not call
-  // router.refresh() when sign-in does not complete": if the logout request
-  // itself fails, neither navigation call should happen — the user stays on
-  // the current page rather than being routed to /login (or refreshed) while
-  // still authenticated.
-  it('does not call router.push or router.refresh when the logout request fails', async () => {
+  // Residual #397 race: push()+refresh() being two separate, un-batched
+  // router updates left a window where refresh()'s re-fetch of the
+  // still-current route could resolve after push() and win. The fix batches
+  // both inside one `startTransition`. This only proves the implementation
+  // routes both calls through `startTransition` — the actual timing race
+  // this fixes cannot be reproduced against `next/navigation`'s synchronous
+  // test router and needs real Playwright verification against a dev
+  // server.
+  it('batches push and refresh inside a single startTransition on logout (#397 race)', async () => {
+    apiClientMock.post.mockResolvedValueOnce(undefined)
+
+    const { AuthProvider, useAuth } = await import('@/lib/auth/auth-context')
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider initialUser={createUser()}>{children}</AuthProvider>
+    )
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await act(async () => {
+      await result.current.logout()
+    })
+
+    expect(startTransitionSpy).toHaveBeenCalledTimes(1)
+    // The router call must happen inside the transition's callback, not
+    // before it runs.
+    expect(routerPushMock.mock.invocationCallOrder[0]).toBeGreaterThan(
+      startTransitionSpy.mock.invocationCallOrder[0],
+    )
+  })
+
+  // If the backend logout request fails, the session must be left
+  // untouched: no clerk.signOut(), no cache clear, no navigation. Since the
+  // POST now runs before clerk.signOut() (see the ordering test above), a
+  // POST failure aborts before the client-side session is ever touched —
+  // otherwise a POST failure would leave a genuinely dead Clerk session
+  // behind a UI that still shows the user as logged in, which is the same
+  // symptom shape #397 originally reported, just triggered a different way.
+  it('does not touch the client session or navigate when the logout request fails', async () => {
     apiClientMock.post.mockRejectedValueOnce(new Error('Network error'))
 
     const { AuthProvider, useAuth } = await import('@/lib/auth/auth-context')
@@ -179,8 +301,11 @@ describe('AuthProvider', () => {
       await expect(result.current.logout()).rejects.toThrow('Network error')
     })
 
+    expect(clerkSignOutMock).not.toHaveBeenCalled()
+    expect(queryClientClearMock).not.toHaveBeenCalled()
     expect(routerPushMock).not.toHaveBeenCalled()
     expect(routerRefreshMock).not.toHaveBeenCalled()
+    expect(result.current.user).toEqual(createUser())
   })
 })
 
