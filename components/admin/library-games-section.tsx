@@ -395,10 +395,11 @@ function LibraryGameRow({ game }: { game: AdminLibraryGame }) {
               <Button type="button" variant="outline" onClick={() => setEditing(false)} className="border-border">
                 {tc('cancel')}
               </Button>
-              <Button type="submit" disabled={updateGame.isPending} className="min-w-[80px]">
-                {updateGame.isPending ? (
-                  <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('saving')}</span></span>
-                ) : tc('save')}
+              <Button type="submit" disabled={updateGame.isPending} aria-busy={updateGame.isPending}>
+                <span className="inline-flex h-4 w-4 shrink-0">
+                  {updateGame.isPending && <DiceLoader size="sm" hideRole />}
+                </span>
+                {tc('save')}
               </Button>
             </DialogFooter>
           </form>
@@ -436,11 +437,12 @@ function LibraryGameRow({ game }: { game: AdminLibraryGame }) {
               variant="destructive"
               onClick={handleDelete}
               disabled={deleteGame.isPending}
-              className="min-w-[80px]"
+              aria-busy={deleteGame.isPending}
             >
-              {deleteGame.isPending ? (
-                <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{tc('loading')}</span></span>
-              ) : tc('delete')}
+              <span className="inline-flex h-4 w-4 shrink-0">
+                {deleteGame.isPending && <DiceLoader size="sm" hideRole />}
+              </span>
+              {tc('delete')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -595,10 +597,11 @@ export function LibraryGamesSection() {
               <Button type="button" variant="outline" onClick={() => setShowCreate(false)} className="border-border">
                 {tc('cancel')}
               </Button>
-              <Button type="submit" disabled={createGame.isPending} className="min-w-[80px]">
-                {createGame.isPending ? (
-                  <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('creating')}</span></span>
-                ) : tc('save')}
+              <Button type="submit" disabled={createGame.isPending} aria-busy={createGame.isPending}>
+                <span className="inline-flex h-4 w-4 shrink-0">
+                  {createGame.isPending && <DiceLoader size="sm" hideRole />}
+                </span>
+                {tc('save')}
               </Button>
             </DialogFooter>
           </form>

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EquipmentSection } from '@/components/admin/equipment-section'
@@ -9,11 +9,19 @@ vi.mock('next-intl', () => ({
 
 const mockCreateMutateAsync = vi.fn()
 
+const { createEquipmentState, updateEquipmentState, deleteEquipmentState } = vi.hoisted(() => ({
+  createEquipmentState: { isPending: false },
+  updateEquipmentState: { isPending: false },
+  deleteEquipmentState: { isPending: false },
+}))
+
+const equipmentFixture = [{ id: 'eq-1', name: 'Projector', description: null }]
+
 vi.mock('@/lib/hooks/use-admin', () => ({
-  useAdminEquipment: () => ({ data: [], isLoading: false }),
-  useAdminCreateEquipment: () => ({ mutateAsync: mockCreateMutateAsync, isPending: false }),
-  useAdminUpdateEquipment: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useAdminDeleteEquipment: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useAdminEquipment: () => ({ data: equipmentFixture, isLoading: false }),
+  useAdminCreateEquipment: () => ({ mutateAsync: mockCreateMutateAsync, isPending: createEquipmentState.isPending }),
+  useAdminUpdateEquipment: () => ({ mutateAsync: vi.fn(), isPending: updateEquipmentState.isPending }),
+  useAdminDeleteEquipment: () => ({ mutateAsync: vi.fn(), isPending: deleteEquipmentState.isPending }),
 }))
 
 describe('EquipmentSection — required-field validation (#313)', () => {
@@ -55,5 +63,101 @@ describe('EquipmentSection — required-field validation (#313)', () => {
     await user.click(screen.getByRole('button', { name: 'save' }))
 
     expect(mockCreateMutateAsync).toHaveBeenCalledWith({ name: 'Projector', description: undefined })
+  })
+})
+
+// #404 — same fixed-slot fix as #399, applied to the `min-w-[80px]` floor
+// pattern (a floor doesn't provably hold against a long enough pending
+// label, unlike a fixed-size slot). Also drops the label swap (`save` ->
+// `saving`), matching #399's decision to keep label text constant.
+describe('EquipmentSection — pending buttons reserve loader space without animating while idle (#404)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    createEquipmentState.isPending = false
+    updateEquipmentState.isPending = false
+    deleteEquipmentState.isPending = false
+  })
+
+  function getIconSlot(button: HTMLElement) {
+    return button.querySelector('span.shrink-0')
+  }
+
+  function queryLoader(button: HTMLElement) {
+    return within(button).queryByTestId('dice-loader')
+  }
+
+  it('create-dialog save button: icon slot reserved with correct sizing but loader unmounted when idle', async () => {
+    const user = userEvent.setup()
+    render(<EquipmentSection />)
+
+    await user.click(screen.getByRole('button', { name: 'equipment.createEquipment' }))
+    const button = screen.getByRole('button', { name: 'save' })
+
+    expect(getIconSlot(button)).toHaveClass('h-4', 'w-4', 'shrink-0')
+    expect(queryLoader(button)).toBeNull()
+  })
+
+  it('create-dialog save button: loader mounts while creating', async () => {
+    createEquipmentState.isPending = true
+    const user = userEvent.setup()
+    render(<EquipmentSection />)
+
+    await user.click(screen.getByRole('button', { name: 'equipment.createEquipment' }))
+    const button = screen.getByRole('button', { name: 'save' })
+
+    expect(getIconSlot(button)).not.toBeNull()
+    expect(queryLoader(button)).not.toBeNull()
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('edit-dialog save button: icon slot reserved with correct sizing but loader unmounted when idle', async () => {
+    const user = userEvent.setup()
+    render(<EquipmentSection />)
+
+    await user.click(screen.getByRole('button', { name: 'equipment.editEquipment' }))
+    const button = screen.getByRole('button', { name: 'save' })
+
+    expect(getIconSlot(button)).toHaveClass('h-4', 'w-4', 'shrink-0')
+    expect(queryLoader(button)).toBeNull()
+  })
+
+  it('edit-dialog save button: loader mounts while saving', async () => {
+    updateEquipmentState.isPending = true
+    const user = userEvent.setup()
+    render(<EquipmentSection />)
+
+    await user.click(screen.getByRole('button', { name: 'equipment.editEquipment' }))
+    const button = screen.getByRole('button', { name: 'save' })
+
+    expect(getIconSlot(button)).not.toBeNull()
+    expect(queryLoader(button)).not.toBeNull()
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('delete-dialog button (destructive variant): icon slot reserved but loader unmounted when idle', async () => {
+    const user = userEvent.setup()
+    render(<EquipmentSection />)
+
+    await user.click(screen.getByRole('button', { name: 'equipment.deleteEquipment' }))
+    const button = screen.getByRole('button', { name: 'delete' })
+
+    expect(getIconSlot(button)).toHaveClass('h-4', 'w-4', 'shrink-0')
+    expect(queryLoader(button)).toBeNull()
+  })
+
+  it('delete-dialog button (destructive variant): loader mounts while deleting', async () => {
+    deleteEquipmentState.isPending = true
+    const user = userEvent.setup()
+    render(<EquipmentSection />)
+
+    await user.click(screen.getByRole('button', { name: 'equipment.deleteEquipment' }))
+    const button = screen.getByRole('button', { name: 'delete' })
+
+    expect(getIconSlot(button)).not.toBeNull()
+    expect(queryLoader(button)).not.toBeNull()
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-busy', 'true')
   })
 })

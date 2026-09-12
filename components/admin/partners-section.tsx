@@ -361,10 +361,11 @@ function PartnerRow({ partner }: { partner: AdminPartner }) {
               <Button type="button" variant="outline" onClick={() => setEditing(false)} className="border-border">
                 {tc('cancel')}
               </Button>
-              <Button type="submit" disabled={updatePartner.isPending} className="min-w-[80px]">
-                {updatePartner.isPending ? (
-                  <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('saving')}</span></span>
-                ) : tc('save')}
+              <Button type="submit" disabled={updatePartner.isPending} aria-busy={updatePartner.isPending}>
+                <span className="inline-flex h-4 w-4 shrink-0">
+                  {updatePartner.isPending && <DiceLoader size="sm" hideRole />}
+                </span>
+                {tc('save')}
               </Button>
             </DialogFooter>
           </form>
@@ -402,11 +403,12 @@ function PartnerRow({ partner }: { partner: AdminPartner }) {
               variant="destructive"
               onClick={handleDelete}
               disabled={deletePartner.isPending}
-              className="min-w-[80px]"
+              aria-busy={deletePartner.isPending}
             >
-              {deletePartner.isPending ? (
-                <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{tc('loading')}</span></span>
-              ) : tc('delete')}
+              <span className="inline-flex h-4 w-4 shrink-0">
+                {deletePartner.isPending && <DiceLoader size="sm" hideRole />}
+              </span>
+              {tc('delete')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -561,10 +563,11 @@ export function PartnersSection() {
               <Button type="button" variant="outline" onClick={() => setShowCreate(false)} className="border-border">
                 {tc('cancel')}
               </Button>
-              <Button type="submit" disabled={createPartner.isPending} className="min-w-[80px]">
-                {createPartner.isPending ? (
-                  <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('creating')}</span></span>
-                ) : tc('save')}
+              <Button type="submit" disabled={createPartner.isPending} aria-busy={createPartner.isPending}>
+                <span className="inline-flex h-4 w-4 shrink-0">
+                  {createPartner.isPending && <DiceLoader size="sm" hideRole />}
+                </span>
+                {tc('save')}
               </Button>
             </DialogFooter>
           </form>
