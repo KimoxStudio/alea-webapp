@@ -65,6 +65,30 @@
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
+  /* #407 — kx-ux non-negotiable: honour prefers-reduced-motion wherever
+     anything moves. This app has several infinite CSS animations
+     (dice-roll/dice-fade in components/ui/dice-loader.tsx, glow, shimmer,
+     mod-pulse, mod-marq, mod-float — all in tailwind.config.ts) plus short
+     transitions (accordion, .rpg-card hover), none of which previously
+     checked this. A single global rule here is the safety net for all
+     CSS-driven animation/transition — present and future — rather than
+     annotating every `animate-*`/`transition-*` call site individually.
+
+     This rule only stops CSS animations/transitions; it cannot touch
+     JS-driven motion. `mod-marq`'s JS twin — the auto-scroll
+     requestAnimationFrame loop and the scrollBy({behavior:'smooth'}) call
+     in components/landing/marquee-row.tsx — is unaffected by anything
+     here (an explicit `behavior` option overrides `scroll-behavior` per
+     the CSSOM-View spec) and is gated on the same media feature
+     separately, in that component. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
   .skip-link {
     @apply sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50;
     @apply bg-primary text-primary-foreground px-4 py-2 rounded font-semibold;

@@ -1,7 +1,9 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, startTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { useClerk } from '@clerk/nextjs'
 import type { User } from '@/lib/types'
 import { apiClient } from '@/lib/api/client'
 import { endpoints } from '@/lib/api/endpoints'
@@ -22,6 +24,8 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
   const [isLoading, setIsLoading] = useState(initialUser === undefined)
   const router = useRouter()
   const pathname = usePathname()
+  const queryClient = useQueryClient()
+  const clerk = useClerk()
 
   const locale = pathname.match(/^\/([a-z]{2})(?:\/|$)/)?.[1] ?? 'es'
 
@@ -54,10 +58,42 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
     setUser(data)
   }
   const logout = async () => {
+    // #397, corrected root cause (found via Playwright verification against
+    // a real dev server — the originally-suspected push()/refresh() timing
+    // race turned out not to be the actual cause; see PR description):
+    // `apiClient.post(endpoints.auth.logout)` only revokes the session on
+    // Clerk's backend (`lib/server/auth-service.ts` -> `revokeSession()`).
+    // That stops the session from being *refreshed*, but the short-lived
+    // `__session` JWT cookie Clerk's middleware verifies locally (no
+    // per-request revocation check) stays valid until it naturally expires
+    // — verified empirically: `/api/rooms` kept returning 200 for
+    // authenticated requests for a window right after the logout POST
+    // resolved. `clerk.signOut()` clears that cookie client-side
+    // immediately, which is what actually ends the session on this request
+    // — the backend revoke alone does not.
+    //
+    // Order matters: the backend POST must run FIRST, while the session
+    // cookie is still present — `getClerkSession()` (used by
+    // `lib/server/auth-service.ts`'s logout handler) reads that cookie, and
+    // if `clerk.signOut()` already cleared it client-side, the server sees
+    // no session and short-circuits without ever calling `revokeSession()`.
+    // This also means a POST failure (rate limit, CSRF expiry, network)
+    // aborts here, before the session is touched client-side — leaving the
+    // user's state consistent (still logged in) rather than a session that's
+    // dead client-side but stuck showing authenticated content.
     await apiClient.post(endpoints.auth.logout)
+    await clerk.signOut()
     setUser(null)
-    router.push(`/${locale}/login`)
-    router.refresh()
+    // TanStack Query's client-side cache (staleTime, lib/providers.tsx)
+    // otherwise keeps rendering protected data fetched before logout —
+    // verified via Playwright: without this clear, a previously-loaded room
+    // list stayed on screen (with the header correctly gone) after
+    // "Cerrar Sesión", matching the original #397 evidence.
+    queryClient.clear()
+    startTransition(() => {
+      router.push(`/${locale}/login`)
+      router.refresh()
+    })
   }
   const register = async (memberNumber: string, password: string) => {
     const data = await apiClient.post<User>(endpoints.auth.register, { memberNumber, password })

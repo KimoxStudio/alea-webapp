@@ -54,6 +54,7 @@ export function DiceLoader({ size = 'md', label, className, hideRole = false }: 
     return (
       <span
         {...roleProps}
+        data-testid="dice-loader"
         className={`inline-flex items-center justify-center text-primary${className ? ` ${className}` : ''}`}
       >
         <span className="relative">
@@ -69,6 +70,7 @@ export function DiceLoader({ size = 'md', label, className, hideRole = false }: 
   return (
     <span
       {...roleProps}
+      data-testid="dice-loader"
       className={`inline-flex items-center justify-center text-primary${className ? ` ${className}` : ''}`}
     >
       <D20Svg px={px} />

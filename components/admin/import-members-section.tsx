@@ -103,7 +103,9 @@ export function ImportMembersSection({ inDialog = false }: ImportMembersSectionP
             </div>
 
             <Button type="submit" size="lg" className="w-full min-w-0 sm:min-w-52 lg:w-auto lg:self-stretch" disabled={!importFile || importMutation.isPending}>
-              {importMutation.isPending ? <DiceLoader size="sm" className="mr-2" hideRole /> : null}
+              <span className="inline-flex h-4 w-4 shrink-0">
+                {importMutation.isPending && <DiceLoader size="sm" hideRole />}
+              </span>
               {t('importMembersAction')}
             </Button>
           </div>

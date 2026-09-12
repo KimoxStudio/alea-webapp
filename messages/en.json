@@ -293,7 +293,6 @@
       "create_auth_failed": "Failed to create auth user",
       "persist_import_failed": "Failed to persist imported member"
     },
-    "saving": "Saving...",
     "creating": "Creating...",
     "editRoom": "Edit room",
     "noRooms": "No rooms found",

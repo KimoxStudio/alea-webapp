@@ -30,8 +30,31 @@ export function MarqueeRow({ children, speedPxSec = 30, ariaLabel, prevLabel, ne
   const drag = useRef<DragState>({ active: false, startX: 0, startScroll: 0, moved: 0, isTouch: false, dragging: false })
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
+  // #407 — kx-ux non-negotiable: honour prefers-reduced-motion wherever
+  // anything moves. This is the JS twin of the CSS `mod-marq` animation:
+  // app/globals.css's `prefers-reduced-motion` media rule only stops CSS
+  // animations/transitions, not this component's own requestAnimationFrame
+  // loop, so it's gated here separately.
+  //
+  // The initial value is read synchronously in the lazy useState
+  // initializer, not via an effect + setState — an effect-based read would
+  // still be `false` on the very first render's commit (React batches the
+  // state update to a later render), letting the auto-scroll effect below
+  // start the rAF loop for one frame regardless of the actual preference.
+  // The change listener below still tracks live OS-setting toggles.
+  const [reducedMotion, setReducedMotion] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  )
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const handleChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
+    mql.addEventListener('change', handleChange)
+    return () => mql.removeEventListener('change', handleChange)
+  }, [])
+
   // Auto-scroll loop.
   useEffect(() => {
+    if (reducedMotion) return
     let raf: number
     let last = performance.now()
     const tick = (now: number) => {
@@ -48,7 +71,7 @@ export function MarqueeRow({ children, speedPxSec = 30, ariaLabel, prevLabel, ne
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [paused, speedPxSec])
+  }, [paused, speedPxSec, reducedMotion])
 
   const wrapSafe = (el: HTMLDivElement) => {
     const half = el.scrollWidth / 2
@@ -61,7 +84,10 @@ export function MarqueeRow({ children, speedPxSec = 30, ariaLabel, prevLabel, ne
     if (!el) return
     const card = el.querySelector('.alea-marquee-item')
     const step = card ? card.getBoundingClientRect().width + 18 : el.clientWidth * 0.8
-    el.scrollBy({ left: dir * step, behavior: 'smooth' })
+    // An explicit `behavior` option here overrides the CSS `scroll-behavior`
+    // property per the CSSOM-View spec, so app/globals.css's reduced-motion
+    // rule has no effect on this call — it has to be handled here too.
+    el.scrollBy({ left: dir * step, behavior: reducedMotion ? 'auto' : 'smooth' })
     setPaused(true)
     clearTimeout(resumeTimer.current)
     resumeTimer.current = setTimeout(() => {
