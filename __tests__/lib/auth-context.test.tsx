@@ -155,6 +155,32 @@ describe('AuthProvider', () => {
 
     expect(routerPushMock).toHaveBeenCalledWith('/es/login')
     expect(routerRefreshMock).toHaveBeenCalledTimes(1)
+    expect(routerPushMock.mock.invocationCallOrder[0]).toBeLessThan(
+      routerRefreshMock.mock.invocationCallOrder[0],
+    )
+  })
+
+  // Sibling coverage to `login-form.test.tsx`'s "does not call
+  // router.refresh() when sign-in does not complete": if the logout request
+  // itself fails, neither navigation call should happen — the user stays on
+  // the current page rather than being routed to /login (or refreshed) while
+  // still authenticated.
+  it('does not call router.push or router.refresh when the logout request fails', async () => {
+    apiClientMock.post.mockRejectedValueOnce(new Error('Network error'))
+
+    const { AuthProvider, useAuth } = await import('@/lib/auth/auth-context')
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider initialUser={createUser()}>{children}</AuthProvider>
+    )
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await act(async () => {
+      await expect(result.current.logout()).rejects.toThrow('Network error')
+    })
+
+    expect(routerPushMock).not.toHaveBeenCalled()
+    expect(routerRefreshMock).not.toHaveBeenCalled()
   })
 })
 
@@ -163,6 +189,7 @@ describe('AuthProvider adopting a refreshed initialUser (#391)', () => {
     apiClientMock.get.mockReset()
     apiClientMock.post.mockReset()
     routerPushMock.mockReset()
+    routerRefreshMock.mockReset()
   })
 
   // This is the actual user-visible bug: `router.refresh()` alone re-runs the
