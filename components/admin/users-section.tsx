@@ -300,124 +300,129 @@ export function UsersSection() {
                 </tr>
               </thead>
               <tbody>
-                {data.data.map((user) => (
-                  <tr key={user.id} className="border-b border-border last:border-0 hover:bg-secondary/10 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs">{user.memberNumber}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{user.fullName ?? '—'}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{user.email ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                        {t(user.role)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge isActive={user.isActive} />
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {user.noShowCount > 0 ? (
-                        <Badge className="border-red-500/40 bg-red-900/20 text-red-400">
-                          {user.noShowCount}
+                {data.data.map((user) => {
+                  const isResettingNoShows = patchMutation.isPending && patchMutation.variables?.id === user.id && patchMutation.variables?.action === 'reset_no_shows'
+                  const isUnblocking = patchMutation.isPending && patchMutation.variables?.id === user.id && patchMutation.variables?.action === 'unblock'
+
+                  return (
+                    <tr key={user.id} className="border-b border-border last:border-0 hover:bg-secondary/10 transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs">{user.memberNumber}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{user.fullName ?? '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{user.email ?? '—'}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                          {t(user.role)}
                         </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">0</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">
-                      {user.blockedUntil
-                        ? new Date(user.blockedUntil).toLocaleDateString()
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        {user.noShowCount > 0 && (
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge isActive={user.isActive} />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {user.noShowCount > 0 ? (
+                          <Badge className="border-red-500/40 bg-red-900/20 text-red-400">
+                            {user.noShowCount}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">0</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">
+                        {user.blockedUntil
+                          ? new Date(user.blockedUntil).toLocaleDateString()
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {new Date(user.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          {user.noShowCount > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs text-amber-400 hover:bg-amber-900/20 hover:text-amber-300"
+                              disabled={patchMutation.isPending}
+                              onClick={() => patchMutation.mutate({ id: user.id, action: 'reset_no_shows' })}
+                              aria-label={t('resetNoShows')}
+                            >
+                              <span className="mr-1 inline-flex h-4 w-4 shrink-0">
+                                {isResettingNoShows && <DiceLoader size="sm" hideRole />}
+                              </span>
+                              {t('resetNoShows')}
+                            </Button>
+                          )}
+                          {user.blockedUntil && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs text-emerald-400 hover:bg-emerald-900/20 hover:text-emerald-300"
+                              disabled={patchMutation.isPending}
+                              onClick={() => patchMutation.mutate({ id: user.id, action: 'unblock' })}
+                              aria-label={t('unblockUser')}
+                            >
+                              <span className="mr-1 inline-flex h-4 w-4 shrink-0">
+                                {isUnblocking && <DiceLoader size="sm" hideRole />}
+                              </span>
+                              {t('unblockUser')}
+                            </Button>
+                          )}
+                          {!user.isActive && user.role === 'member' && (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 border-sky-500/40 text-sky-400 hover:bg-sky-900/20 hover:text-sky-300"
+                              disabled={activationLinkMutation.isPending}
+                              onClick={() => handleCopyActivationLink(user)}
+                              aria-label={t('copyActivationLink')}
+                              title={t('copyActivationLink')}
+                            >
+                              {activationLinkMutation.isPending && activationLinkMutation.variables?.id === user.id
+                                ? <DiceLoader size="sm" hideRole />
+                                : <Link2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                            </Button>
+                          )}
+                          {user.isActive && user.role === 'member' && (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 border-amber-500/40 text-amber-400 hover:bg-amber-900/20 hover:text-amber-300"
+                              disabled={recoveryLinkMutation.isPending}
+                              onClick={() => handleCopyRecoveryLink(user)}
+                              aria-label={t('copyRecoveryLink')}
+                              title={t('copyRecoveryLink')}
+                            >
+                              {recoveryLinkMutation.isPending && recoveryLinkMutation.variables?.id === user.id
+                                ? <DiceLoader size="sm" hideRole />
+                                : <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />}
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="text-xs text-amber-400 hover:bg-amber-900/20 hover:text-amber-300"
-                            disabled={patchMutation.isPending}
-                            onClick={() => patchMutation.mutate({ id: user.id, action: 'reset_no_shows' })}
-                            aria-label={t('resetNoShows')}
+                            size="icon"
+                            onClick={() => openEdit(user)}
+                            aria-label={t('editUser')}
                           >
-                            {patchMutation.isPending && patchMutation.variables?.id === user.id && patchMutation.variables?.action === 'reset_no_shows' ? (
-                              <DiceLoader size="sm" className="mr-1" hideRole />
-                            ) : null}
-                            {t('resetNoShows')}
+                            <Pencil className="h-4 w-4" aria-hidden="true" />
                           </Button>
-                        )}
-                        {user.blockedUntil && (
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="text-xs text-emerald-400 hover:bg-emerald-900/20 hover:text-emerald-300"
-                            disabled={patchMutation.isPending}
-                            onClick={() => patchMutation.mutate({ id: user.id, action: 'unblock' })}
-                            aria-label={t('unblockUser')}
-                          >
-                            {patchMutation.isPending && patchMutation.variables?.id === user.id && patchMutation.variables?.action === 'unblock' ? (
-                              <DiceLoader size="sm" className="mr-1" hideRole />
-                            ) : null}
-                            {t('unblockUser')}
-                          </Button>
-                        )}
-                        {!user.isActive && user.role === 'member' && (
-                          <Button
-                            variant="outline"
                             size="icon"
-                            className="h-8 w-8 border-sky-500/40 text-sky-400 hover:bg-sky-900/20 hover:text-sky-300"
-                            disabled={activationLinkMutation.isPending}
-                            onClick={() => handleCopyActivationLink(user)}
-                            aria-label={t('copyActivationLink')}
-                            title={t('copyActivationLink')}
+                            onClick={() => setDeleteUser(user)}
+                            aria-label={t('deleteUser')}
+                            className="text-destructive-foreground hover:bg-destructive/15"
                           >
-                            {activationLinkMutation.isPending && activationLinkMutation.variables?.id === user.id
-                              ? <DiceLoader size="sm" hideRole />
-                              : <Link2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
                           </Button>
+                        </div>
+                        {activationFeedback?.userId === user.id && (
+                          <p className={`mt-2 text-right text-xs ${activationFeedback.kind === 'success' ? 'text-emerald-400' : 'text-destructive'}`}>
+                            {activationFeedback.message}
+                          </p>
                         )}
-                        {user.isActive && user.role === 'member' && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 border-amber-500/40 text-amber-400 hover:bg-amber-900/20 hover:text-amber-300"
-                            disabled={recoveryLinkMutation.isPending}
-                            onClick={() => handleCopyRecoveryLink(user)}
-                            aria-label={t('copyRecoveryLink')}
-                            title={t('copyRecoveryLink')}
-                          >
-                            {recoveryLinkMutation.isPending && recoveryLinkMutation.variables?.id === user.id
-                              ? <DiceLoader size="sm" hideRole />
-                              : <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />}
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEdit(user)}
-                          aria-label={t('editUser')}
-                        >
-                          <Pencil className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteUser(user)}
-                          aria-label={t('deleteUser')}
-                          className="text-destructive-foreground hover:bg-destructive/15"
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        </Button>
-                      </div>
-                      {activationFeedback?.userId === user.id && (
-                        <p className={`mt-2 text-right text-xs ${activationFeedback.kind === 'success' ? 'text-emerald-400' : 'text-destructive'}`}>
-                          {activationFeedback.message}
-                        </p>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -551,9 +556,9 @@ export function UsersSection() {
               onClick={handleSaveEdit}
               disabled={updateMutation.isPending || !editState.memberNumber.trim()}
             >
-              {updateMutation.isPending ? (
-                <DiceLoader size="sm" className="mr-2" hideRole />
-              ) : null}
+              <span className="mr-2 inline-flex h-4 w-4 shrink-0">
+                {updateMutation.isPending && <DiceLoader size="sm" hideRole />}
+              </span>
               {tc('save')}
             </Button>
           </DialogFooter>
@@ -575,9 +580,9 @@ export function UsersSection() {
               onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? (
-                <DiceLoader size="sm" className="mr-2" hideRole />
-              ) : null}
+              <span className="mr-2 inline-flex h-4 w-4 shrink-0">
+                {deleteMutation.isPending && <DiceLoader size="sm" hideRole />}
+              </span>
               {tc('delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
