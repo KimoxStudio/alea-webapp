@@ -2,6 +2,8 @@
 name: kx-tech-debt
 description: Maps accumulated debt across an existing codebase, ranked by churn × complexity. Read-only analysis, never edits. Use on inherited or long-running projects, not inside a development phase.
 model: opus
+codexModel: gpt-5.6-sol
+opencodeModel: local/local-reason
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
 skills:

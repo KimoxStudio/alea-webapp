@@ -2,6 +2,8 @@
 name: kx-documenter
 description: Writes and revises documentation meant to be read by people and by language models — READMEs, references, guides, ADRs. Use when documentation is missing, wrong, or has drifted from what the code does.
 model: opus
+codexModel: gpt-5.6-sol
+opencodeModel: local/local-reason
 tools: Read, Grep, Glob, Bash, Write, Edit
 effort: high
 color: cyan

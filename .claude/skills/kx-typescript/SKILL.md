@@ -92,6 +92,17 @@ overlap is a different thing and is fine.
 - `import 'server-only'` at the top of any module that must never reach the
   client bundle.
 
+## Named exports only
+
+`export default` is avoided wherever possible — use named exports.
+
+The reason is greppability: an import site invents whatever name it likes for
+a default, so a symbol search finds nothing and two callers of one module can
+call it two different things. A named export has one name everywhere.
+
+Where a tool requires the default — Next.js pages, layouts and route files —
+it stays. Everything else is named.
+
 ## Naming
 
 - Components: PascalCase files — `Button.tsx`, `ActivityPicker.tsx`

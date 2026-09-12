@@ -2,6 +2,8 @@
 name: kx-ux-reviewer
 description: Reviews a UI diff against the studio's UX and accessibility rules — focus, keyboard, labels, error placement, states, reduced motion, reflow. Read-only. Returns findings by severity, each citing the rule it breaks. Use when a phase changes something a person sees or operates; never on a diff with no interface in it.
 model: opus
+codexModel: gpt-5.6-sol
+opencodeModel: local/local-reason
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
 skills:

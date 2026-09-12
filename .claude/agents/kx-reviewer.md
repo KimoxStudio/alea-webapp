@@ -2,6 +2,8 @@
 name: kx-reviewer
 description: Reviews a diff against Kimox Studio standards (YAGNI, KISS, SOLID) and judges test quality. Read-only. Returns structured findings ranked by severity.
 model: opus
+codexModel: gpt-5.6-sol
+opencodeModel: local/local-reason
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
 skills:

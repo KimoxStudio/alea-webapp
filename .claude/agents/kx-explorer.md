@@ -2,6 +2,8 @@
 name: kx-explorer
 description: Answers one concrete question about a codebase by reading it — where something lives, what a file does, which pattern is already in use. Read-only and cheap. Returns the answer with file:line evidence, never a file dump. Use when a caller needs to know something the repository already answers.
 model: haiku
+codexModel: gpt-5.6-luna
+opencodeModel: local/local-main
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
 skills:

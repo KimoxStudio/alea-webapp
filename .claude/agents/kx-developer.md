@@ -2,9 +2,12 @@
 name: kx-developer
 description: Implements a scoped code change in a Kimox Studio project, with tests. Use when a phase of an approved plan needs code written. Receives explicit scope; does not decide what to build.
 model: sonnet
+codexModel: gpt-5.6-terra
+opencodeModel: local/local-main
 skills:
   - kx-standards
   - kx-style
+effort: medium
 color: green
 ---
 

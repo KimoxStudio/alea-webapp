@@ -31,14 +31,16 @@ Never write code to "show what I mean". Describe it to `kx-developer` instead.
 
 ---
 
-## Step 1 — Worktree
+## Step 1 — Worktree or main repo
 
-**Always.** Every session works in its own worktree, never in the checkout the
-human is sitting in.
+**Always ask.** Before any other step, ask the human: a dedicated worktree, or
+the checkout they are sitting in. Never assume either answer — the same request
+sometimes deserves isolation and sometimes is a one-file touch where a worktree
+is ceremony.
 
 Not a git repository → stop and say so. Do not work in place instead.
 
-### Before you create it
+### If the human picks the worktree
 
 You will branch from **origin**, not from local HEAD. Anything the human has
 locally and has not pushed will not be in the worktree.
@@ -122,6 +124,15 @@ scratch tree. If a file's name suggests production, ask instead of copying.
 
 **3. Verify once** — typecheck or build — before delegating anything. A broken
 environment costs a full developer round to diagnose as if it were a code bug.
+
+### If the human picks the main repo
+
+Work where they are sitting. Nothing to create, nothing to enter, nothing to
+bootstrap — the checkout already has its dependencies and `.env`. Do not run
+the worktree checks above; they answer a question nobody asked.
+
+`EnterWorktree` is off the table, and so is `isolation: "worktree"` on any
+agent you spawn — one tree per session, and this session's tree is the repo.
 
 ---
 
@@ -346,8 +357,9 @@ When all phases close, report:
 - What changed, per phase, one line each
 - Findings accepted and findings dropped, with the reason for the dropped ones
 - Anything deferred
-- **The worktree path and branch name**, so the human can review, push or open
-  a PR from it
+- **The worktree path and branch name** — when a worktree was used — so the
+  human can review, push or open a PR from it — `kx worktree open <slug>` gets
+  them into it from a terminal
 
 No summary of the conversation. No restating the plan.
 

@@ -2,6 +2,8 @@
 name: kx-analyst
 description: Reads a Claude Code transcript and reports where a session's time went, which skills fired, and which of them were followed. Read-only. Returns findings ranked by the turns they cost. Use when asked to review, grade or debug how a session went, or why a skill did not fire.
 model: opus
+codexModel: gpt-5.6-sol
+opencodeModel: local/local-reason
 tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
 skills:
