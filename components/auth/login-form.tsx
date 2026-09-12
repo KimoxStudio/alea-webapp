@@ -5,6 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { useAuth } from '@clerk/nextjs'
+import { isClerkAPIResponseError } from '@clerk/nextjs/errors'
 import { useSignIn } from '@clerk/nextjs/legacy'
 import { DiceLoader } from '@/components/ui/dice-loader'
 import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
@@ -58,6 +60,7 @@ export function LoginForm({ locale, redirectUrl }: LoginFormProps) {
   const t = useTranslations('auth')
   const router = useRouter()
   const { isLoaded, signIn, setActive } = useSignIn()
+  const { isSignedIn } = useAuth()
   const [serverError, setServerError] = useState<string | null>(null)
   const [recoveryHelpVisible, setRecoveryHelpVisible] = useState(false)
 
@@ -74,6 +77,22 @@ export function LoginForm({ locale, redirectUrl }: LoginFormProps) {
   const onSubmit = async (data: LoginFormData) => {
     setServerError(null)
     setRecoveryHelpVisible(false)
+
+    // #405: right after a successful sign-in, the URL can transiently stay
+    // on /sign-in while client routing settles even though the session is
+    // already established. Re-submitting in that window used to call
+    // signIn.create() with a session already active — Clerk throws its
+    // `session_exists` error for that, which fell into the catch below and
+    // was mapped to a false "invalid credentials" message, plus burned the
+    // authLogin rate limit (lib/server/security.ts) on a session the user
+    // already holds. Checking isSignedIn up front avoids ever making that
+    // call: short-circuit straight to the redirect instead.
+    if (isSignedIn) {
+      const target = resolveSafeRedirect(redirectUrl, `/${locale}/rooms`)
+      router.push(target)
+      router.refresh()
+      return
+    }
 
     if (!isLoaded || !signIn || !setActive) {
       setServerError(t('errors.invalidCredentials'))
@@ -95,7 +114,20 @@ export function LoginForm({ locale, redirectUrl }: LoginFormProps) {
       const target = resolveSafeRedirect(redirectUrl, `/${locale}/rooms`)
       router.push(target)
       router.refresh()
-    } catch {
+    } catch (error) {
+      // Defense-in-depth for the isSignedIn guard above: isSignedIn is React
+      // state that updates asynchronously after setActive() resolves, so a
+      // resubmit lands here (rather than being caught by the guard) in the
+      // narrow window before that state update commits. `session_exists` is
+      // Clerk's own documented error code for "already signed in"
+      // (@clerk/shared's ERROR_CODES.SESSION_EXISTS) — redirect the same way
+      // the guard does instead of showing a false "invalid credentials".
+      if (isClerkAPIResponseError(error) && error.errors.some((e) => e.code === 'session_exists')) {
+        const target = resolveSafeRedirect(redirectUrl, `/${locale}/rooms`)
+        router.push(target)
+        router.refresh()
+        return
+      }
       setServerError(t('errors.invalidCredentials'))
     }
   }
