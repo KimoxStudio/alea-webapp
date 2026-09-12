@@ -459,10 +459,15 @@ function RoomRow({ room }: { room: Room }) {
               <Button type="button" variant="outline" onClick={() => setEditing(false)} className="border-border">
                 {tc('cancel')}
               </Button>
-              <Button type="submit" disabled={updateRoom.isPending || setRoomDefaultEquipment.isPending} className="min-w-[80px]">
-                {(updateRoom.isPending || setRoomDefaultEquipment.isPending) ? (
-                  <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('saving')}</span></span>
-                ) : tc('save')}
+              <Button
+                type="submit"
+                disabled={updateRoom.isPending || setRoomDefaultEquipment.isPending}
+                aria-busy={updateRoom.isPending || setRoomDefaultEquipment.isPending}
+              >
+                <span className="inline-flex h-4 w-4 shrink-0">
+                  {(updateRoom.isPending || setRoomDefaultEquipment.isPending) && <DiceLoader size="sm" hideRole />}
+                </span>
+                {tc('save')}
               </Button>
             </DialogFooter>
           </form>
@@ -663,10 +668,15 @@ export function RoomsSection() {
               <Button type="button" variant="outline" onClick={() => { setShowCreate(false); setCreateError(null) }} className="border-border">
                 {tc('cancel')}
               </Button>
-              <Button type="submit" disabled={createRoom.isPending || setRoomDefaultEquipment.isPending} className="min-w-[80px]">
-                {(createRoom.isPending || setRoomDefaultEquipment.isPending) ? (
-                  <span className="inline-flex items-center gap-2"><DiceLoader size="sm" hideRole /><span>{t('creating')}</span></span>
-                ) : tc('save')}
+              <Button
+                type="submit"
+                disabled={createRoom.isPending || setRoomDefaultEquipment.isPending}
+                aria-busy={createRoom.isPending || setRoomDefaultEquipment.isPending}
+              >
+                <span className="inline-flex h-4 w-4 shrink-0">
+                  {(createRoom.isPending || setRoomDefaultEquipment.isPending) && <DiceLoader size="sm" hideRole />}
+                </span>
+                {tc('save')}
               </Button>
             </DialogFooter>
           </form>

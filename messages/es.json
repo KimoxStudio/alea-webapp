@@ -293,7 +293,6 @@
       "create_auth_failed": "No se pudo crear usuario de acceso",
       "persist_import_failed": "No se pudo guardar socio importado"
     },
-    "saving": "Guardando...",
     "creating": "Creando...",
     "editRoom": "Editar sala",
     "noRooms": "No hay salas",

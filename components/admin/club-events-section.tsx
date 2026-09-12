@@ -935,13 +935,11 @@ function ClubEventFormDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="border-border">
               {tc('cancel')}
             </Button>
-            <Button type="submit" disabled={isPending} className="min-w-[80px]">
-              {isPending ? (
-                <span className="inline-flex items-center gap-2">
-                  <DiceLoader size="sm" hideRole />
-                  <span>{t('saving')}</span>
-                </span>
-              ) : tc('save')}
+            <Button type="submit" disabled={isPending} aria-busy={isPending}>
+              <span className="inline-flex h-4 w-4 shrink-0">
+                {isPending && <DiceLoader size="sm" hideRole />}
+              </span>
+              {tc('save')}
             </Button>
           </DialogFooter>
         </form>
@@ -999,14 +997,12 @@ function DeleteClubEventDialog({
             variant="destructive"
             onClick={onConfirm}
             disabled={isPending}
-            className="min-w-[80px]"
+            aria-busy={isPending}
           >
-            {isPending ? (
-              <span className="inline-flex items-center gap-2">
-                <DiceLoader size="sm" hideRole />
-                <span>{tc('loading')}</span>
-              </span>
-            ) : tc('delete')}
+            <span className="inline-flex h-4 w-4 shrink-0">
+              {isPending && <DiceLoader size="sm" hideRole />}
+            </span>
+            {tc('delete')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ClubEventsSection } from '@/components/admin/club-events-section'
@@ -21,11 +21,41 @@ global.ResizeObserver = ResizeObserverMock
 
 const mockCreateMutateAsync = vi.fn()
 
+const { createClubEventState, deleteClubEventState } = vi.hoisted(() => ({
+  createClubEventState: { isPending: false },
+  deleteClubEventState: { isPending: false },
+}))
+
+// A row is needed so the delete dialog (#408 tests below) is reachable.
+const clubEventFixture = {
+  id: 'ce-1',
+  titleEs: 'Poker Night',
+  titleEn: 'Poker Night',
+  blurbEs: '',
+  blurbEn: '',
+  descriptionEs: null,
+  descriptionEn: null,
+  dateKind: 'single' as const,
+  startDate: '2026-06-01',
+  endDate: null,
+  recurrenceLabelEs: null,
+  recurrenceLabelEn: null,
+  imageUrl: null,
+  linkUrl: null,
+  categoryEs: null,
+  categoryEn: null,
+  status: 'upcoming' as const,
+  blocksRooms: false,
+  roomBlocks: [],
+  visibleOnLanding: false,
+  materials: [],
+}
+
 vi.mock('@/lib/hooks/use-admin', () => ({
-  useAdminClubEvents: () => ({ data: { upcoming: [], past: [] }, isLoading: false }),
-  useAdminCreateClubEvent: () => ({ mutateAsync: mockCreateMutateAsync, isPending: false }),
+  useAdminClubEvents: () => ({ data: { upcoming: [clubEventFixture], past: [] }, isLoading: false }),
+  useAdminCreateClubEvent: () => ({ mutateAsync: mockCreateMutateAsync, isPending: createClubEventState.isPending }),
   useAdminUpdateClubEvent: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useAdminDeleteClubEvent: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useAdminDeleteClubEvent: () => ({ mutateAsync: vi.fn(), isPending: deleteClubEventState.isPending }),
   useAdminRooms: () => ({ data: [], isLoading: false }),
   useAdminRoomTables: () => ({ data: [], isLoading: false }),
   useAdminEquipment: () => ({ data: [], isLoading: false }),
@@ -84,5 +114,82 @@ describe('ClubEventsSection — schedule-row required-field focus routing (#313)
     // The mutation (which would persist an incomplete schedule row) must
     // never fire.
     expect(mockCreateMutateAsync).not.toHaveBeenCalled()
+  })
+})
+
+// #408 — same fixed-slot fix as #399/#404, applied to this file's two
+// `min-w-[80px]` sites: ClubEventFormDialog's save button (shared between
+// create and edit — same JSX either way, so covering it via the create
+// flow covers the edit flow identically) and DeleteClubEventDialog's
+// delete button.
+describe('ClubEventsSection — pending buttons reserve loader space without animating while idle (#408)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    createClubEventState.isPending = false
+    deleteClubEventState.isPending = false
+  })
+
+  function getIconSlot(button: HTMLElement) {
+    return button.querySelector('span.shrink-0')
+  }
+
+  function queryLoader(button: HTMLElement) {
+    return within(button).queryByTestId('dice-loader')
+  }
+
+  it('create/edit-dialog save button: icon slot reserved with correct sizing but loader unmounted when idle', async () => {
+    const user = userEvent.setup()
+    render(<ClubEventsSection />)
+
+    await user.click(screen.getByRole('button', { name: 'clubEvents.createEvent' }))
+    const button = screen.getByRole('button', { name: 'save' })
+
+    expect(getIconSlot(button)).toHaveClass('h-4', 'w-4', 'shrink-0')
+    expect(queryLoader(button)).toBeNull()
+    expect(button).not.toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('create/edit-dialog save button: loader mounts while creating', async () => {
+    createClubEventState.isPending = true
+    const user = userEvent.setup()
+    render(<ClubEventsSection />)
+
+    await user.click(screen.getByRole('button', { name: 'clubEvents.createEvent' }))
+    const button = screen.getByRole('button', { name: 'save' })
+
+    expect(getIconSlot(button)).not.toBeNull()
+    expect(queryLoader(button)).not.toBeNull()
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('delete-dialog button (destructive variant): icon slot reserved but loader unmounted when idle', async () => {
+    const user = userEvent.setup()
+    render(<ClubEventsSection />)
+
+    // The row's delete trigger and the dialog's confirm button share the
+    // same accessible name ('delete') — the trigger stays in the DOM once
+    // the dialog opens, so scope the lookup to the dialog itself.
+    await user.click(screen.getByRole('button', { name: 'delete' }))
+    const dialog = screen.getByRole('dialog')
+    const button = within(dialog).getByRole('button', { name: 'delete' })
+
+    expect(getIconSlot(button)).toHaveClass('h-4', 'w-4', 'shrink-0')
+    expect(queryLoader(button)).toBeNull()
+  })
+
+  it('delete-dialog button (destructive variant): loader mounts while deleting', async () => {
+    deleteClubEventState.isPending = true
+    const user = userEvent.setup()
+    render(<ClubEventsSection />)
+
+    await user.click(screen.getByRole('button', { name: 'delete' }))
+    const dialog = screen.getByRole('dialog')
+    const button = within(dialog).getByRole('button', { name: 'delete' })
+
+    expect(getIconSlot(button)).not.toBeNull()
+    expect(queryLoader(button)).not.toBeNull()
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-busy', 'true')
   })
 })
