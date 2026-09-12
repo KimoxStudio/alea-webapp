@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // Synthetic pk_test_* key so `next.config.ts` can derive a Clerk Frontend
 // API host without depending on the real value in .env.local. Decodes (per
@@ -24,7 +24,7 @@ async function getContentSecurityPolicy(): Promise<string> {
 }
 
 describe('Content-Security-Policy (next.config.ts)', () => {
-  beforeEach(() => {
+  afterEach(() => {
     vi.unstubAllEnvs()
   })
 
