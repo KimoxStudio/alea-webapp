@@ -345,7 +345,7 @@ export function UsersSection() {
                               onClick={() => patchMutation.mutate({ id: user.id, action: 'reset_no_shows' })}
                               aria-label={t('resetNoShows')}
                             >
-                              <span className="mr-1 inline-flex h-4 w-4 shrink-0">
+                              <span className="inline-flex h-4 w-4 shrink-0">
                                 {isResettingNoShows && <DiceLoader size="sm" hideRole />}
                               </span>
                               {t('resetNoShows')}
@@ -360,7 +360,7 @@ export function UsersSection() {
                               onClick={() => patchMutation.mutate({ id: user.id, action: 'unblock' })}
                               aria-label={t('unblockUser')}
                             >
-                              <span className="mr-1 inline-flex h-4 w-4 shrink-0">
+                              <span className="inline-flex h-4 w-4 shrink-0">
                                 {isUnblocking && <DiceLoader size="sm" hideRole />}
                               </span>
                               {t('unblockUser')}
@@ -556,7 +556,7 @@ export function UsersSection() {
               onClick={handleSaveEdit}
               disabled={updateMutation.isPending || !editState.memberNumber.trim()}
             >
-              <span className="mr-2 inline-flex h-4 w-4 shrink-0">
+              <span className="inline-flex h-4 w-4 shrink-0">
                 {updateMutation.isPending && <DiceLoader size="sm" hideRole />}
               </span>
               {tc('save')}
@@ -580,7 +580,7 @@ export function UsersSection() {
               onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              <span className="mr-2 inline-flex h-4 w-4 shrink-0">
+              <span className="inline-flex h-4 w-4 shrink-0">
                 {deleteMutation.isPending && <DiceLoader size="sm" hideRole />}
               </span>
               {tc('delete')}
