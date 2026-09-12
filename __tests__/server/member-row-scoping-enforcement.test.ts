@@ -13,7 +13,7 @@
  * enforcement.
  *
  * It is a source scan, not a runtime test: for every `lib/server/*.ts`
- * file, it finds each top-level function whose signature mentions
+ * file, it finds each function whose signature mentions
  * `SessionUser` (the project's own signal for "this function acts on
  * behalf of a specific session" — see every admin-only service file,
  * which all thread `SessionUser` the same way) and whose OWN body (not a
@@ -110,7 +110,7 @@ const KNOWN_SAFE_FUNCTIONS: Record<string, string> = {
 type FunctionSpan = { name: string; signature: string; body: string; bodyNode: ts.Node }
 
 /**
- * Extracts every top-level `function`/`async function` declaration (with or
+ * Extracts every `function`/`async function` declaration (with or
  * without `export`, generic or not) AND any single-declarator `const`/`let`
  * initialized to an arrow function, exported or not, at any nesting level
  * (this walk recurses into function bodies too, the same way it already did
