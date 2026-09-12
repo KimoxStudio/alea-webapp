@@ -57,6 +57,7 @@ export function AuthProvider({ children, initialUser }: { children: React.ReactN
     await apiClient.post(endpoints.auth.logout)
     setUser(null)
     router.push(`/${locale}/login`)
+    router.refresh()
   }
   const register = async (memberNumber: string, password: string) => {
     const data = await apiClient.post<User>(endpoints.auth.register, { memberNumber, password })
