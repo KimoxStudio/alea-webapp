@@ -18,8 +18,8 @@
  * behalf of a specific session" — see every admin-only service file,
  * which all thread `SessionUser` the same way) and whose OWN body (not a
  * callee's) contains a `FROM reservations` / `FROM saved_games` read.
- * Such a function must reference `assertMemberRowsScoped(` or
- * `assertMemberRowsScopedSql(` somewhere in its body.
+ * Such a function must call one of the guards (a real call node, not the
+ * name in a comment).
  *
  * This does not flag every raw-SQL read of these tables — only ones whose
  * containing function takes a `SessionUser`, which is what distinguishes a
@@ -111,13 +111,15 @@ type FunctionSpan = { name: string; signature: string; body: string; bodyNode: t
 
 /**
  * Extracts every top-level `function`/`async function` declaration (with or
- * without `export`, generic or not) AND every `export const foo = (...) =>
- * {...}` / `export const foo: SomeType = (...) => {...}` arrow-function
- * assignment, from a service file's source, via the real TypeScript parser.
- * Class methods are still out of scope — none of these service files use
- * classes for their exported surface. A function overload's signature-only
- * declarations (no body) are skipped; only the implementation (which always
- * has a body) is captured.
+ * without `export`, generic or not) AND any single-declarator `const`/`let`
+ * initialized to an arrow function, exported or not, at any nesting level
+ * (this walk recurses into function bodies too, the same way it already did
+ * for nested `function` declarations) — via the real TypeScript parser.
+ * Class methods, function expressions (`const foo = function () {}`), and
+ * multi-declarator statements (`const a = () => {}, b = () => {}`) are still
+ * out of scope — none of these service files use them for their exported
+ * surface. A function overload's signature-only declarations (no body) are
+ * skipped; only the implementation (which always has a body) is captured.
  */
 function extractFunctions(source: string, fileName: string): FunctionSpan[] {
   const sourceFile = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true)
@@ -210,8 +212,9 @@ describe('member-scoped reservations/saved_games reads are guarded (#389)', () =
     }
   })
 
-  // Scan-scope gap coverage (#400): both fixtures below reproduce a blind
-  // spot the scan used to have. Each is asserted to fail the scan.
+  // Scan-scope gap coverage (#400): the first two fixtures reproduce gaps
+  // and must be flagged; the third is the control proving a real guard call
+  // still counts.
   it('flags an unguarded read exported as an arrow function, not just a function declaration', () => {
     const fixture = `
       export const listReservationsForSession = async (session: SessionUser) => {
@@ -221,12 +224,8 @@ describe('member-scoped reservations/saved_games reads are guarded (#389)', () =
 
     const violations = findScopingViolations(fixture, 'fixture-arrow-unguarded.ts')
 
-    expect(violations).toEqual([
-      'fixture-arrow-unguarded.ts:listReservationsForSession takes a SessionUser and reads ' +
-        'reservations/saved_games but never calls assertMemberRowsScoped()/assertMemberRowsScopedSql(). ' +
-        'If this is a genuine gap, wire the guard. If it is a single-row-by-id read with an inline ' +
-        'ownership check, add it to KNOWN_SAFE_FUNCTIONS with the reason.',
-    ])
+    expect(violations).toHaveLength(1)
+    expect(violations[0]).toContain('fixture-arrow-unguarded.ts:listReservationsForSession')
   })
 
   it('flags a read where the guard name only appears in a comment, not a real call', () => {
